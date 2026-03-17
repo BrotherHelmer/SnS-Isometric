@@ -7,16 +7,18 @@
 [ext_resource type="Script" path="res://scripts/state_machine/settler_states/working_state.gd" id="5_working"]
 [ext_resource type="Script" path="res://scripts/state_machine/settler_states/returning_state.gd" id="6_returning"]
 [ext_resource type="Script" path="res://scripts/state_machine/settler_states/panic_state.gd" id="7_panic"]
-[ext_resource type="Texture2D" path="res://assets/art/sovereign.png" id="8_sprite"]
+[ext_resource type="Texture2D" path="res://assets/art/settler.png" id="8_sprite"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_set"]
 size = Vector2(16, 8)
 
 [node name="Settler" type="CharacterBody2D"]
+z_index = 1
 script = ExtResource("1_settler")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 texture = ExtResource("8_sprite")
+offset = Vector2(0, -16)
 texture_filter = 0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]

@@ -1,35 +1,45 @@
-[gd_scene load_steps=5 format=3 uid="uid://world"]
+[gd_scene load_steps=8 format=3 uid="uid://world"]
 
-[ext_resource type="Script" path="res://scripts/fog_manager.gd" id="1_fog_mgr"]
-[ext_resource type="Shader" path="res://shaders/fog_of_war.gdshader" id="2_fog_shader"]
+[ext_resource type="Script" path="res://scripts/world.gd" id="1_world"]
+[ext_resource type="Script" path="res://scripts/fog_manager.gd" id="2_fog_mgr"]
+[ext_resource type="Shader" path="res://shaders/fog_of_war.gdshader" id="3_fog_shader"]
+[ext_resource type="TileSet" path="res://assets/tilesets/world_tileset.tres" id="4_tileset"]
+[ext_resource type="PackedScene" path="res://scenes/sovereign.tscn" id="5_sovereign"]
+[ext_resource type="PackedScene" path="res://scenes/wyrd_node.tscn" id="6_wyrd"]
+[ext_resource type="Texture2D" path="res://assets/art/lumen_mask.png" id="7_lumen_mask"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_fog"]
-shader = ExtResource("2_fog_shader")
-
-[sub_resource type="World2D" id="World2D_sub"]
+shader = ExtResource("3_fog_shader")
 
 [node name="World" type="Node2D"]
+script = ExtResource("1_world")
 
 [node name="GroundLayer" type="TileMapLayer" parent="."]
-tile_map_data = PackedByteArray()
+tile_set = ExtResource("4_tileset")
 
 [node name="RoadLayer" type="TileMapLayer" parent="."]
-tile_map_data = PackedByteArray()
+tile_set = ExtResource("4_tileset")
 
 [node name="Entities" type="Node2D" parent="."]
+
+[node name="Sovereign" parent="Entities" instance=ExtResource("5_sovereign")]
+position = Vector2(96, 80)
+
+[node name="WyrdNode" parent="Entities" instance=ExtResource("6_wyrd")]
+position = Vector2(0, 0)
 
 [node name="CanvasModulate" type="CanvasModulate" parent="."]
 color = Color(1, 1, 1, 1)
 
 [node name="FogManager" type="Node2D" parent="."]
-script = ExtResource("1_fog_mgr")
+script = ExtResource("2_fog_mgr")
+lumen_stamp_texture = ExtResource("7_lumen_mask")
 
 [node name="SubViewport" type="SubViewport" parent="FogManager"]
 transparent_bg = false
 handle_input_locally = false
 size = Vector2i(1280, 720)
 render_target_update_mode = 3
-world_2d = SubResource("World2D_sub")
 
 [node name="Background" type="ColorRect" parent="FogManager/SubViewport"]
 anchors_preset = 15
@@ -37,7 +47,10 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(1, 1, 1, 1)
 
-[node name="FogRect" type="ColorRect" parent="FogManager"]
+[node name="FogOverlay" type="CanvasLayer" parent="FogManager"]
+layer = 100
+
+[node name="FogRect" type="ColorRect" parent="FogManager/FogOverlay"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0

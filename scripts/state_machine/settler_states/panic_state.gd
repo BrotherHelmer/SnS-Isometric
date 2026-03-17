@@ -19,7 +19,6 @@ func enter() -> void:
 
 
 func physics_update(delta: float) -> void:
-	# Apply fog damage every frame.
 	if unit.has_method("take_damage"):
 		unit.take_damage(fog_damage_rate * delta)
 
@@ -29,16 +28,30 @@ func physics_update(delta: float) -> void:
 
 	var next_pos := _nav_agent.get_next_path_position()
 	var direction := (next_pos - unit.global_position).normalized()
-	var base_speed: float = unit.get("move_speed")
+	var base_speed: float = unit.move_speed
 	unit.velocity = direction * base_speed * panic_speed_mult
 	unit.move_and_slide()
 
 
 func _reached_safety() -> void:
-	# Transition back to Idle once outside the fog.
+	unit.is_in_fog = false
 	get_parent().transition_to("IdleState")
 
 
 func _find_nearest_safe_position() -> Vector2:
-	# TODO: Query lumen sources group for nearest cleared area.
-	return Vector2.ZERO
+	# Prefer the nearest lumen source (Sovereign, Lumen Pillars).
+	var sources := get_tree().get_nodes_in_group("lumen_sources")
+	var best_pos := Vector2.ZERO
+	var best_dist := INF
+
+	for source in sources:
+		var d := unit.global_position.distance_to(source.global_position)
+		if d < best_dist:
+			best_dist = d
+			best_pos = source.global_position
+
+	# Fallback: run home.
+	if best_dist == INF and unit.home_hut and is_instance_valid(unit.home_hut):
+		best_pos = unit.home_hut.global_position
+
+	return best_pos

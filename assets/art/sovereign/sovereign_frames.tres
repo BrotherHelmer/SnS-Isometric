@@ -1,0 +1,74 @@
+[gd_resource type="SpriteFrames" load_steps=6 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/art/sovereign/idle_s.png" id="1_s"]
+[ext_resource type="Texture2D" path="res://assets/art/sovereign/idle_se.png" id="2_se"]
+[ext_resource type="Texture2D" path="res://assets/art/sovereign/idle_e.png" id="3_e"]
+[ext_resource type="Texture2D" path="res://assets/art/sovereign/idle_ne.png" id="4_ne"]
+[ext_resource type="Texture2D" path="res://assets/art/sovereign/idle_n.png" id="5_n"]
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_s")
+}],
+"loop": true,
+"name": &"idle_s",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("2_se")
+}],
+"loop": true,
+"name": &"idle_se",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("3_e")
+}],
+"loop": true,
+"name": &"idle_e",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("4_ne")
+}],
+"loop": true,
+"name": &"idle_ne",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("5_n")
+}],
+"loop": true,
+"name": &"idle_n",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("2_se")
+}],
+"loop": true,
+"name": &"idle_sw",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("3_e")
+}],
+"loop": true,
+"name": &"idle_w",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("4_ne")
+}],
+"loop": true,
+"name": &"idle_nw",
+"speed": 1.0
+}]

@@ -20,12 +20,13 @@ func physics_update(delta: float) -> void:
 
 	var next_pos := _nav_agent.get_next_path_position()
 	var direction := (next_pos - unit.global_position).normalized()
-
-	# Road speed bonus is handled by the parent unit's speed property.
-	unit.velocity = direction * unit.get("move_speed")
+	unit.velocity = direction * unit.move_speed
 	unit.move_and_slide()
 
 
 func _on_arrived() -> void:
-	# The settler script decides what comes next (Working or Returning).
-	pass
+	if unit.target_resource != null and is_instance_valid(unit.target_resource):
+		get_parent().transition_to("WorkingState")
+	else:
+		unit.target_resource = null
+		get_parent().transition_to("IdleState")

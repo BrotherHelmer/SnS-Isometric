@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://rock_deco"]
+
+[ext_resource type="Texture2D" path="res://assets/art/rock_a.png" id="1_rock"]
+
+[node name="RockDeco" type="Node2D"]
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("1_rock")
+offset = Vector2(0, -17)
+texture_filter = 1

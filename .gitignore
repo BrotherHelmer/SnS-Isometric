@@ -20,6 +20,9 @@ desktop.ini
 *.swp
 *.swo
 
+# Third-party licensed asset packs (not redistributable)
+assets/pro/
+
 # Export templates and builds
 /export/
 *.pck

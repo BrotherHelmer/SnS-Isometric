@@ -5,3 +5,13 @@ Core Mechanics: > 1. Daytime: Settlers move on paths to gather wood/stone.
 3. Nighttime: Mobs emerge from the Crater.
 4. 'Lumen Pillars' fueled by Wyrd push back the 'Infection Fog'.
 Coding Standard: Use GDScript. Prioritize modular nodes. Always include comments for 'The Director'."
+
+
+## ART PIPELINE & SPRITE INTEGRATION
+1. **Quality over Simplicity**: All sprites must match the fidelity of 'lumen_pillar.png' (approx 128x128 or 256x256). NEVER downsample high-detail art into low-res pixel blocks.
+2. **Godot Texture Settings**: When importing art, set the 'Texture Filter' to 'Linear' or 'Nearest' based on the asset, but NEVER allow 'Bilinear Blur'.
+3. **Sprite Sizing**:
+   - The Sovereign should be approx 1.5x the height of a Settler.
+   - All sprites must be centered on their bottom-edge (feet) to align with the Isometric Grid.
+4. **Consistency**: Use the 'Nano Banana Pro' tool to generate assets. If a generation results in a different style, REGENERATE immediately using the Lumen Pillar as a style reference.
+5. **Transparency**: Always ensure generated art has a true transparent background. Use Python scripts to remove any residual 'white' or 'black' artifacts if needed.

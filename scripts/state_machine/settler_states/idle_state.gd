@@ -18,6 +18,23 @@ func update(delta: float) -> void:
 
 
 func _try_find_task() -> void:
-	# TODO: Query The Director for the nearest available resource node.
-	# For now, transition to Moving with a placeholder target.
-	pass
+	var trees := get_tree().get_nodes_in_group("trees")
+	if trees.is_empty():
+		return
+
+	var nearest: Node2D = null
+	var best_dist := INF
+	for tree in trees:
+		var d := unit.global_position.distance_to(tree.global_position)
+		if d < best_dist:
+			best_dist = d
+			nearest = tree
+	if nearest == null:
+		return
+
+	unit.target_resource = nearest
+
+	var moving_state: State = get_parent().get_node_or_null("MovingState")
+	if moving_state:
+		moving_state.target_position = nearest.global_position
+	get_parent().transition_to("MovingState")
