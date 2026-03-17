@@ -1,0 +1,23 @@
+[gd_scene load_steps=5 format=3 uid="uid://lumen_pillar"]
+
+[ext_resource type="Script" path="res://scripts/lumen_pillar.gd" id="1_pillar"]
+[ext_resource type="Texture2D" path="res://assets/art/lumen_pillar.png" id="2_sprite"]
+[ext_resource type="Texture2D" path="res://assets/art/lumen_mask.png" id="3_lumen"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_pil"]
+size = Vector2(16, 24)
+
+[node name="LumenPillar" type="StaticBody2D"]
+script = ExtResource("1_pillar")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("2_sprite")
+texture_filter = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_pil")
+
+[node name="LumenLight" type="PointLight2D" parent="."]
+texture = ExtResource("3_lumen")
+energy = 1.2
+texture_scale = 5.0

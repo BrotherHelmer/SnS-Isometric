@@ -1,0 +1,7 @@
+"This project is 'Shard & Sovereign 2D'—a 2D Isometric Cozy-Horror Colony Sim in Godot 4.
+Style: Amiga 500 pixel art vs. Diablo 1 gothic.
+Core Mechanics: > 1. Daytime: Settlers move on paths to gather wood/stone.
+2. The Sovereign (Player) enters the 'Crater' to mine 'Wyrd'.
+3. Nighttime: Mobs emerge from the Crater.
+4. 'Lumen Pillars' fueled by Wyrd push back the 'Infection Fog'.
+Coding Standard: Use GDScript. Prioritize modular nodes. Always include comments for 'The Director'."
