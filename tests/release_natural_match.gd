@@ -5,6 +5,7 @@ extends SceneTree
 ## No terrain edits, supplied resources, clock jumps or fabricated victories.
 const Simulation = preload("res://src/GodotClient/Scripts/one_shard_simulation.gd")
 const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
+const Tuning = preload("res://src/GodotClient/Scripts/one_shard_rivalry_tuning.gd")
 const Fixture = preload("res://src/GodotClient3D/Scripts/production_demo_fixture.gd")
 const SEEDS = [260821, 424242, 717171]
 var reports: Array = []
@@ -13,7 +14,11 @@ func _init() -> void:
 	call_deferred("_run")
 
 func _run() -> void:
-	for seed_value in SEEDS:
+	var selected_seeds: Array = SEEDS.duplicate()
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--seed="):
+			selected_seeds = [int(arg.trim_prefix("--seed="))]
+	for seed_value in selected_seeds:
 		_run_seed(seed_value)
 	var file := FileAccess.open("res://artifacts/release_candidate/natural_match.json", FileAccess.WRITE)
 	file.store_string(JSON.stringify(reports, "\t"))
@@ -22,8 +27,8 @@ func _run() -> void:
 	for report in reports:
 		if report.victory:
 			wins += 1
-	print("RELEASE_NATURAL_MATCH %s wins=%d/%d" % ["PASS" if wins == SEEDS.size() else "FAIL", wins, SEEDS.size()])
-	quit(0 if wins == SEEDS.size() else 1)
+	print("RELEASE_NATURAL_MATCH %s wins=%d/%d" % ["PASS" if wins == selected_seeds.size() else "FAIL", wins, selected_seeds.size()])
+	quit(0 if wins == selected_seeds.size() else 1)
 
 func _run_seed(seed_value: int) -> void:
 	var sim = Simulation.new(70, 70, seed_value, false, true)
@@ -88,6 +93,8 @@ func _run_seed(seed_value: int) -> void:
 						binding_reload = true
 		if tick % 6000 == 0:
 			print("NATURAL progress seed=%d time=%.1f stage=%d population=%d claim=%s" % [seed_value, sim.elapsed_seconds, stage, sim.population_current, sim.rivalry.claim_requirements("player").summary])
+			if tick == 18000:
+				sim.save_to_path("res://artifacts/release_candidate/natural_mid_%d.json" % seed_value)
 		sim.advance_tick()
 	var report := {"seed": seed_value, "victory": sim.victory, "finished": sim.game_finished, "seconds": sim.elapsed_seconds, "stage": stage, "reload": restart_checked, "binding_reload": binding_reload, "reason": sim.defeat_reason, "orders": orders, "claim": sim.rivalry.claim_requirements("player"), "resources": sim.central_inventory}
 	reports.append(report)
@@ -123,7 +130,8 @@ func _road(sim, chooser, target: Vector2i) -> int:
 	return int(result.get("building", {}).get("id", 0))
 
 func _expand(sim, _chooser, orders: Array) -> void:
-	var has_claim: bool = sim.rivalry.claim_requirements("player").outpost
+	var requirements: Dictionary = sim.rivalry.claim_requirements("player")
+	var has_claim: bool = requirements.outpost
 	var wyrd_sites: Array = sim.rivalry.get_wyrd_sites()
 	var structures: Array = sim.rivalry.get_structures("player")
 	var lumen_sources: Array = sim.rivalry.get_lumen_sources("player")
@@ -135,8 +143,12 @@ func _expand(sim, _chooser, orders: Array) -> void:
 		if structure.type == Defs.BUILDING_OUTPOST and sim.outpost_has_wyrd_node(structure):
 			harvest_outposts += 1
 	for type in [Defs.BUILDING_OUTPOST, Defs.BUILDING_LUMEN_PILLAR]:
+		if type == Defs.BUILDING_LUMEN_PILLAR and requirements.lumen:
+			continue
 		var site := Vector2i(-1, -1)
 		var best := INF
+		var detour_site := Vector2i(-1, -1)
+		var detour_score := INF
 		for key in sim.revealed_tiles:
 			var parts = String(key).split(",")
 			var candidate := Vector2i(int(parts[0]), int(parts[1]))
@@ -148,27 +160,38 @@ func _expand(sim, _chooser, orders: Array) -> void:
 				var center := Vector2(candidate) + Vector2(0.5, 0.5)
 				for node in wyrd_sites:
 					useful = useful or (harvest_outposts < 2 and center.distance_to(Vector2(node.position)) <= sim.WYRD_OUTPOST_HARVEST_RADIUS)
-				useful = useful or (not has_claim and center.distance_to(Vector2(sim.shard_position)) <= 5.0)
+				var claim_site := not has_claim and center.distance_to(Vector2(sim.shard_position)) <= Tuning.SHARD_BUILD_RADIUS
+				useful = useful or claim_site
 				for outpost in structures:
-					if outpost.type == type and center.distance_to(Vector2(outpost.position) + Vector2(0.5, 0.5)) < 5.0:
+					if not claim_site and outpost.type == type and center.distance_to(Vector2(outpost.position) + Vector2(0.5, 0.5)) < 5.0:
 						useful = false
 			else:
 				useful = score < closest_lumen - 1.0
+				var spaced := true
 				for source in lumen_sources:
-					if Vector2(candidate).distance_to(Vector2(source.center)) < 6.5:
+					if Vector2(candidate).distance_to(Vector2(source.center)) < 4.0:
 						useful = false
+						spaced = false
+				# Roads may initially leave home on the side away from the Shard.
+				# A valid detour Pillar can carry Lumen around the occupied yard.
+				if spaced and score < detour_score and sim.validate_placement(type, candidate).get("success", false):
+					detour_site = candidate
+					detour_score = score
 			if useful and sim.validate_placement(type, candidate).get("success", false):
 				site = candidate
 				best = score
+		if site.x < 0 and type == Defs.BUILDING_LUMEN_PILLAR:
+			# Clear a useful forward site before spending Wyrd on a detour.
+			if _can_afford(sim, type) and _clear_lumen_site(sim, lumen_sources, closest_lumen, orders):
+				continue
+			site = detour_site
 		if site.x >= 0:
 			var result: Dictionary = sim.request_build(type, site)
 			if result.get("success", false):
 				orders.append({"seconds": sim.elapsed_seconds, "type": type, "tile": str(site)})
 				print("NATURAL seed=%d time=%.1f built=%s tile=%s" % [sim.rng_seed, sim.elapsed_seconds, type, site])
-		elif type == Defs.BUILDING_LUMEN_PILLAR and _can_afford(sim, type):
-			_clear_lumen_site(sim, lumen_sources, closest_lumen, orders)
 
-func _clear_lumen_site(sim, sources: Array, closest_lumen: float, orders: Array) -> void:
+func _clear_lumen_site(sim, sources: Array, closest_lumen: float, orders: Array) -> bool:
 	var best := INF
 	var candidate := Vector2i(-1, -1)
 	for road in sim.rivalry.get_roads("player"):
@@ -178,10 +201,20 @@ func _clear_lumen_site(sim, sources: Array, closest_lumen: float, orders: Array)
 			if distance >= closest_lumen - 1.0 or distance >= best or sim.get_tile(tile) not in [Defs.TILE_TREE, Defs.TILE_ROCK]:
 				continue
 			var covered := false
+			var spaced := true
 			for source in sources:
 				covered = covered or Vector2(tile).distance_to(Vector2(source.center)) <= source.radius
+				spaced = spaced and Vector2(tile).distance_to(Vector2(source.center)) >= 4.0
+			if not spaced:
+				continue
+			if covered:
+				for worker in sim.workers:
+					if worker.get("clear_target", Vector2i(-1, -1)) == tile:
+						return true
 			if covered and sim.validate_clear(tile).get("success", false):
 				candidate = tile
 				best = distance
 	if candidate.x >= 0 and sim.request_clear(candidate).get("success", false):
 		orders.append({"seconds": sim.elapsed_seconds, "type": "CLEAR_FOR_LUMEN", "tile": str(candidate)})
+		return true
+	return false

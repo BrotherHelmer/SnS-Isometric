@@ -42,11 +42,16 @@ static func run(game) -> void:
 	var cycle := 0
 	var memory := int(Performance.get_monitor(Performance.MEMORY_STATIC))
 	var peak_memory := memory
+	var audio_samples: Array = []
 	var started := Time.get_ticks_msec()
 	while elapsed < duration:
 		await tree.create_timer(minf(30.0, duration - elapsed)).timeout
 		elapsed = float(Time.get_ticks_msec() - started) / 1000.0
 		cycle += 1
+		if AudioServer.get_driver_name() != "Dummy":
+			var mix_age := AudioServer.get_time_since_last_mix()
+			audio_samples.append({"seconds": elapsed, "seconds_since_mix": mix_age, "device": AudioServer.output_device})
+			_check(failures, mix_age >= 0.0 and mix_age < 2.0, "audio mixer alive cycle %d" % cycle)
 		_check(failures, game.save_game(), "save cycle %d" % cycle)
 		_check(failures, game.load_game(), "continue cycle %d" % cycle)
 		game._show_start_menu()
@@ -61,7 +66,7 @@ static func run(game) -> void:
 		peak_memory = maxi(peak_memory, int(Performance.get_monitor(Performance.MEMORY_STATIC)))
 		print("SOAK elapsed=%.1f cycle=%d memory=%d day=%d enemies=%d" % [elapsed, cycle, int(Performance.get_monitor(Performance.MEMORY_STATIC)), game.simulation_host.simulation.day_count, game.simulation_host.simulation.enemies.size()])
 	var report := FileAccess.open("user://release_check.json", FileAccess.WRITE)
-	report.store_string(JSON.stringify({"version": ProjectSettings.get_setting("application/config/version"), "duration_seconds": elapsed, "cycles": cycle, "baseline_memory": memory, "peak_memory": peak_memory, "failures": failures}, "\t"))
+	report.store_string(JSON.stringify({"version": ProjectSettings.get_setting("application/config/version"), "duration_seconds": elapsed, "cycles": cycle, "baseline_memory": memory, "peak_memory": peak_memory, "audio_driver": AudioServer.get_driver_name(), "audio_samples": audio_samples, "failures": failures}, "\t"))
 	report.close()
 	print("RELEASE_PACKAGE_PROBE %s cycles=%d seconds=%.1f" % ["PASS" if failures.is_empty() else "FAIL", cycle, elapsed])
 	game.queue_free()

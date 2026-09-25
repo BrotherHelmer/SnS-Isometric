@@ -469,7 +469,9 @@ func _rebuild_terrain() -> void:
 	)
 	boundary_floor.mesh = boundary_mesh
 	boundary_floor.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	boundary_floor.position.y = 0.20
+	# Raise exterior mist above the exposed slab edges in the isometric view.
+	# The shader discards the playable interior, preserving its low terrain.
+	boundary_floor.position.y = 2.0
 	var boundary_material := ShaderMaterial.new()
 	boundary_material.shader = BoundaryMistShader
 	boundary_material.set_shader_parameter("world_min_xz", _fog_world_min_xz())

@@ -14,7 +14,8 @@ try {
         $stdout = "$outputRoot/logs/$testName.stdout.txt"
         $stderr = "$outputRoot/logs/$testName.stderr.txt"
         $arguments = @('--headless', '--path', $workspaceRoot, '--log-file', "$outputRoot/logs/$testName.log", '--script', "res://tests/$testName.gd")
-        $process = Start-Process -FilePath $engine -ArgumentList $arguments -WindowStyle Hidden -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
+        $quotedArguments = $arguments | ForEach-Object { '"' + $_ + '"' }
+        $process = Start-Process -FilePath $engine -ArgumentList $quotedArguments -WindowStyle Hidden -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
         $timedOut = -not $process.WaitForExit($TimeoutSeconds * 1000)
         if ($timedOut) { $process.Kill(); $process.WaitForExit() }
         $output = (Get-Content -LiteralPath $stdout -Raw) + (Get-Content -LiteralPath $stderr -Raw)
