@@ -33,7 +33,7 @@ func _run() -> void:
 func _run_seed(seed_value: int) -> void:
 	var sim = Simulation.new(70, 70, seed_value, false, true)
 	var chooser = Fixture.new()
-	var queue = [Defs.BUILDING_HOUSE, Defs.BUILDING_LUMBER_CAMP, Defs.BUILDING_FARM, Defs.BUILDING_BAKERY, Defs.BUILDING_QUARRY, Defs.BUILDING_SAWMILL, Defs.BUILDING_HOUSE, Defs.BUILDING_BARRACKS, Defs.BUILDING_WATCHTOWER, Defs.BUILDING_WATCHTOWER]
+	var queue = [Defs.BUILDING_HOUSE, Defs.BUILDING_LUMBER_CAMP, Defs.BUILDING_FARM, Defs.BUILDING_BAKERY, Defs.BUILDING_QUARRY, Defs.BUILDING_SAWMILL, Defs.BUILDING_HOUSE, Defs.BUILDING_BARRACKS, Defs.BUILDING_WATCHTOWER, Defs.BUILDING_WATCHTOWER, Defs.BUILDING_WATCHTOWER]
 	var stage := 0
 	var pending := 0
 	var orders: Array = []
@@ -51,6 +51,8 @@ func _run_seed(seed_value: int) -> void:
 			if stage < queue.size():
 				var type: String = queue[stage]
 				var aim: Vector2i = sim.town_hall_position + (Vector2i(1, 1) if type == Defs.BUILDING_WATCHTOWER else Vector2i(7, 6))
+				if type == Defs.BUILDING_WATCHTOWER and stage == 10:
+					aim = sim.town_hall_position + Vector2i(5, 3)
 				var site: Vector2i = chooser._find_best_site(sim, type, aim)
 				if site.x >= 0:
 					var result: Dictionary = sim.request_build(type, site)

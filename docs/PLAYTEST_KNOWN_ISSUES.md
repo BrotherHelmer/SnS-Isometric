@@ -3,7 +3,7 @@
 - This candidate is not yet cleared for public Steam release. Steamworks setup and IDs are deferred at the owner's request.
 - Human first-session comprehension, unassisted full-match wins/losses, integrated-GPU performance and clean physical Windows-machine testing remain external gates.
 - A 60-minute test completed its gameplay checks but logged a Windows audio-device invalidation. Audio reconnection needs a listening check; a clean final-package soak remains required.
-- All three review seeds have produced command-only victories across strategy iterations. The latest combined bot run wins two of three; seed 424242 reaches Binding but loses its Town Hall. Human strategy and difficulty remain unvalidated.
+- The three-seed command-only bot now completes all three matches, including mid-Binding save/reload. Human strategy, difficulty and session length remain unvalidated.
 - The intended 35–55 minute session length is provisional. Automated checks and accelerated simulations do not establish whether the game is fun or well paced.
 - Controller, Steam Deck, Linux, achievements and Steam Cloud are not advertised as supported. The Windows renderer is Forward+; Compatibility is an unverified fallback.
 - Asset provenance records cover the KayKit runtime and project-synthesised audio; final branding and the exact distribution manifest still need owner sign-off before public publication.
