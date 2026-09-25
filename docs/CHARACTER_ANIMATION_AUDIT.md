@@ -1,0 +1,40 @@
+# Character Animation Audit
+
+## Runtime conventions
+
+- Pixel textures use nearest-neighbour filtering.
+- Every walking atlas has four horizontal frames. Idle holds frame 1; movement advances 0–3 across each simulation step so cadence scales with 1×, 2×, and 4× time.
+- Units are anchored at bottom-centre. Movement is interpolated between tile centres; the sprite origin does not bob.
+- Horizontal direction is mirrored from the next path segment or attack target. There is no authored north/south atlas in this demo.
+- Worker selection uses a 10 px radius ring; ordinary enemies and rival workers have no selection footprint. Health bars appear only after damage or during combat.
+- Source-frame and draw sizes are listed as `width × height` in pixels.
+
+## Coverage
+
+| Mobile type | Sprite / scene path | States presented in the demo | Temporary or missing states | Direction / frames / cadence | Runtime movement | Foot position, origin, scale | Selection footprint | Required correction after demo |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Opening settler | `assets/settlement/settler_walk_v2.png`; `Scenes/main.tscn` | Idle, walk-out, confused look, gather, carry/deliver, acknowledgement, completion | Scratch-head is represented by a restrained look/reaction pose, not a bespoke body-frame sequence; incapacitated removal has no corpse animation | Left/right mirror; 4 walk frames; 5.13 fps carrier cadence | 0.78 s/tile; 0.61 s/tile on road | Bottom-centre; 28×42 source to 20×30 draw | 10 px ring plus selected tile diamond | Add bespoke confused and delivery frames for a final art pass |
+| Carrier | `assets/settlement/settler_walk_v2.png` | Idle, walk, carry walk with visible crate, pickup, delivery, react, flee/shelter, hit recoil | No bespoke pickup/drop frame; no persistent incapacitated pose | Left/right mirror; 4 frames matched to each tile step | 0.78 s/tile; 0.61 s/tile on road | Bottom-centre; 28×42 to 20×30 | 10 px ring | Add dedicated lift/drop and incapacitated frames |
+| Woodcutter / clearer | `assets/settlement/settler_walk_v2.png` | Idle, walk, gather, chopping axe swing, carry, deliver, react, flee, hit | Axe and body action are procedural overlays; no death hold | Left/right mirror; 4 walk frames; ~4.21 fps off-road | 0.95 s/tile; 0.74 s/tile on road | Bottom-centre; 28×42 to 20×30 | 10 px ring | Replace overlay with authored two- or four-frame chop cycle |
+| Miner | `assets/settlement/settler_walk_v2.png` | Idle, walk, pick strike, carry, deliver, react, flee, hit | Pick strike is an overlay; no authored brace/death | Left/right mirror; 4 walk frames; ~4.21 fps off-road | 0.95 s/tile; 0.74 s/tile on road | Bottom-centre; 28×42 to 20×30 | 10 px ring | Author mining impact and recovery frames |
+| Sawyer | `assets/settlement/settler_walk_v2.png` | Idle, walk, sawing work, carry, deliver, react, flee, hit | Saw is a procedural work overlay; no bespoke injury/death | Left/right mirror; 4 walk frames | 0.95 s/tile; 0.74 s/tile on road | Bottom-centre; 28×42 to 20×30 | 10 px ring | Author paired saw motion if the role remains foregrounded |
+| Farmer / baker | `assets/settlement/settler_walk_v2.png` | Idle, walk, workplace activity, carry, deliver, react, flee, hit | Indoor production uses the shared worker pose; no dedicated knead/harvest cycles | Left/right mirror; 4 walk frames | 0.95 s/tile; 0.74 s/tile on road | Bottom-centre; 28×42 to 20×30; role palette tint | 10 px ring | Add profession-specific body frames during content expansion |
+| Builder | `assets/settlement/settler_walk_v2.png` | Idle, walk, build hammer swing, deliver, react, flee, hit | Hammer and strike are procedural; no dedicated completion flourish | Left/right mirror; 4 walk frames; movement-synchronised | 0.78–0.95 s/tile by worker role | Bottom-centre; 28×42 to 20×30 | 10 px ring | Add authored hammer anticipation/contact/recovery |
+| Soldier / guard | `assets/settlement/settler_walk_v2.png` | Idle, alert idle, walk/patrol, attack wind-up/contact/recovery, hit recoil/spark, shelter | Defend/brace is state-driven rather than a unique body atlas; defeated soldiers are removed without a death hold | Left/right mirror; 4 walk frames; 0.48 s procedural attack | 0.95 s/tile; 0.74 s/tile on road | Bottom-centre; 28×42 to 20×30; guard tint | 10 px ring | Bespoke guard atlas should add shield brace and death |
+| Player Sovereign | `assets/settlement/rivalry/sovereign_walk_v3.png` | Idle, four-frame walk, attack lean, hit flash, Wyrd extraction, claim interaction, incapacitation state, Town Hall recovery | Attack, channel and claim use overlays/progress rather than dedicated full-body frames; incapacitated body is hidden | Left/right mirror; 4 walk frames at 8 fps; idle holds planted frame | Continuous direct movement from rivalry tuning; animation scales with simulation clock | Bottom-centre; 48×72 source to 25×37.5 draw; 9 px shadow | Directly controlled; no oversized selection geometry | Author attack/channel/incapacitated atlas before a combat-focused trailer |
+| Rival Sovereign | `assets/settlement/rivalry/sovereign_walk_v3.png` | Idle, walk, attack, hit, extraction, incapacitation and timed recovery | Shares player atlas with realm tint; no bespoke rival silhouette or cardinal directions | Left/right mirror; 4 frames at 8 fps | Continuous AI movement | Bottom-centre; 48×72 to 25×37.5 | Not selectable | Distinct rival atlas is recommended for final readability |
+| Rival worker | `assets/settlement/settler_walk_v2.png` | Idle, walk to forest, chop, return, shelter | Carry load and hit/death are not separately authored | Left/right presentation; 4 frames at 5 fps | Continuous rivalry-worker movement | Bottom-centre; 28×42 to 20×30; realm tint | Not selectable | Add visible rival cargo and hit response |
+| Raider | `assets/settlement/threats/night_raider_walk_v2.png` | Idle, walk, attack anticipation/contact/recovery, hit recoil/spark | Death removes the entity without a held corpse frame | Left/right mirror; 4 locomotion frames; ~5.56 fps off-road | 0.72 s/tile; 0.56 s/tile on road | Bottom-centre; 38×46 source to 26×32 draw | None | Add authored attack and death strips |
+| Skitterer | `assets/settlement/threats/night_raider_walk_v2.png` | Idle, fast walk, attack, hit | Shared raider sheet at 0.72 scale; no unique death | Left/right mirror; 4 frames; cadence follows 0.374 s/tile | 0.374 s/tile; 0.292 s/tile on road | Bottom-centre; effective 18.7×23 draw; violet tint | None | A unique low-slung silhouette is the highest-priority enemy fallback |
+| Brute | `assets/settlement/threats/night_raider_walk_v2.png` | Idle, heavy walk, broad attack, hit | Shared raider sheet at 1.42 scale; no brace/death | Left/right mirror; 4 frames; cadence follows 1.066 s/tile | 1.066 s/tile; 0.831 s/tile on road | Bottom-centre; effective 36.9×45.4 draw; rust tint | None | Author a unique heavy atlas to avoid scaled-pixel softness |
+| Hexer | `assets/settlement/threats/night_raider_walk_v2.png` | Idle, walk, ranged anticipation, Wyrd beam/cast, hit | Shared body sheet; cast beam is procedural; no death strip | Left/right mirror; 4 frames; cadence follows 0.778 s/tile | 0.778 s/tile; 0.607 s/tile on road | Bottom-centre; effective 24.4×30.1 draw; cyan tint | None | Author a staff/cast silhouette and death frame |
+
+## Visual verification
+
+The motion reels under `artifacts/presentation_pass/motion/` were rendered from the live Godot scene at 1280×720:
+
+- `opening_sequence.png`: door, walk-out, confused reaction and first-order handoff.
+- `character_motion_reel.png`: settler/carrier, soldier, Sovereign, Raider, Skitterer, Brute and Hexer locomotion plus attacks.
+- `day_to_night_transition.png`: visual phase transition and raid activation.
+
+The implemented locomotion avoids static-sprite sliding and vertical bob substitutes. The principal remaining fallback is artistic breadth: several actions use inexpensive procedural weapon/tool overlays over the correct moving atlas, and enemy roles share one coherent atlas with scale and palette differentiation.

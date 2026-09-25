@@ -1,0 +1,1093 @@
+﻿{
+    "schema":  1,
+    "generated_utc":  "2026-08-22T11:13:08.3230898Z",
+    "source_manifest":  "phase1_3d_lab/assets/runtime/allowlist_manifest.json",
+    "policy":  "Production promotion of the Phase 1 curated allowlist. Raw vendor paths are forbidden in gameplay and presentation code.",
+    "files":  [
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_1_B_Color1.gltf",
+                      "bytes":  3058,
+                      "sha256":  "03F4773B06ADF252AC8CA0A9BFDC77F315C1F4036B6151796F110B4897E586C5"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_1_B_Color1.bin",
+                      "bytes":  19016,
+                      "sha256":  "5D4129BDC6F13A24E076F7FA870C6695DC20491F4820C54153FE9D1D90B40522"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_1_A_Color1.gltf.import",
+                      "bytes":  1198,
+                      "sha256":  "FB6F0673EEB030C4492AB675A736ECADD17443F45F78F08960D9C668D39DFA2A"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_1_C_Color1.gltf",
+                      "bytes":  3064,
+                      "sha256":  "FFB1E44646CD8DBE9902DD31BF94E64E1A3DE5523D1B1F819ACDBEF09B42D45F"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_1_C_Color1.bin",
+                      "bytes":  46296,
+                      "sha256":  "B5D131C607D96B71583E515A48E28C22B1C67831A0290C850AA32C8980480EED"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_1_B_Color1.gltf.import",
+                      "bytes":  1198,
+                      "sha256":  "2CBF5FA3F548472F313E9AB8EFFA91E63304A066C76590AC55FB8672E124EB9A"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_1_A_Color1.gltf",
+                      "bytes":  3061,
+                      "sha256":  "9D972EBA9D61FC563CB7C3248F1BE057190859CE2554AD2032DF27C3D09E06C6"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Rock_2_B_Color1.bin",
+                      "bytes":  1416,
+                      "sha256":  "F707450455FD603313FFE97D9EE13F0899432C977971ABE50B07CCE3CA4EA72D"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Rock_2_A_Color1.gltf.import",
+                      "bytes":  1198,
+                      "sha256":  "813A3B0DFA402A07E55985B88869DE5FC1C524B8C60DE7042BCCFF400747DF23"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Rock_2_A_Color1.gltf",
+                      "bytes":  3052,
+                      "sha256":  "BBE5254A4C13BE7F4AA017297A9458DB441E99234028AF378D29207D80BE4696"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_1_A_Color1.bin",
+                      "bytes":  17484,
+                      "sha256":  "76A10FFA74960D730F0895A2599E5D56CC50A553D6624A14422420EB9B083979"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Rock_2_B_Color1.gltf.import",
+                      "bytes":  1198,
+                      "sha256":  "8221DB756FE8069E8A3FFD5540234B43C9855CF6326E1A051B9E02D58BA96AEC"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Rock_2_B_Color1.gltf",
+                      "bytes":  3053,
+                      "sha256":  "0B48492D69655B4CDE7678D3582D045147E171F40EDF34F28E4FF81DB4A1F7CA"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_1_C_Color1.gltf.import",
+                      "bytes":  1198,
+                      "sha256":  "3D37D77191520046424EC36D2FEFDC4AEC9D27893F6DA03AB1AF215462C33B6B"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_3_A_Color1.bin",
+                      "bytes":  29740,
+                      "sha256":  "EA2F20E847BD3BCF748B9F1CF9932ABE45967DB8DCACFEAFAEA1F07E3DA6A2E9"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_2_C_Color1.gltf.import",
+                      "bytes":  1197,
+                      "sha256":  "B95D13A9057F2BB6E685FEA071B11A6449188D53E613FE8739198D96F796CBCE"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_2_C_Color1.gltf",
+                      "bytes":  3060,
+                      "sha256":  "55A4E60B889A4823B72F1741B78AD6E8D6DD3E3F43B74A19D840CA7C7B4B1F97"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_3_B_Color1.bin",
+                      "bytes":  29288,
+                      "sha256":  "C7B09E0FD302D2A96B02AAA7A5907F2A364A1E7287CE3CB3287406DAE331987B"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_3_A_Color1.gltf.import",
+                      "bytes":  1197,
+                      "sha256":  "9EFC0B6B97A940020353FD247914CA8069C3508659C5FB4C4C6467E75304A7CD"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_3_A_Color1.gltf",
+                      "bytes":  3061,
+                      "sha256":  "A5140F21978004544844DF4C2969625724C2C263E74F798716EA9E115216A230"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_2_C_Color1.bin",
+                      "bytes":  15440,
+                      "sha256":  "4FC63A4762F8AA024E777707522FB7D3E8CD599182B9392E7AC4E70E245286FF"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_2_A_Color1.gltf.import",
+                      "bytes":  1198,
+                      "sha256":  "79BA2DEF39C829080C32DE0C64B650FFECF30EAB58AA17332E8A77D3A7206BBE"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_2_A_Color1.gltf",
+                      "bytes":  3057,
+                      "sha256":  "793570B93CD350B935BC88C766317675890F102D157965D2ACA3D8DAEF5EE49B"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_2_A_Color1.bin",
+                      "bytes":  8192,
+                      "sha256":  "FD413AD809FF30939FAF1190194654892066ABA94F67EC6F96CE257FA5B34E35"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_2_B_Color1.gltf.import",
+                      "bytes":  1198,
+                      "sha256":  "5040ED22D4B95B4A368AAB59EA3287664ECD27E73612062F2EA469976D8078BE"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_2_B_Color1.gltf",
+                      "bytes":  3059,
+                      "sha256":  "3094D793C2625C2543C1C8106864426F6C61CFE13B2CFF0A2C133AEC23065408"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_2_B_Color1.bin",
+                      "bytes":  11688,
+                      "sha256":  "90E260B69154A83B1799D68778FB35DDEAAF5F0EB69AC67384C99770ED7BF821"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Grass_1_A_Color1.gltf",
+                      "bytes":  3058,
+                      "sha256":  "58686904164D636E8731544FBB6911BF1EBC068841FE6C127F0C509B1449212B"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Grass_1_A_Color1.bin",
+                      "bytes":  2056,
+                      "sha256":  "D293510BE3CA4A6062DC305C22A143BA134FC49AF65AABA064CC8F8D868D6C6E"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/forest_texture.png.import",
+                      "bytes":  981,
+                      "sha256":  "755A41838BC76D6D753D735DE4A9F6AC0E690B1709F6656B4C101F4509CCE366"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Grass_1_B_Color1.gltf",
+                      "bytes":  3064,
+                      "sha256":  "A11D2572B48595F1B05B560E347BE83E08AA4189A19686EA211C9207D343BE1D"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Grass_1_B_Color1.bin",
+                      "bytes":  6168,
+                      "sha256":  "217A485CA9F647A77E8CADB79972B2A4E04757547F05AAB7B3DFB70CCF02EB1A"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Grass_1_A_Color1.gltf.import",
+                      "bytes":  1200,
+                      "sha256":  "20A76A15B145851C3E2ACAC6EC05CBD6FB7F8000F63E0C256C0FED5F5DFE04CA"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/forest_texture.png",
+                      "bytes":  48679,
+                      "sha256":  "406C01E0AC1D3368FC7B26FF5FB0D3335BA5E48BD19A703540ED92EE3971EA39"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Bush_2_A_Color1.gltf.import",
+                      "bytes":  1198,
+                      "sha256":  "1A630C85B5B125BCAB689E74753BFC1881EDFAA6FAD96751917B53E084C46DBC"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Bush_2_A_Color1.gltf",
+                      "bytes":  3050,
+                      "sha256":  "C41284BA3191BDDA026380527EDF9FB0DCF03B5DD26C8779ED056EDB6526C444"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Bush_2_A_Color1.bin",
+                      "bytes":  1032,
+                      "sha256":  "156A986B87B097725A1C675EA20EEAF3F788014742DBF4B8F0FD2C69F27CAD98"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Bush_2_B_Color1.gltf.import",
+                      "bytes":  1198,
+                      "sha256":  "E92AF411B9540C77186BE9AF15A603567C5B68B91F45B6685E00D184F67A3C99"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Bush_2_B_Color1.gltf",
+                      "bytes":  3057,
+                      "sha256":  "A56841ACE35231C41B81F3038F5BD180FD0C6FFBD8BC0AB3070BD31E99E58AAD"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Bush_2_B_Color1.bin",
+                      "bytes":  2440,
+                      "sha256":  "B0F7B67B91B9696946E5AE616ABBE139811D0949049876ED43A5A4F69B970AA0"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Grass_1_B_Color1.gltf.import",
+                      "bytes":  1201,
+                      "sha256":  "96060E464A002E0D05C2516A530C866243AF6DEC4C811FEF3C20704A0E4FF87B"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Rock_1_B_Color1.bin",
+                      "bytes":  2784,
+                      "sha256":  "782CEF58CF202C5ED3F121219AA7492C36857F1D00C9BD2BCE13C8C6C8147D7E"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Rock_1_A_Color1.gltf.import",
+                      "bytes":  1198,
+                      "sha256":  "4A865DFAD50ED622FCCB72A9071CC725271E4ACE4363344CE32B4CC2BAB25BDC"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Rock_1_A_Color1.gltf",
+                      "bytes":  3032,
+                      "sha256":  "CA24326B9C24556227C68DF64933122F34A972CD38B6E95C53353FEFA97DBC80"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Rock_2_A_Color1.bin",
+                      "bytes":  840,
+                      "sha256":  "FFEE05221DDA59936BA6C94112B65BB3C8A38E938FBB219A2808A1590DAAB050"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Rock_1_B_Color1.gltf.import",
+                      "bytes":  1198,
+                      "sha256":  "1ABAF6A0625EE501C6EAF149663920131E92F82C8D007F549DBA53B585E48C66"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Rock_1_B_Color1.gltf",
+                      "bytes":  3035,
+                      "sha256":  "749F2DE085A5CEE1C91C5953CF04CF243D9B61D847E6006CF3D4EEEF5A35985A"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Rock_1_A_Color1.bin",
+                      "bytes":  2848,
+                      "sha256":  "1C94027B4B01E479F14C6A0288445F2EC74C4971BD5154095C4EA261DDEA5B95"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Grass_2_A_Color1.gltf.import",
+                      "bytes":  1201,
+                      "sha256":  "B89FADB6724C5323AB086AA1C2AFFAA7C2BCAB18D2886FA819FAF706031D2596"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Grass_2_A_Color1.gltf",
+                      "bytes":  3056,
+                      "sha256":  "FA822543A17721C40B3386557ED37AF6C44FD6D4CE6B4FC16F9187D69CDE8FE1"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Grass_2_A_Color1.bin",
+                      "bytes":  2056,
+                      "sha256":  "07FC84EDA0B374B3FD4AFED280452F0BE21F75C0E53FBF6778D3997C09832A64"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Grass_2_B_Color1.gltf.import",
+                      "bytes":  1201,
+                      "sha256":  "3934BE8BF4712D1D3ECF8E6BCB1BB4ECC756258825005043C6153636DE8B7F45"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Grass_2_B_Color1.gltf",
+                      "bytes":  3064,
+                      "sha256":  "C95C9AA402330CB1F1950A5C6FA467F9714D5EBEB257731BC4E0567951E08032"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Grass_2_B_Color1.bin",
+                      "bytes":  6168,
+                      "sha256":  "8A8A00EFC28A7EA1FA735579B72C55EE6D0DE7CEA4672AFA82A378DCADC70487"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Wood_Plank_A.gltf.import",
+                      "bytes":  1192,
+                      "sha256":  "8F254EF9E3439CCA35112D80043DFB07D6B6C6C054E3DB3F508B4CC243DC3CD1"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Wood_Plank_A.gltf",
+                      "bytes":  2998,
+                      "sha256":  "6793A656BF58F43BC272532A598F01EA82B3CADCE00300937D1267A79E6A231F"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Wood_Plank_A.bin",
+                      "bytes":  1960,
+                      "sha256":  "063B834CD5D82F4439DD321FAE06B0DCF77D0A45190A20DD553205866C4C3B1F"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/tools/axe.gltf.import",
+                      "bytes":  1161,
+                      "sha256":  "01B4EE9D27F5FFD71E61EDC2B3CA1E93AD6563A5D9DD35CA213532785F3E7A78"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/tools/axe.gltf",
+                      "bytes":  3023,
+                      "sha256":  "5761DDB06283A0075E5FDFE8665784488E6BC00AABCCA2134851C8EBAC1831E7"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/tools/axe.bin",
+                      "bytes":  22056,
+                      "sha256":  "AF3B83EF8AB49FE0272382310115C5DAACC37CF350AECC064812A3C2A2DEB086"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Wood_Planks_Stack_Small.gltf.import",
+                      "bytes":  1225,
+                      "sha256":  "0D51D5C986617C50B3C461008AA593D29FBF43AF906AF7FBB722968D1E730617"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Wood_Log_Stack.gltf",
+                      "bytes":  3073,
+                      "sha256":  "1730BDA0F010BD9772186940AAFF56CCDD7753F2682B8D1FB42452AEDA62F471"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Wood_Log_Stack.bin",
+                      "bytes":  191568,
+                      "sha256":  "42912884C56AFFE69539DA3CA4C604C711B7AAC882BB3C1AFF5C20B5F9248BF7"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Wood_Log_B.gltf.import",
+                      "bytes":  1186,
+                      "sha256":  "7BD63124DF96FF16418397F11F5C15DA18EB82D50F595E5501ADBBE6B7F5EE6D"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Wood_Planks_Stack_Small.gltf",
+                      "bytes":  3089,
+                      "sha256":  "40919A583027B72239CB23B86D6560799D24ECE07D988BD8C84490C3FC4BE212"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Wood_Planks_Stack_Small.bin",
+                      "bytes":  15376,
+                      "sha256":  "E7718185294FFA144582E8DF5E0C3CB0D9E23E7D175ADB1C2D935E66428A728C"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Wood_Log_Stack.gltf.import",
+                      "bytes":  1198,
+                      "sha256":  "78465F3B9C0BF9C01C3BE9C170DAAA24F4C5CA83001AB366AC20AA1A065BC9DE"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/tools/hammer.bin",
+                      "bytes":  14600,
+                      "sha256":  "74133DC5BE0278E6310DB3427B60325540D2214FB7FAA9AC339AC284BB709CD2"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/tools/shovel.gltf",
+                      "bytes":  3030,
+                      "sha256":  "B4AEC5F58A2574CB9A89CC19BFC81B3ED9EDB641272CEA1A42ED6430E5889AED"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/tools/shovel.bin",
+                      "bytes":  28860,
+                      "sha256":  "C7D64F1BE8BA7C70A7A8DACD556C17BA7A4903971C6A9FEC9C1354A852A8830E"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/tools/saw.gltf.import",
+                      "bytes":  1161,
+                      "sha256":  "C830E5FD071157AEA38B3ABAC45AFBCC0DE680EDD2CBD0DB0E5CD9B72F288D66"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/tools/tools_bits_texture.png.import",
+                      "bytes":  992,
+                      "sha256":  "9D7AA7BF5DDBBB8359ED1C679BA7E5A97E67CA76501902102FA582AA646BD499"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/tools/tools_bits_texture.png",
+                      "bytes":  28269,
+                      "sha256":  "E0663527C0C0A8E9F4DBA0BB15261C367DE31981CB3E3EC80F84BF6A5E47FC60"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/tools/shovel.gltf.import",
+                      "bytes":  1170,
+                      "sha256":  "799919629AB6B8C7899B9226A826BA417DC397061D9F53A30D41DC63EBCB930D"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/tools/saw.gltf",
+                      "bytes":  3020,
+                      "sha256":  "3AB6F3A679F4F9F79841F02BA8D65364C45C43C26CE91BA2C041CCBD55B54720"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/tools/pickaxe.bin",
+                      "bytes":  20968,
+                      "sha256":  "9466B3B3C20EB0B555288AF934800C39D9FF36568F2E8C7AF2A9C2BF9B73EBC2"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/tools/hammer.gltf.import",
+                      "bytes":  1169,
+                      "sha256":  "D736DAC33A2C91FF9442883AEFBAE38576D7237D4F27083E34B3F2C0A3188FA9"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/tools/hammer.gltf",
+                      "bytes":  3029,
+                      "sha256":  "C5D203D2C0E00E1D69B033943C01E7BC9C2A0F6A2FBBB4DE1D240CA1E23FE225"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/tools/saw.bin",
+                      "bytes":  25568,
+                      "sha256":  "970AE1AB92BE6D167429CC00BE1F95087F143F789B478362D6DF266D5A3EED39"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/tools/pickaxe.gltf.import",
+                      "bytes":  1173,
+                      "sha256":  "5063B5516DFC10CF2BDD612480B355AE75C9B26F9B94309DC03630D5B359B992"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/tools/pickaxe.gltf",
+                      "bytes":  3032,
+                      "sha256":  "4F3777249FDB9551A546BA66B997F948992787E4B5394EBE13CC1D7BF344A98B"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Iron_Bar.gltf",
+                      "bytes":  3040,
+                      "sha256":  "48D2B74B16284BA651CD77DBD79A43B6D912A203B342CA37FA8BCB030037723E"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Iron_Bar.bin",
+                      "bytes":  3848,
+                      "sha256":  "8727F658D7AAC4BDA834E6D55BE016A7FF3972F0088B565DF95A89ABC685B7B2"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_4_B_Color1.gltf.import",
+                      "bytes":  1198,
+                      "sha256":  "51B72A6207F27C03064BA5EABC793CB3117597FAA5B27B0066B30CD2F3C4A9C1"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Iron_Bars_Stack_Small.gltf",
+                      "bytes":  3071,
+                      "sha256":  "9107015B5C71560BCD48B6F2F0E67B436292C17904515380E14DA966B198F9DF"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Iron_Bars_Stack_Small.bin",
+                      "bytes":  23088,
+                      "sha256":  "EDC6429C44BBCBDF68E8CB5F283DD6A6E8F2B3C4205E95666C36850E57012A5A"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Iron_Bar.gltf.import",
+                      "bytes":  1180,
+                      "sha256":  "00C59E1C162C59E42DC3D0935A7AF909B68E989782B883FABCF522184CB90E48"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_4_B_Color1.gltf",
+                      "bytes":  3059,
+                      "sha256":  "7DAD365CCC9E9DA3E1CBCDBD5EC16B67F0058A3C76AAA06A1BFAA17C706F1CE5"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_4_A_Color1.bin",
+                      "bytes":  12568,
+                      "sha256":  "EEB22BDC0ECE9941865139476AFCAF5DADD8285751321770886D1A065B8512D6"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_3_B_Color1.gltf.import",
+                      "bytes":  1198,
+                      "sha256":  "9EE3C38599D600435DB94547DCF84031EC9451DCD7E4A11ACED6E7815D79F108"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_3_B_Color1.gltf",
+                      "bytes":  3060,
+                      "sha256":  "13F4EDE4272F07308D06DA5D6F6AB8FF894E3175ED964DE8BC356FA1A1CCF319"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_4_B_Color1.bin",
+                      "bytes":  16092,
+                      "sha256":  "155BE76B0EC5D12A246C6B686156A2FA0D8CA086A67EF156633B7DF681143D54"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_4_A_Color1.gltf.import",
+                      "bytes":  1198,
+                      "sha256":  "7255A6ACF00C6C7142A8FDFF3B2393986D19AA686C0546FA72D69B21A12FC4B7"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Tree_4_A_Color1.gltf",
+                      "bytes":  3061,
+                      "sha256":  "14F8F50AF9F9CF8D2BB488CAE15613F9E2ED6CE0002D2AA11721A2EFC2BA3010"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Iron_Bars_Stack_Small.gltf.import",
+                      "bytes":  1219,
+                      "sha256":  "FD435CBDE46E7A16CDF798516043A9134F8BB89E769ADDCBD38BAFC2E06BC256"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Wood_Log_A.gltf",
+                      "bytes":  3056,
+                      "sha256":  "39827330B7D77D528149BD57197B4204F72D471CC2CDA290FB4A18A6165A1E68"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Wood_Log_A.bin",
+                      "bytes":  40312,
+                      "sha256":  "CC8DE89A2079438987DF3B0157118B81BB506DD1A89367EC0273AB28E056E7A7"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Stone_Chunks_Small.gltf.import",
+                      "bytes":  1209,
+                      "sha256":  "3B00F10B408DB8DDE4AB7BEC56276836E0D86BF9E11C2C8B5F8FEF7AF75CDBDB"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Wood_Log_B.gltf",
+                      "bytes":  3051,
+                      "sha256":  "B40070E38B66887DFB658E825D7A7BF7B1F2DAF6938759D4708834773C4C6F40"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Wood_Log_B.bin",
+                      "bytes":  31000,
+                      "sha256":  "A752BC9E3F5F14603F8FBB37C3F88C559FD7BE61228BB434CCFCA4CEE6C29996"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Wood_Log_A.gltf.import",
+                      "bytes":  1186,
+                      "sha256":  "675BEA1E55156225A6008D77C1E9A5CA5F27BF37D7F9446BD09A6DEFF9868CF1"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Stone_Chunks_Small.gltf",
+                      "bytes":  3078,
+                      "sha256":  "C92409D663F1AF77164D74BF8B3522207249591F1F5D4E22B0F3FB5372781094"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Stone_Bricks_Stack_Small.bin",
+                      "bytes":  15580,
+                      "sha256":  "4258B0B71E90E0D55B7777D2DA86F69EBD147D87725830700C0D61D97702471F"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/resource_bits_texture.png.import",
+                      "bytes":  1005,
+                      "sha256":  "306FC98DF591E1EA81C90F4D292EC4DF2B429DCDD0611E53DEC3000B4DE9F1FC"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/resource_bits_texture.png",
+                      "bytes":  25730,
+                      "sha256":  "62A252ABA7BC9382EFFE48D93B976605D8FA70A3A40AF7FC52362F5CA89C135B"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Stone_Chunks_Small.bin",
+                      "bytes":  32188,
+                      "sha256":  "58C68F4E870CAC393CE76448D597707708C836F52461FECCC04182AC6DCC9EF1"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Stone_Bricks_Stack_Small.gltf.import",
+                      "bytes":  1227,
+                      "sha256":  "95A0708772C1D4D52C6DD13D41B44EF7E90EB80B7E89B68D0DF3A1F5B9850E11"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/resources/Stone_Bricks_Stack_Small.gltf",
+                      "bytes":  3090,
+                      "sha256":  "5EEA3328365F7C75CA76451216917B3F9F62209A06AF8AF06256001EA3538E19"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Bush_1_B_Color1.gltf.import",
+                      "bytes":  1198,
+                      "sha256":  "120E4FE766A3605F46A0D67F7B1D3F405AF7E7FF51A5CB8A38DE37D30D394C37"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/building_tower_A_green.bin",
+                      "bytes":  112860,
+                      "sha256":  "56FD1F8C7233706B77AA704A73DC65DFB178E706E0E33D41BDAF69B799B4AA9E"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/building_mine_green.gltf.import",
+                      "bytes":  1213,
+                      "sha256":  "D35CF4A3DB547B71F447CBD7E378DB7E768839F4A651C606BA8EE0EC8921F438"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/building_mine_green.gltf",
+                      "bytes":  3087,
+                      "sha256":  "2DDC0A7F59FC845CB1DD7A8D063D7D325CFFF5AA0D1ABEDEB0286C85D9D0E79D"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/crate_A_small.bin",
+                      "bytes":  7000,
+                      "sha256":  "F46DEBEB9AD1F44B174F9BD62C382412172676B1CDFA714D15E3B11227F1EEB3"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/building_tower_A_green.gltf.import",
+                      "bytes":  1222,
+                      "sha256":  "DDAF69F2E88D401EB7386ECA0DDA7B0D97763B4A74498A66139CCA77FDDE3091"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/building_tower_A_green.gltf",
+                      "bytes":  5052,
+                      "sha256":  "8D144181835E2069BDBC55FC53BBE1639A0DB6C9B005E0F21F71543151EBD5AC"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/building_mine_green.bin",
+                      "bytes":  66020,
+                      "sha256":  "E99C0EB333234832EE1E00372897A85AF91EB787DE32923BAA3D2B44B7051DED"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/building_home_A_green.gltf.import",
+                      "bytes":  1219,
+                      "sha256":  "F17DECA4AC13F0A309EFE72838AC0F306D8CE614B9ED9BACF38182114E371678"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/building_home_A_green.gltf",
+                      "bytes":  3093,
+                      "sha256":  "43EEC5E22564BEFC0AD5D283D92A577E0271682501C348AE3B22067E5B43A59E"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/building_home_A_green.bin",
+                      "bytes":  55348,
+                      "sha256":  "CD4992C75BF0C3EA3F21DE2F0CF14F7783B158AA6B94CC3D433848CECE0BFC04"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/building_lumbermill_green.gltf.import",
+                      "bytes":  1230,
+                      "sha256":  "6E22A40F54E0AA2187EF3C1C5314267EAF6E07EAE007D2FEF3F2BD398F830FAE"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/building_lumbermill_green.gltf",
+                      "bytes":  7365,
+                      "sha256":  "FBBFA52B3A53CF3AA0DF0F18F7A21709E7AE0C04D24862EC0E4B710F47DEBC7A"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/building_lumbermill_green.bin",
+                      "bytes":  166284,
+                      "sha256":  "94153BB2BEF6A9D72EBDD311E0E47D01A00703722C0717C6EB1FC463E5604B0C"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/crate_A_small.gltf",
+                      "bytes":  3059,
+                      "sha256":  "3A7FEE2B962949D44BDAC360405F2CD9C442BF41EEA65E057F08B6B2E2D6F6D8"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/weaponrack.gltf",
+                      "bytes":  3027,
+                      "sha256":  "E6985E05285AE219A0A6317522DEBB9D48C8B39334820E0C9694F195F1519BE5"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/weaponrack.bin",
+                      "bytes":  2940,
+                      "sha256":  "3773A0EAB3DA0C7526A13880B3DC7F2C8C42F97E5B8970D5BF5A522F0EA7F0EA"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/target.gltf",
+                      "bytes":  3016,
+                      "sha256":  "E92374D50C46B5816A1C118260D27AC49D3E52E8D7DE6B0B7A9326A69C43CC44"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Barbarian_barbarian_texture.png",
+                      "bytes":  14424,
+                      "sha256":  "F11434D3E5E4DF929DACD2C69D15734EFFB82BABF8176A80BB040D2007F5F882"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Barbarian.glb.import",
+                      "bytes":  1181,
+                      "sha256":  "2476B776ACE36A0E5C5938C380163A279CF128810736A37970347344E811B251"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Barbarian.glb",
+                      "bytes":  386648,
+                      "sha256":  "D37824A1D6E8E8AF57EF9AE4A87E9271C3986210FBC432FB44670749A577CCAC"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/target.bin",
+                      "bytes":  7112,
+                      "sha256":  "783DC41050451FB43EFAFC97B60BF486A50679BAC07A782C0BEB7AF9D05BBE2E"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/crate_long_A.gltf",
+                      "bytes":  3041,
+                      "sha256":  "36B6BC187C410F3A4D7EC1BD88161E20FFD43F4B3A952C14165CFB83F65A06FF"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/crate_long_A.bin",
+                      "bytes":  14204,
+                      "sha256":  "1FB1050D8DA5DFA703ED1D5A6C853682161DD299DFA23112941F625F63EAE1C3"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/crate_A_small.gltf.import",
+                      "bytes":  1195,
+                      "sha256":  "D1ADDB69F1D34652242D994505341A209952484D377A4454ECED89C187F77CE2"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/hexagons_medieval.png.import",
+                      "bytes":  993,
+                      "sha256":  "E67325D021155EC737B8A14B159E3B3083D2BECA4A3E1A31599B16FD9DB80ECC"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/hexagons_medieval.png",
+                      "bytes":  15783,
+                      "sha256":  "5301A06866BA3BE68DCC14CC429BD6D0F69004B72884283715D7E233F2E9782E"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/crate_long_A.gltf.import",
+                      "bytes":  1192,
+                      "sha256":  "2BC7D91917F6856437173743C6E436C480CF2A0CF33C730BB316D3FEE5439A60"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/animations/Rig_Medium/Rig_Medium_MovementBasic.glb.import",
+                      "bytes":  1237,
+                      "sha256":  "F4EE04F0E4258EA9CA746EAC247BF656DE3F42E8004B1C1D6C3F741F24395EF9"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/animations/Rig_Medium/Rig_Medium_MovementBasic.glb",
+                      "bytes":  689624,
+                      "sha256":  "11422AFD50ABF7E8C92EA107E2E0BC94ABD38023D6D15F55AD580347EFBFA29E"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/animations/Rig_Medium/Rig_Medium_MovementAdvanced.glb.import",
+                      "bytes":  1245,
+                      "sha256":  "B15C489CD4C62E13720D926EED4BE95D53010AC675C833BD6AAF6B6E39A54FFB"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/animations/Rig_Medium/Rig_Medium_Special.glb",
+                      "bytes":  924308,
+                      "sha256":  "74047DD2178FBED388656051664158E921B7BFC613ABB119860AEB7B646BD640"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/animations/Rig_Medium/Rig_Medium_Simulation.glb.import",
+                      "bytes":  1228,
+                      "sha256":  "035B3D62A5A287BC81BDE99744D435B33AA565E5989BC0F9F8F25EC68D5C93AE"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/animations/Rig_Medium/Rig_Medium_Simulation.glb",
+                      "bytes":  855904,
+                      "sha256":  "AB6FFEED40C8281DD0CE0506534EADF7385151F1C266643A10FA2A0F0A7BA3B1"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/animations/Rig_Medium/Rig_Medium_MovementAdvanced.glb",
+                      "bytes":  719628,
+                      "sha256":  "8B2317CF81E3F24149E4B791C27E1932BEBD46CD378ED962E7D27D642FAD8C56"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/animations/Rig_Medium/Rig_Medium_CombatRanged.glb",
+                      "bytes":  1014852,
+                      "sha256":  "7FEF1FC0E7B0FEAFD34B8E12D23F514C8C1F9D068047A691B854B56F1774DFF5"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/animations/Rig_Medium/Rig_Medium_CombatMelee.glb.import",
+                      "bytes":  1231,
+                      "sha256":  "A9F1FFD4EB46CE62250AAB2BEE4146EDD8B63FB0DE5E5C0EB9DCEFAEB8446FC3"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/animations/Rig_Medium/Rig_Medium_CombatMelee.glb",
+                      "bytes":  999416,
+                      "sha256":  "C55E6EC1C79E83AE21D46FE1CD921C1B64BE8B9A524A24517E51C6BA99231459"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/animations/Rig_Medium/Rig_Medium_General.glb.import",
+                      "bytes":  1219,
+                      "sha256":  "39DF737A644A10160035575CBEC62A21F6ACB6FBA5D0DDD2C6E85F5237C3F592"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/animations/Rig_Medium/Rig_Medium_General.glb",
+                      "bytes":  828240,
+                      "sha256":  "5F725C0F745F36078C7238968CD5C04843CBC6260689EB6E7F5E2BBD7FFDD7AD"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/animations/Rig_Medium/Rig_Medium_CombatRanged.glb.import",
+                      "bytes":  1234,
+                      "sha256":  "A8FA7AF314F25425DCA9ABEAA5E6C36E7855CADABEAA43EA21777494698ECC28"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/animations/Rig_Medium/Rig_Medium_Special.glb.import",
+                      "bytes":  1219,
+                      "sha256":  "BDDBD74D615B8E385F7F10F6BE78BE1C0B3F924E234A053CF2AF3DF6C4185C8D"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/building_bridge_A.gltf.import",
+                      "bytes":  1206,
+                      "sha256":  "70F5541753CECB42846581C846CC41352F242ADC82116EDC137D96F2702F75DE"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/building_bridge_A.gltf",
+                      "bytes":  3039,
+                      "sha256":  "7F3A7E8B3E72A66DEC70D6A00EB87E62D3CA5C6892B9B965C675CB9D193E4D29"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/building_bridge_A.bin",
+                      "bytes":  25576,
+                      "sha256":  "DC78350862E173E7D948DAB4DBB3E32234F3AB2302A149DA8D0C0DA9380040D5"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/building_castle_green.gltf.import",
+                      "bytes":  1218,
+                      "sha256":  "AD5834BA56BACA8043569289581EFA4718D33E1C9E1BC5EEAFEBB8AAB4DDA486"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/building_castle_green.gltf",
+                      "bytes":  3075,
+                      "sha256":  "6739F651DAF33B406C0ABB0B91AF49315059A0E70012BD01B77B30695F4BD98C"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/building_castle_green.bin",
+                      "bytes":  317732,
+                      "sha256":  "80DDE2497FDD208A8A9B29B8168533B1CBEF7AE05962B408459DCC6A0ABCD8FE"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/building_barracks_green.gltf",
+                      "bytes":  3081,
+                      "sha256":  "60C13C9844F88F96C7D1261AA4605EA9356B0A1CD820A23BDB9D2F6381174A1E"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/barrel.bin",
+                      "bytes":  15552,
+                      "sha256":  "FF1B034F1AC95B063A2BAA3D72A0AD0B33F25337F776E7A25FBC811D9C77DEE8"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/animations/Rig_Medium/Rig_Medium_Tools.glb.import",
+                      "bytes":  1213,
+                      "sha256":  "5C9C1A499C06E8F251A102934D989AA21DF4B4B30B49BA024A1D086C38EE97CF"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/animations/Rig_Medium/Rig_Medium_Tools.glb",
+                      "bytes":  1461204,
+                      "sha256":  "E3B62DC122C5073373376A846E354137ADD2088DDCCE8731C389FC5C20734AAD"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/building_barracks_green.bin",
+                      "bytes":  229676,
+                      "sha256":  "3F0F2BF64BB51FA16EEAB8C5A5FDBC7C7DEA9B248C12A6EE0BCDB0F490AC04FB"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/barrel.gltf.import",
+                      "bytes":  1174,
+                      "sha256":  "3ABB34F31C4EF2F1F0F9F6F79869BC4750648302E945A1AF957F0757D1D9A871"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/buildings/barrel.gltf",
+                      "bytes":  3042,
+                      "sha256":  "24673663EB53FFAB6C8DB612654856F051C4877BFC02EA25FEE89CD95EE4D100"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/farm/farmer_texture_A.png.import",
+                      "bytes":  985,
+                      "sha256":  "E99664370C6B530E368B19BBB14312BEFE3CF17B0AF4CB84CAF43E1BCCDEEFB1"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/farm/farmer_texture_A.png",
+                      "bytes":  12542,
+                      "sha256":  "81647C634126C536E3DF99A005102B048FF67650FE32A180CB522C9014BB14D6"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/farm/dirt_plot.gltf.import",
+                      "bytes":  1177,
+                      "sha256":  "4006A9B290D6CB9995B289893DA09B7C67D3B27ADA033058DA757A20F354AA36"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/farm/lettuce.gltf.import",
+                      "bytes":  1171,
+                      "sha256":  "BB0B4765332A9DCF977AE7C1F649156998F1ADE233945E90981C01FF79E24BDE"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/farm/lettuce.gltf",
+                      "bytes":  3029,
+                      "sha256":  "20D99FFD6D30975E569B9DA0DE92F9ACA0362ABC4C8080CCBD0889A16DEE796C"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/farm/lettuce.bin",
+                      "bytes":  16340,
+                      "sha256":  "1D24E6393E0FAF12E8063A97F5D65C05475E5AA505CC60679DD36F34746E2255"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/farm/dirt_plot.gltf",
+                      "bytes":  3022,
+                      "sha256":  "449D83962315FA9DE784C70AD530105428C734D9128E076F49BF91C04D9B9C45"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/farm/carrot.bin",
+                      "bytes":  10072,
+                      "sha256":  "CD8A199BA37018B6851AB206AA2851F032CCE50ADFF347E3EF2D68831086726B"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Rogue_rogue_texture.png.import",
+                      "bytes":  1000,
+                      "sha256":  "42148CF6C02EF3255267A4D9F48E579FC99C3099238A18B6B9F7AA436FCF2EE3"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Rogue_rogue_texture.png",
+                      "bytes":  15026,
+                      "sha256":  "2E2FC741E20E7E2C85B176C8143B49B769BCA0D2ED1A1CFC1807A758A0E4D3E1"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/farm/dirt_plot.bin",
+                      "bytes":  1472,
+                      "sha256":  "5EA8609E0420D9913D6BF2899B679EE25E861B975D99FDCBDABB2E8DE422B405"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/farm/carrot.gltf.import",
+                      "bytes":  1169,
+                      "sha256":  "E0173DDA2B54E87812DE90B572DB3DF9EA324C7018E34C995E96EDCF07DC563C"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/farm/carrot.gltf",
+                      "bytes":  3026,
+                      "sha256":  "A9BC1A0EC2CC255539283FE519E4D5C72BDC1F00542E0A6708FC36FE3DA6CEEB"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/farm/pitchfork.bin",
+                      "bytes":  18744,
+                      "sha256":  "F9FE06985F41202150F5E09D341C11DD064F08C4CB19C79708FA278C87C8755F"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Bush_1_A_Color1.gltf",
+                      "bytes":  3054,
+                      "sha256":  "BC6CF33DBED296A181D8AFBD82FFE1C44EE5E57CB095F9EFDF4B63E93C165B70"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Bush_1_A_Color1.bin",
+                      "bytes":  2352,
+                      "sha256":  "66BA041776959C19849954C9D2393528783461CA6DD11EBE1C1F6B9026B63C0C"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/farm/wheelbarrow_empty.gltf.import",
+                      "bytes":  1201,
+                      "sha256":  "B4E6A96D5EC1B1CE6E0BC9C0A431F0DCF1EB5791A01F72957612158A04469460"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Bush_1_B_Color1.gltf",
+                      "bytes":  3061,
+                      "sha256":  "523F15A4A27759251BA6C3D666D6B651804ED7A5A0DB8615454110651081D774"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Bush_1_B_Color1.bin",
+                      "bytes":  4656,
+                      "sha256":  "9FF9A26A0D1C7E468727C0AD2503BEE8462E971E71366739A18AC0A38C3648F0"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/nature/Bush_1_A_Color1.gltf.import",
+                      "bytes":  1198,
+                      "sha256":  "388BE0D438AC19170FD48D485C06600D2B16A657FC780BAC6EBE52581AEF108E"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/farm/wheelbarrow_empty.gltf",
+                      "bytes":  3059,
+                      "sha256":  "51421786D4E961120624A5AB9505EEC43F50DC3D1F920958F3CE5116C847F04D"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/farm/wheelbarrow.bin",
+                      "bytes":  34432,
+                      "sha256":  "880E503A3BB4DE190473264CB06F76D3A7F35FF02828C6B2795EBA1CA29EA1B1"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/farm/pitchfork.gltf.import",
+                      "bytes":  1177,
+                      "sha256":  "4FF54E029CF1A33AF6056BA9AAEC3D3B1ABF91BE984A220BE2980AD6F8A6A4A9"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/farm/pitchfork.gltf",
+                      "bytes":  3034,
+                      "sha256":  "2506E3289BC5B3506AD76B95F4D56699CBDE8988305BE4CDA8630B776041E6EC"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/farm/wheelbarrow_empty.bin",
+                      "bytes":  28664,
+                      "sha256":  "34720D29ADA804C92AA9DF610807C6086B7E770C870D0576F5837F593E2E3806"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/farm/wheelbarrow.gltf.import",
+                      "bytes":  1184,
+                      "sha256":  "3AB674550895B5C6CFB8A4610A35C7E14DBDF52E644B8BD583263F9324E9BCFF"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/farm/wheelbarrow.gltf",
+                      "bytes":  3044,
+                      "sha256":  "57F10D9E9298285260D1968627A9BE9B482890A91F6605E664C70D2C721A1957"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Knight.glb",
+                      "bytes":  341688,
+                      "sha256":  "E484370733824A0740683E7F6040AAE0D20E5EFD4107DDE1175D6A2AD7E2F199"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Farmer_B_farmer_texture_A.png.import",
+                      "bytes":  1018,
+                      "sha256":  "22A6EFB1EA20FB722B9622EC49013C214AEE5D7988B48E3185333B995ADE8A14"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Farmer_B_farmer_texture_A.png",
+                      "bytes":  12542,
+                      "sha256":  "81647C634126C536E3DF99A005102B048FF67650FE32A180CB522C9014BB14D6"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Knight_knight_texture.png.import",
+                      "bytes":  1005,
+                      "sha256":  "5B6B0906A98493FF62F201EF13AFAE6A6B96D4EAEF7A8B04812148B0CF4188A3"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Knight_knight_texture.png",
+                      "bytes":  12914,
+                      "sha256":  "028DB4D1CD8B3471E6BA21686515ABD4E36AE582F8B314B71AD2AB1FB5453B12"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Knight.glb.import",
+                      "bytes":  1171,
+                      "sha256":  "208029B94CC010D3668C6125E8AC5EC9F504FB17E4C84AB5CF163A7717E96380"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Farmer_B.glb.import",
+                      "bytes":  1178,
+                      "sha256":  "46F336B4A9AEAE36B9CE2B3CD2BBE34A45150C336557385FA60F4442AED3C47D"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Farmer_A.glb.import",
+                      "bytes":  1178,
+                      "sha256":  "A2368780957A1522EECC33FBB3645F3064EFE02FA04646D499858F4617C5DAB7"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Farmer_A.glb",
+                      "bytes":  334696,
+                      "sha256":  "1C0941FDEFF102B85EA61C62A2ED1EBF6512BE7DD92023B8561674A79530F21A"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Barbarian_barbarian_texture.png.import",
+                      "bytes":  1024,
+                      "sha256":  "24E6274F93086CEFD263E65C91F460703D8816DCC37485BA72A1F5081E2DA7AA"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Farmer_B.glb",
+                      "bytes":  390844,
+                      "sha256":  "1076ADCE6AFDA18F0D5F112FA63AF298E9E9C20BB2111697914BB55FB6CDBF33"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Farmer_A_farmer_texture_A.png.import",
+                      "bytes":  1018,
+                      "sha256":  "8FA981AE60452CC2C1397C684AEE2C9072B302F32765B36F81CEC68584FAD345"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Farmer_A_farmer_texture_A.png",
+                      "bytes":  12542,
+                      "sha256":  "81647C634126C536E3DF99A005102B048FF67650FE32A180CB522C9014BB14D6"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Mage.glb",
+                      "bytes":  352472,
+                      "sha256":  "1F7D891BDE50B879C70965F155B7B765B166DC3F8518E5ABB86C0002F191A26E"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Rogue_Hooded.glb",
+                      "bytes":  381432,
+                      "sha256":  "E8F3233C6DB190506FBEF3AD855683E6CB8BD7350DE637D923E14A08AEF088DC"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Rogue.glb.import",
+                      "bytes":  1169,
+                      "sha256":  "1585FD01B381A84838DF0EAA1DBA14B770BB5877FFCF344DE2669D61F75D4335"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Rogue.glb",
+                      "bytes":  409188,
+                      "sha256":  "CAE5D9B2F08D53F7B4AB2617D9F42F021C546EB10920455FDCD82A110867FAE4"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Rogue_Hooded_rogue_texture.png.import",
+                      "bytes":  1021,
+                      "sha256":  "33B2D32C0B6D0B835B1C26FC0A12ADB2FCCF1617F552ED171DAD0F57A70331DC"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Rogue_Hooded_rogue_texture.png",
+                      "bytes":  15026,
+                      "sha256":  "2E2FC741E20E7E2C85B176C8143B49B769BCA0D2ED1A1CFC1807A758A0E4D3E1"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Rogue_Hooded.glb.import",
+                      "bytes":  1190,
+                      "sha256":  "00E0EDC6A4B54CD3FDB289A795461C0BCDFBEA5F2BC78750A6DCC9A680CB694A"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Ranger_ranger_texture.png.import",
+                      "bytes":  1005,
+                      "sha256":  "3D56FF83A3C7F7B5933133D592A2A7542DC26B2325FD06DC02BF87D2F8048A20"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Mage_mage_texture.png.import",
+                      "bytes":  994,
+                      "sha256":  "6312D37FBF1DEFB4EDA791256ADE6E1F32305346CB3A1B1379B65880A20407D5"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Mage_mage_texture.png",
+                      "bytes":  14740,
+                      "sha256":  "9EF9672E93B231FC4E0E19238EDFAE3BE22513AAF634DF1898F45842CE6E4B5F"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Mage.glb.import",
+                      "bytes":  1166,
+                      "sha256":  "33D1B731ACC95A7C7DDA4BAD62F63291E1015A3A6A0D75796B35928C50DB4A22"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Ranger_ranger_texture.png",
+                      "bytes":  13248,
+                      "sha256":  "639CD0BA5106FBDF65370B52B9290091D3BD92FE267693ABC8DC474471BB800F"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Ranger.glb.import",
+                      "bytes":  1171,
+                      "sha256":  "C485B94CCFB6B7A9FFACD02AD5F22BA62F2BE0A26AE3FF3EE5509540D3D2FDBE"
+                  },
+                  {
+                      "runtime":  "assets/settlement3d/runtime/characters/Ranger.glb",
+                      "bytes":  484712,
+                      "sha256":  "3A0B0166B9D61D58DCAAA739C3CC0538BE46E00D2928DD5CB513D9A41770D2E9"
+                  }
+              ]
+}

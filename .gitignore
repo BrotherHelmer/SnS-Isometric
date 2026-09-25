@@ -9,6 +9,10 @@
 data_*/
 mono_crash.*.json
 
+# .NET generated files
+bin/
+obj/
+
 # OS junk
 .DS_Store
 Thumbs.db
@@ -24,6 +28,7 @@ desktop.ini
 assets/pro/
 
 # Export templates and builds
+/android/
 /export/
 *.pck
 *.zip
@@ -31,3 +36,11 @@ assets/pro/
 # IDE
 .vscode/
 .idea/
+
+# Local tool extractions
+.tools/
+
+# Generated release evidence, distributions, and preserved vendor downloads
+/artifacts/
+/dist/
+/assets/Kaykit/

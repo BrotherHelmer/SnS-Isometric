@@ -1,0 +1,31 @@
+class_name ProductionQualityProfile3D
+extends RefCounted
+
+const PROFILES := {
+	"recommended": {
+		"name": "recommended",
+		"foliage_density": 1.0,
+		"shadows": true,
+		"shadow_distance": 170.0,
+		"water_detail": 1.0,
+		"vfx_density": 1.0,
+		"animation_lod": 1.0,
+		"ambient_actor_budget": 0,
+		"anti_aliasing": "project_default",
+	},
+	"scalable_low": {
+		"name": "scalable_low",
+		"foliage_density": 0.45,
+		"shadows": false,
+		"shadow_distance": 80.0,
+		"water_detail": 0.35,
+		"vfx_density": 0.40,
+		"animation_lod": 0.60,
+		"ambient_actor_budget": 0,
+		"anti_aliasing": "disabled_by_launch_profile",
+	},
+}
+
+
+static func get_profile(profile_name: String) -> Dictionary:
+	return Dictionary(PROFILES.get(profile_name, PROFILES["recommended"])).duplicate(true)

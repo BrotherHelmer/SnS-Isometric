@@ -1,0 +1,20 @@
+SHARD & SOVEREIGN - INTERNAL PLAYTEST
+
+Godot Engine: see GODOT_COPYRIGHT.txt for the engine's MIT license,
+bundled component copyrights and license texts from the pinned engine.
+
+Runtime 3D models, textures and animation libraries: Kay Lousberg / KayKit.
+The preserved vendor licenses identify CC0 1.0.
+See ASSET_LEDGER.md for source archives, versions and recorded hashes.
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Audio: original project synthesis; see AUDIO_LICENSE_LEDGER.md.
+No third-party recordings or samples are identified in that ledger.
+
+Project scripts, shaders, title and branding are not licensed to recipients
+under the Godot or KayKit licenses by this notice. The project owner must
+confirm distribution rights and final branding before public publication.
+
+The exact candidate source and binary hashes are in build_manifest.json.
+Historical demo art, raw vendor archives and prototype projects are excluded
+from this candidate's selected-resource export.
