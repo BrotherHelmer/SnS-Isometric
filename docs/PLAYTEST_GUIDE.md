@@ -27,7 +27,13 @@ To remove a contesting rival Outpost, select it and choose **ASSAULT RIVAL OUTPO
 
 ## First session
 
-Build a House and a Lumber Camp near connected roads; watch the first delivery. Establish a Farm and Bakery for food, then a Quarry and Sawmill to support construction. Inspect stalled buildings for the reason. A Watchtower needs a trained soldier; a Barracks supplies recruits. Night 1 teaches the threat; later nights and Wyrd extraction raise the stakes. Outposts and Lumen support expansion and the Shard race.
+**Roads connect everything**: Extend roads from the Town Hall first, then place buildings beside them. Roads cost no resources but workers must construct them. The game shows valid placement areas (green highlights) when you select a building type.
+
+**Build the basics**: Start with a House and Lumber Camp near connected roads; watch the first delivery. Establish a Farm and Bakery for the food chain (Farm produces Wheat, Bakery converts it to Bread). If storage fills up, build a Storehouse to expand capacity for all resources.
+
+**Prepare for night**: Build a Watchtower and train a soldier at the Barracks before the first night. Night brings raiders; Houses shelter workers, and Watchtowers defend against attacks. Inspect stalled buildings for the reason.
+
+Later nights and Wyrd extraction raise the stakes. Outposts and Lumen support expansion and the Shard race.
 
 The current match-length hypothesis is 35–55 minutes; this is being tested. Pause and speed controls change wall-clock duration.
 

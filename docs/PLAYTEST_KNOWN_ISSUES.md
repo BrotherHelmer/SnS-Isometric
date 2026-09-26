@@ -12,3 +12,11 @@
 - The restricted development environment cannot read the Windows certificate store. An unrestricted save-safety run is clean; this exact environment error is recorded separately from game failures.
 
 See `docs/RELEASE_EXECUTION_STATUS.md` in the project for current validation results and remaining work.
+
+## Recent UX Improvements (post-playtest.4)
+
+**Road Connectivity**: Improved error messages now explicitly guide players to extend roads from the Town Hall before placing buildings. Valid placement areas are highlighted through the existing build pads system when a building type is selected.
+
+**Food & Storage**: Increased starting Bread (12→18) and Town Hall storage overflow (8→20) to provide better early-game breathing room. Added Storehouse and Watchtower to early objectives. Storage-full warnings now include hints about the Farm→Bakery→Storehouse chain.
+
+**Night Readability**: Improved night lighting visibility (ambient 0.38→0.50, sun energy 0.24→0.35, fill energy 0.24→0.32) while maintaining atmospheric mood. First-night warning now specifically mentions defensive buildings if no Watchtower exists. Reduced attack notification spam.

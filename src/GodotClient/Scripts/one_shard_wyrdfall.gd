@@ -218,6 +218,8 @@ static func objective_steps(objective_id: String, state: Dictionary) -> Array[St
 				steps.append("Build a Lumber Camp and clear nearby forest.")
 			if not bool(state.get("has_farm", false)):
 				steps.append("Build a Farm so food stays stable.")
+			if not bool(state.get("has_watchtower", false)):
+				steps.append("Build a Watchtower to defend against night raids.")
 			if steps.is_empty():
 				steps.append("Extend a road toward the Shard.")
 				steps.append("Build a Claimant Outpost on the frontier.")
