@@ -15,6 +15,8 @@ See `docs/RELEASE_EXECUTION_STATUS.md` in the project for current validation res
 
 ## Recent UX Improvements (post-playtest.4)
 
+**Early Defense** (playtest.6): Increased initial fog-of-war reveal radius (8→12 tiles) around the starting Town Hall. Players can now place a Watchtower in a sensible spot near the Town Hall during Day 1, before the first night raid arrives.
+
 **Road Connectivity**: Improved error messages now explicitly guide players to extend roads from the Town Hall before placing buildings. Valid placement areas are highlighted through the existing build pads system when a building type is selected.
 
 **Food & Storage**: Increased starting Bread (12→18) and Town Hall storage overflow (8→20) to provide better early-game breathing room. Added Storehouse and Watchtower to early objectives. Storage-full warnings now include hints about the Farm→Bakery→Storehouse chain.
