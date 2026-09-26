@@ -45,7 +45,7 @@ const ENEMY_ATTACK_STRIKE_REMAINING := 0.28
 const GUARD_ATTACK_ANIMATION_SECONDS := 0.48
 const GUARD_ATTACK_STRIKE_REMAINING := 0.24
 const GUARD_DAMAGE := 4
-const TOWN_HALL_OVERFLOW := 8
+const TOWN_HALL_OVERFLOW := 20
 const AUTO_SPUR_MAX_STEPS := 2
 const NOTICE_LOG_LIMIT := 40
 const BARRACKS_TRAIN_SECONDS := 18.0
@@ -255,6 +255,8 @@ func start_new_run(width: int = MAP_WIDTH, height: int = MAP_HEIGHT, seed_value:
 		{"id": "found", "text": "Choose a clear site and build the Town Hall", "complete": false},
 		{"id": "road", "text": "Extend the Road from the Town Hall", "complete": false},
 		{"id": "lumber", "text": "Build a Lumber Camp", "complete": false},
+		{"id": "storehouse", "text": "Build a Storehouse when storage fills up", "complete": false},
+		{"id": "watchtower", "text": "Build a Watchtower before night", "complete": false},
 		{"id": "wyrd", "text": "Harvest a Wyrd node with an Outpost", "complete": false},
 		{"id": "lumen", "text": "Extend connected Lumen toward the Shard", "complete": false},
 		{"id": "outpost", "text": "Build an Outpost toward the Shard", "complete": false},
@@ -807,7 +809,7 @@ func validate_placement(building_type: String, tile: Vector2i, rotation: int = 0
 			return _success("CLEARING REQUIRED — a short road will also be extended.")
 		return _success("Will extend a short road to this site.")
 
-	return _failure("RoadConnection", "Must touch your connected road network.")
+	return _failure("RoadConnection", "Must touch your connected road network. Extend roads from the Town Hall, then place buildings beside them.")
 
 
 func validate_road_route(route: Array) -> Dictionary:
@@ -1165,6 +1167,7 @@ func get_macro_objective() -> Dictionary:
 	var has_lumber := false
 	var has_house := false
 	var has_farm := false
+	var has_watchtower := false
 	var has_outpost := false
 	for building in buildings:
 		if bool(building.get("construction", false)):
@@ -1176,6 +1179,8 @@ func get_macro_objective() -> Dictionary:
 				has_house = true
 			Defs.BUILDING_FARM:
 				has_farm = true
+			Defs.BUILDING_WATCHTOWER:
+				has_watchtower = true
 			Defs.BUILDING_OUTPOST:
 				has_outpost = true
 	if rivalry != null:
@@ -1196,6 +1201,7 @@ func get_macro_objective() -> Dictionary:
 		"has_lumber": has_lumber,
 		"has_house": has_house,
 		"has_farm": has_farm,
+		"has_watchtower": has_watchtower,
 		"has_outpost": has_outpost,
 		"starter_ready": has_house and has_lumber and has_farm,
 		"has_road_toward_shard": _has_road_toward_shard(),
@@ -1562,13 +1568,14 @@ func _emit_routine_notices() -> void:
 		var status := String(building.get("status", "")).to_lower()
 		if "storage full" in status:
 			_notice_if_new("STORAGE FULL", "Build a Storehouse or free capacity.", "economy", 48.0)
+			_offer_onboarding("storehouse_needed", "STOREHOUSE ADDS STORAGE. Build one to expand capacity for all resources. Farm→Bakery produces Bread to feed the settlement.")
 		if String(building.get("type", "")) == Defs.BUILDING_BAKERY and "waiting for wheat" in status:
 			var wheat_elsewhere := get_available_resource(Defs.RESOURCE_WHEAT) > int(building.get("local_inventory", {}).get(Defs.RESOURCE_WHEAT, 0))
 			_notice_if_new("BAKERY STALLED", "Wheat is at the Farm — carriers will haul it." if wheat_elsewhere else "Needs Wheat.", "economy", 48.0)
 		if bool(building.get("construction", false)) and "clearing site" in status:
 			_notice_if_new("CLEARING SITE", "Woodcutters are opening the building footprint.", "construction", 20.0, "info")
 	if int(get_building_at_tile(town_hall_position).get("hp", 1)) < int(get_building_at_tile(town_hall_position).get("max_hp", 1)):
-		_notice_if_new("TOWN HALL UNDER ATTACK", "Defenders to the Town Hall.", "danger", 12.0, "critical")
+		_notice_if_new("TOWN HALL UNDER ATTACK", "Defenders to the Town Hall.", "danger", 24.0, "critical")
 
 
 func _tile_allows_clear_and_build(tile: Vector2i, building_type: String) -> bool:
@@ -5279,7 +5286,18 @@ func _update_time(delta: float) -> void:
 		night_warning_sent = true
 		path_grid_dirty = true
 		dusk_forecast = Wyrdfall.night_forecast(float(get_wyrd_pressure().get("value", 0.0)), day_count <= 1)
-		_offer_onboarding("dusk", "Night tests what you built. Wyrd Pressure sets how hard it hits.")
+		if day_count == 1:
+			var has_tower := false
+			for building in buildings:
+				if String(building.get("type", "")) == Defs.BUILDING_WATCHTOWER and not bool(building.get("construction", false)):
+					has_tower = true
+					break
+			if not has_tower:
+				_offer_onboarding("first_night", "NIGHT BRINGS RAIDERS. Build a Watchtower and train a soldier at the Barracks to defend against attacks. Houses shelter workers at night.")
+			else:
+				_offer_onboarding("dusk", "Night tests what you built. Wyrd Pressure sets how hard it hits.")
+		else:
+			_offer_onboarding("dusk", "Night tests what you built. Wyrd Pressure sets how hard it hits.")
 		_add_log("NIGHTFALL. Threat: %s. Likely activity: %s." % [
 			String(dusk_forecast.get("threat", "QUIET")),
 			String(dusk_forecast.get("activity", "Light"))
@@ -6156,11 +6174,15 @@ func _finish_run(won: bool, reason: String) -> void:
 func _update_objectives() -> void:
 	if _count_connected_roads() > 1:
 		_update_objective_flag("road")
-		_offer_onboarding("road", "Roads let carriers move goods. The settlement works through what you connect.")
+		_offer_onboarding("road", "ROADS CONNECT BUILDINGS. Extend roads from the Town Hall, then place buildings beside them. Roads are free but need worker construction.")
 	for building in buildings:
 		if String(building["type"]) == Defs.BUILDING_LUMBER_CAMP and not bool(building.get("construction", false)):
 			_update_objective_flag("lumber")
 			_offer_onboarding("production", "Workers harvest, carriers haul. Production needs access and storage.")
+		if String(building["type"]) == Defs.BUILDING_STOREHOUSE and not bool(building.get("construction", false)):
+			_update_objective_flag("storehouse")
+		if String(building["type"]) == Defs.BUILDING_WATCHTOWER and not bool(building.get("construction", false)):
+			_update_objective_flag("watchtower")
 		if String(building["type"]) == Defs.BUILDING_OUTPOST and not bool(building.get("construction", false)) and _footprint_touches_tile(building["position"], _building_footprint(building), shard_position):
 			_update_objective_flag("outpost")
 	if rivalry != null:
