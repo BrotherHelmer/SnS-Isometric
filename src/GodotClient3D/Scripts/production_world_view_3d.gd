@@ -445,10 +445,8 @@ func _rebuild_terrain() -> void:
 	terrain_mesh_instance = MeshInstance3D.new()
 	terrain_mesh_instance.name = "ContinuousTerrain"
 	terrain_mesh_instance.mesh = mesh
-	var material := StandardMaterial3D.new()
-	material.vertex_color_use_as_albedo = true
-	material.roughness = 0.96
-	material.metallic = 0.0
+	var material := ShaderMaterial.new()
+	material.shader = preload("res://src/GodotClient3D/Shaders/settlement_ground.gdshader")
 	terrain_mesh_instance.material_override = material
 	terrain_root.add_child(terrain_mesh_instance)
 	terrain_body = StaticBody3D.new()
@@ -522,7 +520,7 @@ func _add_terrain_cell(surface: SurfaceTool, tile: Vector2i) -> void:
 func _add_quad(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, normal: Vector3, color: Color) -> void:
 	for vertex in [a, b, c, a, c, d]:
 		surface.set_normal(normal)
-		surface.set_color(color)
+		surface.set_color(color.srgb_to_linear())
 		surface.add_vertex(vertex)
 
 
@@ -539,11 +537,10 @@ func _terrain_color(tile: Vector2i) -> Color:
 			if tile_type == Defs.TILE_ROCK: rock_weight += 1
 	var hash_a := float(_tile_hash(tile, 7) % 100) / 100.0
 	var hash_b := float(_tile_hash(tile, 13) % 100) / 100.0
-	var base := Color("#3a6a34")
-	base = base.lerp(Color("#4d7a38"), hash_a * 0.55)
-	base = base.lerp(Color("#2c5630"), hash_b * 0.28)
-	base = base.lerp(Color("#5c7436"), clampf(absf(hash_a - hash_b), 0.0, 0.16))
-	base = base.lerp(Color("#2f5530"), clampf(float(tree_weight) / 24.0, 0.0, 0.38))
+	var base := Color("#586d4b")
+	base = base.lerp(Color("#67774f"), hash_a * 0.12)
+	base = base.lerp(Color("#506548"), hash_b * 0.08)
+	base = base.lerp(Color("#465941"), clampf(float(tree_weight) / 24.0, 0.0, 0.38))
 	base = base.lerp(Color("#55574d"), clampf(float(rock_weight) / 22.0, 0.0, 0.46))
 	if String(simulation.get_tile(tile)) == Defs.TILE_SHARD:
 		base = Color("#465963")
@@ -1525,8 +1522,8 @@ func _sync_fog(force: bool) -> void:
 		fog_material = ShaderMaterial.new()
 		fog_material.shader = FogShader
 		fog_material.set_shader_parameter("visibility_texture", fog_visibility_texture)
-		fog_material.set_shader_parameter("unknown_color", Vector3(0.055, 0.10, 0.088))
-		fog_material.set_shader_parameter("mist_color", Vector3(0.08, 0.14, 0.12))
+		fog_material.set_shader_parameter("unknown_color", Vector3(0.012, 0.025, 0.029))
+		fog_material.set_shader_parameter("mist_color", Vector3(0.021, 0.038, 0.043))
 		fog_material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
 		fog_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
 		fog_material.render_priority = 20

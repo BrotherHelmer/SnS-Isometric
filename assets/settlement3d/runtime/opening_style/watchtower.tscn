@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/watchtower.res" id="1_hs6k4"]
+
+[node name="Watchtower" type="Node3D" unique_id=1268057343]
+
+[node name="Model" type="MeshInstance3D" parent="." unique_id=1990379052]
+mesh = ExtResource("1_hs6k4")

@@ -26,6 +26,7 @@ const CLIP_BY_STATE := {
 
 static var _shared_libraries: Dictionary = {}
 static var _libraries_ready := false
+static var _cloth_materials: Dictionary = {}
 static var _shared_state_machine: AnimationNodeStateMachine
 
 var entity_id := 0
@@ -183,14 +184,12 @@ func set_selected(value: bool) -> void:
 
 func set_presentation_paused(value: bool) -> void:
 	presentation_paused = value
-	if animation_tree != null:
-		animation_tree.active = not value and animation_lod_enabled
+	# This tree advances manually. Deactivating it resets playback to Start on
+	# resume, leaving the imported rest pose visible instead of an idle pose.
 
 
 func set_animation_lod_enabled(value: bool) -> void:
 	animation_lod_enabled = value
-	if animation_tree != null:
-		animation_tree.active = value and not presentation_paused
 
 
 func retire(seconds := 1.15) -> void:
@@ -312,6 +311,7 @@ func _build_character() -> void:
 		push_error("Production character asset unavailable for %s" % worker_type)
 		return
 	character_model = packed.instantiate()
+	_apply_settlement_materials(character_model)
 	character_model.name = "CharacterModel"
 	character_model.scale = Vector3.ONE * ScaleProfile.CHARACTER_MODEL_SCALE
 	character_model.position.y = ScaleProfile.CHARACTER_GROUND_OFFSET
@@ -344,8 +344,29 @@ func _build_character() -> void:
 	set_cargo(current_cargo, current_cargo_amount)
 
 
+func _apply_settlement_materials(node: Node) -> void:
+	if node is MeshInstance3D:
+		var instance := node as MeshInstance3D
+		for surface in instance.mesh.get_surface_count():
+			var original := instance.get_active_material(surface) as StandardMaterial3D
+			if original == null: continue
+			var key: Material = original
+			if not _cloth_materials.has(key):
+				var material := ShaderMaterial.new()
+				material.shader = preload("res://src/GodotClient3D/Shaders/settlement_character.gdshader")
+				material.set_shader_parameter("base_color", original.albedo_color)
+				material.set_shader_parameter("has_texture", original.albedo_texture != null)
+				if original.albedo_texture != null:
+					material.set_shader_parameter("palette_texture", original.albedo_texture)
+				_cloth_materials[key] = material
+			instance.set_surface_override_material(surface, _cloth_materials[key])
+	for child in node.get_children():
+		_apply_settlement_materials(child)
+
+
+
 func _update_manual_animation(delta: float) -> void:
-	if presentation_paused or animation_tree == null or not animation_tree.active:
+	if presentation_paused or not animation_lod_enabled or animation_tree == null or not animation_tree.active:
 		return
 	animation_elapsed += delta
 	if animation_elapsed < animation_update_interval:

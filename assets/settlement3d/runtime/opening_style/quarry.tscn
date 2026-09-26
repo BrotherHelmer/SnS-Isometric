@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/quarry.res" id="1_2rfr7"]
+
+[node name="Quarry" type="Node3D" unique_id=1532895956]
+
+[node name="Model" type="MeshInstance3D" parent="." unique_id=1088401396]
+mesh = ExtResource("1_2rfr7")

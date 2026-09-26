@@ -36,20 +36,20 @@ const ANIMATION_LIBRARIES := {
 }
 
 const BUILDINGS := {
-	"TOWN_HALL": ROOT + "/buildings/building_castle_green.gltf",
-	"HOUSE": ROOT + "/buildings/building_home_A_green.gltf",
-	"LUMBER_CAMP": ROOT + "/buildings/building_lumbermill_green.gltf",
-	"SAWMILL": ROOT + "/buildings/building_lumbermill_green.gltf",
-	"QUARRY": ROOT + "/buildings/building_mine_green.gltf",
-	"FARM": ROOT + "/buildings/building_home_A_green.gltf",
-	"BAKERY": ROOT + "/buildings/building_home_A_green.gltf",
-	"STOREHOUSE": ROOT + "/buildings/building_home_A_green.gltf",
-	"WATCHTOWER": ROOT + "/buildings/building_tower_A_green.gltf",
-	"BARRACKS": ROOT + "/buildings/building_barracks_green.gltf",
+	"TOWN_HALL": ROOT + "/opening_style/town_hall.tscn",
+	"HOUSE": ROOT + "/opening_style/house.tscn",
+	"LUMBER_CAMP": ROOT + "/opening_style/lumber_camp.tscn",
+	"SAWMILL": ROOT + "/opening_style/lumber_camp.tscn",
+	"QUARRY": ROOT + "/opening_style/quarry.tscn",
+	"FARM": ROOT + "/opening_style/house.tscn",
+	"BAKERY": ROOT + "/opening_style/bakery.tscn",
+	"STOREHOUSE": ROOT + "/opening_style/storehouse.tscn",
+	"WATCHTOWER": ROOT + "/opening_style/watchtower.tscn",
+	"BARRACKS": ROOT + "/opening_style/barracks.tscn",
 	"WALL": ROOT + "/buildings/building_bridge_A.gltf",
-	"LUMEN_PILLAR": ROOT + "/resources/Iron_Bar.gltf",
-	"CLAIMANT_OUTPOST": ROOT + "/buildings/building_tower_A_green.gltf",
-	"ENEMY_CAMP": ROOT + "/buildings/building_castle_green.gltf",
+	"LUMEN_PILLAR": ROOT + "/opening_style/lumen_pillar.tscn",
+	"CLAIMANT_OUTPOST": ROOT + "/opening_style/watchtower.tscn",
+	"ENEMY_CAMP": ROOT + "/opening_style/enemy_camp.tscn",
 }
 
 const TOOLS := {
@@ -64,12 +64,16 @@ const CARGO := {
 	"wood": ROOT + "/resources/Wood_Log_A.gltf",
 	"planks": ROOT + "/resources/Wood_Plank_A.gltf",
 	"stone": ROOT + "/resources/Stone_Chunks_Small.gltf",
-	"wheat": ROOT + "/farm/carrot.gltf",
+	"wheat": ROOT + "/opening_style/wheat.tscn",
 	"bread": ROOT + "/buildings/crate_A_small.gltf",
 	"wyrd": ROOT + "/resources/Iron_Bar.gltf",
 }
 
 const WORKYARD_PROPS := {
+	"wheat_crop": ROOT + "/opening_style/wheat.tscn",
+	"lantern": ROOT + "/opening_style/lantern.tscn",
+	"fence": ROOT + "/opening_style/fence.tscn",
+	"cart": ROOT + "/opening_style/cart.tscn",
 	"wood_stack": ROOT + "/resources/Wood_Log_Stack.gltf",
 	"plank_stack": ROOT + "/resources/Wood_Planks_Stack_Small.gltf",
 	"stone_stack": ROOT + "/resources/Stone_Bricks_Stack_Small.gltf",
@@ -78,43 +82,21 @@ const WORKYARD_PROPS := {
 	"long_crate": ROOT + "/buildings/crate_long_A.gltf",
 	"pitchfork": ROOT + "/farm/pitchfork.gltf",
 	"dirt_plot": ROOT + "/farm/dirt_plot.gltf",
-	"carrot": ROOT + "/farm/carrot.gltf",
-	"lettuce": ROOT + "/farm/lettuce.gltf",
+	"carrot": ROOT + "/opening_style/wheat.tscn",
+	"lettuce": ROOT + "/opening_style/wheat.tscn",
 	"wheelbarrow": ROOT + "/farm/wheelbarrow.gltf",
 	"work_axe": ROOT + "/tools/axe.gltf",
 	"weaponrack": ROOT + "/buildings/weaponrack.gltf",
 	"training_target": ROOT + "/buildings/target.gltf",
 }
 
-const TREES := [
-	ROOT + "/nature/Tree_1_A_Color1.gltf",
-	ROOT + "/nature/Tree_1_B_Color1.gltf",
-	ROOT + "/nature/Tree_1_C_Color1.gltf",
-	ROOT + "/nature/Tree_2_A_Color1.gltf",
-	ROOT + "/nature/Tree_2_B_Color1.gltf",
-	ROOT + "/nature/Tree_2_C_Color1.gltf",
-	ROOT + "/nature/Tree_3_A_Color1.gltf",
-	ROOT + "/nature/Tree_3_B_Color1.gltf",
-]
+const TREES := [ROOT + "/opening_style/fir.tscn", ROOT + "/opening_style/broadleaf.tscn"]
 
-const ROCKS := [
-	ROOT + "/nature/Rock_1_A_Color1.gltf",
-	ROOT + "/nature/Rock_1_B_Color1.gltf",
-	ROOT + "/nature/Rock_2_A_Color1.gltf",
-	ROOT + "/nature/Rock_2_B_Color1.gltf",
-]
+const ROCKS := [ROOT + "/opening_style/rocks.tscn"]
 
-const UNDERSTORY := [
-	ROOT + "/nature/Bush_1_A_Color1.gltf",
-	ROOT + "/nature/Bush_1_B_Color1.gltf",
-	ROOT + "/nature/Grass_1_A_Color1.gltf",
-	ROOT + "/nature/Grass_2_B_Color1.gltf",
-]
+const UNDERSTORY := [ROOT + "/opening_style/bush.tscn", ROOT + "/opening_style/grass.tscn"]
 
-const GRASS := [
-	ROOT + "/nature/Grass_1_A_Color1.gltf",
-	ROOT + "/nature/Grass_2_B_Color1.gltf",
-]
+const GRASS := [ROOT + "/opening_style/grass.tscn"]
 
 
 static func building_path(building_type: String) -> String:

@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/lumen_pillar.res" id="1_mae3g"]
+
+[node name="LumenPillar" type="Node3D" unique_id=1029484723]
+
+[node name="Model" type="MeshInstance3D" parent="." unique_id=19191913]
+mesh = ExtResource("1_mae3g")

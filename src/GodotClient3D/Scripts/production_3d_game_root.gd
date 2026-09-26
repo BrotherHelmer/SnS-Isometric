@@ -121,6 +121,7 @@ var build_category_sections: Dictionary = {}
 var debug_info_button: Button
 var current_build_category := "ESSENTIALS"
 var startup_overlay: Control
+var menu_backdrop: TextureRect
 var seed_edit: LineEdit
 var quality_select: OptionButton
 var build_buttons: Dictionary = {}
@@ -497,6 +498,7 @@ func _sync_presentation() -> void:
 
 
 func _create_lighting() -> void:
+	get_viewport().msaa_3d = Viewport.MSAA_2X if bool(quality_profile.get("shadows", true)) else Viewport.MSAA_DISABLED
 	var environment_node := WorldEnvironment.new()
 	environment_node.name = "ShardlitEnvironment"
 	var environment := Environment.new()
@@ -511,9 +513,12 @@ func _create_lighting() -> void:
 	sky_material_value.ground_horizon_color = Color("#14221c")
 	sky.sky_material = sky_material_value
 	environment.sky = sky
-	environment.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.ambient_light_energy = 0.56
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	environment.ssao_enabled = bool(quality_profile.get("shadows", true))
+	environment.ssao_radius = 1.5
+	environment.ssao_intensity = 1.3
 	environment.adjustment_enabled = true
 	environment.adjustment_saturation = 1.04
 	environment.adjustment_contrast = 1.05
@@ -2118,16 +2123,25 @@ func _create_start_menu(root: Control) -> void:
 	startup_overlay.color = Color(0.012, 0.018, 0.028, 0.28)
 	startup_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	root.add_child(startup_overlay)
+	menu_backdrop = TextureRect.new()
+	menu_backdrop.name = "TitleArtwork"
+	menu_backdrop.texture = preload("res://assets/settlement3d/runtime/interface/title_settlement_v1.png")
+	menu_backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	menu_backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	menu_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	menu_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	startup_overlay.add_child(menu_backdrop)
 
 	menu_card = _menu_panel("StartPanel", Vector2(-180, -220), Vector2(360, 440))
 	startup_overlay.add_child(menu_card)
+	menu_card.add_theme_stylebox_override("panel", Identity.panel_style(Color(0.018, 0.035, 0.044, 0.84), Color(0.65, 0.53, 0.32, 0.45), 10))
 	var menu_box := _menu_box(menu_card)
 	var title := Label.new()
 	title.name = "GameTitle"
-	title.text = "SHARDS & SOVEREIGN"
+	title.text = "SHARD &\nSOVEREIGN"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	Identity.apply_label(title, "title")
-	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_font_size_override("font_size", 36)
 	menu_box.add_child(title)
 	var rule := ColorRect.new()
 	rule.custom_minimum_size = Vector2(0, 1)
@@ -2311,6 +2325,13 @@ func _menu_action(host: VBoxContainer, node_name: String, text: String, height: 
 
 func _show_main_menu_card() -> void:
 	menu_card.visible = true
+	menu_backdrop.visible = not play_has_begun
+	var feedback := menu_card.find_child("FeedbackBundle", true, false) as Button
+	if feedback != null:
+		feedback.visible = play_has_begun
+	var quit_button := menu_card.find_child("QuitGame", true, false) as Button
+	if quit_button != null:
+		quit_button.text = "SAVE & QUIT" if play_has_begun else "QUIT"
 	new_realm_card.visible = false
 	settings_card.visible = false
 	if continue_button != null and simulation_host.simulation != null:
@@ -2537,8 +2558,11 @@ func _apply_menu_quality() -> void:
 		return
 	var profile_name := String(quality_select.get_selected_metadata())
 	quality_profile = QualityProfile.get_profile(profile_name)
+	get_viewport().msaa_3d = Viewport.MSAA_2X if bool(quality_profile.get("shadows", true)) else Viewport.MSAA_DISABLED
 	if sun_light != null:
 		sun_light.shadow_enabled = bool(quality_profile.get("shadows", true))
+	if environment_resource != null:
+		environment_resource.ssao_enabled = bool(quality_profile.get("shadows", true))
 
 
 func _show_start_menu() -> void:
@@ -2679,7 +2703,12 @@ func _update_day_night_lighting() -> void:
 
 
 func _apply_lighting_palette(palette: Dictionary) -> void:
+	var road_brightness := clampf(float(palette.get("sun_energy", 1.1)) * 0.68 + float(palette.get("ambient", 0.5)) * 0.6, 0.22, 1.0)
+	var road_tint := Color.WHITE.lerp(palette.get("sun_color", Color.WHITE), 0.25) * road_brightness
+	road_tint.a = 1.0
+	ProductionRoadView3D.set_lighting(road_tint)
 	environment_resource.ambient_light_energy = float(palette.get("ambient", 0.5))
+	environment_resource.ambient_light_color = palette.get("fill_color", Color("#849aaf"))
 	environment_resource.fog_density = float(palette.get("fog_density", 0.003))
 	environment_resource.fog_light_color = palette.get("fog_color", Color("#c8c2a5"))
 	environment_resource.fog_light_energy = float(palette.get("fog_energy", 0.7))

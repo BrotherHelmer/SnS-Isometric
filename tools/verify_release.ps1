@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 $workspaceRoot = Split-Path -Parent $PSScriptRoot
 $engine = Join-Path $workspaceRoot '.tools/godot-4.7/Godot_v4.7-stable_win64_console.exe'
 $outputRoot = Join-Path $workspaceRoot 'artifacts/release_candidate'
-$tests = @('release_save_safety', 'release_logistics_safety', 'release_session_safety', 'release_outpost_assault', 'phase4_2_parse_smoke', 'godot_rebuild_smoke', 'godot_rivalry_smoke', 'phase8_bakery_haul', 'phase4_wyrdfall_smoke', 'phase4_full_run_harness', 'phase4_2_human_playtest_rescue', 'phase6_presence', 'phase7_review_evidence', 'phase5_start_menu_layout', 'phase5_settlement_speak', 'phase3_ui_interaction_smoke', 'phase3_2_real_playthrough')
+$tests = @('release_save_safety', 'release_logistics_safety', 'release_session_safety', 'release_outpost_assault', 'release_presentation_regressions', 'opening_style_models', 'settlement_style_capture', 'phase4_2_parse_smoke', 'godot_rebuild_smoke', 'godot_rivalry_smoke', 'phase8_bakery_haul', 'phase4_wyrdfall_smoke', 'phase4_full_run_harness', 'phase4_2_human_playtest_rescue', 'phase6_presence', 'phase7_review_evidence', 'phase5_start_menu_layout', 'phase5_settlement_speak', 'phase3_ui_interaction_smoke', 'phase3_2_real_playthrough')
 New-Item -ItemType Directory -Force -Path "$outputRoot/logs", "$outputRoot/test_users" | Out-Null
 $oldAppData = $env:APPDATA
 $results = @()

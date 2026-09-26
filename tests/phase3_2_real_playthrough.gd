@@ -5,6 +5,8 @@ const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
 const Fixture = preload("res://src/GodotClient3D/Scripts/production_demo_fixture.gd")
 const Tuning = preload("res://src/GodotClient/Scripts/one_shard_rivalry_tuning.gd")
 
+const Identity = preload("res://src/GodotClient3D/Scripts/production_identity.gd")
+
 const SAVE_PATH := "res://artifacts/phase3_2/persistence/eighteen_step_playthrough.json"
 
 
@@ -94,7 +96,7 @@ func _run() -> void:
 	game._sync_presentation()
 	game._update_day_night_lighting()
 	await process_frame
-	_check(failures, simulation.is_night and game.sun_light.light_energy <= 0.12, "10. night is obviously darker than day without HUD text")
+	_check(failures, simulation.is_night and game.sun_light.light_energy <= float(Identity.LIGHTING["day"]["sun_energy"]) * 0.25, "10. night is obviously darker than day without HUD text")
 	_check(failures, _occupied_building_lights_on(game), "11. occupied buildings emit warm night lights")
 	_check(failures, _night_guard_visible(simulation, game), "12. night guards are alert or on patrol")
 	print("P32_PLAY 12 night sun=%.3f lights=%s" % [game.sun_light.light_energy, _occupied_building_lights_on(game)])

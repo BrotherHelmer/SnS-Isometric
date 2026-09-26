@@ -142,7 +142,7 @@ func _create_wall_model() -> void:
 	var mask := int(last_snapshot.get("wall_mask", 0))
 	if mask == 0:
 		mask = 5
-	var stone := _material(Color("#7c7d70"), 0.0)
+	var stone := _material(Color("#a99d81"), 0.0)
 	for index in 4:
 		if mask & (1 << index) == 0:
 			continue
@@ -150,16 +150,25 @@ func _create_wall_model() -> void:
 		var mesh := BoxMesh.new()
 		mesh.size = Vector3(0.70, 1.95, 2.25)
 		segment.mesh = mesh
-		segment.position = Vector3(0.0, 0.98, -1.05)
+		segment.position = Vector3(0.0, 0.98, -1.05).rotated(Vector3.UP, float(index) * PI * 0.5)
 		segment.rotation.y = float(index) * PI * 0.5
 		segment.material_override = stone
 		model_root.add_child(segment)
+		for merlon_index in 3:
+			var merlon := MeshInstance3D.new()
+			merlon.name = "Crenellation"
+			var crown := BoxMesh.new()
+			crown.size = Vector3(0.78, 0.42, 0.4)
+			merlon.mesh = crown
+			merlon.position = Vector3(0.0, 1.12, -0.86 + merlon_index * 0.86)
+			merlon.material_override = stone
+			segment.add_child(merlon)
 	var post := MeshInstance3D.new()
 	var post_mesh := BoxMesh.new()
 	post_mesh.size = Vector3(0.92, 2.45, 0.92)
 	post.mesh = post_mesh
 	post.position.y = 1.22
-	post.material_override = _material(Color("#686b61"), 0.0)
+	post.material_override = _material(Color("#827e70"), 0.0)
 	model_root.add_child(post)
 	if bool(last_snapshot.get("gate_adjacent", false)):
 		var pennant := MeshInstance3D.new()
@@ -330,6 +339,9 @@ func _create_workyard() -> void:
 	add_child(workyard_root)
 	match building_type:
 		"TOWN_HALL":
+			_add_prop("lantern", Vector3(2.15, 0.0, 1.65), Vector3.ONE, "FoundingLantern")
+			_add_prop("fence", Vector3(-2.6, 0.0, -1.8), Vector3.ONE, "FoundingFence")
+			_add_prop("cart", Vector3(2.55, 0.0, -0.8), Vector3.ONE * 0.7, "FoundingCart")
 			# Existing civic supplies stay inside the hall's yard and do not add
 			# occupancy, resources or new buildings to the simulation.
 			_add_prop("barrel", Vector3(-2.15, 0.0, 2.5), Vector3.ONE * 3.5, "FoundingBarrel")
@@ -347,6 +359,7 @@ func _create_workyard() -> void:
 			for x in range(-1, 2):
 				for z in range(2):
 					_add_prop("dirt_plot", Vector3(float(x) * 1.85, 0.0, -1.25 - float(z) * 1.45), Vector3.ONE * 0.82, "DecorativeFarmPlot")
+					_add_prop("wheat_crop", Vector3(float(x) * 1.85, 0.08, -1.25 - float(z) * 1.45), Vector3.ONE * 1.5, "WheatCrop")
 			_add_prop("wheelbarrow", Vector3(3.15, 0.0, -1.20), Vector3.ONE * 0.76, "InventoryIndicatorWheat", "wheat")
 		"STOREHOUSE":
 			_add_prop("crate", Vector3(-2.85, 0.0, 0.55), Vector3.ONE, "DecorativeCrate")
@@ -371,19 +384,12 @@ func _create_semantic_identity_geometry() -> void:
 			silo_mesh.top_radius = 0.65
 			silo_mesh.bottom_radius = 0.78
 			silo_mesh.height = 3.1
+			silo_mesh.radial_segments = 10
 			silo.mesh = silo_mesh
 			silo.position = Vector3(-3.0, 1.55, -1.4)
 			silo.material_override = _material(Color("#9a7a4d"), 0.0)
 			workyard_root.add_child(silo)
 		"BAKERY":
-			var chimney := MeshInstance3D.new()
-			chimney.name = "BakeryChimney"
-			var chimney_mesh := BoxMesh.new()
-			chimney_mesh.size = Vector3(0.72, 3.8, 0.72)
-			chimney.mesh = chimney_mesh
-			chimney.position = Vector3(2.0, 1.9, -0.75)
-			chimney.material_override = _material(Color("#6d6257"), 0.0)
-			workyard_root.add_child(chimney)
 			var oven_glow := OmniLight3D.new()
 			oven_glow.name = "OvenGlow"
 			oven_glow.position = Vector3(1.7, 0.85, 1.7)
@@ -392,15 +398,7 @@ func _create_semantic_identity_geometry() -> void:
 			oven_glow.omni_range = 4.0
 			workyard_root.add_child(oven_glow)
 		"STOREHOUSE":
-			for side in [-1.0, 1.0]:
-				var stack := MeshInstance3D.new()
-				stack.name = "StorehouseWing"
-				var stack_mesh := BoxMesh.new()
-				stack_mesh.size = Vector3(1.8, 2.2, 2.3)
-				stack.mesh = stack_mesh
-				stack.position = Vector3(side * 2.7, 1.1, -0.8)
-				stack.material_override = _material(Color("#765a3f"), 0.0)
-				workyard_root.add_child(stack)
+			_add_prop("long_crate", Vector3(-2.3, 0.0, -0.8), Vector3.ONE * 2.0, "StorehouseSupplies")
 		"BARRACKS":
 			var yard := MeshInstance3D.new()
 			yard.name = "BarracksTrainingYard"

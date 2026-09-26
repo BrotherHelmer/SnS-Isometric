@@ -3,6 +3,9 @@ extends Node3D
 
 const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_profile.gd")
 
+static var _materials: Dictionary = {}
+static var _light_tint := Color.WHITE
+
 var tile := Vector2i.ZERO
 var building_id := 0
 var planned := false
@@ -29,7 +32,7 @@ func _rebuild() -> void:
 		remove_child(child)
 		child.queue_free()
 	var edge_color := Color(0.32, 0.22, 0.12, 0.42) if planned else Color(0.22, 0.14, 0.08, 0.55)
-	var road_color := Color(0.58, 0.40, 0.22, 0.78) if planned else Color("#5a3d24")
+	var road_color := Color(0.58, 0.40, 0.22, 0.78) if planned else Color("#8c7351")
 	if faction == "rival":
 		edge_color = Color(0.28, 0.17, 0.18, 0.72)
 		road_color = Color("#805d58")
@@ -76,6 +79,7 @@ func _add_path_mesh(width: float, height: float, material: Material, node_name: 
 	var instance := MeshInstance3D.new()
 	instance.name = node_name
 	instance.mesh = surface.commit()
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	instance.material_override = material
 	add_child(instance)
 
@@ -98,6 +102,7 @@ func _add_ruts(road_width: float) -> void:
 			rut.position = Vector3(center.x, 0.070, center.y)
 			if direction.x != 0.0:
 				rut.rotation.y = PI * 0.5
+			rut.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			rut.material_override = material
 			add_child(rut)
 
@@ -113,13 +118,19 @@ func _add_quad(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vect
 	_add_triangle(surface, a, c, d)
 
 
-func _road_material(color: Color) -> StandardMaterial3D:
-	var material := StandardMaterial3D.new()
-	material.albedo_color = color
-	material.roughness = 1.0
-	material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	if color.a < 1.0:
-		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		material.render_priority = -1
-	return material
+func _road_material(color: Color) -> ShaderMaterial:
+	var key := color.to_html()
+	if not _materials.has(key):
+		var material := ShaderMaterial.new()
+		material.shader = preload("res://src/GodotClient3D/Shaders/settlement_road.gdshader")
+		material.set_shader_parameter("road_color", color)
+		material.set_shader_parameter("light_tint", _light_tint)
+		material.render_priority = -1 if color.a < 1.0 else 0
+		_materials[key] = material
+	return _materials[key]
+
+static func set_lighting(tint: Color) -> void:
+	if _light_tint.is_equal_approx(tint): return
+	_light_tint = tint
+	for material in _materials.values():
+		material.set_shader_parameter("light_tint", tint)

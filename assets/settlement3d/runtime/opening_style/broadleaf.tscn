@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/broadleaf.res" id="1_0gw6l"]
+
+[node name="Broadleaf" type="Node3D" unique_id=708803332]
+
+[node name="Model" type="MeshInstance3D" parent="." unique_id=2044813552]
+mesh = ExtResource("1_0gw6l")

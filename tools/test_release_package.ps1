@@ -1,7 +1,7 @@
 param([int]$SoakSeconds = 4, [switch]$Rendered, [string]$ValidationSave = '')
 $ErrorActionPreference = 'Stop'
 $workspaceRoot = Split-Path -Parent $PSScriptRoot
-$sourceDirectory = Join-Path $workspaceRoot 'dist/ShardAndSovereign_0.2.0-playtest.1'
+$sourceDirectory = Join-Path $workspaceRoot 'dist/ShardAndSovereign_0.2.0-playtest.4'
 $mode = if ($Rendered) { 'rendered' } else { 'headless' }
 $validationDirectory = Join-Path $env:TEMP "SnS_Playtest_Validation_$mode"
 $evidenceDirectory = Join-Path $workspaceRoot "artifacts/release_candidate/package_$mode"

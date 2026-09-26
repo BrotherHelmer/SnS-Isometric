@@ -15,6 +15,7 @@ const ROAD_WIDTH_SCALE := 1.18
 # Phase 2.1 visual calibration. Characters remain the reference; these values
 # change presentation mass only and never alter authoritative footprints.
 const BUILDING_MODEL_SCALE := {
+	"ENEMY_CAMP": 2.0,
 	"TOWN_HALL": 2.00,
 	"HOUSE": 4.40,
 	"LUMBER_CAMP": 2.50,
@@ -30,10 +31,12 @@ const BUILDING_MODEL_SCALE := {
 	"CLAIMANT_OUTPOST": 3.25,
 }
 
-# Imported model bounds at unit scale. They keep socket, focus, construction,
+# Runtime model bounds at unit scale. They keep socket, focus, construction,
 # and selection calibration derived from the same central presentation data.
 const BUILDING_UNIT_SIZE := {
-	"TOWN_HALL": Vector3(1.9752, 3.9792, 2.2560),
+	"LUMEN_PILLAR": Vector3(0.8, 1.3, 0.8),
+	"ENEMY_CAMP": Vector3(3.0, 3.7, 2.8),
+	"TOWN_HALL": Vector3(3.0, 3.7, 2.8),
 	"HOUSE": Vector3(0.7918, 0.9300, 0.8536),
 	"LUMBER_CAMP": Vector3(1.3667, 1.7080, 1.1893),
 	"SAWMILL": Vector3(1.3667, 1.7080, 1.1893),

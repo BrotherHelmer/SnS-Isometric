@@ -70,8 +70,23 @@ The animation files contain 43 root-position tracks across the libraries. Phase 
 
 ## Evidence
 
+### Opening-style playable geometry — 2026-09-26
+
+`assets/settlement3d/runtime/opening_style/` contains twelve project-authored 3D models adapted from the pre-generated AI reference sheet in `assets/art_direction/opening_style_v1/`. These are native Godot mesh resources and scenes, built reproducibly by `tools/build_opening_style_models.gd`; they are not extracted KayKit meshes or automatic image-to-3D reconstructions. The set contains town hall, house, storehouse, lumber camp, bakery, watchtower, fir, broadleaf, rocks, fence, lantern and cart. Building geometry is normalized to the presentation profile; gameplay footprints and saves retain their existing meanings. Related roles reuse appropriate models (farm/house, sawmill/lumber camp, Outpost/watchtower).
+
+Meshes are merged by material into one mesh per model for compatibility with instanced nature rendering. `model_manifest.json` records surface and triangle counts. The roof and meadow raster candidates remain outside the runtime: the models use geometric shingles and authored materials. AI reference provenance remains applicable to the design process. This is the first playable adaptation, not a claim of visual parity with the title illustration.
+
+### Title-screen illustration — 2026-09-26
+
+`assets/settlement3d/runtime/interface/title_settlement_v1.png` is pre-generated AI artwork created with OpenAI's image-generation tool for this project. It depicts a decorative settlement at dusk, not the live game map. It contains no baked-in title or interface text. This asset is separate from the KayKit CC0 assets listed above. Record it as pre-generated AI content when completing the eventual Steam content survey; no runtime image generation is used.
+
+
 - Runtime manifest: `phase1_3d_lab\assets\runtime\allowlist_manifest.json`
 - Rebuild script: `tools\phase1_sync_runtime_assets.ps1`
 - Focused rig log: `phase1_3d_lab\artifacts\final_rig_validation.log`
 - Scale log: `phase1_3d_lab\artifacts\final_scale_validation.log`
 - Full Phase 1 handoff: `docs\architecture\PHASE_1_3D_FOUNDATION_REPORT.md`
+
+### Environment follow-up — 2026-09-26
+
+Playtest.4 expands the authored opening-style set from twelve to nineteen model scenes, adding Quarry, Barracks, Lumen Pillar, rival camp, grass, bush and wheat. Existing wall geometry receives stone crenellations. Character clothing and terrain colour changes use project-authored runtime shaders; no vendor bitmap or rig is edited. The previously generated meadow/roof bitmap prototypes remain unused. Geometry continues to derive from the recorded AI art direction; see OPENING_STYLE_MODELS.md for integration and validation limits.

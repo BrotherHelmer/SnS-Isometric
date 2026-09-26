@@ -77,7 +77,7 @@ func redraw(frame_snapshot: Dictionary) -> void:
 	last_signature = signature
 
 
-func _paint(map_size: Vector2i, frame_snapshot: Dictionary) -> void:
+func _render_map(map_size: Vector2i, frame_snapshot: Dictionary) -> Image:
 	var image := Image.create(map_size.x, map_size.y, false, Image.FORMAT_RGB8)
 	image.fill(Color("#0a1210"))
 	for y in range(map_size.y):
@@ -114,8 +114,8 @@ func _paint(map_size: Vector2i, frame_snapshot: Dictionary) -> void:
 		_dot(image, map_size, Vector2i(structure.get("anchor", Vector2i.ZERO)), color)
 	for site_value in frame_snapshot.get("wyrd_sites", []):
 		var site: Dictionary = site_value
-		var site_color := Color("#7a6bb8") if bool(site.get("visible", false)) else Color("#5a4a88")
-		_dot(image, map_size, Vector2i(site.get("position", Vector2i.ZERO)), site_color)
+		if bool(site.get("visible", false)):
+			_dot(image, map_size, Vector2i(site.get("position", Vector2i.ZERO)), Color("#7a6bb8"))
 	for worker_value in frame_snapshot.get("workers", []):
 		var worker: Dictionary = worker_value
 		if not bool(worker.get("visible", true)):
@@ -131,6 +131,11 @@ func _paint(map_size: Vector2i, frame_snapshot: Dictionary) -> void:
 	_dot(image, map_size, Vector2i(simulation.shard_position), Color("#6bcfe0"))
 	_dot(image, map_size, Vector2i(simulation.rival_town_hall_position), Color("#7a2c36"))
 	_paint_camera(image, map_size)
+	return image
+
+
+func _paint(map_size: Vector2i, frame_snapshot: Dictionary) -> void:
+	var image := _render_map(map_size, frame_snapshot)
 	if texture == null:
 		texture = ImageTexture.create_from_image(image)
 	else:
@@ -141,8 +146,12 @@ func _paint(map_size: Vector2i, frame_snapshot: Dictionary) -> void:
 	map_image.texture = texture
 
 
-func _dot(image: Image, map_size: Vector2i, tile: Vector2i, color: Color) -> void:
+func _dot(image: Image, map_size: Vector2i, tile: Vector2i, color: Color, camera_outline := false) -> void:
 	if tile.x < 0 or tile.y < 0 or tile.x >= map_size.x or tile.y >= map_size.y:
+		return
+	# Every world marker obeys discovery, even when a snapshot contains hidden
+	# authority data. The player's camera outline is not a world observation.
+	if not camera_outline and not simulation.is_revealed(tile):
 		return
 	image.set_pixel(tile.x, tile.y, color)
 
@@ -154,11 +163,11 @@ func _paint_camera(image: Image, map_size: Vector2i) -> void:
 	var half := maxi(3, int(round(camera_rig.target_zoom / ScaleProfile.LOGICAL_CELL_METRES * 0.55)))
 	var color := Color("#f4d27a")
 	for x in range(focus.x - half, focus.x + half + 1):
-		_dot(image, map_size, Vector2i(x, focus.y - half), color)
-		_dot(image, map_size, Vector2i(x, focus.y + half), color)
+		_dot(image, map_size, Vector2i(x, focus.y - half), color, true)
+		_dot(image, map_size, Vector2i(x, focus.y + half), color, true)
 	for y in range(focus.y - half, focus.y + half + 1):
-		_dot(image, map_size, Vector2i(focus.x - half, y), color)
-		_dot(image, map_size, Vector2i(focus.x + half, y), color)
+		_dot(image, map_size, Vector2i(focus.x - half, y), color, true)
+		_dot(image, map_size, Vector2i(focus.x + half, y), color, true)
 
 
 func _on_map_gui_input(event: InputEvent) -> void:

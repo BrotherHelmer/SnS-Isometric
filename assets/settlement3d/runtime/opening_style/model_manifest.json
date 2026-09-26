@@ -1,0 +1,116 @@
+{
+	"bakery": {
+		"size": "(0.7918, 0.93, 0.8536)",
+		"source": "Authored geometry adapted from opening_style_v1 image references",
+		"surfaces": 11,
+		"triangles": 7280
+	},
+	"barracks": {
+		"size": "(1.44, 1.6401, 1.5661)",
+		"source": "Authored geometry adapted from opening_style_v1 image references",
+		"surfaces": 12,
+		"triangles": 6080
+	},
+	"broadleaf": {
+		"size": "(3.572532, 4.145833, 3.360013)",
+		"source": "Authored geometry adapted from opening_style_v1 image references",
+		"surfaces": 3,
+		"triangles": 660
+	},
+	"bush": {
+		"size": "(1.261704, 1.0, 1.160116)",
+		"source": "Authored geometry adapted from opening_style_v1 image references",
+		"surfaces": 1,
+		"triangles": 56
+	},
+	"cart": {
+		"size": "(1.503923, 1.165, 2.75)",
+		"source": "Authored geometry adapted from opening_style_v1 image references",
+		"surfaces": 3,
+		"triangles": 576
+	},
+	"enemy_camp": {
+		"size": "(3.0, 3.7, 2.8)",
+		"source": "Authored geometry adapted from opening_style_v1 image references",
+		"surfaces": 11,
+		"triangles": 4628
+	},
+	"fence": {
+		"size": "(1.95, 1.2, 0.15)",
+		"source": "Authored geometry adapted from opening_style_v1 image references",
+		"surfaces": 2,
+		"triangles": 48
+	},
+	"fir": {
+		"size": "(2.402931, 4.785, 2.366425)",
+		"source": "Authored geometry adapted from opening_style_v1 image references",
+		"surfaces": 2,
+		"triangles": 264
+	},
+	"grass": {
+		"size": "(0.157417, 0.346495, 0.270267)",
+		"source": "Authored geometry adapted from opening_style_v1 image references",
+		"surfaces": 1,
+		"triangles": 40
+	},
+	"house": {
+		"size": "(0.7918, 0.93, 0.8536)",
+		"source": "Authored geometry adapted from opening_style_v1 image references",
+		"surfaces": 11,
+		"triangles": 5936
+	},
+	"lantern": {
+		"size": "(1.003, 2.26, 0.526)",
+		"source": "Authored geometry adapted from opening_style_v1 image references",
+		"surfaces": 6,
+		"triangles": 696
+	},
+	"lumber_camp": {
+		"size": "(1.3667, 1.708, 1.1893)",
+		"source": "Authored geometry adapted from opening_style_v1 image references",
+		"surfaces": 6,
+		"triangles": 2412
+	},
+	"lumen_pillar": {
+		"size": "(0.8, 1.3, 0.8)",
+		"source": "Authored geometry adapted from opening_style_v1 image references",
+		"surfaces": 5,
+		"triangles": 276
+	},
+	"quarry": {
+		"size": "(1.6056, 1.1367, 1.92)",
+		"source": "Authored geometry adapted from opening_style_v1 image references",
+		"surfaces": 5,
+		"triangles": 672
+	},
+	"rocks": {
+		"size": "(1.678928, 2.006644, 1.666186)",
+		"source": "Authored geometry adapted from opening_style_v1 image references",
+		"surfaces": 2,
+		"triangles": 280
+	},
+	"storehouse": {
+		"size": "(0.7918, 0.93, 0.8536)",
+		"source": "Authored geometry adapted from opening_style_v1 image references",
+		"surfaces": 5,
+		"triangles": 2064
+	},
+	"town_hall": {
+		"size": "(3.0, 3.7, 2.8)",
+		"source": "Authored geometry adapted from opening_style_v1 image references",
+		"surfaces": 11,
+		"triangles": 4628
+	},
+	"watchtower": {
+		"size": "(0.9933, 2.192, 1.1533)",
+		"source": "Authored geometry adapted from opening_style_v1 image references",
+		"surfaces": 9,
+		"triangles": 4044
+	},
+	"wheat": {
+		"size": "(0.235671, 0.971727, 0.297838)",
+		"source": "Authored geometry adapted from opening_style_v1 image references",
+		"surfaces": 1,
+		"triangles": 476
+	}
+}

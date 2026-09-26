@@ -8,8 +8,8 @@ render_mode unshaded, cull_disabled, skip_vertex_transform, depth_test_disabled,
 
 uniform sampler2D visibility_texture : filter_linear, repeat_disable;
 uniform sampler2D depth_texture : hint_depth_texture, filter_nearest;
-uniform vec3 unknown_color = vec3(0.055, 0.10, 0.088);
-uniform vec3 mist_color = vec3(0.08, 0.14, 0.12);
+uniform vec3 unknown_color = vec3(0.012, 0.025, 0.029);
+uniform vec3 mist_color = vec3(0.021, 0.038, 0.043);
 uniform vec2 world_min_xz = vec2(-87.5, -87.5);
 uniform vec2 world_size_xz = vec2(175.0, 175.0);
 uniform float unknown_opacity : hint_range(0.0, 1.0) = 1.0;
