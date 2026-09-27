@@ -5161,7 +5161,7 @@ func _update_barracks(delta: float) -> void:
 		central_inventory[Defs.RESOURCE_BREAD] = int(central_inventory.get(Defs.RESOURCE_BREAD, 0)) - SOLDIER_BREAD_COST
 		soldiers_total += 1
 		_add_log("A soldier completed training at the Barracks.")
-		_emit_audio("soldier")
+		_emit_audio("settler_spawn_guard")
 		_auto_staff_towers()
 		_sync_production_workers()
 		_record_event("soldier_trained", "A soldier completed training.", {"soldiers": soldiers_total})
@@ -5273,7 +5273,7 @@ func _update_population_growth(delta: float) -> void:
 		last_message = "A new founding settler has arrived. Population %d/%d." % [population_current, housing_capacity]
 		_auto_staff_unstaffed_buildings()
 		_record_event("population_growth", last_message, {"population": population_current, "housing": housing_capacity, "founding_arrival": true})
-		_emit_audio("settler_spawn")
+		_emit_audio("settler_spawn_worker")
 		return
 	var reserve_needed := get_next_food_demand()
 	if get_food_units() < reserve_needed + POP_GROWTH_FOOD_COST:
@@ -5292,7 +5292,7 @@ func _update_population_growth(delta: float) -> void:
 	last_message = "A new settler is ready at the Town Hall. Population %d/%d." % [population_current, housing_capacity]
 	_auto_staff_unstaffed_buildings()
 	_record_event("population_growth", last_message, {"population": population_current, "housing": housing_capacity})
-	_emit_audio("settler_spawn")
+	_emit_audio("settler_spawn_worker")
 
 
 func _update_time(delta: float) -> void:

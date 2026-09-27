@@ -151,29 +151,39 @@ No attribution required by license. Optional credit:
 
 ---
 
-## Playtest.9 Placeholder Audio (Procedural)
+## Playtest.9 Required Audio (BLOCKING MERGE)
 
-**Added**: September 27, 2026  
-**Purpose**: Minimal placeholders for new gameplay events until curated CC0 audio is sourced  
-**License**: CC0 (Public Domain) - procedurally generated  
-**Generation Script**: `tools/generate_playtest9_placeholder_audio.py`
+**Status**: September 27, 2026  
+**Helmer Requirement**: Real CC0 foley ONLY — no procedural/synthesized placeholders  
+**Blocking**: PR #5 cannot merge until these real CC0 recordings are added
 
-### Files
+### Missing Files (REQUIRED for Merge)
 
-| File | Duration | Character | Status |
-|------|----------|-----------|--------|
-| `farm_animal.wav` | 0.9s | Simple sheep-like bleat (350-280Hz sweep with vibrato) | **PROCEDURAL PLACEHOLDER** - replace with real CC0 sheep recording |
-| `settler_arrive.wav` | 0.75s | Friendly two-note chime (C4-E4 ascending) | **PROCEDURAL PLACEHOLDER** - replace with CC0 greeting/arrival sound |
+| File | Purpose | Character | Sources |
+|------|---------|-----------|---------|
+| `farm_animal_complete.wav` | Farm completion | Real sheep/farm animal bleat (0.8-1.5s) | Freesound CC0, OpenGameArt |
+| `settler_arrive_worker.wav` | Civilian spawn | Footsteps + door or greeting (0.6-1.2s) | qubodup + rubberduck, Kenney |
+| `settler_arrive_guard.wav` | Military spawn | **CC0 voice grunt** or armor clink (0.8-1.5s) | HaelDB, LFA, rubberduck + Kenney |
+| `barracks_ready.wav` (optional) | Barracks completion | CC0 voice "huh/ready" (0.8-1.5s) | HaelDB, LFA (can keep `soldier.wav`) |
 
-### Replacement Instructions
+### Soft-Deprecated
 
-See `docs/art/AUDIO_REQUIREMENTS_PLAYTEST9.md` for:
-- Curated CC0 source recommendations (Freesound, OpenGameArt)
-- Technical specifications (16-bit mono, 44.1kHz, normalized)
-- Processing workflow
+- `tools/generate_playtest9_placeholder_audio.py` — **Do not use for runtime audio**
+  - Procedural synthesis rejected by Helmer
+  - Placeholder files (`farm_animal.wav`, `settler_arrive.wav`) deleted from repo
+  - Script retained for reference only (marked soft-deprecated)
 
-These procedural sounds are **functionally adequate** but lack the warmth and character of real recordings. Replace before final release.
+### Requirements
+
+All runtime audio must be:
+- ✅ **Real CC0 recordings** from trusted sources (Freesound, OpenGameArt, Kenney)
+- ✅ **Documented provenance** (author, pack, URL, CC0 license)
+- ✅ **Processed to spec** (16-bit mono WAV, 44.1kHz, normalized to ≈-1dB)
+- ❌ **NO procedural synthesis** for shipped runtime audio
+
+See `docs/art/AUDIO_REQUIREMENTS_PLAYTEST9.md` for full sourcing instructions.  
+See `assets/settlement/audio/TODO_REQUIRED_CC0_AUDIO.md` for exact file specifications.
 
 ---
 
-Last Updated: September 27, 2026 (Playtest.9 - procedural placeholders + CC0 Foley v3)
+Last Updated: September 27, 2026 (Playtest.9 - real CC0 required, procedural rejected)

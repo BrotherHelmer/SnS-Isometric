@@ -1,7 +1,15 @@
 #!/usr/bin/env python3
 """
-Generate minimal CC0 placeholder audio for playtest.9.
-These are procedural placeholders until proper curated CC0 audio is sourced.
+SOFT-DEPRECATED: Do not use for runtime audio.
+
+This script generated procedural placeholders but Helmer rejected merge until
+all runtime audio is real CC0 foley. Use curated recordings from Freesound/
+OpenGameArt/Kenney instead.
+
+See docs/art/AUDIO_REQUIREMENTS_PLAYTEST9.md for proper CC0 sourcing.
+
+These procedural sounds lack the warmth and character of real recordings and
+should NOT be shipped as runtime audio.
 """
 
 import struct

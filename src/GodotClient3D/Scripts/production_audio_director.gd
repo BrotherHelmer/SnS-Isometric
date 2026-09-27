@@ -32,9 +32,10 @@ const CUE_PATHS := {
 	"build_start": "res://assets/settlement/audio/build_start.wav",
 	"build_complete": "res://assets/settlement/audio/build_complete.wav",
 	"soldier": "res://assets/settlement/audio/soldier.wav",
-	"farm_complete": "res://assets/settlement/audio/farm_animal.wav",
-	"barracks_complete": "res://assets/settlement/audio/soldier.wav",
-	"settler_spawn": "res://assets/settlement/audio/settler_arrive.wav"
+	"farm_complete": "res://assets/settlement/audio/farm_animal_complete.wav",
+	"barracks_complete": "res://assets/settlement/audio/barracks_ready.wav",
+	"settler_spawn_worker": "res://assets/settlement/audio/settler_arrive_worker.wav",
+	"settler_spawn_guard": "res://assets/settlement/audio/settler_arrive_guard.wav"
 }
 
 var settings: Dictionary = {}
@@ -190,8 +191,10 @@ func handle_sim_event(event_name: String) -> void:
 			play_cue("farm_complete")
 		"barracks_complete":
 			play_cue("barracks_complete")
-		"settler_spawn":
-			play_cue("settler_spawn")
+		"settler_spawn_worker":
+			play_cue("settler_spawn_worker")
+		"settler_spawn_guard":
+			play_cue("settler_spawn_guard")
 		_:
 			pass
 
