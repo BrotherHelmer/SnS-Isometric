@@ -24,11 +24,17 @@ try {
         $psi.WorkingDirectory = $workspaceRoot
         $process = New-Object System.Diagnostics.Process
         $process.StartInfo = $psi
+        $stdoutBuilder = New-Object System.Text.StringBuilder
+        $stderrBuilder = New-Object System.Text.StringBuilder
+        $process.add_OutputDataReceived({param($sender, $e) if ($null -ne $e.Data) { [void]$stdoutBuilder.AppendLine($e.Data) }})
+        $process.add_ErrorDataReceived({param($sender, $e) if ($null -ne $e.Data) { [void]$stderrBuilder.AppendLine($e.Data) }})
         $process.Start() | Out-Null
+        $process.BeginOutputReadLine()
+        $process.BeginErrorReadLine()
         $timedOut = -not $process.WaitForExit($TimeoutSeconds * 1000)
         if ($timedOut) { $process.Kill(); $process.WaitForExit() }
-        $stdoutContent = $process.StandardOutput.ReadToEnd()
-        $stderrContent = $process.StandardError.ReadToEnd()
+        $stdoutContent = $stdoutBuilder.ToString()
+        $stderrContent = $stderrBuilder.ToString()
         $stdoutContent | Set-Content -LiteralPath $stdout
         $stderrContent | Set-Content -LiteralPath $stderr
         $output = $stdoutContent + $stderrContent

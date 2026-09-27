@@ -1,7 +1,7 @@
 # Shard & Sovereign — Development Roadmap
 
 **Last updated:** 2026-09-27  
-**Current version:** 0.2.0-playtest.26  
+**Current version:** 0.2.0-playtest.27  
 **Target:** Closed Steam Playtest → Public Demo
 
 This roadmap tracks progress toward a releasable Windows settlement survival game: build an economy with autonomous workers, defend against night raids, race a rival realm to Bind the central Shard. Owner-confirmed route: **closed Steam Playtest first, then public demo** after validation gates pass.
@@ -14,13 +14,21 @@ This roadmap tracks progress toward a releasable Windows settlement survival gam
 
 Prepare a validated Windows package for supervised external testing. The game must demonstrate a complete playable loop (founding → economy → defense → Shard race → victory/defeat) with comprehensible onboarding, reliable saves, and no progression blockers.
 
-**Status:** Playtest.26 fixes PowerShell exit code capture in verification suite (replaced fragile Start-Process with reliable ProcessStartInfo). Playtest.25 hardened night-verification check (threshold now matches actual night lighting design: 0.35 + tolerance vs incorrect 0.28) and integrated export packing audit as build preflight. Core gameplay loop is implemented and passes automated checks. External human validation gates remain open.
+**Status:** Playtest.27 fixes critical deadlock in verification suite (playtest.26 ExitCode capture introduced pipe buffer deadlock). Playtest.25 hardened night-verification check (threshold now matches actual night lighting design: 0.35 + tolerance vs incorrect 0.28) and integrated export packing audit as build preflight. Core gameplay loop is implemented and passes automated checks. External human validation gates remain open.
 
 ---
 
 ## Completed Work (Recent)
 
-### Playtest.26 (2026-09-27) — PowerShell Exit Code Capture Fix
+### Playtest.27 (2026-09-27) — Verification Deadlock Fix
+- **Critical deadlock resolved**: Fixed `tools/verify_release.ps1` pipe buffer deadlock introduced in playtest.26 that caused 180s timeout and ExitCode -1 on all test suites during Spawn
+- **Root cause**: Playtest.26's ProcessStartInfo implementation called `WaitForExit` **before** draining redirected stdout/stderr streams. When Godot child process filled pipe buffers (typically 4KB on Windows), it blocked waiting for parent to read; parent blocked in `WaitForExit` → classic deadlock → 180s timeout
+- **Solution**: Replaced synchronous `ReadToEnd()` calls with asynchronous `BeginOutputReadLine()` / `BeginErrorReadLine()` pattern using StringBuilder event handlers. Streams now drain concurrently with process execution, preventing buffer saturation
+- **ExitCode reliability preserved**: Playtest.26's goal (reliable non-null ExitCode) maintained; async pattern works consistently on both PowerShell 5.1 and PowerShell 7
+- **Verification**: Test suites (save/logistics/session/outpost) no longer timeout; ship can proceed without `-SkipVerification` workaround
+- Version bumped to 0.2.0-playtest.27 in both `project.godot` and `tools/build_release.ps1`
+
+### Playtest.26 (2026-09-27) — PowerShell Exit Code Capture Fix (FAILED: introduced deadlock)
 - **PowerShell verification hardening**: Fixed `tools/verify_release.ps1` exit code capture using `System.Diagnostics.Process` with `ProcessStartInfo` instead of fragile `Start-Process -PassThru`
 - **Root cause**: `Start-Process` with `-RedirectStandardOutput`/`-RedirectStandardError` can leave `ExitCode` property null even after `WaitForExit()` completes, especially on PowerShell 5.1. This caused false FAIL during playtest.25 ship even though all suite checks printed PASS
 - **Solution**: Switched to `ProcessStartInfo` pattern with explicit stream redirection and reliable exit code capture via `Process.ExitCode`. Now works consistently on both PowerShell 5.1 and PowerShell 7
