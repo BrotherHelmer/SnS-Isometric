@@ -239,4 +239,89 @@ All files meet runtime requirements:
 
 ---
 
-Last Updated: September 27, 2026 (Playtest.9 - CC0 real foley integrated)
+## Playtest.10 BGM + Atmosphere (CC0)
+
+**Added**: September 27, 2026  
+**Source**: Curated CC0 pack `cc0-playtest10-bgm.zip`  
+**License**: CC0 (Public Domain)  
+**Character**: Warm pastoral medieval settlement theme + soft natural ambience  
+**Purpose**: Replace/supplement existing BGM with full-length looping town theme + nature bed
+
+### Files
+
+#### bgm_settlement_loop.ogg
+- **Purpose**: Primary settlement BGM (day/main theme)
+- **Duration**: 94.5 seconds (seamless crossfade loop)
+- **Format**: Ogg Vorbis, stereo, 44.1 kHz, ~130 kbps
+- **Character**: Warm pastoral medieval town theme (harps + recorders emotional space)
+- **Source Pack**: Town Theme RPG
+- **Original File**: `TownTheme.mp3`
+- **License**: CC0 (Public Domain dedication on OpenGameArt)
+- **Author**: **cynicmusic** (pixelsphere.org / cynicmusic.com)
+- **URL**: https://opengameart.org/content/town-theme-rpg
+- **Direct Source**: https://opengameart.org/sites/default/files/TownTheme.mp3
+- **Processing**: 3.0s triangular acrossfade (tail↔head) for click-free loop; loudnorm ≈ -16 LUFS / TP -1.5 dB; libvorbis q≈5
+- **Usage**: Music bus, loop enabled from game start
+- **Replaces**: `score_pastoral_foundation.wav` (now using full-length original CC0 theme)
+
+#### ambient_world.wav
+- **Purpose**: Soft wind + birds nature bed (continuous ambient layer)
+- **Duration**: 26.0 seconds (crossfade-looped)
+- **Format**: WAV PCM s16le, mono, 44.1 kHz
+- **Character**: Soft nature ambience (no musical synth bed — pure ambient mix)
+- **Source Pack**: Birds and Wind — Ambient
+- **Original File**: `Birds and Wind - Ambient_1.ogg`
+- **License**: CC0
+- **Author/Composer**: **Spring Spring** (composer "Spring"); bird SFX contributors: isaiah658, syncopika, pauliuw (all PD/CC0)
+- **URL**: https://opengameart.org/content/birds-and-wind-ambient-birds-wind-and-synth
+- **Direct Source**: https://opengameart.org/sites/default/files/Birds%20and%20Wind%20-%20Ambient_1.ogg
+- **Processing**: First 28s; 2.0s acrossfade loop; HPF 80Hz / LPF 8kHz; loudnorm quiet bed ≈ -28 LUFS / TP -6 dB; mono s16
+- **Usage**: Ambience bus, loop enabled, kept quiet under Music/SFX
+- **Replaces**: `settlement_wind_birds.wav` (now using dedicated nature-only ambient bed)
+
+#### farm_animal.wav (Updated)
+- **Purpose**: Farm completion cue + occasional animal presence
+- **Duration**: 0.87 seconds
+- **Format**: WAV PCM s16le, mono, 44.1 kHz
+- **Character**: Clearer / louder warm sheep bleat (more audible than playtest.9 version)
+- **Source Pack**: Sheep Baa (OpenGameArt)
+- **Original File**: `sheep_baa.flac`
+- **License**: CC0
+- **Author**: Recording by **mikewest**; packaged/submitted by **AntumDeluge**
+- **URL**: https://opengameart.org/content/sheep-baa
+- **Processing**: HPF 200Hz / LPF 6kHz; mild presence EQ (+2.5 dB @ 1.2 kHz); 12ms in / 25ms out fades; loudnorm ≈ -16 LUFS / TP -2.5 dB (louder/clearer than playtest.9 -4 dBFS peak version)
+- **Usage**: SFX bus, one-shot on Farm completion event
+- **Replaces**: Previous playtest.9 `farm_animal.wav` (now with better presence/clarity)
+
+### Technical Specifications
+
+All files meet runtime requirements:
+- ✅ Real CC0 recordings/compositions (no procedural synthesis)
+- ✅ BGM: Ogg Vorbis stereo 44.1kHz (Godot-friendly, loop-enabled)
+- ✅ Ambient/SFX: WAV 16-bit mono 44.1kHz
+- ✅ Loudness-normalized for consistent volume
+- ✅ Seamless looping (crossfade-processed)
+- ✅ Full provenance documented (author, pack, URL, license)
+
+### Auditioned But Not Included
+
+Helmer's curated pack evaluated additional CC0 music but selected the above as primary:
+- Magician Village Loop (beardalaxy) — too short (~18.9s)
+- Medieval fair loop (Woli34) — too busy, not quiet settlement
+- Medieval: Harvest Season (RandomMind) — too long/epic, not cozy town
+- Port Town Loop (beardalaxy) — port/dock mood, not pastoral
+- HoliznaCC0 Quiet Village 1-4 (FMA/Bandcamp) — excellent match but 404 download from environment
+
+*(Full evaluation notes in `cc0-playtest10-bgm.zip/PROVENANCE.md`)*
+
+### Integration Notes
+
+- **BGM loop**: Godot import should set OGG to `loop = true` on Music bus
+- **Ambient loop**: WAV set to `loop = true` on Ambience bus, kept -8 to -12 dB under Music
+- **Farm bleat**: One-shot on SFX bus (not looped)
+- **No copyrighted covers**: No Settlers II, Amiga, or commercial game samples used
+- **Character-appropriate**: Warm pastoral medieval town feel without copying Settlers II theme melody
+
+---
+
+Last Updated: September 27, 2026 (Playtest.10 - CC0 BGM + atmosphere integrated)
