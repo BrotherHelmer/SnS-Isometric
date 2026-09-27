@@ -5161,7 +5161,7 @@ func _update_barracks(delta: float) -> void:
 		central_inventory[Defs.RESOURCE_BREAD] = int(central_inventory.get(Defs.RESOURCE_BREAD, 0)) - SOLDIER_BREAD_COST
 		soldiers_total += 1
 		_add_log("A soldier completed training at the Barracks.")
-		_emit_audio("settler_spawn_guard")
+		_emit_audio("settler_spawn_soldier")
 		_auto_staff_towers()
 		_sync_production_workers()
 		_record_event("soldier_trained", "A soldier completed training.", {"soldiers": soldiers_total})

@@ -253,12 +253,17 @@ Two sounds are **procedural placeholders** until curated CC0 recordings are sour
 
 1. ✅ **Visual**: Town Hall → Castle upgrade triggers immediately when Barracks built
 2. ✅ **Interaction**: Bottom bar icons fully clickable for build placement  
-3. ✅ **Audio**: Comprehensive settlement audio — background music, farm animals, woodcutting, sawmill, barracks complete, settler spawn
+3. ✅ **Audio**: Comprehensive settlement audio with **real CC0 foley** — background music, farm animals, woodcutting, sawmill, barracks complete, per-type settler spawn
 
-**Status**: Playable and audible. Procedural placeholder audio is functional — replace with curated CC0 for final polish.
+**Audio Status**: ✅ **Real CC0 foley integrated** (September 27, 2026)
+- Curated recordings from Kenney, OpenGameArt (AntumDeluge, Vehicle/tinysized, artisticdude)
+- BigSoundBank CC0 sheep/flock presence
+- All files: 16-bit mono WAV, 44.1kHz, normalized, proper fades
+- Complete provenance documented in `AUDIO_LICENSE_LEDGER.md`
+- **Zero procedural/synthesized audio** in runtime
 
 **Export Compatibility**: Godot 4.7, Windows build clean, typed GDScript validated.
 
 ---
 
-Last Updated: September 27, 2026
+Last Updated: September 27, 2026 (Real CC0 audio integrated)
