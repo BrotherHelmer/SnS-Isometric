@@ -951,13 +951,34 @@ func _create_ui() -> void:
 	strip_box.add_theme_constant_override("separation", 4)
 	strip_scroll.add_child(strip_box)
 	for building_type in BUILD_PALETTE:
+		var btn_container := PanelContainer.new()
+		var btn_style := StyleBoxFlat.new()
+		btn_style.bg_color = _building_icon_color(building_type)
+		btn_style.border_color = Color("#3a3a3a")
+		btn_style.set_border_width_all(1)
+		btn_style.corner_radius_top_left = 3
+		btn_style.corner_radius_top_right = 3
+		btn_style.corner_radius_bottom_left = 3
+		btn_style.corner_radius_bottom_right = 3
+		btn_container.add_theme_stylebox_override("panel", btn_style)
+		strip_box.add_child(btn_container)
+		
+		var btn_vbox := VBoxContainer.new()
+		btn_vbox.add_theme_constant_override("separation", 2)
+		btn_container.add_child(btn_vbox)
+		
+		var icon_rect := ColorRect.new()
+		icon_rect.custom_minimum_size = Vector2(72, 32)
+		icon_rect.color = _building_icon_accent(building_type)
+		btn_vbox.add_child(icon_rect)
+		
 		var btn := Button.new()
 		btn.text = Defs.building_name(building_type) if building_type != Defs.TOOL_CLEAR_AREA else "Clear"
-		btn.custom_minimum_size = Vector2(84, 46)
-		btn.add_theme_font_size_override("font_size", 10)
+		btn.custom_minimum_size = Vector2(72, 14)
+		btn.add_theme_font_size_override("font_size", 9)
+		btn.flat = true
 		btn.pressed.connect(_select_building_for_placement.bind(building_type))
-		Identity.apply_button(btn)
-		strip_box.add_child(btn)
+		btn_vbox.add_child(btn)
 		build_strip_buttons.append(btn)
 
 	inspector_panel = PanelContainer.new()
