@@ -8,6 +8,13 @@ Uses: layered noise, resonant filters, transients, decay tails, body/weight.
 
 License: CC0 (public domain)
 Author: Original work for Shard & Sovereign
+
+---
+DEPRECATION NOTICE (Playtest.8):
+This synthesis script (v2) was replaced by curated real CC0 foley (v3).
+The script remains for reference but is NOT the shipped runtime audio.
+See: docs/art/AUDIO_PROVENANCE_V3.md
+---
 """
 
 import wave

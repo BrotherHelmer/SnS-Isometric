@@ -2,76 +2,101 @@
 
 This document tracks all audio assets used in Shard & Sovereign and their licenses.
 
-## Settlement SFX (CC0 Original Organic Synthesis - Playtest.8 v2)
+## Settlement SFX (CC0 Real Foley - Playtest.8 v3)
 
-**Generated**: September 27, 2026  
-**Generator**: `tools/generate_organic_settlement_audio.py`  
+**Curated**: September 27, 2026  
+**Source Archive**: `cc0-settlement-sfx-v3.zip`  
 **License**: CC0 (Public Domain)  
-**Author**: Original work for Shard & Sovereign project  
-**Character**: Settlers-II-inspired FEEL (not copies) - warm, rhythmic colony-work clarity
+**Provenance Document**: `docs/art/AUDIO_PROVENANCE_V3.md`  
+**Character**: Real recorded foley and curated CC0 game SFX with Settlers-II work-soul — warm, physical colony-building audio
 
-### Synthesis Approach
+### Audio Approach
 
-**NOT thin sine/FM beeps**. These sounds use advanced organic synthesis:
-- Layered transients + resonant body
-- Wood impacts with realistic decay and overtones
-- Metallic rings with inharmonic partials
-- Filtered noise for texture and physical weight
-- Natural ADSR envelopes (no clicks/pops)
-- Resonant lowpass filters for warmth
-- Multiple frequency components for organic character
+These are **curated real CC0 recordings and game audio**, NOT procedural synthesis:
+- Layered real foley (wood impacts, metal hits, saws, hammers, footsteps)
+- Curated from multiple CC0 packs: Kenney Impact/RPG/Jingles/Interface, rubberduck 100 CC0 metal+wood SFX, qubodup footsteps, Vehicle Tinysized SFX, OwlishMedia clicks, HaelDB growls, Brandon Morris completion, etc.
+- Edited for timing, fades (5–15ms), mono channel, 44.1kHz 16-bit PCM
+- Peak normalized to ≈ −1 dB for consistent volume and headroom
+- Each sound combines 1–5 source files with careful layering/delays/filtering
 
 ### Files
 
-| File | Duration | Character | Technical Details |
-|------|----------|-----------|-------------------|
-| `ui_click.wav` | 0.08s | Soft wooden tap, pleasant to spam | Wood impact @ 800Hz, gentle transient |
-| `build_start.wav` | 0.15s | Hammer into wood/nail | Metal impact (600Hz) + wood receiving (150Hz) |
-| `build_complete.wav` | 0.90s | Warm major fanfare, rewarding | C major arpeggio (C-E-G-C), plucked/bell character |
-| `delivery.wav` | 0.18s | Crate drop with weight | Heavy wood impact (120Hz) + contents rattle |
-| `road.wav` | 0.45s | Gravel/scrape texture | Multiple stone impacts + brown noise scraping |
-| `woodchop.wav` | 0.17s | Axe into tree, satisfying split | Blade slice (1200Hz) + wood splitting (160Hz) |
-| `saw.wav` | 0.55s | Sawmill blade with rhythm | Motor drone + teeth impacts + wood grain texture |
-| `attack.wav` | 0.12s | Combat hit with weight | Metal weapon (450Hz) + impact thud (100Hz) |
-| `tower.wav` | 0.30s | Arrow/bow launch | Bow twang (220Hz) + whoosh (swept noise) |
-| `enemy.wav` | 0.70s | Ominous growl, cozy-horror | Deep frequencies (85-127Hz), inharmonic, dark texture |
-| `night.wav` | 1.00s | Descending tense chord | A minor chord sweep, string-like, slight dissonance |
-| `soldier.wav` | 0.40s | Firm horn-like military ready | Brass-like two-tone (G-C), odd harmonics |
-| `destroyed.wav` | 1.30s | Crash/collapse with rumble | Multiple wood breaks + deep rumble + debris settling |
+| File | Duration | Character | Sources |
+|------|----------|-----------|---------|
+| `ui_click.wav` | 0.20s | Soft wooden tap with quiet click | rubberduck wood_hit_01 + OwlishMedia click26 |
+| `build_start.wav` | 0.45s | Hammer into wood | rubberduck hammer_01 + wood_hit_03 |
+| `build_complete.wav` | 0.69s | Warm success sting | Brandon Morris completetask + Robin Lamb Ding |
+| `delivery.wav` | 0.42s | Crate drop with weight | rubberduck wood_slam + Kenney impactPlank_medium |
+| `road.wav` | 0.45s | Gravel scrape + stone | qubodup gravel + stone01 footsteps |
+| `woodchop.wav` | 0.31s | Axe chop with split | Kenney chop + rubberduck wood layers + impactWood_heavy |
+| `saw.wav` | 0.55s | Real handsaw sawing | Vehicle handsaw-sawing-wood-01 (rhythmic section) |
+| `attack.wav` | 0.38s | Combat weapon hit | rubberduck metal_hit + Kenney impactMetal_heavy + Vehicle hammer |
+| `tower.wav` | 0.44s | Arrow launch whoosh | qubodup bamboo swosh + Vehicle arrow-feathers + whoosh |
+| `enemy.wav` | 0.70s | Ominous growl/sting | HaelDB gutteral beast + LFA Monster-1 + congusbongus abyss (lowpass) |
+| `night.wav` | 1.05s | Descending tense chord | Kresiek dark_stinger + congusbongus abyss |
+| `soldier.wav` | 0.85s | Military steel jingle | Kenney jingles_STEEL05 + confirmation_001 |
+| `destroyed.wav` | 1.16s | Building collapse | rubberduck: wood_breaking, crack, slam, dual falling (staggered) |
 
 ### Technical Specifications
 
 - **Format**: WAV, 16-bit mono, 44.1kHz
-- **Peak Level**: Normalized to -1dB (0.89 scale) for headroom
+- **Peak Level**: Normalized to ≈ −1 dB
 - **Processing**: 
-  - Resonant lowpass filtering (800Hz - 6kHz depending on sound)
-  - Natural decay envelopes (exponential + shaped)
-  - Layered harmonics (2nd, 3rd, 5th)
-  - Inharmonic partials for metal sounds
-  - Brown/pink noise for texture
-- **No Clipping**: Proper normalization and mixing levels
-- **No Harsh Transients**: Smooth attack/release phases
+  - Short fades (5–15 ms) to eliminate clicks
+  - Layering with carefully timed delays (10–40 ms)
+  - Filtering (lowpass beds, noise reduction where needed)
+  - Mono channel mix
+  - Trimmed to action-appropriate durations (0.20–1.16 s)
 
-### What Makes These "Organic" Not "Synthetic"
+### What Makes These Real Foley Not Synthesis
 
-**Previous version** (rejected): Thin sine/FM tones, no body, felt digital/artificial
+**Previous v2** (rejected by Helmer): Procedural organic synthesis with advanced techniques but no recorded soul
 
-**Current version**:
-1. **Wood impacts**: Sharp transient + resonant body + texture noise + natural vibrato
-2. **Metal sounds**: Inharmonic overtone series (not pure harmonics) + ring decay
-3. **Work sounds** (chop/saw): Rhythmic character, multiple layers, physical grain
-4. **Build complete**: Musical, warm, plucked/bell-like (not just chord beep)
-5. **Physical weight**: Low frequency components, rumble, settling
-6. **Warm filtering**: Resonant lowpass removes digital harshness
-7. **Organic decay**: Exponential + shaped (not linear cutoff)
+**Current v3**:
+1. **Real recordings**: Actual wood impacts, metal hits, saws, footsteps, growls, bells
+2. **Curated from trusted CC0 packs**: Kenney (professional game audio), rubberduck (OGA foley master), qubodup, Vehicle Tinysized, etc.
+3. **Physical character**: Real acoustic properties, not algorithmic approximations
+4. **Work-soul**: Settlers-II feel comes from real foley layering, not synthesis parameters
+5. **Proven game audio**: Many sources are from shipped CC0 games and professional packs
+
+### Source Packs Used
+
+All CC0 (Creative Commons Zero / Public Domain):
+
+- **Kenney** (www.kenney.nl): Impact Sounds, RPG Audio, Music Jingles, Interface Sounds — professional game audio packs
+- **rubberduck** (OpenGameArt): 100 CC0 metal and wood SFX — extensive foley collection
+- **qubodup** (OpenGameArt): Different steps on wood/stone/leaves/gravel/mud, Swish bamboo stick whooshes
+- **Vehicle (Jan Schupke / tinysized)** (OpenGameArt): Fantasy Sound Effects — real handsaw, arrow, whoosh recordings
+- **OwlishMedia** (OpenGameArt): 87 Clickety Clips
+- **HaelDB** (OpenGameArt): RPG Sound Pack — NPC/monster vocals
+- **LFA** (OpenGameArt): Monster Sound Pack Volume 2
+- **Brandon Morris** (OpenGameArt): Completion sound
+- **Robin Lamb** (OpenGameArt): UI Sound Effects (from VCSL/VSCO 2 CE public-domain libraries)
+- **Kresiek The Furry** (OpenGameArt): Dark Stinger 1
+- **congusbongus** (OpenGameArt): String and piano horror stings
+
+Full per-file attribution and source URLs: `docs/art/AUDIO_PROVENANCE_V3.md`
 
 ### Reproduction
 
-```bash
-python3 tools/generate_organic_settlement_audio.py
-```
+Source archive: `cc0-settlement-sfx-v3.zip` (13 WAV files + PROVENANCE.md)
 
-Generation takes ~0.4 seconds. Output is deterministic for same code version.
+Installed paths:
+```
+assets/settlement/audio/ui_click.wav
+assets/settlement/audio/build_start.wav
+assets/settlement/audio/build_complete.wav
+assets/settlement/audio/delivery.wav
+assets/settlement/audio/road.wav
+assets/settlement/audio/woodchop.wav
+assets/settlement/audio/saw.wav
+assets/settlement/audio/attack.wav
+assets/settlement/audio/tower.wav
+assets/settlement/audio/enemy.wav
+assets/settlement/audio/night.wav
+assets/settlement/audio/soldier.wav
+assets/settlement/audio/destroyed.wav
+```
 
 ---
 
@@ -100,20 +125,20 @@ The following audio files in `assets/settlement/audio/presentation/` were presen
 
 ## Provenance Statement
 
-All settlement SFX are **100% original synthesis** created specifically for this project:
+All settlement SFX are **100% curated real CC0 recordings**:
+- ✅ **Real foley** from trusted CC0 packs (Kenney, rubberduck, qubodup, Vehicle, etc.)
 - ✅ **No Settlers II samples** or recreations of copyrighted melodies
-- ✅ **No Amiga audio** rips or inspired-by-specific-copyrighted-works
-- ✅ **No commercial game audio** used as source material
-- ✅ **No third-party foley** - pure algorithmic generation
-- ✅ Character inspired by **genre feel** (Settlers-II-style colony sim), not specific implementations
+- ✅ **No commercial game audio** used without proper CC0 licensing
+- ✅ **Character inspired by genre feel** (Settlers-II-style colony sim work-soul)
+- ✅ **All sources are CC0** with full attribution in AUDIO_PROVENANCE_V3.md
 
-### Legal Distinction
+### Synthesis Scripts (Deprecated for Runtime Audio)
 
-**What we did**: Create sounds with similar **character and function** to classic colony sim audio (warm, physical, rhythmic work sounds)
+Previous versions explored procedural synthesis:
+- `tools/generate_organic_settlement_audio.py` — advanced organic synthesis (v2, rejected)
+- Earlier thin sine/FM generators (v1, rejected)
 
-**What we did NOT do**: Sample, rip, recreate, or derive from any copyrighted Settlers/Amiga/commercial audio
-
-This is similar to: "Make a platformer that feels like Mario" (legal) vs "Use Mario sound effects" (illegal)
+These scripts remain in the repository for reference but are **soft-deprecated** and NOT the shipped runtime audio. The 13 settlement SFX slots are now filled with curated real CC0 foley (v3).
 
 ---
 
@@ -121,19 +146,9 @@ This is similar to: "Make a platformer that feels like Mario" (legal) vs "Use Ma
 
 ### For CC0 Assets:
 No attribution required by license. Optional credit:
-> Settlement SFX: Original organic synthesis for Shard & Sovereign (CC0)
 
-### Why Not Use Real CC0 Packs?
-
-Attempted to download:
-- Kenney Impact Sounds
-- Kenney RPG Audio  
-- OpenGameArt "100 CC0 metal and wood SFX"
-
-**Result**: Network/JavaScript restrictions prevented downloads in build environment.
-
-**Solution**: Created organic synthesis that matches or exceeds quality of typical game audio foley, using advanced techniques (resonance, layering, filtering, transients, physical modeling principles).
+> Settlement SFX: Curated CC0 foley from Kenney, rubberduck, qubodup, Vehicle/tinysized, OwlishMedia, HaelDB, LFA, Brandon Morris, Robin Lamb, Kresiek The Furry, congusbongus — full provenance in docs/art/AUDIO_PROVENANCE_V3.md
 
 ---
 
-Last Updated: September 27, 2026 (Playtest.8 - Organic Audio v2)
+Last Updated: September 27, 2026 (Playtest.8 - CC0 Foley v3)
