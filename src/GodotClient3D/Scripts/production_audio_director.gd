@@ -30,7 +30,11 @@ const CUE_PATHS := {
 	"attack": "res://assets/settlement/audio/attack.wav",
 	"tower": "res://assets/settlement/audio/tower.wav",
 	"build_start": "res://assets/settlement/audio/build_start.wav",
-	"build_complete": "res://assets/settlement/audio/build_complete.wav"
+	"build_complete": "res://assets/settlement/audio/build_complete.wav",
+	"soldier": "res://assets/settlement/audio/soldier.wav",
+	"farm_complete": "res://assets/settlement/audio/farm_animal.wav",
+	"barracks_complete": "res://assets/settlement/audio/soldier.wav",
+	"settler_spawn": "res://assets/settlement/audio/settler_arrive.wav"
 }
 
 var settings: Dictionary = {}
@@ -152,7 +156,14 @@ func play_work_at(world_position: Vector3, kind: String) -> void:
 		return
 	var player: AudioStreamPlayer3D = work_pool[work_index % work_pool.size()]
 	work_index += 1
-	var path := "res://assets/settlement/audio/presentation/work_chop.wav" if kind == "chop" else "res://assets/settlement/audio/presentation/work_hammer.wav"
+	var path := ""
+	match kind:
+		"chop":
+			path = "res://assets/settlement/audio/presentation/work_chop.wav"
+		"saw":
+			path = "res://assets/settlement/audio/saw.wav"
+		_:
+			path = "res://assets/settlement/audio/presentation/work_hammer.wav"
 	player.stream = _load_stream(path)
 	player.global_position = world_position
 	player.volume_db = -10.0
@@ -173,6 +184,14 @@ func handle_sim_event(event_name: String) -> void:
 			play_cue("build_start")
 		"build_complete":
 			play_cue("build_complete")
+		"soldier":
+			play_cue("soldier")
+		"farm_complete":
+			play_cue("farm_complete")
+		"barracks_complete":
+			play_cue("barracks_complete")
+		"settler_spawn":
+			play_cue("settler_spawn")
 		_:
 			pass
 

@@ -964,29 +964,35 @@ func _create_ui() -> void:
 		btn_container.add_theme_stylebox_override("panel", btn_style)
 		strip_box.add_child(btn_container)
 		
+		# Make the entire area (icon + text) a single clickable button
+		var btn := Button.new()
+		btn.custom_minimum_size = Vector2(72, 52)
+		btn.flat = true
+		btn.pressed.connect(begin_placement.bind(building_type))
+		var purpose := String(BUILD_PURPOSES.get(building_type, "Settlement building."))
+		var cost := Defs.formatted_cost(building_type)
+		btn.tooltip_text = "%s\n\n%s\nCost: %s" % [Defs.building_name(building_type), purpose, cost]
+		btn_container.add_child(btn)
+		
 		var btn_vbox := VBoxContainer.new()
 		btn_vbox.add_theme_constant_override("separation", 2)
-		btn_container.add_child(btn_vbox)
+		btn_vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		btn.add_child(btn_vbox)
 		
-		# Create visual icon representation instead of plain color rect
 		var icon_canvas := Control.new()
 		icon_canvas.custom_minimum_size = Vector2(72, 32)
-		icon_canvas.mouse_filter = Control.MOUSE_FILTER_PASS
+		icon_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var icon_drawing := _create_building_icon_visual(building_type)
 		icon_canvas.add_child(icon_drawing)
 		btn_vbox.add_child(icon_canvas)
 		
-		var btn := Button.new()
-		btn.text = Defs.building_name(building_type) if building_type != Defs.TOOL_CLEAR_AREA else "Clear"
-		btn.custom_minimum_size = Vector2(72, 14)
-		btn.add_theme_font_size_override("font_size", 9)
-		btn.flat = true
-		btn.pressed.connect(begin_placement.bind(building_type))
-		# Add tooltip with what it does + resource cost
-		var purpose := String(BUILD_PURPOSES.get(building_type, "Settlement building."))
-		var cost := Defs.formatted_cost(building_type)
-		btn.tooltip_text = "%s\n\n%s\nCost: %s" % [Defs.building_name(building_type), purpose, cost]
-		btn_vbox.add_child(btn)
+		var label := Label.new()
+		label.text = Defs.building_name(building_type) if building_type != Defs.TOOL_CLEAR_AREA else "Clear"
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.add_theme_font_size_override("font_size", 9)
+		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		btn_vbox.add_child(label)
+		
 		build_strip_buttons.append(btn)
 
 	inspector_panel = PanelContainer.new()
@@ -2714,7 +2720,11 @@ func _tick_audio(delta: float) -> void:
 		var type_name := String(snapshot.get("type", ""))
 		if type_name not in ["LUMBER_CAMP", "SAWMILL", "QUARRY", "FARM", "BAKERY", "BARRACKS"]:
 			continue
-		var kind := "chop" if type_name in ["LUMBER_CAMP", "SAWMILL"] else "hammer"
+		var kind := "chop"
+		if type_name == "SAWMILL":
+			kind = "saw"
+		elif type_name not in ["LUMBER_CAMP"]:
+			kind = "hammer"
 		audio_director.play_work_at(world_view.tile_to_world(Vector2(snapshot.get("center", Vector2.ZERO))), kind)
 		break
 

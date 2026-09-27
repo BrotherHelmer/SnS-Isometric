@@ -56,7 +56,9 @@ func apply_snapshot(snapshot: Dictionary) -> void:
 	var next_construction := bool(snapshot.get("construction", false))
 	var next_footprint := Vector2i(snapshot.get("footprint", footprint))
 	var next_wall_signature := "%d:%d:%d" % [int(snapshot.get("wall_mask", 0)), int(bool(snapshot.get("gate_adjacent", false))), int(bool(snapshot.get("gate_closed", false)))]
-	if next_type != building_type or next_construction != is_construction or next_footprint != footprint or (next_type == "WALL" and next_wall_signature != wall_signature):
+	var next_has_barracks := bool(snapshot.get("has_barracks", false))
+	var last_has_barracks := bool(last_snapshot.get("has_barracks", false))
+	if next_type != building_type or next_construction != is_construction or next_footprint != footprint or (next_type == "WALL" and next_wall_signature != wall_signature) or (next_type == "TOWN_HALL" and next_has_barracks != last_has_barracks):
 		configure(snapshot)
 		return
 	last_snapshot = snapshot.duplicate(true)

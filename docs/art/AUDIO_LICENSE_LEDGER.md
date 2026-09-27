@@ -151,4 +151,29 @@ No attribution required by license. Optional credit:
 
 ---
 
-Last Updated: September 27, 2026 (Playtest.8 - CC0 Foley v3)
+## Playtest.9 Placeholder Audio (Procedural)
+
+**Added**: September 27, 2026  
+**Purpose**: Minimal placeholders for new gameplay events until curated CC0 audio is sourced  
+**License**: CC0 (Public Domain) - procedurally generated  
+**Generation Script**: `tools/generate_playtest9_placeholder_audio.py`
+
+### Files
+
+| File | Duration | Character | Status |
+|------|----------|-----------|--------|
+| `farm_animal.wav` | 0.9s | Simple sheep-like bleat (350-280Hz sweep with vibrato) | **PROCEDURAL PLACEHOLDER** - replace with real CC0 sheep recording |
+| `settler_arrive.wav` | 0.75s | Friendly two-note chime (C4-E4 ascending) | **PROCEDURAL PLACEHOLDER** - replace with CC0 greeting/arrival sound |
+
+### Replacement Instructions
+
+See `docs/art/AUDIO_REQUIREMENTS_PLAYTEST9.md` for:
+- Curated CC0 source recommendations (Freesound, OpenGameArt)
+- Technical specifications (16-bit mono, 44.1kHz, normalized)
+- Processing workflow
+
+These procedural sounds are **functionally adequate** but lack the warmth and character of real recordings. Replace before final release.
+
+---
+
+Last Updated: September 27, 2026 (Playtest.9 - procedural placeholders + CC0 Foley v3)
