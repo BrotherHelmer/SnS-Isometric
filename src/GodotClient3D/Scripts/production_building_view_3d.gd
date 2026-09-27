@@ -47,6 +47,9 @@ func configure(snapshot: Dictionary) -> void:
 	var has_barracks := bool(snapshot.get("has_barracks", false))
 	if building_type == "TOWN_HALL" and has_barracks:
 		building_type = "CASTLE"
+		# Update last_snapshot to reflect the castle upgrade so apply_snapshot
+		# doesn't trigger another rebuild on every frame
+		last_snapshot["has_barracks"] = true
 	_rebuild()
 	apply_snapshot(snapshot)
 

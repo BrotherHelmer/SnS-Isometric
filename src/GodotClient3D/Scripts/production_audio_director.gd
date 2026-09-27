@@ -105,9 +105,9 @@ func setup(host: Node, camera_value: Camera3D) -> void:
 func apply_settings(next: Dictionary) -> void:
 	settings = next
 	_set_bus_volume("Master", float(settings.get("master", 1.0)))
-	_set_bus_volume("Music", float(settings.get("music", 0.72)))
-	_set_bus_volume("SFX", float(settings.get("sfx", 0.85)))
-	_set_bus_volume("Ambience", float(settings.get("sfx", 0.85)) * 0.9)
+	_set_bus_volume("Music", float(settings.get("music", 0.85)))
+	_set_bus_volume("SFX", float(settings.get("sfx", 1.0)))
+	_set_bus_volume("Ambience", float(settings.get("sfx", 1.0)) * 0.9)
 	Identity.save_audio_settings(settings)
 
 
@@ -272,16 +272,16 @@ func _update_stem_targets(simulation, menu_visible: bool) -> void:
 	var pop := 3
 	if simulation != null:
 		pop = int(simulation.population_current)
-	var activity_db := lerpf(-26.0, -12.0, clampf(float(pop) / 10.0, 0.0, 1.0))
+	var activity_db := lerpf(-26.0, -8.0, clampf(float(pop) / 10.0, 0.0, 1.0))
 	match current_state:
 		"menu":
 			stem_targets["day"] = -16.0
 			stem_targets["ambience"] = -14.0
 			stem_targets["wyrd"] = -34.0
 		"day":
-			stem_targets["day"] = -11.0
+			stem_targets["day"] = -8.0
 			stem_targets["activity"] = activity_db
-			stem_targets["ambience"] = -13.0
+			stem_targets["ambience"] = -11.0
 			stem_targets["lumen"] = -30.0
 		"dusk":
 			stem_targets["day"] = -20.0

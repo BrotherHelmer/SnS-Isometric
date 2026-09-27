@@ -31,6 +31,7 @@ const BUILD_PALETTE := [
 	Defs.BUILDING_BARRACKS,
 	Defs.BUILDING_LUMEN_PILLAR,
 	Defs.BUILDING_OUTPOST,
+	Defs.TOOL_CLEAR_AREA,
 ]
 const BUILD_CATEGORIES := {
 	"ESSENTIALS": [Defs.BUILDING_ROAD, Defs.BUILDING_HOUSE, Defs.BUILDING_LUMBER_CAMP, Defs.BUILDING_FARM, Defs.BUILDING_WATCHTOWER, Defs.BUILDING_OUTPOST],
@@ -415,6 +416,12 @@ func load_game() -> bool:
 
 
 func begin_placement(building_type: String) -> void:
+	# Cancel any existing placement or dragging state first
+	_cancel_road_drag()
+	_cancel_wall_drag()
+	map_drag_active = false
+	map_drag_moved = false
+	# Now start fresh placement
 	placement_preview_locked = false
 	placement_type = building_type
 	placement_rotation = 0
