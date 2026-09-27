@@ -5718,7 +5718,10 @@ func _find_enemy_target_unprofiled(enemy: Dictionary) -> Dictionary:
 		if building_type == Defs.BUILDING_TOWN_HALL:
 			occupied_buildings.append(building)
 		elif building_type == Defs.BUILDING_WATCHTOWER:
-			towers.append(building)
+			if int(building.get("soldiers_assigned", 0)) > 0:
+				towers.append(building)
+			else:
+				occupied_buildings.append(building)
 		elif building_type == Defs.BUILDING_WALL and (is_brute or _wall_guards_gate(building)):
 			gateways.append(building)
 		elif int(building.get("assigned_staff", 0)) > 0 or building_type == Defs.BUILDING_HOUSE or int(building.get("id", 0)) == claim_outpost_id:
@@ -6921,10 +6924,11 @@ func collect_build_pads(building_type: String, rotation: int = 0, limit: int = 4
 	if not Defs.is_buildable(building_type) or building_type == Defs.BUILDING_ROAD:
 		return {"valid": valid, "clearing": clearing}
 	var seen: Dictionary = {}
+	var search_radius := 8
 	for road_key in connected_roads.keys():
 		var road_tile := _tile_from_key(String(road_key))
-		for y in range(-5, 6):
-			for x in range(-5, 6):
+		for y in range(-search_radius, search_radius + 1):
+			for x in range(-search_radius, search_radius + 1):
 				var origin := road_tile + Vector2i(x, y)
 				var key := _tile_key(origin)
 				if seen.has(key) or not is_inside_map(origin) or not is_revealed(origin):

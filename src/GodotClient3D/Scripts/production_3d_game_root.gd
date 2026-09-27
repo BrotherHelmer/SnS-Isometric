@@ -1706,15 +1706,17 @@ func _update_inspector() -> void:
 			selected_worker_id = 0
 		else:
 			var descriptor: Dictionary = presentation_adapter.worker_descriptor(worker, simulation_host.simulation)
-			inspector_label.text = "\n".join([
+			var lines := [
 				"[font_size=22][color=#efcf8a]%s[/color][/font_size]" % String(descriptor.get("profession", "Worker")),
 				"[color=#9fc6a5]%s[/color]" % _worker_player_status(String(descriptor.get("simulation_state", "Idle"))),
 				"",
 				"%s" % ("Fed" if not bool(worker.get("hungry", false)) else "[color=#f0a06e]Hungry[/color]"),
 				"%s" % ("Healthy" if int(worker.get("hp", 0)) >= int(worker.get("max_hp", 1)) else "Injured  %d / %d HP" % [int(worker.get("hp", 0)), int(worker.get("max_hp", 1))]),
-				"Carrying  %s" % ("%s ×%d" % [String(descriptor.get("cargo", "")).capitalize(), int(descriptor.get("cargo_amount", 0))] if int(descriptor.get("cargo_amount", 0)) > 0 else "—"),
-				_debug_id_line(selected_worker_id),
-			])
+			]
+			if String(worker.get("type", "")) not in ["guard"]:
+				lines.append("Carrying  %s" % ("%s ×%d" % [String(descriptor.get("cargo", "")).capitalize(), int(descriptor.get("cargo_amount", 0))] if int(descriptor.get("cargo_amount", 0)) > 0 else "—"))
+			lines.append(_debug_id_line(selected_worker_id))
+			inspector_label.text = "\n".join(lines)
 			inspector_panel.visible = true
 			return
 	if debug_visible:
@@ -1999,33 +2001,7 @@ func _focus_from_minimap(world_position: Vector3) -> void:
 func _update_shard_compass() -> void:
 	if shard_compass == null:
 		return
-	if not play_has_begun or camera_rig == null or camera_rig.camera == null or world_view == null or simulation_host.simulation == null:
-		shard_compass.visible = false
-		return
-	if startup_overlay != null and startup_overlay.visible:
-		shard_compass.visible = false
-		return
-	if result_overlay != null and result_overlay.visible:
-		shard_compass.visible = false
-		return
-	var shard_world := world_view.tile_to_world(Vector2(simulation_host.simulation.shard_position)) + Vector3(0.0, 8.0, 0.0)
-	var screen := camera_rig.camera.unproject_position(shard_world)
-	var viewport_size := get_viewport().get_visible_rect().size
-	var onscreen := screen.x > 64.0 and screen.x < viewport_size.x - 64.0 and screen.y > 72.0 and screen.y < viewport_size.y - 64.0
-	if onscreen:
-		shard_compass.visible = false
-		return
-	var center := viewport_size * 0.5
-	var direction := (screen - center)
-	if direction.length() < 1.0:
-		shard_compass.visible = false
-		return
-	direction = direction.normalized()
-	var edge := center + direction * minf(viewport_size.x, viewport_size.y) * 0.36
-	edge.x = clampf(edge.x, 56.0, viewport_size.x - 120.0)
-	edge.y = clampf(edge.y, 88.0, viewport_size.y - 48.0)
-	shard_compass.position = edge
-	shard_compass.visible = true
+	shard_compass.visible = false
 
 
 func _should_recommend_frontier(building_type: String) -> bool:
