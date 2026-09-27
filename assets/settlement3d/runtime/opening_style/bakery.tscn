@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3]
 
-[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/bakery.res" id="1_tdnya"]
+[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/bakery.res" id="1_5vk58"]
 
-[node name="Bakery" type="Node3D"]
+[node name="Bakery" type="Node3D" unique_id=300658965]
 
-[node name="Model" type="MeshInstance3D" parent="."]
-mesh = ExtResource("1_tdnya")
+[node name="Model" type="MeshInstance3D" parent="." unique_id=9106646]
+mesh = ExtResource("1_5vk58")
