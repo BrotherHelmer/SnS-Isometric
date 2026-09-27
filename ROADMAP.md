@@ -1,7 +1,7 @@
 # Shard & Sovereign — Development Roadmap
 
 **Last updated:** 2026-09-27  
-**Current version:** 0.2.0-playtest.17  
+**Current version:** 0.2.0-playtest.18  
 **Target:** Closed Steam Playtest → Public Demo
 
 This roadmap tracks progress toward a releasable Windows settlement survival game: build an economy with autonomous workers, defend against night raids, race a rival realm to Bind the central Shard. Owner-confirmed route: **closed Steam Playtest first, then public demo** after validation gates pass.
@@ -14,13 +14,22 @@ This roadmap tracks progress toward a releasable Windows settlement survival gam
 
 Prepare a validated Windows package for supervised external testing. The game must demonstrate a complete playable loop (founding → economy → defense → Shard race → victory/defeat) with comprehensible onboarding, reliable saves, and no progression blockers.
 
-**Status:** Playtest.17 fixes founding yard props placement (entrance-relative) and Goals panel stale objective. Core gameplay loop is implemented and passes automated checks. External human validation gates remain open.
+**Status:** Playtest.18 fixes founding yard props on 3D client path. Core gameplay loop is implemented and passes automated checks. External human validation gates remain open.
 
 ---
 
 ## Completed Work (Recent)
 
-### Playtest.17 (2026-09-27) — Founding Yard Props Placement Fix
+### Playtest.18 (2026-09-27) — Founding Yard Props on 3D Client Path (FIXED Wine failure)
+- Fixed decorative props spawning on 3D client path: props now appear when starting New Realm via production_3d.tscn (Windows build)
+- Root cause: playtest.17 placed props only in `start_presentation_run()` (2D main.gd path), never in `start_new_run()` with `begin_founded=true` (3D ProductionSimulationHost3D path)
+- Solution: extracted `_spawn_founding_yard_props(entrance)` helper, called from both `start_presentation_run()` (2D) and `_finish_founding_setup()` (3D founded path)
+- Props spawn entrance-relative with grass + empty building tile checks (playtest.17 logic preserved)
+- Catalog keys verified: `wood_stack`, `stone_stack`, `barrel`, `crate` (WORKYARD_PROPS dictionary)
+- 3D snapshot/adapter already syncs `decorative_props` via `ProductionPresentationAdapter3D.capture_frame()` → `ProductionWorldView3D._sync_decorative_props()`
+- Version bumped to 0.2.0-playtest.18
+
+### Playtest.17 (2026-09-27) — Founding Yard Props Placement Fix (FAILED Wine test — wrong entry path)
 - Fixed decorative props spawning: props now placed relative to entrance (not town_center)
 - Props spawn at entrance ± offsets avoiding Town Hall footprint and entrance roads
 - Added `get_building_at_tile()` check to prevent props on road tiles
