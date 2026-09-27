@@ -794,7 +794,8 @@ func validate_placement(building_type: String, tile: Vector2i, rotation: int = 0
 			return _failure("EnemyCamp", "Clear the enemy camp before building here.")
 		if rivalry != null and rivalry.is_rivalry_occupied(footprint_tile):
 			return _failure("Occupied", "Footprint blocked by road or rival structure. Try rotating (R) or move away from rival territory.")
-		var existing := get_building_at_tile(footprint_tile):
+		var existing := get_building_at_tile(footprint_tile)
+		if not existing.is_empty():
 			return _failure("Occupied", "Footprint overlaps another building. Move the ghost to an empty area.")
 
 	if building_type == Defs.BUILDING_QUARRY:
