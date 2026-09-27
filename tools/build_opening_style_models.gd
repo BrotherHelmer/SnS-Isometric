@@ -162,8 +162,8 @@ func window(p: Vector3) -> void:
 	box(p + Vector3(0, -0.40, 0.10), Vector3(0.7, 0.09, 0.26), "plank")
 
 func cottage(kind: String) -> void:
-	var w := 3.8 if kind == "TOWN_HALL" else 3.2
-	var d := 2.8
+	var w := 4.2 if kind == "TOWN_HALL" else 3.2
+	var d := 3.0 if kind == "TOWN_HALL" else 2.8
 	masonry(Vector3(0, 0.34, 0), Vector3(w, 0.68, d), 2)
 	box(Vector3(0, 1.63, 0), Vector3(w - 0.1, 1.9, d - 0.1), "plaster")
 	for x in [-w * 0.5 + 0.06, 0.0, w * 0.5 - 0.06]:
@@ -182,9 +182,9 @@ func cottage(kind: String) -> void:
 	for x in [-1, 1]:
 		beam(Vector3(x * (w * 0.5 - 0.1), 0.85, d * 0.5 + 0.05), Vector3(x * 0.55, 2.4, d * 0.5 + 0.05), 0.10, "wood")
 		window(Vector3(x * w * 0.31, 1.65, d * 0.5 + 0.09))
-	box(Vector3(0, 1.05, d * 0.5 + 0.10), Vector3(0.73, 1.43, 0.15), "wood")
+	box(Vector3(0, 1.05, d * 0.5 + 0.10), Vector3(0.85, 1.65, 0.16), "wood")
 	for i in 5:
-		box(Vector3(-0.28 + i * 0.14, 1.04, d * 0.5 + 0.19), Vector3(0.12, 1.32, 0.06), "plank")
+		box(Vector3(-0.34 + i * 0.17, 1.04, d * 0.5 + 0.21), Vector3(0.14, 1.52, 0.07), "plank")
 	for y in [0.68, 1.35]:
 		box(Vector3(0, y, d * 0.5 + 0.24), Vector3(0.68, 0.055, 0.04), "iron")
 	for i in 3:
@@ -196,11 +196,14 @@ func cottage(kind: String) -> void:
 	roof(Vector3(0, 2.52, 0), w + 0.5, d + 0.5, 1.5)
 	beam(Vector3(0, 2.55, d * 0.5 + 0.04), Vector3(0, 3.92, d * 0.5 + 0.04), 0.13, "wood")
 	if kind == "TOWN_HALL":
-		masonry(Vector3(0, 3.6, -0.65), Vector3(1.25, 2.7, 1.25), 7)
-		window(Vector3(0, 4.4, 0.02))
-		cylinder(Vector3(0, 5.65, -0.65), 1.15, 0.04, 1.65, "slate", 4, Vector3(0, PI / 4.0, 0))
-		box(Vector3(0, 6.67, -0.65), Vector3(0.07, 0.6, 0.07), "wood")
-		box(Vector3(0.32, 6.79, -0.65), Vector3(0.64, 0.35, 0.035), "slate_light")
+		masonry(Vector3(0, 4.2, -0.65), Vector3(1.45, 3.9, 1.45), 10)
+		window(Vector3(0, 4.9, 0.08))
+		window(Vector3(0, 3.4, 0.08))
+		cylinder(Vector3(0, 6.8, -0.65), 1.35, 0.06, 2.2, "slate", 4, Vector3(0, PI / 4.0, 0))
+		box(Vector3(0, 8.15, -0.65), Vector3(0.09, 0.9, 0.09), "wood")
+		box(Vector3(0.42, 8.35, -0.65), Vector3(0.8, 0.48, 0.045), "slate_light")
+		for side in [-1, 1]:
+			box(Vector3(side * 0.55, 7.85, -0.65), Vector3(0.22, 0.42, 0.22), "stone_dark")
 	else:
 		masonry(Vector3(1.05, 2.5, -0.5), Vector3(0.5, 4.3, 0.55), 12)
 		box(Vector3(1.05, 4.68, -0.5), Vector3(0.67, 0.17, 0.7), "stone_dark")

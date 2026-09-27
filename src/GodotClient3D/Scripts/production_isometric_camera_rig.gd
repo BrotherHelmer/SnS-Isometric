@@ -5,7 +5,7 @@ const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_p
 
 const CLOSE_ZOOM := 18.0
 const NORMAL_ZOOM := 38.0
-const STRATEGIC_ZOOM := 85.0
+const STRATEGIC_ZOOM := 68.0
 const PREFERRED_YAW := -0.62
 
 var camera: Camera3D
@@ -53,10 +53,10 @@ func _input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
-			target_zoom = clampf(target_zoom - 4.0, CLOSE_ZOOM, STRATEGIC_ZOOM)
+			target_zoom = clampf(target_zoom - 3.5, CLOSE_ZOOM, STRATEGIC_ZOOM)
 			get_viewport().set_input_as_handled()
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
-			target_zoom = clampf(target_zoom + 4.0, CLOSE_ZOOM, STRATEGIC_ZOOM)
+			target_zoom = clampf(target_zoom + 3.5, CLOSE_ZOOM, STRATEGIC_ZOOM)
 			get_viewport().set_input_as_handled()
 		elif event.button_index == MOUSE_BUTTON_MIDDLE:
 			dragging = event.pressed
@@ -118,7 +118,7 @@ func end_pointer_pan() -> void:
 
 func compose_view(world_position: Vector3, orthographic_size: float) -> void:
 	target_position = Vector3(world_position.x, 0.0, world_position.z)
-	target_zoom = clampf(orthographic_size, CLOSE_ZOOM - 2.0, STRATEGIC_ZOOM + 2.0)
+	target_zoom = clampf(orthographic_size, CLOSE_ZOOM, STRATEGIC_ZOOM)
 	_clamp_target()
 	position = target_position
 	if camera != null:
