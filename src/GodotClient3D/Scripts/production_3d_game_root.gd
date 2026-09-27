@@ -106,6 +106,7 @@ var ui_elapsed := 0.0
 var status_label: Label
 var resource_label: Label
 var placement_label: Label
+var placement_legend_label: Label
 var inspector_label: RichTextLabel
 var assault_button: Button
 var recall_button: Button
@@ -434,13 +435,18 @@ func begin_placement(building_type: String) -> void:
 	inspector_panel.visible = false
 	placement_panel.visible = true
 	var instruction := ""
+	var legend := ""
 	if building_type == Defs.TOOL_CLEAR_AREA:
 		instruction = "drag to mark trees · right-click cancels"
+		legend = ""
 	elif building_type in [Defs.BUILDING_ROAD, Defs.BUILDING_WALL]:
 		instruction = "hold and drag to draw · right-click cancels"
+		legend = ""
 	else:
-		instruction = "GREEN = valid · YELLOW = needs clearing · RED = blocked · R rotates · click to place · right-click cancels"
+		instruction = "R rotates · click to place · right-click cancels"
+		legend = "GREEN = valid · YELLOW = needs clearing · RED = blocked"
 	placement_label.text = "%s · %s" % [Defs.building_name(building_type), instruction]
+	placement_legend_label.text = legend
 	world_view.set_claim_overlay_visible(building_type in [Defs.BUILDING_LUMEN_PILLAR, Defs.BUILDING_OUTPOST])
 	_set_build_palette_visible(false)
 	_show_objective_detail(false)
@@ -465,6 +471,8 @@ func cancel_placement() -> void:
 		placement_ghost.visible = false
 	if placement_label != null:
 		placement_label.text = ""
+	if placement_legend_label != null:
+		placement_legend_label.text = ""
 	if placement_panel != null:
 		placement_panel.visible = false
 
@@ -1053,20 +1061,28 @@ func _create_ui() -> void:
 	placement_panel.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	placement_panel.offset_left = -235.0
 	placement_panel.offset_right = 235.0
-	placement_panel.offset_top = -54.0
+	placement_panel.offset_top = -74.0
 	placement_panel.offset_bottom = -12.0
 	placement_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.045, 0.055, 0.052, 0.90), Color("#6e8e72")))
 	root.add_child(placement_panel)
-	var bottom_box := HBoxContainer.new()
-	bottom_box.add_theme_constant_override("separation", 10)
-	placement_panel.add_child(bottom_box)
+	var placement_vbox := VBoxContainer.new()
+	placement_vbox.add_theme_constant_override("separation", 4)
+	placement_panel.add_child(placement_vbox)
+	placement_legend_label = Label.new()
+	placement_legend_label.text = ""
+	placement_legend_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	placement_legend_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	placement_legend_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	placement_legend_label.add_theme_color_override("font_color", Color("#a8b89c"))
+	placement_legend_label.add_theme_font_size_override("font_size", 11)
+	placement_vbox.add_child(placement_legend_label)
 	placement_label = Label.new()
 	placement_label.text = ""
 	placement_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	placement_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	placement_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	placement_label.add_theme_color_override("font_color", Color("#e2d4ad"))
-	bottom_box.add_child(placement_label)
+	placement_vbox.add_child(placement_label)
 	placement_panel.visible = false
 	minimap = MinimapScript.new()
 	minimap.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
