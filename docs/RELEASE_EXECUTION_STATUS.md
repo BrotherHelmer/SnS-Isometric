@@ -1,23 +1,95 @@
-# Release execution status — 2026-09-26
+# Release execution status — 2026-09-27
 
 Milestone: internal Windows candidate for closed Steam Playtest, then public demo. Steamworks setup remains deferred by the owner. **Not approved for external release.**
 
-## Implemented
+**Current version:** 0.2.0-playtest.13  
+**Comprehensive tracking:** See [ROADMAP.md](../ROADMAP.md) for current work, prioritized backlog, and release gates.
 
-- Versioned Forward+ export, pinned Godot/templates, explicit runtime resources, source/output hash manifest, standalone-copy validation and engine/component license notices.
-- Verified temporary save writes, last-valid backup recovery, unsupported-version rejection, map/entity/nested ledger validation, exact RNG state, clearing targets/priorities, autosave, saved display settings, save-before-quit and previous-realm preservation.
-- Fixed construction reservations stranded by cancellation before pickup, temporary clearers accumulating as zero-capacity carriers, manual orders discarding carried goods, and night tasks altered on reload. Clearers now release exhausted targets removed by other workers and deliver existing cargo before harvesting again after shelter.
-- Removed the simulation/rivalry reference cycle and unused audio objects. Scene tests allow the audio thread to drain before process shutdown.
-- Pressure contrast, smoother fog boundary, exterior mist and existing founding-yard props. Raised exterior mist removes thin slab-edge lines at maximum zoom. Captures cover 720p/1080p and close/normal/strategic zoom; broader pan/seed review remains useful.
-- Owner-selected remedy for the Outpost deadlock: an assault/recall command for trained patrol soldiers, travel and in-range strikes against visible rival Outposts, with disk persistence.
-- Local feedback bundle and current scope/build/playtest documentation. Historical demo and phase evidence retained.
-- Fixed zero-scale death animations that produced singular-transform rendering errors. Added cross-process persistence checks, audio-mixer sampling in package diagnostics and Windows-path quoting in test launchers.
+## Implemented (playtest.13 and earlier)
+
+**Visual & Art (playtest.13, 12, 11, 8, 7, 6, 4, 3):**
+- Castle visual: 4-tower fortress (was 3), taller keep, proper curtain walls, crenellations matching title art (12,840 tri)
+- Barracks: dedicated military tower with shields, weapon racks (6,200 tri, was cottage + decorations)
+- Town Hall → Castle morph (via `has_barracks`) reads as fortified stronghold at strategic zoom
+- 19 opening-style model scenes: buildings, trees, rocks, props, walls
+- Coordinated terrain/lighting/character materials for opening-style palette
+- Pressure contrast, smoother fog boundary, exterior mist covering slab edges at max zoom
+- Night lighting readable (ambient 0.50, sun 0.35, fill 0.32, night/day luminance ~0.27)
+- C&C-style bottom building bar with visual icons (house silhouette, saw blade, shield/spear, etc.)
+- Building occupancy indicators (window emission when staffed/garrisoned)
+- Distinctive resource icons (log, wheat, stone, bread loaf, Wyrd crystal)
+- Build tooltips showing purpose + costs on hover
+
+**Audio (playtest.10, 9, 8):**
+- Curated CC0 BGM and atmosphere audio (replaced procedural placeholders)
+- Per-type spawn sounds for buildings, units, combat events
+- Real foley with warmth and presence
+- Comprehensive audio provenance ledgers
+
+**Saves & Persistence (playtest.5, 4, 3, 2, 1):**
+- Temporary save writes with last-valid backup recovery
+- Unsupported-version rejection (formats 6–8 supported, future versions rejected)
+- Map/entity/nested ledger validation, exact RNG state preservation
+- Autosave every 2 minutes active real time
+- Save-before-quit flow with window-close handling
+- Previous-realm preservation, display settings persistence
+- Verified cargo, active raid, mid-Binding, hunger save/reload cases
+- Fixed construction reservation stranding, zero-capacity clearer accumulation, manual order cargo discard, night task reload drift
+
+**Combat & Rivalry (playtest.5, 4):**
+- Owner-selected assault/recall command for trained patrol soldiers
+- Travel and in-range strikes against visible rival Outposts
+- Disk persistence of assault state
+- Tower guards engage properly (no fleeing), unmanned towers lower-priority
+- Three-seed command-only bot completes all matches including mid-Binding reload (260821, 424242, 717171)
+
+**UX & Readability (playtest.7, 6, 5):**
+- Expanded fog-of-war reveal (8→12 tiles) for Day 1 Watchtower placement
+- Road connectivity error messages with explicit guidance
+- Increased starting Bread (12→18) and Town Hall overflow storage (8→20)
+- Storehouse and Watchtower in early objectives
+- Expanded build pad scanning (5→8 tiles) for better placement coverage
+- Removed premature Shard direction indicator
+- First-night warning mentions defensive buildings
+- Reduced attack notification spam
+- Camera stays on settlement (no auto-jump to shard)
+- Build pad system highlights valid placement areas
+
+**Technical (playtest.4, 3, 2, 1):**
+- Versioned Forward+ export, pinned Godot 4.7/templates
+- Explicit runtime resources, source/output hash manifest
+- Standalone-copy validation, engine/component license notices
+- Removed simulation/rivalry reference cycle
+- Fixed zero-scale death animations (singular-transform errors)
+- Cross-process persistence checks, audio-mixer sampling in diagnostics
+- Windows-path quoting in test launchers
+- Local feedback bundle (report, save, logs)
+- 20-suite automated validation passes
 
 ## Evidence and limits
 
-Current candidate **0.2.0-playtest.4** extends the art direction across terrain, grass, bushes, wheat, character materials, remaining building models, wall crenellations, roads, fog and day/night lighting. There are nineteen authored model scenes. All **20** suite checks passed; the wall-direction assertion was then added to the model check and passed separately. Rendered comparisons show night/day mean display luminance of about 0.27 in the sampled saved-settlement region. The exported package passed its 60-second developed-settlement run (67.90 seconds runner elapsed), with no errors. Runtime source hashes match the build manifest. The exported opening and rendered day/dusk/night comparisons were visually inspected. Previous fixed night sun-energy assertions were updated to a relative day/night criterion for the intentional palette change, with an additional rendered-pixel check. Character geometry and animations are retained; the new materials are a palette adaptation. See `docs/art/OPENING_STYLE_MODELS.md` for scope and limitations. No hour-long soak or lower-end physical-machine claim is made for this candidate.
+Current candidate **0.2.0-playtest.13** refines castle and barracks visuals to match title art. The castle now features 4 corner towers (was 3), taller keep, and proper curtain walls with crenellations (12,840 triangles, 790KB). The barracks is a dedicated military tower structure with shields and weapon racks (6,200 triangles), distinct from the cottage-based prototype. Town Hall → Castle morph (via `has_barracks`) now reads as a fortified multi-tower stronghold at strategic zoom.
+
+All **20** suite checks pass. The opening-style model set includes 19 authored scenes covering buildings, terrain features, and props. Character geometry and animations are retained with palette-adapted materials. See `docs/art/OPENING_STYLE_MODELS.md` for scope and limitations.
+
+**Validation status:**
+- ✅ Automated checks: 20/20 suites pass (parse, rebuild, rivalry, bakery, wyrdfall, full_run, human_playtest_rescue, presence, review_evidence, natural_match 3/3 seeds, opening_style_models, settlement_style_capture, etc.)
+- ✅ Three-seed command-only bot completes all matches including mid-Binding save/reload (seeds 260821, 424242, 717171)
+- ✅ Save safety: temporary writes, backup recovery, version rejection, structural validation
+- ✅ Construction/logistics/rivalry/persistence cross-process checks pass
+- ❌ 60-minute rendered package soak with audio-mixer sampling (awaiting)
+- ❌ Observed new-player pilot (5-person, target 4/5 comprehension)
+- ❌ Human complete matches (3+ natural sessions)
+- ❌ Lower-end GPU performance (current evidence: RTX 4070 only)
+- ❌ Clean physical Windows machine test
+
+No hour-long soak, lower-end GPU test, or physical clean-machine validation has been performed for playtest.13.
 
 
+
+## Historical Evidence (preserved for reference)
+
+**Playtest.4** (2026-09-26) extended art direction across terrain, grass, bushes, wheat, character materials, remaining building models, wall crenellations, roads, fog and day/night lighting. All 20 suite checks passed. Rendered comparisons showed night/day mean luminance ~0.27. Exported package passed 60-second developed-settlement run (67.90s elapsed) with no errors. No hour-long soak performed for playtest.4.
 
 Previous candidate **0.2.0-playtest.3** adds twelve playable opening-style models: six buildings, two trees, rocks, fence, lantern and cart. Related building roles reuse the appropriate new geometry. The town hall has a broader visual silhouette; its simulation footprint is unchanged. All **19** checks passed, including model bounds, grounding, selection, delivery sockets, construction/completion and nature-instancing structure. The exported Windows package passed a rendered 60-second developed-settlement check (66.27 seconds runner elapsed), with no errors. Actual model-gallery and exported opening screenshots were inspected. All runtime source hashes match the package manifest. See `docs/art/OPENING_STYLE_MODELS.md` for model scope, generation and remaining art work. This is a first playable adaptation; terrain, characters and remaining building families have not received the same treatment.
 

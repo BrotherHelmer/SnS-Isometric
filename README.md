@@ -4,8 +4,9 @@ A Windows 3D settlement survival game: build an economy, move goods with workers
 
 ## Current candidate
 
-`0.2.0-playtest.4` is an internal test candidate. The agreed release sequence is **closed Steam Playtest, then public demo**. Steamworks setup is deferred. The July `0.1.0-demo` package is historical and does not represent this source.
+`0.2.0-playtest.13` is the current internal test candidate. The agreed release sequence is **closed Steam Playtest, then public demo**. Steamworks setup is deferred. The July `0.1.0-demo` package is historical and does not represent this source.
 
+- **[Development Roadmap](ROADMAP.md)** — current milestone, completed work, prioritized backlog, release gates
 - [Execution status and open release gates](docs/RELEASE_EXECUTION_STATUS.md)
 - [Current product rules](docs/CURRENT_PRODUCT.md)
 - [Playtest instructions](docs/PLAYTEST_GUIDE.md)
@@ -13,7 +14,7 @@ A Windows 3D settlement survival game: build an economy, move goods with workers
 - [Build and verification](docs/BUILD_AND_TEST.md)
 - [Full release plan](docs/RELEASE_READINESS_PLAN.md)
 
-The versioned Windows folder and ZIP are under `dist/ShardAndSovereign_0.2.0-playtest.4`. A build manifest records source and executable hashes. Git HEAD alone does not identify an uncommitted candidate.
+Build the candidate with `./tools/build_release.ps1`. The versioned Windows folder and ZIP will be created under `dist/`. A build manifest records source and executable hashes. Git HEAD alone does not identify an uncommitted candidate.
 
 ## Development
 
