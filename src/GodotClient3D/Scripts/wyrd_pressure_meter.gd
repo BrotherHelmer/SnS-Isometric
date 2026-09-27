@@ -41,6 +41,6 @@ func _draw() -> void:
 		draw_line(Vector2(x, 3.0), Vector2(x, rect.size.y - 3.0), Color(0.02, 0.04, 0.05, 0.55), 1.0)
 	draw_rect(rect, color.darkened(0.35), false, 1.0)
 	var label := "PRESSURE  %s" % band
-	# Text remains readable both over an empty meter and a bright filled band.
-	draw_string_outline(ThemeDB.fallback_font, Vector2(8.0, rect.size.y * 0.72), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, 4, Color(0.02, 0.03, 0.04, 1.0))
-	draw_string(ThemeDB.fallback_font, Vector2(8.0, rect.size.y * 0.72), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Identity.COLOR_NEUTRAL)
+	# Stronger outline and brighter text ensures readability at 720p/1080p independent of meter fill.
+	draw_string_outline(ThemeDB.fallback_font, Vector2(8.0, rect.size.y * 0.72), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, 5, Color(0.01, 0.02, 0.03, 1.0))
+	draw_string(ThemeDB.fallback_font, Vector2(8.0, rect.size.y * 0.72), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#f5e8d0"))

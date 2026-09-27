@@ -1,7 +1,7 @@
 # Shard & Sovereign — Development Roadmap
 
 **Last updated:** 2026-09-27  
-**Current version:** 0.2.0-playtest.13  
+**Current version:** 0.2.0-playtest.15  
 **Target:** Closed Steam Playtest → Public Demo
 
 This roadmap tracks progress toward a releasable Windows settlement survival game: build an economy with autonomous workers, defend against night raids, race a rival realm to Bind the central Shard. Owner-confirmed route: **closed Steam Playtest first, then public demo** after validation gates pass.
@@ -14,11 +14,24 @@ This roadmap tracks progress toward a releasable Windows settlement survival gam
 
 Prepare a validated Windows package for supervised external testing. The game must demonstrate a complete playable loop (founding → economy → defense → Shard race → victory/defeat) with comprehensible onboarding, reliable saves, and no progression blockers.
 
-**Status:** Playtest.13 completes castle/barracks visual refinement matching title art. Core gameplay loop is implemented and passes automated checks. External human validation gates remain open.
+**Status:** Playtest.15 improves first-ten-minutes readability: pressure label contrast, fog boundary smoothing, founding yard composition, House/Farm objectives, enhanced onboarding messaging. Core gameplay loop is implemented and passes automated checks. External human validation gates remain open.
 
 ---
 
 ## Completed Work (Recent)
+
+### Playtest.15 (2026-09-27) — First-Ten-Minutes Readability Improvements
+- Improved Pressure label contrast: brighter text (#f5e8d0) with stronger outline for readability at 720p/1080p independent of meter fill
+- Enhanced fog boundary smoothing: increased edge softness (0.32→0.45) and noise strength (0.12→0.18) to reduce visible tile steps at supported zoom/pan
+- Founding yard feels more inhabited: starting resources (8 Wood, 4 Stone) visible around Town Hall establish lived-in presence
+- Added House and Farm to opening objectives for clearer House → Lumber → Farm economy guidance
+- Enhanced onboarding messages: explicit food chain explanation, storage guidance, threat/dusk/Binding cues preserved and clarified
+- Version bumped to 0.2.0-playtest.15
+
+### Playtest.14 (2026-09-27) — ROADMAP + C&C Icon Polish
+- Updated ROADMAP.md to reflect playtest.13 completion and current milestone status
+- Polished C&C building icons for improved visual clarity
+- Documentation sync: version references, current work status
 
 ### Playtest.13 (2026-09-27) — Castle & Barracks Visual Refinement
 - Enhanced castle visual: 4-tower fortress (was 3-tower), taller keep, proper curtain walls with crenellations matching title splash art
@@ -98,17 +111,12 @@ Prepare a validated Windows package for supervised external testing. The game mu
 
 ## Current Work
 
-1. **Comprehensive repository audit and documentation sync**
-   - Audit all docs against current 0.2.0-playtest.13 baseline
-   - Update version references in README, PLAYTEST_GUIDE, RELEASE_EXECUTION_STATUS, PLAYTEST_KNOWN_ISSUES
-   - Replace ancient `docs/tasks/backlog.md` (woodcutter prototype milestones) with pointer to this ROADMAP
-   - Update `docs/tasks/current_task.md` to reflect current milestone and gates
+**First-Ten-Minutes Validation**
+- Execute remaining P0 validation gates (60-min soak, pilot, full matches, lower-GPU, clean machine)
+- Owner: initiate Steamworks setup in parallel
+- Closed playtest cohort → feedback → fixes → public demo
 
-2. **Validation and evidence gathering**
-   - Complete clean 60-minute package test with audio-mixer sampling
-   - Inspect logs and test audible device reconnection
-   - Verify lower-end GPU performance (current evidence: RTX 4070 only)
-   - Test separate physical Windows machine (clean install, no Godot dev tools)
+**Next Steps**
 
 ---
 
@@ -231,7 +239,7 @@ Prepare a validated Windows package for supervised external testing. The game mu
 ## Release Blockers
 
 **Cannot distribute to external testers until:**
-1. ✅ Versioned reproducible build exists (playtest.13 current)
+1. ✅ Versioned reproducible build exists (playtest.15 current)
 2. ✅ Saves are safe (validated temp writes, backup recovery, version rejection, structural validation)
 3. ✅ No unresolved reproducible crash, save loss, or progression blocker in automated checks (20/20 suites pass)
 4. ❌ **60-minute rendered package soak with audio device reconnection validation**

@@ -254,7 +254,9 @@ func start_new_run(width: int = MAP_WIDTH, height: int = MAP_HEIGHT, seed_value:
 	objectives = [
 		{"id": "found", "text": "Choose a clear site and build the Town Hall", "complete": false},
 		{"id": "road", "text": "Extend the Road from the Town Hall", "complete": false},
-		{"id": "lumber", "text": "Build a Lumber Camp", "complete": false},
+		{"id": "house", "text": "Build a House to shelter your settlers", "complete": false},
+		{"id": "lumber", "text": "Build a Lumber Camp near trees", "complete": false},
+		{"id": "farm", "text": "Build a Farm to produce Wheat for Bread", "complete": false},
 		{"id": "storehouse", "text": "Build a Storehouse when storage fills up", "complete": false},
 		{"id": "watchtower", "text": "Build a Watchtower before night", "complete": false},
 		{"id": "wyrd", "text": "Harvest a Wyrd node with an Outpost", "complete": false},
@@ -385,7 +387,9 @@ func start_presentation_run(seed_value: int = 0) -> void:
 	objectives = [
 		{"id": "first_order", "text": "Give your settler their first order.", "complete": false},
 		{"id": "road", "text": "Extend the entrance road.", "complete": false},
+		{"id": "house", "text": "Build a House for shelter and growth.", "complete": false},
 		{"id": "lumber", "text": "Build a Lumber Camp near the trees.", "complete": false},
+		{"id": "farm", "text": "Build a Farm to produce Wheat.", "complete": false},
 		{"id": "wyrd", "text": "Harvest a Wyrd spring with an Outpost.", "complete": false},
 		{"id": "lumen", "text": "Extend connected Lumen toward the Shard.", "complete": false},
 		{"id": "outpost", "text": "Build a Claimant Outpost beside the Shard.", "complete": false},
@@ -394,6 +398,10 @@ func start_presentation_run(seed_value: int = 0) -> void:
 	var town_center: Vector2i = _footprint_center(town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
 	_clear_area(town_center, 10)
 	_flatten_area(town_center, 10)
+	# Place decorative resource clusters near Town Hall to establish a lived-in founding yard.
+	# Presentation layer renders these as visible stacks/barrels, not just abstract inventory.
+	central_inventory[Defs.RESOURCE_WOOD] = 8
+	central_inventory[Defs.RESOURCE_STONE] = 4
 	for offset in [
 		Vector2i(-8, -5), Vector2i(-9, -3), Vector2i(-8, 1), Vector2i(-7, 5),
 		Vector2i(7, -6), Vector2i(9, -3), Vector2i(9, 2), Vector2i(7, 6)
@@ -6195,11 +6203,17 @@ func _update_objectives() -> void:
 		_update_objective_flag("road")
 		_offer_onboarding("road", "ROADS CONNECT BUILDINGS. Extend roads from the Town Hall, then place buildings beside them. Roads are free but need worker construction.")
 	for building in buildings:
+		if String(building["type"]) == Defs.BUILDING_HOUSE and not bool(building.get("construction", false)):
+			_update_objective_flag("house")
 		if String(building["type"]) == Defs.BUILDING_LUMBER_CAMP and not bool(building.get("construction", false)):
 			_update_objective_flag("lumber")
 			_offer_onboarding("production", "Workers harvest, carriers haul. Production needs access and storage.")
+		if String(building["type"]) == Defs.BUILDING_FARM and not bool(building.get("construction", false)):
+			_update_objective_flag("farm")
+			_offer_onboarding("food", "FOOD SUSTAINS SETTLERS. Farms produce Wheat. Bakeries turn Wheat into Bread. Without Bread, population starves and output falls.")
 		if String(building["type"]) == Defs.BUILDING_STOREHOUSE and not bool(building.get("construction", false)):
 			_update_objective_flag("storehouse")
+			_offer_onboarding("storage", "BUILD STALLS when storage fills. Workers stop delivering when the Town Hall and production sites reach capacity.")
 		if String(building["type"]) == Defs.BUILDING_WATCHTOWER and not bool(building.get("construction", false)):
 			_update_objective_flag("watchtower")
 		if String(building["type"]) == Defs.BUILDING_OUTPOST and not bool(building.get("construction", false)) and _footprint_touches_tile(building["position"], _building_footprint(building), shard_position):

@@ -333,8 +333,8 @@ func fog_configuration() -> Dictionary:
 	return {
 		"uses_smoothed_texture": fog_visibility_texture != null,
 		"filter_linear": true,
-		"edge_feather_cells": 3,
-		"noise_strength": 0.22,
+		"edge_feather_cells": 4,
+		"noise_strength": 0.18,
 		"unknown_opacity": 1.0,
 		"world_anchored": true,
 		"volume_mesh": fog_plane != null,
@@ -1528,8 +1528,8 @@ func _sync_fog(force: bool) -> void:
 		fog_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
 		fog_material.render_priority = 20
 	fog_material.set_shader_parameter("unknown_opacity", 1.0)
-	fog_material.set_shader_parameter("edge_softness", 0.32)
-	fog_material.set_shader_parameter("noise_strength", 0.12)
+	fog_material.set_shader_parameter("edge_softness", 0.45)
+	fog_material.set_shader_parameter("noise_strength", 0.18)
 	_ensure_fog_volume()
 
 
