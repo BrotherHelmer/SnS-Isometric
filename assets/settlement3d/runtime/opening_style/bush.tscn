@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3]
 
-[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/bush.res" id="1_kduop"]
+[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/bush.res" id="1_jb6dk"]
 
-[node name="Bush" type="Node3D"]
+[node name="Bush" type="Node3D" unique_id=987641244]
 
-[node name="Model" type="MeshInstance3D" parent="."]
-mesh = ExtResource("1_kduop")
+[node name="Model" type="MeshInstance3D" parent="." unique_id=453484301]
+mesh = ExtResource("1_jb6dk")

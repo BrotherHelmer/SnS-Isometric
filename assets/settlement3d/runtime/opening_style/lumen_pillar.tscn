@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3]
 
-[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/lumen_pillar.res" id="1_0s00r"]
+[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/lumen_pillar.res" id="1_mae3g"]
 
-[node name="LumenPillar" type="Node3D"]
+[node name="LumenPillar" type="Node3D" unique_id=372831618]
 
-[node name="Model" type="MeshInstance3D" parent="."]
-mesh = ExtResource("1_0s00r")
+[node name="Model" type="MeshInstance3D" parent="." unique_id=430376459]
+mesh = ExtResource("1_mae3g")

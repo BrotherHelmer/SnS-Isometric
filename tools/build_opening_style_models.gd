@@ -251,52 +251,52 @@ func tower() -> void:
 
 func castle() -> void:
 	var base_h := 0.45
-	masonry(Vector3(0, base_h * 0.5, 0), Vector3(5.8, base_h, 4.8), 1)
-	for x in [-2.4, 2.4]:
-		for z in [-1.9, 1.9]:
+	masonry(Vector3(0, base_h * 0.5, 0), Vector3(6.2, base_h, 5.0), 1)
+	for x in [-2.6, 2.6]:
+		for z in [-2.0, 2.0]:
 			masonry(Vector3(x, base_h + 0.08, z), Vector3(0.95, 0.16, 0.95), 1)
-	var curtain_h := 1.85
-	masonry(Vector3(0, base_h + curtain_h * 0.5, 0), Vector3(5.4, curtain_h, 0.24), 5)
-	masonry(Vector3(0, base_h + curtain_h * 0.5, 1.9), Vector3(4.6, curtain_h, 0.24), 5)
-	masonry(Vector3(0, base_h + curtain_h * 0.5, -1.9), Vector3(4.6, curtain_h, 0.24), 5)
-	masonry(Vector3(-2.4, base_h + curtain_h * 0.5, 0), Vector3(0.24, curtain_h, 3.4), 5)
-	masonry(Vector3(2.4, base_h + curtain_h * 0.5, 0), Vector3(0.24, curtain_h, 3.4), 5)
-	for i in 12:
-		var x := -2.3 + (i % 6) * 0.92
-		box(Vector3(x, base_h + curtain_h + 0.18, 1.95), Vector3(0.32, 0.36, 0.32), "stone_light")
-	for i in 12:
-		var x := -2.3 + (i % 6) * 0.92
-		box(Vector3(x, base_h + curtain_h + 0.18, -1.95), Vector3(0.32, 0.36, 0.32), "stone_light")
-	var keep_pos := Vector3(0.1, 0, -0.4)
-	cylinder(keep_pos + Vector3(0, base_h + 2.45, 0), 0.88, 0.82, 4.9, "stone", 12)
-	for level in 3:
-		window(keep_pos + Vector3(0, base_h + 1.3 + level * 0.95, 0.91))
-	cylinder(keep_pos + Vector3(0, base_h + 5.1, 0), 0.96, 0.96, 0.18, "stone_dark")
-	cylinder(keep_pos + Vector3(0, base_h + 6.15, 0), 0.86, 0.05, 2.2, "slate", 8)
-	box(keep_pos + Vector3(0, base_h + 7.45, 0), Vector3(0.08, 0.7, 0.08), "wood")
-	box(keep_pos + Vector3(0.4, base_h + 7.6, 0), Vector3(0.75, 0.42, 0.04), "slate_light")
+	var curtain_h := 2.1
+	masonry(Vector3(0, base_h + curtain_h * 0.5, 0), Vector3(5.8, curtain_h, 0.28), 6)
+	masonry(Vector3(0, base_h + curtain_h * 0.5, 2.05), Vector3(5.0, curtain_h, 0.28), 6)
+	masonry(Vector3(0, base_h + curtain_h * 0.5, -2.05), Vector3(5.0, curtain_h, 0.28), 6)
+	masonry(Vector3(-2.6, base_h + curtain_h * 0.5, 0), Vector3(0.28, curtain_h, 3.6), 6)
+	masonry(Vector3(2.6, base_h + curtain_h * 0.5, 0), Vector3(0.28, curtain_h, 3.6), 6)
+	for i in 14:
+		var x := -2.5 + (i % 7) * 0.85
+		box(Vector3(x, base_h + curtain_h + 0.20, 2.12), Vector3(0.35, 0.40, 0.35), "stone_light")
+	for i in 14:
+		var x := -2.5 + (i % 7) * 0.85
+		box(Vector3(x, base_h + curtain_h + 0.20, -2.12), Vector3(0.35, 0.40, 0.35), "stone_light")
+	var keep_pos := Vector3(0.0, 0, -0.3)
+	cylinder(keep_pos + Vector3(0, base_h + 2.75, 0), 0.95, 0.88, 5.5, "stone", 14)
+	for level in 4:
+		window(keep_pos + Vector3(0, base_h + 1.3 + level * 0.95, 0.96))
+	cylinder(keep_pos + Vector3(0, base_h + 5.75, 0), 1.05, 1.05, 0.22, "stone_dark")
+	cylinder(keep_pos + Vector3(0, base_h + 6.95, 0), 0.92, 0.04, 2.5, "slate", 8)
+	box(keep_pos + Vector3(0, base_h + 8.38, 0), Vector3(0.09, 0.85, 0.09), "wood")
+	box(keep_pos + Vector3(0.45, base_h + 8.55, 0), Vector3(0.85, 0.48, 0.045), "slate_light")
 	for i in 4:
 		var angle := i * PI / 2.0
-		var p := keep_pos + Vector3(cos(angle) * 0.82, base_h + 5.2, sin(angle) * 0.82)
-		box(p, Vector3(0.28, 0.32, 0.28), "stone_light")
-	var corners := [Vector3(-2.4, 0, 1.9), Vector3(2.4, 0, 1.9), Vector3(-2.4, 0, -1.9)]
+		var p := keep_pos + Vector3(cos(angle) * 0.92, base_h + 5.88, sin(angle) * 0.92)
+		box(p, Vector3(0.32, 0.38, 0.32), "stone_light")
+	var corners := [Vector3(-2.6, 0, 2.0), Vector3(2.6, 0, 2.0), Vector3(-2.6, 0, -2.0), Vector3(2.6, 0, -2.0)]
 	for corner in corners:
-		cylinder(corner + Vector3(0, base_h + 1.85, 0), 0.75, 0.70, 3.7, "stone_light", 10)
-		cylinder(corner + Vector3(0, base_h + 3.85, 0), 0.82, 0.82, 0.15, "stone_dark")
-		cylinder(corner + Vector3(0, base_h + 4.75, 0), 0.74, 0.04, 1.85, "slate_dark", 6)
-		box(corner + Vector3(0, base_h + 5.82, 0), Vector3(0.07, 0.55, 0.07), "wood")
-		box(corner + Vector3(0.32, base_h + 5.92, 0), Vector3(0.62, 0.35, 0.035), "slate_light")
-		for i in 3:
-			var angle := i * TAU / 3.0
-			var wp: Vector3 = corner + Vector3(cos(angle) * 0.65, base_h + 2.6, sin(angle) * 0.65)
-			box(wp + Vector3(0, 0, cos(angle) * 0.08), Vector3(0.42, 0.58, 0.08), "wood")
-			box(wp + Vector3(0, 0, cos(angle) * 0.13), Vector3(0.32, 0.44, 0.03), "glass")
-	masonry(Vector3(0, base_h + 0.75, 1.95), Vector3(1.25, 1.5, 0.24), 4)
-	box(Vector3(0, base_h + 0.75, 2.09), Vector3(0.68, 1.15, 0.08), "wood")
+		cylinder(corner + Vector3(0, base_h + 2.15, 0), 0.82, 0.76, 4.3, "stone_light", 12)
+		cylinder(corner + Vector3(0, base_h + 4.45, 0), 0.90, 0.90, 0.18, "stone_dark")
+		cylinder(corner + Vector3(0, base_h + 5.45, 0), 0.80, 0.04, 2.1, "slate_dark", 6)
+		box(corner + Vector3(0, base_h + 6.65, 0), Vector3(0.08, 0.65, 0.08), "wood")
+		box(corner + Vector3(0.35, base_h + 6.78, 0), Vector3(0.68, 0.40, 0.04), "slate_light")
+		for i in 4:
+			var angle := i * TAU / 4.0
+			var wp: Vector3 = corner + Vector3(cos(angle) * 0.72, base_h + 2.9, sin(angle) * 0.72)
+			box(wp + Vector3(0, 0, cos(angle) * 0.09), Vector3(0.46, 0.64, 0.09), "wood")
+			box(wp + Vector3(0, 0, cos(angle) * 0.14), Vector3(0.35, 0.48, 0.03), "glass")
+	masonry(Vector3(0, base_h + 0.85, 2.12), Vector3(1.35, 1.7, 0.28), 5)
+	box(Vector3(0, base_h + 0.85, 2.28), Vector3(0.72, 1.28, 0.09), "wood")
 	for i in 5:
-		box(Vector3(-0.26 + i * 0.13, base_h + 0.75, 2.15), Vector3(0.11, 1.05, 0.05), "plank")
-	for y_val in [0.42, 1.0]:
-		box(Vector3(0, base_h + y_val, 2.2), Vector3(0.62, 0.05, 0.035), "iron")
+		box(Vector3(-0.28 + i * 0.14, base_h + 0.85, 2.35), Vector3(0.12, 1.18, 0.06), "plank")
+	for y_val in [0.45, 1.10]:
+		box(Vector3(0, base_h + y_val, 2.42), Vector3(0.66, 0.06, 0.04), "iron")
 
 func fence(p: Vector3) -> void:
 	for x in [-0.9, 0.9]:
@@ -368,6 +368,45 @@ func save_model(label: String, target := Vector3.ZERO) -> void:
 	report[label] = {"triangles": triangles, "surfaces": final_mesh.get_surface_count(), "size": str(final_mesh.get_aabb().size), "source": "Authored geometry adapted from opening_style_v1 image references"}
 	node.free()
 
+func barracks() -> void:
+	var w := 3.6
+	var d := 2.6
+	masonry(Vector3(0, 0.40, 0), Vector3(w, 0.80, d), 2)
+	box(Vector3(0, 1.75, 0), Vector3(w - 0.12, 2.1, d - 0.12), "plaster")
+	for x in [-w * 0.5 + 0.08, 0.0, w * 0.5 - 0.08]:
+		for z in [-d * 0.5, d * 0.5]:
+			box(Vector3(x, 1.72, z), Vector3(0.18, 2.2, 0.18), "wood")
+	for y in [0.88, 2.80]:
+		box(Vector3(0, y, 0), Vector3(w + 0.14, 0.18, d + 0.14), "wood")
+	for side in [-1, 1]:
+		for z in [-0.65, 0.65]:
+			box(Vector3(side * w * 0.5, 1.74, z), Vector3(0.13, 1.85, 0.14), "wood")
+	for x in [-1, 1]:
+		window(Vector3(x * w * 0.28, 1.78, d * 0.5 + 0.10))
+	box(Vector3(0, 1.15, d * 0.5 + 0.11), Vector3(0.78, 1.55, 0.16), "wood")
+	for i in 5:
+		box(Vector3(-0.30 + i * 0.15, 1.14, d * 0.5 + 0.21), Vector3(0.13, 1.44, 0.06), "plank")
+	for y in [0.76, 1.48]:
+		box(Vector3(0, y, d * 0.5 + 0.26), Vector3(0.73, 0.06, 0.045), "iron")
+	for i in 3:
+		box(Vector3(0, 0.12 + i * 0.14, d * 0.5 + 0.68 - i * 0.18), Vector3(1.15, 0.22, 0.38), "stone")
+	var prism := PrismMesh.new()
+	prism.size = Vector3(w, 1.25, d)
+	add(prism, Vector3(0, 3.43, 0), "plaster")
+	roof(Vector3(0, 2.82, 0), w + 0.5, d + 0.5, 1.25)
+	masonry(Vector3(0.90, 2.88, -0.45), Vector3(0.62, 4.8, 0.68), 13)
+	window(Vector3(0.90, 4.65, 0.05))
+	cylinder(Vector3(0.90, 5.75, -0.45), 0.95, 0.04, 1.38, "slate_dark", 4, Vector3(0, PI / 4.0, 0))
+	box(Vector3(0.90, 6.60, -0.45), Vector3(0.08, 0.55, 0.08), "wood")
+	box(Vector3(1.22, 6.72, -0.45), Vector3(0.62, 0.32, 0.04), "slate_light")
+	for side in [-1, 1]:
+		box(Vector3(side * 1.35, 1.52, 1.48), Vector3(0.12, 3.0, 0.12), "wood")
+		box(Vector3(side * 1.10, 2.5, 1.48), Vector3(0.55, 0.88, 0.07), "slate_dark")
+		box(Vector3(side * 1.10, 2.5, 1.54), Vector3(0.09, 0.62, 0.04), "grain")
+	box(Vector3(0, 0.62, -1.65), Vector3(2.8, 0.12, 0.35), "wood")
+	for i in 5:
+		beam(Vector3(-1.1 + i * 0.55, 0.25, -1.65), Vector3(-1.1 + i * 0.55, 1.65, -1.65), 0.08, "iron")
+
 func extended_building(kind: String) -> void:
 	match kind:
 		"QUARRY":
@@ -380,14 +419,7 @@ func extended_building(kind: String) -> void:
 			box(Vector3(-0.5, 1.9, 0.9), Vector3(0.035, 1.9, 0.035), "iron")
 			box(Vector3(-0.5, 0.85, 0.9), Vector3(0.6, 0.4, 0.65), "stone_light")
 		"BARRACKS":
-			cottage("HOUSE")
-			for side in [-1, 1]:
-				box(Vector3(side * 1.9, 1.4, 1.6), Vector3(0.10, 2.8, 0.10), "wood")
-				box(Vector3(side * 1.65, 2.3, 1.6), Vector3(0.5, 0.8, 0.06), "slate")
-				box(Vector3(side * 1.65, 2.3, 1.65), Vector3(0.08, 0.55, 0.035), "grain")
-			box(Vector3(0, 0.55, -1.8), Vector3(2.6, 0.10, 0.3), "wood")
-			for i in 5:
-				beam(Vector3(-1 + i * 0.5, 0.2, -1.8), Vector3(-1 + i * 0.5, 1.5, -1.8), 0.07, "iron")
+			barracks()
 		"LUMEN_PILLAR":
 			cylinder(Vector3(0, 0.18, 0), 0.8, 0.75, 0.36, "stone_dark")
 			cylinder(Vector3(0, 0.44, 0), 0.64, 0.56, 0.20, "stone")
