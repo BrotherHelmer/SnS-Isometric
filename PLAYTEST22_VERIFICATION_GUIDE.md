@@ -1,6 +1,6 @@
-# Playtest.21 Verification Guide
+# Playtest.22 Verification Guide
 
-**Version:** 0.2.0-playtest.21  
+**Version:** 0.2.0-playtest.22  
 **Focus:** Castle morph fix + building visual identity improvements  
 **Critical Wine gate:** Town Hall → Castle morph when Barracks completes
 
@@ -8,8 +8,10 @@
 
 ## P0: Castle Morph (Wine gate)
 
-### Issue (playtest.20)
+### Issue (playtest.20-21)
 After Barracks completes and connects, Town Hall still renders as civic timber hall with cupola instead of upgrading to 4-tower stone fortress (castle.tscn).
+
+**Note:** Playtest.21 included audio improvements (BGM/ambience/saw imports, volume defaults). The castle morph bug persisted through .21.
 
 ### Root Cause
 `_settlement_has_barracks()` was being called N times per frame (once per building) instead of once per frame. Additionally, the function used string comparison instead of the constant and had an overly conservative default for the 'completed' check.
@@ -43,7 +45,7 @@ After Barracks completes and connects, Town Hall still renders as civic timber h
 
 ## P1: Grey Cylinder Removal
 
-### Issue (playtest.20)
+### Issue (playtest.20-21)
 Grey cylindrical "silo" placeholders visible near Barracks and Outpost, looking unfinished or broken.
 
 ### Fix
@@ -198,9 +200,9 @@ The improved generation code ensures no grey placeholder cylinders remain.
 ## Next Steps After Verification
 
 If PASS:
-- Tag playtest.21 for Wine distribution
-- Update ROADMAP.md with playtest.21 entry
-- Begin playtest.22 planning (next priority features)
+- Tag playtest.22 for Wine distribution
+- Update ROADMAP.md with playtest.22 entry
+- Begin playtest.23 planning (next priority features)
 
 If FAIL:
 - Document specific failure mode (morph timing? save/load? freeze?)
