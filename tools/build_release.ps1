@@ -4,7 +4,7 @@ $workspaceRoot = Split-Path -Parent $PSScriptRoot
 $engine = Join-Path $workspaceRoot '.tools/godot-4.7/Godot_v4.7-stable_win64_console.exe'
 $template = Join-Path $workspaceRoot '.tools/godot-4.7/templates/windows_release_x86_64.exe'
 if (-not (Test-Path -LiteralPath $engine) -or -not (Test-Path -LiteralPath $template)) { throw 'Install the pinned Godot 4.7 stable engine and Windows templates in .tools/godot-4.7. See docs/BUILD_AND_TEST.md.' }
-$version = '0.2.0-playtest.20'
+$version = '0.2.0-playtest.22'
 $releaseDirectory = Join-Path $workspaceRoot "dist/ShardAndSovereign_$version"
 $evidenceDirectory = Join-Path $workspaceRoot 'artifacts/release_candidate'
 New-Item -ItemType Directory -Force -Path $releaseDirectory, $evidenceDirectory | Out-Null

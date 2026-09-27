@@ -43,11 +43,12 @@ func capture_world(simulation) -> Dictionary:
 
 
 func capture_frame(simulation, render_lead_seconds := 0.0) -> Dictionary:
+	var settlement_has_barracks_cache := _settlement_has_barracks(simulation)
 	var building_snapshots: Array[Dictionary] = []
 	var roads_by_tile: Dictionary = {}
 	for building_value in simulation.get_buildings():
 		var building: Dictionary = building_value
-		var descriptor := building_descriptor(building, simulation)
+		var descriptor := building_descriptor(building, simulation, settlement_has_barracks_cache)
 		if bool(descriptor.get("is_road", false)):
 			var anchor: Vector2i = descriptor.get("anchor", Vector2i.ZERO)
 			var road_key := "%d,%d" % [anchor.x, anchor.y]
@@ -153,7 +154,7 @@ func capture_frame(simulation, render_lead_seconds := 0.0) -> Dictionary:
 	}
 
 
-func building_descriptor(building: Dictionary, simulation) -> Dictionary:
+func building_descriptor(building: Dictionary, simulation, cached_has_barracks: bool = false) -> Dictionary:
 	var is_construction := bool(building.get("construction", false))
 	var type_name := String(building.get("planned_type", "")) if is_construction else String(building.get("type", ""))
 	var footprint := _footprint_from(building, type_name)
@@ -164,8 +165,7 @@ func building_descriptor(building: Dictionary, simulation) -> Dictionary:
 	var type_definition: Dictionary = Defs.PRODUCTION_DEFS.get(type_name, {})
 	var input_resource := String(type_definition.get("input", ""))
 	var output_resource := String(type_definition.get("output", ""))
-	# Issue #5: Check if settlement has barracks for Town Hall → Castle upgrade
-	var has_barracks := _settlement_has_barracks(simulation)
+	var has_barracks := cached_has_barracks
 	return {
 		"id": int(building.get("id", 0)),
 		"type": type_name,
@@ -633,6 +633,10 @@ func _footprint_from(building: Dictionary, type_name: String) -> Vector2i:
 func _settlement_has_barracks(simulation) -> bool:
 	for building_value in simulation.get_buildings():
 		var building: Dictionary = building_value
-		if String(building.get("type", "")) == "BARRACKS" and not bool(building.get("construction", false)) and bool(building.get("completed", false)):
-			return true
+		var building_type := String(building.get("type", ""))
+		if building_type == Defs.BUILDING_BARRACKS:
+			var is_construction := bool(building.get("construction", false))
+			var is_completed := bool(building.get("completed", true))
+			if not is_construction and is_completed:
+				return true
 	return false

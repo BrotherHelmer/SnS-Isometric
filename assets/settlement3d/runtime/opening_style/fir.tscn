@@ -1,8 +1,8 @@
-[gd_scene format=3]
+[gd_scene load_steps=2 format=3]
 
-[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/fir.res" id="1_y7443"]
+[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/fir.res" id="1_7bbpd"]
 
-[node name="Fir" type="Node3D" unique_id=1634335396]
+[node name="Fir" type="Node3D"]
 
-[node name="Model" type="MeshInstance3D" parent="." unique_id=784912637]
-mesh = ExtResource("1_y7443")
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1_7bbpd")

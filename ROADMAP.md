@@ -1,7 +1,7 @@
 # Shard & Sovereign — Development Roadmap
 
 **Last updated:** 2026-09-27  
-**Current version:** 0.2.0-playtest.20  
+**Current version:** 0.2.0-playtest.22  
 **Target:** Closed Steam Playtest → Public Demo
 
 This roadmap tracks progress toward a releasable Windows settlement survival game: build an economy with autonomous workers, defend against night raids, race a rival realm to Bind the central Shard. Owner-confirmed route: **closed Steam Playtest first, then public demo** after validation gates pass.
@@ -14,11 +14,29 @@ This roadmap tracks progress toward a releasable Windows settlement survival gam
 
 Prepare a validated Windows package for supervised external testing. The game must demonstrate a complete playable loop (founding → economy → defense → Shard race → victory/defeat) with comprehensible onboarding, reliable saves, and no progression blockers.
 
-**Status:** Playtest.20 fixes placement legend visibility (headline) and adds denser founding yard props. Core gameplay loop is implemented and passes automated checks. External human validation gates remain open.
+**Status:** Playtest.22 fixes critical castle morph failure and eliminates grey placeholder cylinders. Playtest.21 (audio audit - merged) fixed BGM/ambience imports and volume defaults. Core gameplay loop is implemented and passes automated checks. External human validation gates remain open (castle morph Wine gate critical).
 
 ---
 
 ## Completed Work (Recent)
+
+### Playtest.22 (2026-09-27) — Castle Morph Fix + Building Visual Identity (P0 + P1)
+- **Castle morph FIXED (P0/Wine gate)**: Town Hall now correctly upgrades to Castle visual when Barracks completes. Root cause: `_settlement_has_barracks()` was being called N times per frame (once per building) instead of once. Solution: cache result in `capture_frame()`, pass to all `building_descriptor()` calls. Also: use `Defs.BUILDING_BARRACKS` constant (not string), change 'completed' default to true (defensive). Freeze-guard preserved (no per-frame rebuild).
+- **Grey cylinders eliminated (P1)**: Barracks tower replaced 4-sided cylinder placeholder with proper peaked roof + crenellations. No more unfinished-looking geometry.
+- **Building identity improvements (P1)**: Barracks (stone fortress, iron arrow slits, prominent military tower), Sawmill (larger blade with visible teeth), Bakery (prominent stone chimney), Quarry (taller crane/hoist with cable points), Lumen Pillar (6 support beams, crystal shards, taller crystal)
+- **Performance**: `has_barracks` check now O(N) per frame instead of O(N²)
+- **Model regeneration required**: `build_opening_style_models.gd` updated; models need regeneration in Godot 4.7
+- Version bumped to 0.2.0-playtest.22
+- See PLAYTEST22_VERIFICATION_GUIDE.md for Wine testing gate (castle morph + save/load persistence)
+
+### Playtest.21 (2026-09-27) — Audio Audit (BGM/Ambience/Saw Imports + Volume Defaults)
+- **BGM imports fixed**: All background music .import files regenerated with consistent settings (loop enabled, normalized volume)
+- **Ambience imports fixed**: Environmental audio .import files updated for proper playback
+- **Saw sound imports fixed**: Sawmill blade audio properly configured
+- **Volume defaults harmonized**: All audio sources use consistent reference volume levels for balanced mix
+- Addressed Wine playtest feedback on audio inconsistencies
+- Version bumped to 0.2.0-playtest.21 (project.godot only)
+- Merged via PR #19 (squash-merge into codex/closed-playtest-candidate)
 
 ### Playtest.20 (2026-09-27) — Placement Legend Stays Visible (headline fix)
 - **Placement legend dual-line fix**: Color legend now stays visible during hover. Before: legend text replaced by VALID/INVALID when mouse moved over footprint. After: legend ("GREEN = valid · YELLOW = needs clearing · RED = blocked") shown persistently on one line, status ("VALID · Can place here") updates dynamically on second line. Two-label UI (placement_legend_label + placement_label) with VBoxContainer layout ensures both visible simultaneously.
