@@ -1,7 +1,7 @@
 # Shard & Sovereign — Development Roadmap
 
 **Last updated:** 2026-09-27  
-**Current version:** 0.2.0-playtest.22  
+**Current version:** 0.2.0-playtest.24  
 **Target:** Closed Steam Playtest → Public Demo
 
 This roadmap tracks progress toward a releasable Windows settlement survival game: build an economy with autonomous workers, defend against night raids, race a rival realm to Bind the central Shard. Owner-confirmed route: **closed Steam Playtest first, then public demo** after validation gates pass.
@@ -14,11 +14,32 @@ This roadmap tracks progress toward a releasable Windows settlement survival gam
 
 Prepare a validated Windows package for supervised external testing. The game must demonstrate a complete playable loop (founding → economy → defense → Shard race → victory/defeat) with comprehensible onboarding, reliable saves, and no progression blockers.
 
-**Status:** Playtest.22 fixes critical castle morph failure and eliminates grey placeholder cylinders. Playtest.21 (audio audit - merged) fixed BGM/ambience imports and volume defaults. Core gameplay loop is implemented and passes automated checks. External human validation gates remain open (castle morph Wine gate critical).
+**Status:** Playtest.24 hardens runtime asset export packing (all audio now packed). Playtest.23 fixed castle.tscn export omission (Wine castle morph PASS). Playtest.22 fixed critical castle morph failure. Core gameplay loop is implemented and passes automated checks. External human validation gates remain open.
 
 ---
 
 ## Completed Work (Recent)
+
+### Playtest.24 (2026-09-27) — Export Packing Hardening (Audio Completeness)
+- **Export packing audit implemented**: Created `tools/audit_export_packing.py` to systematically compare runtime asset paths (from `ProductionAssetCatalog3D.all_runtime_paths()` + `ProductionAudioDirector3D` STEM_PATHS/CUE_PATHS/work paths) against `export_presets.cfg` export_files list
+- **9 missing audio files added to export**: All runtime-referenced audio now properly packed in release `.pck`:
+  - Primary day BGM: `bgm_settlement_loop.ogg`
+  - World ambience: `ambient_world.wav`
+  - Work SFX: `saw.wav`
+  - Building completion cues: `barracks_ready.wav`, `farm_animal.wav`, `farm_ambient.wav`
+  - Settler arrival cues: `settler_arrive_worker.wav`, `settler_arrive_soldier.wav`, `settler_arrive_generic.wav`
+- **Root cause**: Same class of bug as playtest.22 castle.tscn omission—`export_filter="resources"` with explicit `export_files` list can silently omit runtime assets when string-concatenated or hardcoded paths are not added to the list
+- **Verification**: Audit script confirms 0 missing runtime paths; all 88 catalog paths + all audio paths now covered by 162 export_files entries
+- **Prevention**: Audit tool provides evidence-based packing validation; future additions to asset catalog or audio director can be verified before release
+- Version bumped to 0.2.0-playtest.24 in both `project.godot` and `tools/build_release.ps1`
+- Windows WASAPI playtests now have correct audio packing (Wine cannot prove audibility)
+
+### Playtest.23 (2026-09-27) — Castle Export Pack Fix (Wine PASS)
+- **Castle morph visual confirmed working**: Added `opening_style/castle.tscn` to `export_presets.cfg` export_files list
+- **Root cause**: Playtest.22 fixed castle morph code, but release export omitted `castle.tscn` even though `production_asset_catalog.gd` maps CASTLE via string concat
+- **Wine validation**: Castle morph (Town Hall → Castle when Barracks completes) now renders correct fortress visual in packaged build
+- Same packing bug class later found in audio paths (fixed in playtest.24)
+- Version bumped to 0.2.0-playtest.23 in `project.godot`
 
 ### Playtest.22 (2026-09-27) — Castle Morph Fix + Building Visual Identity (P0 + P1)
 - **Castle morph FIXED (P0/Wine gate)**: Town Hall now correctly upgrades to Castle visual when Barracks completes. Root cause: `_settlement_has_barracks()` was being called N times per frame (once per building) instead of once. Solution: cache result in `capture_frame()`, pass to all `building_descriptor()` calls. Also: use `Defs.BUILDING_BARRACKS` constant (not string), change 'completed' default to true (defensive). Freeze-guard preserved (no per-frame rebuild).
