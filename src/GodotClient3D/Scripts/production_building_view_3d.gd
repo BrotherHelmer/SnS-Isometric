@@ -499,9 +499,9 @@ func _update_damage_visual(hp: int, max_hp: int) -> void:
 
 
 func _update_night_presentation(night: bool, occupants: int) -> void:
-	if building_type not in ["HOUSE", "TOWN_HALL", "BAKERY", "BARRACKS", "STOREHOUSE"]:
+	if building_type not in ["HOUSE", "TOWN_HALL", "BAKERY", "BARRACKS", "STOREHOUSE", "LUMBER_CAMP", "QUARRY", "SAWMILL", "FARM", "WATCHTOWER"]:
 		return
-	var inhabited := occupants > 0 if building_type == "HOUSE" else bool(last_snapshot.get("connected", false))
+	var inhabited := occupants > 0 if building_type == "HOUSE" else bool(last_snapshot.get("connected", false)) and (int(last_snapshot.get("assigned_staff", 0)) > 0 or int(last_snapshot.get("soldiers_assigned", 0)) > 0 or building_type in ["TOWN_HALL", "STOREHOUSE"])
 	if window_light == null:
 		window_light = OmniLight3D.new()
 		window_light.name = "InhabitedWindowGlow"
@@ -526,6 +526,15 @@ func _update_night_presentation(night: bool, occupants: int) -> void:
 	window_light.visible = night and inhabited
 	if window_emission != null:
 		window_emission.visible = night and inhabited
+	
+	if not night and inhabited and building_type not in ["TOWN_HALL", "STOREHOUSE"]:
+		if window_emission != null:
+			window_emission.visible = true
+			var daytime_material := _material(Color("#9fc6a5"), 0.0)
+			daytime_material.emission_enabled = true
+			daytime_material.emission = Color("#7da88a")
+			daytime_material.emission_energy_multiplier = 0.8
+			window_emission.material_override = daytime_material
 
 
 func _update_activity_presentation(active: bool, night: bool) -> void:

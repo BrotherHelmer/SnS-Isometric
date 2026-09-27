@@ -120,6 +120,8 @@ var build_category_select: OptionButton
 var build_category_sections: Dictionary = {}
 var debug_info_button: Button
 var current_build_category := "ESSENTIALS"
+var build_strip: PanelContainer
+var build_strip_buttons: Array = []
 var startup_overlay: Control
 var menu_backdrop: TextureRect
 var seed_edit: LineEdit
@@ -925,6 +927,38 @@ func _create_ui() -> void:
 	debug_info_button.visible = false
 	build_panel.visible = false
 	_set_build_category(0)
+	
+	build_strip = PanelContainer.new()
+	build_strip.name = "BuildStrip"
+	build_strip.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	build_strip.offset_left = 16.0
+	build_strip.offset_right = -16.0
+	build_strip.offset_top = -76.0
+	build_strip.offset_bottom = -12.0
+	build_strip.add_theme_stylebox_override("panel", _panel_style(Color(0.050, 0.048, 0.040, 0.92), Color("#6b5d3e")))
+	root.add_child(build_strip)
+	var strip_margin := MarginContainer.new()
+	strip_margin.add_theme_constant_override("margin_left", 8)
+	strip_margin.add_theme_constant_override("margin_right", 8)
+	strip_margin.add_theme_constant_override("margin_top", 6)
+	strip_margin.add_theme_constant_override("margin_bottom", 6)
+	build_strip.add_child(strip_margin)
+	var strip_scroll := ScrollContainer.new()
+	strip_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_IF_NEEDED
+	strip_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	strip_margin.add_child(strip_scroll)
+	var strip_box := HBoxContainer.new()
+	strip_box.add_theme_constant_override("separation", 4)
+	strip_scroll.add_child(strip_box)
+	for building_type in BUILD_PALETTE:
+		var btn := Button.new()
+		btn.text = Defs.building_name(building_type) if building_type != Defs.TOOL_CLEAR_AREA else "Clear"
+		btn.custom_minimum_size = Vector2(84, 46)
+		btn.add_theme_font_size_override("font_size", 10)
+		btn.pressed.connect(_select_building_for_placement.bind(building_type))
+		Identity.apply_button(btn)
+		strip_box.add_child(btn)
+		build_strip_buttons.append(btn)
 
 	inspector_panel = PanelContainer.new()
 	inspector_panel.name = "Inspector"

@@ -22,3 +22,11 @@ See `docs/RELEASE_EXECUTION_STATUS.md` in the project for current validation res
 **Food & Storage**: Increased starting Bread (12→18) and Town Hall storage overflow (8→20) to provide better early-game breathing room. Added Storehouse and Watchtower to early objectives. Storage-full warnings now include hints about the Farm→Bakery→Storehouse chain.
 
 **Night Readability**: Improved night lighting visibility (ambient 0.38→0.50, sun energy 0.24→0.35, fill energy 0.24→0.32) while maintaining atmospheric mood. First-night warning now specifically mentions defensive buildings if no Watchtower exists. Reduced attack notification spam.
+
+**Combat & Building UX** (playtest.7):
+- **Shard Direction Cue**: Removed the on-screen `▲ SHARD` direction indicator to prevent revealing shard bearing before discovery.
+- **Placement Markers**: Expanded build pad scanning radius (5→8 tiles) to cover more valid placement locations, including sites eligible for auto-spur road connections.
+- **Watchtower Combat**: Unmanned watchtowers are now treated as lower-priority targets by enemies (same as other buildings). Enemies will damage unmanned towers normally. Tower guards properly engage enemies instead of fleeing.
+- **Guard UI**: Removed "Carrying" field from guard inspection panels, as tower guards and patrol soldiers do not haul resources.
+- **Occupancy Indicators**: Buildings now show subtle daytime occupancy hints (window emission changes) when staffed or garrisoned, making it easier to identify which buildings are active.
+- **C&C-Style Building Bar**: Added a bottom-screen building miniatures strip showing all buildable types for quick access, complementing the existing categorized BUILD palette.
