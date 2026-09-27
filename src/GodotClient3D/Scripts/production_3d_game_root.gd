@@ -2979,6 +2979,44 @@ func _apply_requested_fixture() -> void:
 	status_label.text = "Fixture %s: %s" % [fixture_stage, "ready" if bool(fixture_result.get("success", false)) else "; ".join(fixture_result.get("report", []))]
 
 
+func _building_icon_color(building_type: String) -> Color:
+	match building_type:
+		Defs.BUILDING_LUMBER_CAMP: return Color("#8b6f47")
+		Defs.BUILDING_SAWMILL: return Color("#5a4a3a")
+		Defs.BUILDING_QUARRY: return Color("#9a9588")
+		Defs.BUILDING_FARM: return Color("#d4b86a")
+		Defs.BUILDING_BAKERY: return Color("#c8524a")
+		Defs.BUILDING_BARRACKS: return Color("#6a4a4a")
+		Defs.BUILDING_WATCHTOWER: return Color("#6a4a4a")
+		Defs.BUILDING_HOUSE: return Color("#a99377")
+		Defs.BUILDING_STOREHOUSE: return Color("#8a7a5a")
+		Defs.BUILDING_LUMEN_PILLAR: return Color("#6bcfe0")
+		Defs.BUILDING_OUTPOST: return Color("#8b6f47")
+		Defs.BUILDING_ROAD: return Color("#7a6a4a")
+		Defs.BUILDING_WALL: return Color("#9a9588")
+		Defs.TOOL_CLEAR_AREA: return Color("#597a59")
+		_: return Color("#6a6a6a")
+
+
+func _building_icon_accent(building_type: String) -> Color:
+	match building_type:
+		Defs.BUILDING_LUMBER_CAMP: return Color("#6b4423")
+		Defs.BUILDING_SAWMILL: return Color("#4a3a2a")
+		Defs.BUILDING_QUARRY: return Color("#7a7568")
+		Defs.BUILDING_FARM: return Color("#c4a850")
+		Defs.BUILDING_BAKERY: return Color("#a83830")
+		Defs.BUILDING_BARRACKS: return Color("#c84a4a")
+		Defs.BUILDING_WATCHTOWER: return Color("#c84a4a")
+		Defs.BUILDING_HOUSE: return Color("#779367")
+		Defs.BUILDING_STOREHOUSE: return Color("#6a5a3a")
+		Defs.BUILDING_LUMEN_PILLAR: return Color("#4bafc0")
+		Defs.BUILDING_OUTPOST: return Color("#c8524a")
+		Defs.BUILDING_ROAD: return Color("#5a4a2a")
+		Defs.BUILDING_WALL: return Color("#7a7568")
+		Defs.TOOL_CLEAR_AREA: return Color("#3a5a3a")
+		_: return Color("#4a4a4a")
+
+
 func preview_placement_at(building_type: String, tile: Vector2i) -> void:
 	placement_preview_locked = true
 	placement_type = building_type
