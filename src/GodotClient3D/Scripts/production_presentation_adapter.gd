@@ -126,6 +126,10 @@ func capture_frame(simulation, render_lead_seconds := 0.0) -> Dictionary:
 				"visible": true,
 			})
 	var projectile_snapshots := projectile_descriptors(simulation)
+	var decorative_prop_snapshots: Array[Dictionary] = []
+	if simulation.has_method("get_decorative_props"):
+		for prop_value in simulation.get_decorative_props():
+			decorative_prop_snapshots.append(Dictionary(prop_value).duplicate(true))
 	return {
 		"tick": simulation.get_tick_number(),
 		"time": simulation.get_time_label(),
@@ -138,6 +142,7 @@ func capture_frame(simulation, render_lead_seconds := 0.0) -> Dictionary:
 		"rivalry_structures": rivalry_structure_snapshots,
 		"rival_roads": rival_road_snapshots,
 		"projectiles": projectile_snapshots,
+		"decorative_props": decorative_prop_snapshots,
 		"lumen_sources": lumen_sources,
 		"claims": claim_snapshot,
 		"wyrdfall": simulation.get_wyrdfall_presentation() if simulation.has_method("get_wyrdfall_presentation") else {},

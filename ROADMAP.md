@@ -1,7 +1,7 @@
 # Shard & Sovereign — Development Roadmap
 
 **Last updated:** 2026-09-27  
-**Current version:** 0.2.0-playtest.15  
+**Current version:** 0.2.0-playtest.16  
 **Target:** Closed Steam Playtest → Public Demo
 
 This roadmap tracks progress toward a releasable Windows settlement survival game: build an economy with autonomous workers, defend against night raids, race a rival realm to Bind the central Shard. Owner-confirmed route: **closed Steam Playtest first, then public demo** after validation gates pass.
@@ -14,16 +14,26 @@ This roadmap tracks progress toward a releasable Windows settlement survival gam
 
 Prepare a validated Windows package for supervised external testing. The game must demonstrate a complete playable loop (founding → economy → defense → Shard race → victory/defeat) with comprehensible onboarding, reliable saves, and no progression blockers.
 
-**Status:** Playtest.15 improves first-ten-minutes readability: pressure label contrast, fog boundary smoothing, founding yard composition, House/Farm objectives, enhanced onboarding messaging. Core gameplay loop is implemented and passes automated checks. External human validation gates remain open.
+**Status:** Playtest.16 makes founding yard visually inhabited using decorative props and wires Goals UI to show House/Lumber/Farm progression objectives. Core gameplay loop is implemented and passes automated checks. External human validation gates remain open.
 
 ---
 
 ## Completed Work (Recent)
 
+### Playtest.16 (2026-09-27) — Founding Yard Props & Goals UI Clarity
+- Fixed founding yard visual emptiness: added decorative wood stacks, stone piles, barrels, and crates near Town Hall using existing WORKYARD_PROPS (8 props placed)
+- Decorative props are presentation-only and do not double-count as spendable resources (inventory unchanged at Wood 50 / Stone 18)
+- Goals UI now displays simulation objectives (Give first order → Extend road → Build House → Build Lumber Camp → Build Farm) instead of only high-level "FEED THE SETTLEMENT"
+- Objective button shows first incomplete objective text for clearer next-step guidance
+- Goals panel expands to show all objectives with checkboxes ([ ] incomplete, [✓] complete)
+- Props authored using existing asset catalog; no new buildings or balance changes
+- Note on playtest.15: inventory-only approach (central_inventory Wood 8 / Stone 4) failed to create visible props; playtest.16 spawns actual 3D instances
+- Version bumped to 0.2.0-playtest.16
+
 ### Playtest.15 (2026-09-27) — First-Ten-Minutes Readability Improvements
 - Improved Pressure label contrast: brighter text (#f5e8d0) with stronger outline for readability at 720p/1080p independent of meter fill
 - Enhanced fog boundary smoothing: increased edge softness (0.32→0.45) and noise strength (0.12→0.18) to reduce visible tile steps at supported zoom/pan
-- Founding yard feels more inhabited: starting resources (8 Wood, 4 Stone) visible around Town Hall establish lived-in presence
+- Attempted founding yard inhabited look via central_inventory (8 Wood, 4 Stone) — failed visually, no props rendered (fixed in playtest.16 with decorative prop spawning)
 - Added House and Farm to opening objectives for clearer House → Lumber → Farm economy guidance
 - Enhanced onboarding messages: explicit food chain explanation, storage guidance, threat/dusk/Binding cues preserved and clarified
 - Version bumped to 0.2.0-playtest.15
