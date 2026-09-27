@@ -3167,7 +3167,7 @@ func _create_resource_icon(resource_key: String) -> Control:
 	var icon := Control.new()
 	icon.set_anchors_preset(Control.PRESET_FULL_RECT)
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var color := Identity.RESOURCE_CHIP_COLORS.get(resource_key, Identity.COLOR_NEUTRAL)
+	var color: Color = Identity.RESOURCE_CHIP_COLORS.get(resource_key, Identity.COLOR_NEUTRAL) as Color
 	match resource_key:
 		"wood":
 			var log := ColorRect.new()
