@@ -1634,8 +1634,16 @@ func _update_loop_hud() -> void:
 	var binding_active := bool(wyrdfall.get("binding_active", false))
 	var steps: Array = objective.get("steps", [])
 	if objective_button != null:
+		var sim_objectives: Array = simulation_host.simulation.get_objectives()
+		var active_sim_obj := ""
+		for obj in sim_objectives:
+			if not bool(obj.get("complete", false)):
+				active_sim_obj = String(obj.get("text", ""))
+				break
 		if binding_active:
 			objective_button.text = "HOLD THE BINDING"
+		elif active_sim_obj != "":
+			objective_button.text = active_sim_obj
 		elif not steps.is_empty():
 			objective_button.text = String(steps[0])
 		else:
@@ -2027,15 +2035,22 @@ func _show_objective_detail(value: bool) -> void:
 	if not value:
 		return
 	objective_detail_panel.size = Vector2(286, 156)
-	var objective: Dictionary = simulation_host.simulation.get_macro_objective()
-	var steps: Array = objective.get("steps", [])
-	var lines: Array[String] = [
-		String(objective.get("title", "FEED THE SETTLEMENT")),
-		String(objective.get("summary", objective.get("detail", ""))),
-		""
-	]
-	for step in steps:
-		lines.append("• %s" % String(step))
+	var sim_objectives: Array = simulation_host.simulation.get_objectives()
+	var lines: Array[String] = ["Current Goals", ""]
+	if sim_objectives.is_empty():
+		var objective: Dictionary = simulation_host.simulation.get_macro_objective()
+		lines.append(String(objective.get("title", "FEED THE SETTLEMENT")))
+		lines.append(String(objective.get("summary", objective.get("detail", ""))))
+		lines.append("")
+		var steps: Array = objective.get("steps", [])
+		for step in steps:
+			lines.append("• %s" % String(step))
+	else:
+		for obj in sim_objectives:
+			var complete := bool(obj.get("complete", false))
+			var mark := "[✓]" if complete else "[ ]"
+			var text := String(obj.get("text", ""))
+			lines.append("%s %s" % [mark, text])
 	objective_detail_body.text = "\n".join(lines)
 
 

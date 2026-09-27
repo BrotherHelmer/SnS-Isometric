@@ -56,6 +56,7 @@ var rival_road_signatures: Dictionary = {}
 var rivalry_structure_views: Dictionary = {}
 var combatant_views: Dictionary = {}
 var projectile_views: Dictionary = {}
+var decorative_prop_views: Dictionary = {}
 var gate_views: Dictionary = {}
 var gate_signatures: Dictionary = {}
 var nature_views: Dictionary = {}
@@ -141,6 +142,7 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 		rivalry_structure_views.clear()
 		combatant_views.clear()
 		projectile_views.clear()
+		decorative_prop_views.clear()
 		gate_views.clear()
 		gate_signatures.clear()
 		nature_views.clear()
@@ -183,6 +185,7 @@ func sync_frame(frame_snapshot: Dictionary) -> void:
 	_sync_rivalry_structures(frame_snapshot.get("rivalry_structures", []))
 	_sync_combatants(frame_snapshot.get("combatants", []))
 	_sync_projectiles(frame_snapshot.get("projectiles", []))
+	_sync_decorative_props(frame_snapshot.get("decorative_props", []))
 	_sync_claim_overlays(frame_snapshot.get("lumen_sources", []), frame_snapshot.get("claims", {}))
 	_update_shard_beacon(frame_snapshot.get("wyrdfall", {}))
 	_sync_wyrd_springs(frame_snapshot.get("wyrd_sites", []))
@@ -1405,6 +1408,34 @@ func _sync_projectiles(snapshots: Array) -> void:
 			continue
 		(projectile_views[id_value] as Node).queue_free()
 		projectile_views.erase(id_value)
+
+
+func _sync_decorative_props(prop_snapshots: Array) -> void:
+	var desired: Dictionary = {}
+	for snapshot_value in prop_snapshots:
+		var snapshot: Dictionary = snapshot_value
+		var id := int(snapshot.get("id", 0))
+		desired[id] = snapshot
+		if not decorative_prop_views.has(id):
+			var prop_type := String(snapshot.get("type", ""))
+			if not Catalog.WORKYARD_PROPS.has(prop_type):
+				continue
+			var packed := load(String(Catalog.WORKYARD_PROPS[prop_type])) as PackedScene
+			if packed == null:
+				continue
+			var prop := packed.instantiate()
+			prop.name = "DecorativeProp_%d_%s" % [id, prop_type]
+			var tile := Vector2i(snapshot.get("position", Vector2i.ZERO))
+			prop.position = tile_to_world(Vector2(tile))
+			prop.rotation.y = deg_to_rad(float(snapshot.get("rotation", 0.0)))
+			prop.scale = Vector3.ONE * float(snapshot.get("scale", 1.0)) * ScaleProfile.world_prop_scale(prop_type)
+			resource_visuals_root.add_child(prop)
+			decorative_prop_views[id] = prop
+	for id_value in decorative_prop_views.keys():
+		if desired.has(id_value):
+			continue
+		(decorative_prop_views[id_value] as Node).queue_free()
+		decorative_prop_views.erase(id_value)
 
 
 func _sync_gates(road_snapshots: Array) -> void:

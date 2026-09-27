@@ -95,6 +95,7 @@ var connected_walls: Dictionary = {}
 var workers: Array = []
 var enemies: Array = []
 var projectiles: Array = []
+var decorative_props: Array = []
 var path_grid: AStarGrid2D
 var hostile_path_grid: AStarGrid2D
 var path_grid_dirty := true
@@ -399,9 +400,31 @@ func start_presentation_run(seed_value: int = 0) -> void:
 	_clear_area(town_center, 10)
 	_flatten_area(town_center, 10)
 	# Place decorative resource clusters near Town Hall to establish a lived-in founding yard.
-	# Presentation layer renders these as visible stacks/barrels, not just abstract inventory.
-	central_inventory[Defs.RESOURCE_WOOD] = 8
-	central_inventory[Defs.RESOURCE_STONE] = 4
+	# Spawn visual props (wood stacks, stone piles, barrels, crates) rendered by presentation layer.
+	# These are decorative only and do not double-count as spendable resources.
+	decorative_props.clear()
+	var next_prop_id := 1
+	var prop_placements := [
+		{"type": "wood_stack", "offset": Vector2i(-2, -3), "rotation": 0.0, "scale": 1.1},
+		{"type": "wood_stack", "offset": Vector2i(-3, -2), "rotation": 45.0, "scale": 0.9},
+		{"type": "stone_stack", "offset": Vector2i(2, -3), "rotation": 0.0, "scale": 1.0},
+		{"type": "stone_stack", "offset": Vector2i(3, -2), "rotation": 30.0, "scale": 0.85},
+		{"type": "barrel", "offset": Vector2i(-2, 3), "rotation": 0.0, "scale": 1.0},
+		{"type": "crate", "offset": Vector2i(-3, 2), "rotation": 15.0, "scale": 1.0},
+		{"type": "barrel", "offset": Vector2i(2, 3), "rotation": 0.0, "scale": 1.0},
+		{"type": "crate", "offset": Vector2i(3, 2), "rotation": -20.0, "scale": 0.95},
+	]
+	for placement in prop_placements:
+		var prop_tile: Vector2i = town_center + Vector2i(placement["offset"])
+		if is_inside_map(prop_tile) and String(get_tile(prop_tile)) == Defs.TILE_GRASS:
+			decorative_props.append({
+				"id": next_prop_id,
+				"type": String(placement["type"]),
+				"position": prop_tile,
+				"rotation": float(placement["rotation"]),
+				"scale": float(placement["scale"])
+			})
+			next_prop_id += 1
 	for offset in [
 		Vector2i(-8, -5), Vector2i(-9, -3), Vector2i(-8, 1), Vector2i(-7, 5),
 		Vector2i(7, -6), Vector2i(9, -3), Vector2i(9, 2), Vector2i(7, 6)
@@ -2057,6 +2080,10 @@ func get_buildings() -> Array:
 
 func get_workers() -> Array:
 	return workers.duplicate(true)
+
+
+func get_decorative_props() -> Array:
+	return decorative_props.duplicate(true)
 
 
 func get_sheltered_worker_count() -> int:
