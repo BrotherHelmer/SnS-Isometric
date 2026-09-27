@@ -30,7 +30,14 @@ const CUE_PATHS := {
 	"attack": "res://assets/settlement/audio/attack.wav",
 	"tower": "res://assets/settlement/audio/tower.wav",
 	"build_start": "res://assets/settlement/audio/build_start.wav",
-	"build_complete": "res://assets/settlement/audio/build_complete.wav"
+	"build_complete": "res://assets/settlement/audio/build_complete.wav",
+	"soldier": "res://assets/settlement/audio/soldier.wav",
+	"farm_complete": "res://assets/settlement/audio/farm_animal.wav",
+	"farm_ambient": "res://assets/settlement/audio/farm_ambient.wav",
+	"barracks_complete": "res://assets/settlement/audio/barracks_ready.wav",
+	"settler_spawn_worker": "res://assets/settlement/audio/settler_arrive_worker.wav",
+	"settler_spawn_soldier": "res://assets/settlement/audio/settler_arrive_soldier.wav",
+	"settler_spawn_generic": "res://assets/settlement/audio/settler_arrive_generic.wav"
 }
 
 var settings: Dictionary = {}
@@ -152,7 +159,14 @@ func play_work_at(world_position: Vector3, kind: String) -> void:
 		return
 	var player: AudioStreamPlayer3D = work_pool[work_index % work_pool.size()]
 	work_index += 1
-	var path := "res://assets/settlement/audio/presentation/work_chop.wav" if kind == "chop" else "res://assets/settlement/audio/presentation/work_hammer.wav"
+	var path := ""
+	match kind:
+		"chop":
+			path = "res://assets/settlement/audio/presentation/work_chop.wav"
+		"saw":
+			path = "res://assets/settlement/audio/saw.wav"
+		_:
+			path = "res://assets/settlement/audio/presentation/work_hammer.wav"
 	player.stream = _load_stream(path)
 	player.global_position = world_position
 	player.volume_db = -10.0
@@ -173,6 +187,20 @@ func handle_sim_event(event_name: String) -> void:
 			play_cue("build_start")
 		"build_complete":
 			play_cue("build_complete")
+		"soldier":
+			play_cue("soldier")
+		"farm_complete":
+			play_cue("farm_complete")
+		"farm_ambient":
+			play_cue("farm_ambient")
+		"barracks_complete":
+			play_cue("barracks_complete")
+		"settler_spawn_worker":
+			play_cue("settler_spawn_worker")
+		"settler_spawn_soldier":
+			play_cue("settler_spawn_soldier")
+		"settler_spawn_generic":
+			play_cue("settler_spawn_generic")
 		_:
 			pass
 

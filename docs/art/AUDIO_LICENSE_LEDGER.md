@@ -151,4 +151,92 @@ No attribution required by license. Optional credit:
 
 ---
 
-Last Updated: September 27, 2026 (Playtest.8 - CC0 Foley v3)
+## Playtest.9 Atmosphere Audio (CC0 Real Foley)
+
+**Added**: September 27, 2026  
+**Source**: Curated CC0 pack `cc0-playtest9-atmosphere.zip`  
+**License**: CC0 (Public Domain) — **Real recordings / game foley**  
+**Format**: WAV, 44.1 kHz, 16-bit PCM, mono, peak ≈ -3...-6 dBFS, fades 12-25ms
+
+### Files
+
+#### farm_animal.wav
+- **Purpose**: Farm building completion + occasional animal presence
+- **Character**: Warm short sheep bleat (≈0.87s)
+- **Source Pack**: Sheep Baa (OpenGameArt)
+- **Original File**: `sheep_baa.flac`
+- **License**: CC0
+- **Author**: Recording by **mikewest**; packaged by **AntumDeluge**
+- **URL**: https://opengameart.org/content/sheep-baa
+- **Processing**: Mono 44.1kHz s16; peak normalize to -4 dBFS; 12ms in / 25ms out fades
+
+#### farm_ambient.wav
+- **Purpose**: Softer distant sheep/farm bed (non-loop one-shot, ≈2.70s)
+- **Character**: Bells + flock presence, soft background
+- **Source Pack**: BigSoundBank — Flock of Sheep and Cows (#3220)
+- **Original File**: `3220.mp3` (extract ≈7.2-9.9s)
+- **License**: CC0 / public-domain equivalent
+- **Authors**: **Joseph Sardin** & **Axeline T.**
+- **URL**: https://bigsoundbank.com/flock-sheep-and-cows-s3220.html
+- **Processing**: Highpass 120Hz + lowpass 3.5kHz for distant bed; mono 44.1kHz s16; peak -6 dBFS
+
+#### settler_arrive_worker.wav
+- **Purpose**: Civilian/worker settler spawn
+- **Character**: Soft friendly arrival (footstep + cloth/leather, ≈0.49s)
+- **Source Pack**: Kenney RPG Audio
+- **Original Files**: `footstep00.ogg` + `cloth1.ogg` + `handleSmallLeather.ogg`
+- **License**: CC0
+- **Author**: **Kenney** (www.kenney.nl)
+- **URL**: https://kenney.nl/assets/rpg-audio
+- **Processing**: Layered footstep + cloth (adelay ~40ms, -5dB) + leather (adelay ~90ms); trim; peak -5 dBFS
+
+#### settler_arrive_soldier.wav
+- **Purpose**: Soldier/guard spawn
+- **Character**: Military boot + steel acknowledgment (≈0.68s)
+- **Source Packs**: Fantasy Sound Effects (Tinysized SFX); RPG Sound Pack
+- **Original Files**: `boots-leather-step-01.wav` + `battle/sword-unsheathe2.wav` + `inventory/chainmail2.wav`
+- **License**: CC0
+- **Authors**: **Vehicle** (Jan Schupke / tinysized); **artisticdude**
+- **URLs**: https://opengameart.org/content/fantasy-sound-effects-tinysized-sfx ; https://opengameart.org/content/rpg-sound-pack
+- **Processing**: Boot step + sword unsheathe (adelay ~30ms) + quiet chainmail rattle; peak -4 dBFS
+- **Note**: No CC0 human voice grunt available; boot+steel fulfills alternate requirement
+
+#### settler_arrive_generic.wav
+- **Purpose**: Fallback arrival for other settler roles
+- **Character**: Soft step + belt leather + quiet UI confirm (≈0.60s)
+- **Source Packs**: Kenney RPG Audio; Kenney Interface Sounds
+- **Original Files**: `footstep01.ogg` + `beltHandle1.ogg` + `confirmation_002.ogg`
+- **License**: CC0
+- **Author**: **Kenney**
+- **URLs**: https://kenney.nl/assets/rpg-audio ; https://kenney.nl/assets/interface-sounds
+- **Processing**: Footstep + belt (adelay ~35ms) + quiet confirmation (adelay ~60ms, low level); peak -5 dBFS
+
+#### barracks_ready.wav
+- **Purpose**: Barracks/military-ready completion cue
+- **Character**: Steel draw + short steel jingle + confirm (≈0.59s)
+- **Source Packs**: RPG Sound Pack; Kenney Music Jingles; Kenney Interface Sounds
+- **Original Files**: `battle/sword-unsheathe.wav` + `jingles_STEEL00.ogg` (trim 0.55s) + `confirmation_001.ogg`
+- **License**: CC0
+- **Authors**: **artisticdude**; **Kenney**
+- **URLs**: https://opengameart.org/content/rpg-sound-pack ; https://kenney.nl/assets/music-jingles ; https://kenney.nl/assets/interface-sounds
+- **Processing**: Unsheathe + steel jingle (adelay ~40ms) + quiet confirmation; peak -4 dBFS
+
+### Technical Specifications
+
+All files meet runtime requirements:
+- ✅ Real CC0 recordings (no procedural synthesis)
+- ✅ 16-bit mono WAV, 44.1kHz
+- ✅ Peak normalized to ≈ -3...-6 dBFS
+- ✅ Short fades (12-25ms) to eliminate clicks
+- ✅ Documented provenance (author, pack, URL, license)
+
+### Soft-Deprecated
+
+- `tools/generate_playtest9_placeholder_audio.py` — **Do not use for runtime audio**
+  - Procedural synthesis rejected by Helmer
+  - Script retained for reference only (marked soft-deprecated)
+  - All runtime audio is now real CC0 foley
+
+---
+
+Last Updated: September 27, 2026 (Playtest.9 - CC0 real foley integrated)
