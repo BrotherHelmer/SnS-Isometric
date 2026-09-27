@@ -30,3 +30,16 @@ See `docs/RELEASE_EXECUTION_STATUS.md` in the project for current validation res
 - **Guard UI**: Removed "Carrying" field from guard inspection panels, as tower guards and patrol soldiers do not haul resources.
 - **Occupancy Indicators**: Buildings now show subtle daytime occupancy hints (window emission changes) when staffed or garrisoned, making it easier to identify which buildings are active.
 - **C&C-Style Building Bar**: Added a bottom-screen building miniatures strip showing all buildable types for quick access, complementing the existing categorized BUILD palette.
+
+**Visual & UX Polish** (playtest.8):
+- **Camera Stability**: Removed automatic camera jump to shard area that could reveal shard location prematurely. Camera stays on settlement unless player deliberately pans.
+- **Building Identity**: Made buildings more visually distinct at a glance:
+  - **Lumber Camp**: Added tent marker and rustic camp props vs industrial sawmill
+  - **Sawmill**: Added circular saw blade with teeth and organized plank stacks
+  - **Farm**: Added sheep in paddock, fence posts, and clear agricultural identity
+  - **Barracks**: Enhanced military appearance with armor stand, entry banner, and martial features
+  - **Town Hall → Castle**: When Barracks is built, Town Hall visually upgrades to Castle with turrets, crenellations, and royal banner
+- **C&C Bar Icons**: Replaced plain color blocks with visual building icons (house silhouette, saw blade, shield/spear, etc.)
+- **Build Tooltips**: Bottom bar building buttons now show tooltips with what the building does + resource costs on hover
+- **Resource Icons**: Replaced colored resource bars with distinctive icons (log for wood, wheat stalks, stone, bread loaf, crystal for wyrd, etc.)
+- **Audio**: Placeholder audio generation script added (Issue #6 - proper CC0/libre SFX still needed for production)
