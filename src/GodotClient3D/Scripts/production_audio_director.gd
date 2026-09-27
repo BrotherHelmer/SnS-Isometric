@@ -107,9 +107,9 @@ func setup(host: Node, camera_value: Camera3D) -> void:
 func apply_settings(next: Dictionary) -> void:
 	settings = next
 	_set_bus_volume("Master", float(settings.get("master", 1.0)))
-	_set_bus_volume("Music", float(settings.get("music", 0.85)))
-	_set_bus_volume("SFX", float(settings.get("sfx", 1.0)))
-	_set_bus_volume("Ambience", float(settings.get("sfx", 1.0)) * 0.9)
+	_set_bus_volume("Music", float(settings.get("music", 0.72)))
+	_set_bus_volume("SFX", float(settings.get("sfx", 0.85)))
+	_set_bus_volume("Ambience", float(settings.get("sfx", 0.85)) * 0.9)
 	Identity.save_audio_settings(settings)
 
 
