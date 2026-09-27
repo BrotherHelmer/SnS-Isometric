@@ -20,10 +20,19 @@ try {
         Copy-Item -LiteralPath $ValidationSave -Destination "$validationDirectory/developed_realm.json"
         $arguments += "--validation-save=$validationDirectory/developed_realm.json"
     }
-    # Start-Process joins ArgumentList without preserving argument boundaries.
-    # Quote our known flags/Windows paths so user directories may contain spaces.
-    $quotedArguments = $arguments | ForEach-Object { '"' + $_ + '"' }
-    $process = Start-Process -FilePath "$validationDirectory/ShardAndSovereign.exe" -WorkingDirectory $validationDirectory -ArgumentList $quotedArguments -WindowStyle Hidden -RedirectStandardOutput "$validationDirectory/stdout.txt" -RedirectStandardError "$validationDirectory/stderr.txt" -PassThru
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = "$validationDirectory/ShardAndSovereign.exe"
+    $psi.Arguments = ($arguments -join ' ')
+    $psi.UseShellExecute = $false
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError = $true
+    $psi.CreateNoWindow = $true
+    $psi.WorkingDirectory = $validationDirectory
+    $process = New-Object System.Diagnostics.Process
+    $process.StartInfo = $psi
+    $process.Start() | Out-Null
+    $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+    $stderrTask = $process.StandardError.ReadToEndAsync()
     Write-Output "PACKAGE_TEST pid=$($process.Id) directory=$validationDirectory duration=$SoakSeconds"
     $watch = [Diagnostics.Stopwatch]::StartNew()
     $memorySamples = @()
@@ -40,7 +49,11 @@ try {
             @{status='running';pid=$process.Id;elapsed_seconds=$watch.Elapsed.TotalSeconds;requested_seconds=$SoakSeconds;git_revision=$buildManifest.git_revision} | ConvertTo-Json | Set-Content -LiteralPath "$evidenceDirectory/package_validation.json"
         }
     }
-    $output = (Get-Content "$validationDirectory/stdout.txt" -Raw) + (Get-Content "$validationDirectory/stderr.txt" -Raw)
+    $stdoutContent = $stdoutTask.Result
+    $stderrContent = $stderrTask.Result
+    $stdoutContent | Set-Content -LiteralPath "$validationDirectory/stdout.txt"
+    $stderrContent | Set-Content -LiteralPath "$validationDirectory/stderr.txt"
+    $output = $stdoutContent + $stderrContent
     $errors = @($output -split "`n" | Where-Object { $_ -match '^(SCRIPT ERROR:|ERROR:|FAIL )' -and $_ -notmatch '^ERROR: Failed to read the root certificate store\.' })
     if ($timedOut) { $errors += 'Packaged game timed out.' }
     $memorySamples | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath "$evidenceDirectory/process_memory.json"

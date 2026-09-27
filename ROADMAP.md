@@ -1,7 +1,7 @@
 # Shard & Sovereign — Development Roadmap
 
 **Last updated:** 2026-09-27  
-**Current version:** 0.2.0-playtest.27  
+**Current version:** 0.2.0-playtest.28  
 **Target:** Closed Steam Playtest → Public Demo
 
 This roadmap tracks progress toward a releasable Windows settlement survival game: build an economy with autonomous workers, defend against night raids, race a rival realm to Bind the central Shard. Owner-confirmed route: **closed Steam Playtest first, then public demo** after validation gates pass.
@@ -19,6 +19,15 @@ Prepare a validated Windows package for supervised external testing. The game mu
 ---
 
 ## Completed Work (Recent)
+
+### Playtest.28 (2026-09-27) — PowerShell 5.1 Compatibility & ExitCode Reliability Fix
+- **Critical PS 5.1 abort resolved**: Fixed `tools/verify_release.ps1` to work on both PowerShell 5.1 and PowerShell 7 without host abort
+- **Package soak ExitCode null fixed**: Fixed `tools/test_release_package.ps1` null ExitCode issue (overnight 60-min soak: in-game `RELEASE_PACKAGE_PROBE PASS` after 3601s, but runner failed solely because `$process.ExitCode` was null)
+- **Root cause**: Playtest.27's `BeginOutputReadLine()` / `BeginErrorReadLine()` pattern caused PowerShell 5.1 host to abort with exit code 2. Additionally, `test_release_package.ps1` used fragile `Start-Process -PassThru` with stream redirection, which can leave `ExitCode` null even after `WaitForExit()` completes (same footgun as playtest.26 verify_release)
+- **Solution**: Both scripts now use `System.Diagnostics.Process` + `ProcessStartInfo` with `StandardOutput.ReadToEndAsync()` / `StandardError.ReadToEndAsync()` started immediately after `Start()`, then `WaitForExit()`, then `Result` property access. This portable pattern drains streams asynchronously during process execution on both PS 5.1 and PS 7
+- **Deadlock prevention maintained**: ReadToEndAsync starts before WaitForExit, preventing playtest.26's pipe buffer deadlock while avoiding playtest.27's PS 5.1 host abort and Start-Process ExitCode null races
+- **ExitCode reliability preserved**: Reliable non-null `Process.ExitCode` maintained across both PowerShell versions in both verification and package soak tests
+- Version bumped to 0.2.0-playtest.28 in both `project.godot` and `tools/build_release.ps1`
 
 ### Playtest.27 (2026-09-27) — Verification Deadlock Fix
 - **Critical deadlock resolved**: Fixed `tools/verify_release.ps1` pipe buffer deadlock introduced in playtest.26 that caused 180s timeout and ExitCode -1 on all test suites during Spawn
