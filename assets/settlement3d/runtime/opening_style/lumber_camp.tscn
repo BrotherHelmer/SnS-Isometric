@@ -1,8 +1,8 @@
-[gd_scene format=3]
+[gd_scene load_steps=2 format=3]
 
-[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/lumber_camp.res" id="1_tbnj8"]
+[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/lumber_camp.res" id="1_bkxm5"]
 
-[node name="LumberCamp" type="Node3D" unique_id=976868576]
+[node name="LumberCamp" type="Node3D"]
 
-[node name="Model" type="MeshInstance3D" parent="." unique_id=121950907]
-mesh = ExtResource("1_tbnj8")
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1_bkxm5")

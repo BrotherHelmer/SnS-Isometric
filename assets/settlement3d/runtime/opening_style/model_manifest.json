@@ -18,7 +18,7 @@
 		"triangles": 660
 	},
 	"bush": {
-		"size": "(1.261704, 1.0, 1.160116)",
+		"size": "(1.261704, 1, 1.160116)",
 		"source": "Authored geometry adapted from opening_style_v1 image references",
 		"surfaces": 1,
 		"triangles": 56
@@ -29,8 +29,14 @@
 		"surfaces": 3,
 		"triangles": 576
 	},
+	"castle": {
+		"size": "(3, 3.7, 2.8)",
+		"source": "Authored geometry adapted from opening_style_v1 image references",
+		"surfaces": 10,
+		"triangles": 10728
+	},
 	"enemy_camp": {
-		"size": "(3.0, 3.7, 2.8)",
+		"size": "(3, 3.7, 2.8)",
 		"source": "Authored geometry adapted from opening_style_v1 image references",
 		"surfaces": 11,
 		"triangles": 4628
@@ -96,7 +102,7 @@
 		"triangles": 2064
 	},
 	"town_hall": {
-		"size": "(3.0, 3.7, 2.8)",
+		"size": "(3, 3.7, 2.8)",
 		"source": "Authored geometry adapted from opening_style_v1 image references",
 		"surfaces": 11,
 		"triangles": 4628
