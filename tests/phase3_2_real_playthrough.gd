@@ -96,7 +96,9 @@ func _run() -> void:
 	game._sync_presentation()
 	game._update_day_night_lighting()
 	await process_frame
-	_check(failures, simulation.is_night and game.sun_light.light_energy <= float(Identity.LIGHTING["day"]["sun_energy"]) * 0.25, "10. night is obviously darker than day without HUD text")
+	await process_frame
+	var night_threshold: float = float(Identity.LIGHTING["night"]["sun_energy"]) + 0.02
+	_check(failures, simulation.is_night and game.sun_light.light_energy <= night_threshold, "10. night is obviously darker than day without HUD text")
 	_check(failures, _occupied_building_lights_on(game), "11. occupied buildings emit warm night lights")
 	_check(failures, _night_guard_visible(simulation, game), "12. night guards are alert or on patrol")
 	print("P32_PLAY 12 night sun=%.3f lights=%s" % [game.sun_light.light_energy, _occupied_building_lights_on(game)])

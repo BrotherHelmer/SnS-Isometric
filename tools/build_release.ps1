@@ -4,7 +4,7 @@ $workspaceRoot = Split-Path -Parent $PSScriptRoot
 $engine = Join-Path $workspaceRoot '.tools/godot-4.7/Godot_v4.7-stable_win64_console.exe'
 $template = Join-Path $workspaceRoot '.tools/godot-4.7/templates/windows_release_x86_64.exe'
 if (-not (Test-Path -LiteralPath $engine) -or -not (Test-Path -LiteralPath $template)) { throw 'Install the pinned Godot 4.7 stable engine and Windows templates in .tools/godot-4.7. See docs/BUILD_AND_TEST.md.' }
-$version = '0.2.0-playtest.24'
+$version = '0.2.0-playtest.25'
 $releaseDirectory = Join-Path $workspaceRoot "dist/ShardAndSovereign_$version"
 $evidenceDirectory = Join-Path $workspaceRoot 'artifacts/release_candidate'
 New-Item -ItemType Directory -Force -Path $releaseDirectory, $evidenceDirectory | Out-Null
@@ -26,6 +26,10 @@ try {
     New-Item -ItemType Directory -Force -Path $env:APPDATA | Out-Null
     Invoke-Godot @('--headless','--path',$workspaceRoot,'--editor','--import','--log-file',"$evidenceDirectory/import.log") "$evidenceDirectory/import.console.txt" 'Godot import failed.'
     Assert-GodotLog "$evidenceDirectory/import.console.txt"
+    Write-Output 'Running export packing audit...'
+    $pythonCmd = if (Get-Command py -ErrorAction SilentlyContinue) { 'py' } elseif (Get-Command python3 -ErrorAction SilentlyContinue) { 'python3' } else { 'python' }
+    & $pythonCmd "$PSScriptRoot/audit_export_packing.py"
+    if ($LASTEXITCODE -ne 0) { throw 'Export packing audit failed. Runtime assets are missing from export_presets.cfg. See audit output above.' }
     if (-not $SkipVerification) { & "$PSScriptRoot/verify_release.ps1" }
     Invoke-Godot @('--headless','--path',$workspaceRoot,'--script','res://tools/write_engine_notices.gd') "$evidenceDirectory/notices.console.txt" 'Engine license extraction failed.'
     Assert-GodotLog "$evidenceDirectory/notices.console.txt"

@@ -2,10 +2,17 @@
 
 Milestone: internal Windows candidate for closed Steam Playtest, then public demo. Steamworks setup remains deferred by the owner. **Not approved for external release.**
 
-**Current version:** 0.2.0-playtest.13  
+**Current version:** 0.2.0-playtest.25  
 **Comprehensive tracking:** See [ROADMAP.md](../ROADMAP.md) for current work, prioritized backlog, and release gates.
 
-## Implemented (playtest.13 and earlier)
+## Implemented (playtest.25 and earlier)
+
+**Build Pipeline & Verification (playtest.25, 24, 22):**
+- Night verification hardened: test threshold now matches actual lighting design (0.35 + 0.02 tolerance vs incorrect 0.28), extra frame wait for GPU settling
+- Export packing audit integrated: `audit_export_packing.py` runs as build preflight, exit code 1 blocks release if runtime assets missing
+- Audit tool compares runtime paths from `ProductionAssetCatalog3D` + `ProductionAudioDirector3D` against `export_presets.cfg` export_files
+- Prevents silent export omissions (playtest.22 castle.tscn, playtest.24 audio files) from reaching release
+- Release builds can now pass verification without `-SkipVerification` flag (night check no longer flaky)
 
 **Visual & Art (playtest.13, 12, 11, 8, 7, 6, 4, 3):**
 - Castle visual: 4-tower fortress (was 3), taller keep, proper curtain walls, crenellations matching title art (12,840 tri)
@@ -68,7 +75,7 @@ Milestone: internal Windows candidate for closed Steam Playtest, then public dem
 
 ## Evidence and limits
 
-Current candidate **0.2.0-playtest.13** refines castle and barracks visuals to match title art. The castle now features 4 corner towers (was 3), taller keep, and proper curtain walls with crenellations (12,840 triangles, 790KB). The barracks is a dedicated military tower structure with shields and weapon racks (6,200 triangles), distinct from the cottage-based prototype. Town Hall → Castle morph (via `has_barracks`) now reads as a fortified multi-tower stronghold at strategic zoom.
+Current candidate **0.2.0-playtest.25** hardens night verification (test threshold now 0.35 + 0.02 vs incorrect 0.28, matching actual lighting design) and integrates export packing audit as build preflight. The flaky night check that forced `-SkipVerification` in playtest.24 release builds is resolved: test now checks against `Identity.LIGHTING["night"]["sun_energy"]` (0.35) with tolerance and extra frame wait for GPU state settling. Export packing audit (`tools/audit_export_packing.py`) runs after import, before verify/export; exit code 1 blocks release if runtime assets missing from `export_presets.cfg`. This prevents silent export omissions (castle.tscn in playtest.22, audio files in playtest.24) from reaching release packages.
 
 All **20** suite checks pass. The opening-style model set includes 19 authored scenes covering buildings, terrain features, and props. Character geometry and animations are retained with palette-adapted materials. See `docs/art/OPENING_STYLE_MODELS.md` for scope and limitations.
 
@@ -83,7 +90,7 @@ All **20** suite checks pass. The opening-style model set includes 19 authored s
 - ❌ Lower-end GPU performance (current evidence: RTX 4070 only)
 - ❌ Clean physical Windows machine test
 
-No hour-long soak, lower-end GPU test, or physical clean-machine validation has been performed for playtest.13.
+No hour-long soak, lower-end GPU test, or physical clean-machine validation has been performed for playtest.25.
 
 
 

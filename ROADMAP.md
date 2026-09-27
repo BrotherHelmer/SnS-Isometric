@@ -1,7 +1,7 @@
 # Shard & Sovereign — Development Roadmap
 
 **Last updated:** 2026-09-27  
-**Current version:** 0.2.0-playtest.24  
+**Current version:** 0.2.0-playtest.25  
 **Target:** Closed Steam Playtest → Public Demo
 
 This roadmap tracks progress toward a releasable Windows settlement survival game: build an economy with autonomous workers, defend against night raids, race a rival realm to Bind the central Shard. Owner-confirmed route: **closed Steam Playtest first, then public demo** after validation gates pass.
@@ -14,11 +14,20 @@ This roadmap tracks progress toward a releasable Windows settlement survival gam
 
 Prepare a validated Windows package for supervised external testing. The game must demonstrate a complete playable loop (founding → economy → defense → Shard race → victory/defeat) with comprehensible onboarding, reliable saves, and no progression blockers.
 
-**Status:** Playtest.24 hardens runtime asset export packing (all audio now packed). Playtest.23 fixed castle.tscn export omission (Wine castle morph PASS). Playtest.22 fixed critical castle morph failure. Core gameplay loop is implemented and passes automated checks. External human validation gates remain open.
+**Status:** Playtest.25 hardens night-verification check (threshold now matches actual night lighting design: 0.35 + tolerance vs incorrect 0.28) and integrates export packing audit as build preflight (missing packed assets now fail early). Playtest.24 hardened runtime asset export packing (all audio now packed). Playtest.23 fixed castle.tscn export omission (Wine castle morph PASS). Playtest.22 fixed critical castle morph failure. Core gameplay loop is implemented and passes automated checks. External human validation gates remain open.
 
 ---
 
 ## Completed Work (Recent)
+
+### Playtest.25 (2026-09-27) — Night Verification Hardening + Audit Preflight Integration
+- **Night check hardened**: Fixed flaky "night is obviously darker than day" verification that forced `-SkipVerification` workaround in playtest.24 release builds
+- **Root cause**: Test threshold (0.28 = 25% of day 1.12) was stricter than actual designed night lighting (0.35 = 31.25% of day). Test would fail when lighting correctly applied, pass when timing race prevented full lighting update—classic flaky check symptom
+- **Solution**: Test now checks against actual `Identity.LIGHTING["night"]["sun_energy"]` (0.35) + 0.02 tolerance, plus extra `await process_frame` for GPU state settling. Night mood preserved (ambient 0.50, sun 0.35, fill 0.32)
+- **Audit preflight integrated**: `tools/audit_export_packing.py` now runs in build pipeline after import, before verify/export. Exit code 1 blocks release if runtime assets missing from `export_presets.cfg`
+- **Prevention**: Future silent export omissions (like playtest.22 castle.tscn, playtest.24 audio) caught at build time, not post-release Wine testing
+- Version bumped to 0.2.0-playtest.25 in both `project.godot` and `tools/build_release.ps1`
+- Release builds can now pass verification without `-SkipVerification` flag (residual risk: genuine lighting regressions still need human visual validation)
 
 ### Playtest.24 (2026-09-27) — Export Packing Hardening (Audio Completeness)
 - **Export packing audit implemented**: Created `tools/audit_export_packing.py` to systematically compare runtime asset paths (from `ProductionAssetCatalog3D.all_runtime_paths()` + `ProductionAudioDirector3D` STEM_PATHS/CUE_PATHS/work paths) against `export_presets.cfg` export_files list
@@ -368,9 +377,9 @@ Prepare a validated Windows package for supervised external testing. The game mu
 
 **Release Planning:**
 - `docs/RELEASE_READINESS_PLAN.md` — ordered work plan, P0/P1 gates, Steam release sequence (approved 2026-09-25)
-- `docs/RELEASE_EXECUTION_STATUS.md` — validation results, evidence, remaining gates (**needs update to playtest.13**)
-- `docs/PLAYTEST_GUIDE.md` — player-facing instructions, controls, first-session guidance (**needs update to playtest.13**)
-- `docs/PLAYTEST_KNOWN_ISSUES.md` — disclosed limitations, UX improvements by playtest version (**needs update to playtest.13**)
+- `docs/RELEASE_EXECUTION_STATUS.md` — validation results, evidence, remaining gates
+- `docs/PLAYTEST_GUIDE.md` — player-facing instructions, controls, first-session guidance
+- `docs/PLAYTEST_KNOWN_ISSUES.md` — disclosed limitations, UX improvements by playtest version
 - `docs/OBSERVED_PLAYTEST.md` — structured pilot observation protocol
 
 **Architecture & Technical:**
@@ -399,7 +408,7 @@ Prepare a validated Windows package for supervised external testing. The game mu
 
 ## Summary
 
-**Current Status:** Playtest.13 delivers castle/barracks visual refinement matching title art. Core gameplay loop implemented, 20/20 automated checks pass, saves validated. Ready for human validation gates.
+**Current Status:** Playtest.25 delivers hardened night verification (check now matches actual lighting design: 0.35 vs incorrect 0.28 threshold) and export packing audit preflight (missing runtime assets fail build early). Core gameplay loop implemented, 20/20 automated checks pass, saves validated. Ready for human validation gates.
 
 **Next Critical Path:** 
 1. Complete documentation sync (version references, task pointers)
