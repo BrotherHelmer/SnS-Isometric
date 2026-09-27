@@ -55,6 +55,7 @@ const STARTING_RESOURCES := {
 const BUILDING_NAMES := {
 	BUILDING_NONE: "None",
 	BUILDING_TOWN_HALL: "Town Hall",
+	"CASTLE": "Castle",
 	BUILDING_ROAD: "Road",
 	BUILDING_HOUSE: "House",
 	BUILDING_LUMBER_CAMP: "Lumber Camp",

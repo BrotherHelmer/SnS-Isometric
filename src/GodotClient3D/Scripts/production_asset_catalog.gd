@@ -37,6 +37,7 @@ const ANIMATION_LIBRARIES := {
 
 const BUILDINGS := {
 	"TOWN_HALL": ROOT + "/opening_style/town_hall.tscn",
+	"CASTLE": ROOT + "/opening_style/castle.tscn",
 	"HOUSE": ROOT + "/opening_style/house.tscn",
 	"LUMBER_CAMP": ROOT + "/opening_style/lumber_camp.tscn",
 	"SAWMILL": ROOT + "/opening_style/lumber_camp.tscn",
