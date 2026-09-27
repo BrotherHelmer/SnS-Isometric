@@ -159,6 +159,8 @@ func building_descriptor(building: Dictionary, simulation) -> Dictionary:
 	var type_definition: Dictionary = Defs.PRODUCTION_DEFS.get(type_name, {})
 	var input_resource := String(type_definition.get("input", ""))
 	var output_resource := String(type_definition.get("output", ""))
+	# Issue #5: Check if settlement has barracks for Town Hall → Castle upgrade
+	var has_barracks := _settlement_has_barracks(simulation)
 	return {
 		"id": int(building.get("id", 0)),
 		"type": type_name,
@@ -192,6 +194,7 @@ func building_descriptor(building: Dictionary, simulation) -> Dictionary:
 		"selection_kind": "building",
 		"is_road": type_name == Defs.BUILDING_ROAD,
 		"site_clearing": is_construction and bool(building.get("site_clearing", false)),
+		"has_barracks": has_barracks,
 	}
 
 
@@ -620,3 +623,11 @@ func _footprint_from(building: Dictionary, type_name: String) -> Vector2i:
 	if typeof(stored) == TYPE_DICTIONARY:
 		return Vector2i(int(stored.get("x", 1)), int(stored.get("y", 1)))
 	return Defs.building_footprint(type_name)
+
+
+func _settlement_has_barracks(simulation) -> bool:
+	for building_value in simulation.get_buildings():
+		var building: Dictionary = building_value
+		if String(building.get("type", "")) == "BARRACKS" and not bool(building.get("construction", false)) and bool(building.get("completed", false)):
+			return true
+	return false

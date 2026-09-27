@@ -43,6 +43,10 @@ func configure(snapshot: Dictionary) -> void:
 	wall_signature = "%d:%d:%d" % [int(snapshot.get("wall_mask", 0)), int(bool(snapshot.get("gate_adjacent", false))), int(bool(snapshot.get("gate_closed", false)))]
 	name = "%s_%d" % ["Construction" if is_construction else building_type, entity_id]
 	rotation.y = -float(rotation_quarters) * PI * 0.5
+	# Issue #5: Check if this is Town Hall and should upgrade to Castle
+	var has_barracks := bool(snapshot.get("has_barracks", false))
+	if building_type == "TOWN_HALL" and has_barracks:
+		building_type = "CASTLE"
 	_rebuild()
 	apply_snapshot(snapshot)
 
@@ -345,7 +349,7 @@ func _create_workyard() -> void:
 	workyard_root.name = "SemanticWorkyard"
 	add_child(workyard_root)
 	match building_type:
-		"TOWN_HALL":
+		"TOWN_HALL", "CASTLE":
 			_add_prop("lantern", Vector3(2.15, 0.0, 1.65), Vector3.ONE, "FoundingLantern")
 			_add_prop("fence", Vector3(-2.6, 0.0, -1.8), Vector3.ONE, "FoundingFence")
 			_add_prop("cart", Vector3(2.55, 0.0, -0.8), Vector3.ONE * 0.7, "FoundingCart")
@@ -354,35 +358,187 @@ func _create_workyard() -> void:
 			_add_prop("barrel", Vector3(-2.15, 0.0, 2.5), Vector3.ONE * 3.5, "FoundingBarrel")
 			_add_prop("crate", Vector3(-2.55, 0.0, 1.7), Vector3.ONE * 3.5, "FoundingCrate")
 			_add_prop("wheelbarrow", Vector3(2.70, 0.0, 2.5), Vector3.ONE * 0.45, "FoundingWheelbarrow", "", Vector3(0.0, 25.0, 0.0))
-		"LUMBER_CAMP", "SAWMILL":
-			_add_prop("wood_stack", Vector3(-2.75, 0.0, 0.55), Vector3.ONE, "DecorativeLumber")
-			_add_prop("plank_stack", Vector3(2.65, 0.0, 0.45), Vector3.ONE * 0.8, "InventoryIndicatorPlanks", "planks")
-			_add_prop("wood_stack", Vector3(-0.45, 0.0, -1.65), Vector3.ONE * 0.72, "InventoryIndicatorWood", "wood")
-			_add_prop("work_axe", Vector3(-2.00, 0.55, 1.35), Vector3.ONE, "DecorativeWorkAxe", "", Vector3(0.0, 0.0, -24.0))
+			# Issue #5: Castle upgrade - add military features when barracks built
+			if building_type == "CASTLE":
+				# Add battlements/fortifications
+				for side in [-1.0, 1.0]:
+					var turret := MeshInstance3D.new()
+					turret.name = "CastleTurret"
+					var turret_mesh := CylinderMesh.new()
+					turret_mesh.height = 3.2
+					turret_mesh.top_radius = 0.65
+					turret_mesh.bottom_radius = 0.75
+					turret_mesh.radial_segments = 8
+					turret.mesh = turret_mesh
+					turret.position = Vector3(side * 3.5, 1.6, -1.2)
+					turret.material_override = _material(Color("#6a6a5a"), 0.0)
+					workyard_root.add_child(turret)
+					# Add crenellations on turret
+					for cren_i in 4:
+						var merlon := MeshInstance3D.new()
+						merlon.name = "TurretMerlon"
+						var merlon_mesh := BoxMesh.new()
+						merlon_mesh.size = Vector3(0.22, 0.35, 0.18)
+						merlon.mesh = merlon_mesh
+						var angle := float(cren_i) * 90.0
+						merlon.position = Vector3(side * 3.5 + cos(deg_to_rad(angle)) * 0.65, 3.25, -1.2 + sin(deg_to_rad(angle)) * 0.65)
+						merlon.material_override = _material(Color("#5a5a4a"), 0.0)
+						workyard_root.add_child(merlon)
+				# Add royal banner
+				var keep_pole := MeshInstance3D.new()
+				keep_pole.name = "KeepBannerPole"
+				var pole_mesh := BoxMesh.new()
+				pole_mesh.size = Vector3(0.14, 3.5, 0.14)
+				keep_pole.mesh = pole_mesh
+				keep_pole.position = Vector3(0.0, 5.25, -0.5)
+				keep_pole.material_override = _material(Color("#3a2a1a"), 0.0)
+				workyard_root.add_child(keep_pole)
+				var royal_flag := MeshInstance3D.new()
+				royal_flag.name = "RoyalBanner"
+				var flag_mesh := BoxMesh.new()
+				flag_mesh.size = Vector3(1.1, 0.75, 0.08)
+				royal_flag.mesh = flag_mesh
+				royal_flag.position = Vector3(-0.55, 6.5, -0.5)
+				royal_flag.material_override = _material(Color("#7a4a3a"), 0.0)
+				workyard_root.add_child(royal_flag)
+		"LUMBER_CAMP":
+			# Issue #2 fix: Lumber Camp - more rustic forest camp with stacks and tools
+			_add_prop("wood_stack", Vector3(-2.75, 0.0, 0.55), Vector3.ONE * 1.2, "DecorativeLumber")
+			_add_prop("wood_stack", Vector3(-0.45, 0.0, -1.65), Vector3.ONE * 0.85, "InventoryIndicatorWood", "wood")
+			_add_prop("work_axe", Vector3(-2.00, 0.55, 1.35), Vector3.ONE * 1.15, "DecorativeWorkAxe", "", Vector3(0.0, 0.0, -24.0))
+			_add_prop("wheelbarrow", Vector3(2.8, 0.0, 0.35), Vector3.ONE * 0.75, "CampWheelbarrow", "", Vector3(0.0, 45.0, 0.0))
+			# Add a simple tent-like structure marker
+			var tent := MeshInstance3D.new()
+			tent.name = "CampTentMarker"
+			var tent_mesh := BoxMesh.new()
+			tent_mesh.size = Vector3(1.2, 1.4, 1.2)
+			tent.mesh = tent_mesh
+			tent.position = Vector3(-2.3, 0.7, -1.2)
+			tent.rotation_degrees = Vector3(0.0, 25.0, 0.0)
+			tent.material_override = _material(Color("#8b7355"), 0.0)
+			workyard_root.add_child(tent)
+		"SAWMILL":
+			# Issue #2 fix: Sawmill - industrial with saw blade and organized planks
+			_add_prop("plank_stack", Vector3(2.65, 0.0, 0.45), Vector3.ONE * 1.0, "InventoryIndicatorPlanks", "planks")
+			_add_prop("wood_stack", Vector3(-2.55, 0.0, 0.25), Vector3.ONE * 0.85, "InventoryIndicatorWood", "wood")
+			# Add a circular saw blade prop as visual marker
+			var saw_blade := MeshInstance3D.new()
+			saw_blade.name = "SawBladeMarker"
+			var blade_mesh := CylinderMesh.new()
+			blade_mesh.height = 0.08
+			blade_mesh.top_radius = 0.85
+			blade_mesh.bottom_radius = 0.85
+			blade_mesh.radial_segments = 16
+			saw_blade.mesh = blade_mesh
+			saw_blade.position = Vector3(-2.7, 0.9, -1.5)
+			saw_blade.rotation_degrees = Vector3(90.0, 0.0, 22.5)
+			saw_blade.material_override = _material(Color("#5a5a5a"), 0.0)
+			workyard_root.add_child(saw_blade)
+			# Add teeth to saw
+			for tooth_i in 8:
+				var tooth := MeshInstance3D.new()
+				tooth.name = "SawTooth"
+				var tooth_mesh := BoxMesh.new()
+				tooth_mesh.size = Vector3(0.12, 0.15, 0.06)
+				tooth.mesh = tooth_mesh
+				var angle := float(tooth_i) * 45.0
+				var radius := 0.85
+				tooth.position = Vector3(-2.7 + cos(deg_to_rad(angle)) * radius, 0.9, -1.5 + sin(deg_to_rad(angle)) * radius)
+				tooth.rotation_degrees = Vector3(90.0, angle, 0.0)
+				tooth.material_override = _material(Color("#4a4a4a"), 0.0)
+				workyard_root.add_child(tooth)
 		"QUARRY":
 			_add_prop("stone_stack", Vector3(3.15, 0.0, 0.20), Vector3.ONE * 0.85, "InventoryIndicatorStone", "stone")
 			_add_prop("wheelbarrow", Vector3(-3.10, 0.0, 0.35), Vector3.ONE * 0.8, "DecorativeWheelbarrow")
 		"FARM":
+			# Issue #3 fix: Farm must look like a farm - add crops, paddock, and sheep
 			for x in range(-1, 2):
 				for z in range(2):
 					_add_prop("dirt_plot", Vector3(float(x) * 1.85, 0.0, -1.25 - float(z) * 1.45), Vector3.ONE * 0.82, "DecorativeFarmPlot")
 					_add_prop("wheat_crop", Vector3(float(x) * 1.85, 0.08, -1.25 - float(z) * 1.45), Vector3.ONE * 1.5, "WheatCrop")
 			_add_prop("wheelbarrow", Vector3(3.15, 0.0, -1.20), Vector3.ONE * 0.76, "InventoryIndicatorWheat", "wheat")
+			# Add sheep paddock with fence
+			var paddock := MeshInstance3D.new()
+			paddock.name = "FarmPaddock"
+			var paddock_mesh := BoxMesh.new()
+			paddock_mesh.size = Vector3(3.2, 0.04, 2.4)
+			paddock.mesh = paddock_mesh
+			paddock.position = Vector3(-2.8, 0.02, 1.0)
+			paddock.material_override = _material(Color("#7a8a5a"), 0.0)
+			workyard_root.add_child(paddock)
+			# Add simple fence posts
+			for post_x in [-1.6, -2.4, -3.2, -4.0]:
+				var fence_post := MeshInstance3D.new()
+				fence_post.name = "FencePost"
+				var post_mesh := BoxMesh.new()
+				post_mesh.size = Vector3(0.08, 0.55, 0.08)
+				fence_post.mesh = post_mesh
+				fence_post.position = Vector3(post_x, 0.28, -0.2)
+				fence_post.material_override = _material(Color("#5a4a3a"), 0.0)
+				workyard_root.add_child(fence_post)
+			# Add sheep (simple box representations)
+			var sheep_positions := [Vector3(-2.5, 0.0, 0.8), Vector3(-3.2, 0.0, 1.4), Vector3(-2.8, 0.0, 1.8)]
+			for sheep_pos in sheep_positions:
+				var sheep := MeshInstance3D.new()
+				sheep.name = "Sheep"
+				var sheep_mesh := BoxMesh.new()
+				sheep_mesh.size = Vector3(0.35, 0.32, 0.48)
+				sheep.mesh = sheep_mesh
+				sheep.position = sheep_pos + Vector3(0.0, 0.16, 0.0)
+				sheep.rotation_degrees.y = randf_range(-30.0, 30.0)
+				sheep.material_override = _material(Color("#e8e8d8"), 0.0)
+				workyard_root.add_child(sheep)
+				# Add simple head
+				var head := MeshInstance3D.new()
+				head.name = "SheepHead"
+				var head_mesh := BoxMesh.new()
+				head_mesh.size = Vector3(0.22, 0.22, 0.22)
+				head.mesh = head_mesh
+				head.position = Vector3(0.0, 0.05, 0.28)
+				head.material_override = _material(Color("#2a2a2a"), 0.0)
+				sheep.add_child(head)
 		"STOREHOUSE":
 			_add_prop("crate", Vector3(-2.85, 0.0, 0.55), Vector3.ONE, "DecorativeCrate")
 			_add_prop("barrel", Vector3(2.85, 0.0, 0.55), Vector3.ONE, "DecorativeBarrel")
 		"BAKERY":
 			_add_prop("crate", Vector3(2.75, 0.0, 0.20), Vector3.ONE, "InventoryIndicatorBread", "bread")
 		"BARRACKS":
-			_add_prop("weaponrack", Vector3(-2.85, 0.0, 0.55), Vector3.ONE, "BarracksWeaponRack", "", Vector3(0.0, 32.0, 0.0))
-			_add_prop("weaponrack", Vector3(2.75, 0.0, 0.35), Vector3.ONE, "BarracksWeaponRack", "", Vector3(0.0, -28.0, 0.0))
-			_add_prop("training_target", Vector3(-2.10, 0.0, -2.15), Vector3.ONE, "BarracksTrainingTarget", "", Vector3(0.0, 18.0, 0.0))
+			# Issue #4 fix: Barracks must look military - add more military features
+			_add_prop("weaponrack", Vector3(-2.85, 0.0, 0.55), Vector3.ONE * 1.1, "BarracksWeaponRack", "", Vector3(0.0, 32.0, 0.0))
+			_add_prop("weaponrack", Vector3(2.75, 0.0, 0.35), Vector3.ONE * 1.1, "BarracksWeaponRack", "", Vector3(0.0, -28.0, 0.0))
+			_add_prop("training_target", Vector3(-2.10, 0.0, -2.15), Vector3.ONE * 1.15, "BarracksTrainingTarget", "", Vector3(0.0, 18.0, 0.0))
+			# Add armor rack markers
+			var armor_stand := MeshInstance3D.new()
+			armor_stand.name = "ArmorStand"
+			var armor_mesh := BoxMesh.new()
+			armor_mesh.size = Vector3(0.45, 0.85, 0.25)
+			armor_stand.mesh = armor_mesh
+			armor_stand.position = Vector3(2.5, 0.55, -1.8)
+			armor_stand.material_override = _material(Color("#5a5a5a"), 0.0)
+			workyard_root.add_child(armor_stand)
+			# Add military banner pole at entrance
+			var entry_pole := MeshInstance3D.new()
+			entry_pole.name = "EntryBannerPole"
+			var pole_mesh := BoxMesh.new()
+			pole_mesh.size = Vector3(0.12, 2.8, 0.12)
+			entry_pole.mesh = pole_mesh
+			entry_pole.position = Vector3(1.8, 1.4, 2.2)
+			entry_pole.material_override = _material(Color("#4a3a2a"), 0.0)
+			workyard_root.add_child(entry_pole)
+			var entry_flag := MeshInstance3D.new()
+			entry_flag.name = "EntryBanner"
+			var flag_mesh := BoxMesh.new()
+			flag_mesh.size = Vector3(0.85, 0.55, 0.06)
+			entry_flag.mesh = flag_mesh
+			entry_flag.position = Vector3(1.35, 2.35, 2.2)
+			entry_flag.material_override = _material(Color("#8a3a3a") if faction == "rival" else Color("#4a5a6a"), 0.0)
+			workyard_root.add_child(entry_flag)
 	_create_semantic_identity_geometry()
 
 
 func _create_semantic_identity_geometry() -> void:
 	match building_type:
-		"TOWN_HALL":
+		"TOWN_HALL", "CASTLE":
 			_create_town_hall_civic_mass()
 		"FARM":
 			var silo := MeshInstance3D.new()
