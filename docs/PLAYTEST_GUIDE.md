@@ -1,6 +1,6 @@
 # Shard & Sovereign — Windows playtest
 
-Build: 0.2.0-playtest.8. This is a local internal candidate for the planned closed Steam Playtest. Steam distribution is not configured yet.
+Build: 0.2.0-playtest.13. This is a local internal candidate for the planned closed Steam Playtest. Steam distribution is not configured yet.
 
 ## Start
 
