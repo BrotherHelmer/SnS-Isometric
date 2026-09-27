@@ -36,7 +36,7 @@ $revision = (& git -C $workspaceRoot rev-parse HEAD).Trim()
 $sourceRoots = @('src/GodotClient/Scripts', 'src/GodotClient3D', 'assets/settlement3d/runtime', 'assets/settlement/audio')
 $sourceFiles = @('project.godot', 'export_presets.cfg')
 foreach ($sourceRoot in $sourceRoots) {
-    $sourceFiles += Get-ChildItem -LiteralPath (Join-Path $workspaceRoot $sourceRoot) -Recurse -File | Where-Object { $_.Extension -notin @('.uid', '.import') } | ForEach-Object { [IO.Path]::GetRelativePath($workspaceRoot, $_.FullName).Replace('\', '/') }
+    $sourceFiles += Get-ChildItem -LiteralPath (Join-Path $workspaceRoot $sourceRoot) -Recurse -File | Where-Object { $_.Extension -notin @('.uid', '.import') } | ForEach-Object { $_.FullName.Substring($workspaceRoot.Length).TrimStart('\').Replace('\', '/') }
 }
 $manifest = [ordered]@{version=$version; built_utc=[DateTime]::UtcNow.ToString('o'); git_revision=$revision; working_tree_dirty=([bool](& git -C $workspaceRoot status --porcelain)); engine_version=(& $engine --version | Select-Object -First 1); engine_sha256=(Get-FileHash -LiteralPath $engine).Hash; template_sha256=(Get-FileHash -LiteralPath $template).Hash; sources=@(); outputs=@()}
 foreach ($sourceFile in ($sourceFiles | Sort-Object -Unique)) { $manifest.sources += @{path=$sourceFile;sha256=(Get-FileHash -LiteralPath (Join-Path $workspaceRoot $sourceFile)).Hash} }

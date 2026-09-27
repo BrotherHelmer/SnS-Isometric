@@ -636,7 +636,7 @@ func _create_building_identity_markers() -> void:
 	if building_type == "CONSTRUCTION_SITE" or building_type == "ROAD" or building_type == "WALL":
 		return
 	
-	var roof_pos := sockets["vfx"].position + Vector3(0.0, 1.2, 0.0)
+	var roof_pos: Vector3 = (sockets["vfx"] as Marker3D).position + Vector3(0.0, 1.2, 0.0)
 	
 	var identity_color := Color.WHITE
 	var roof_marker: MeshInstance3D = null

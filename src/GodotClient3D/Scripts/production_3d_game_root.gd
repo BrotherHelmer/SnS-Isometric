@@ -944,7 +944,7 @@ func _create_ui() -> void:
 	strip_margin.add_theme_constant_override("margin_bottom", 6)
 	build_strip.add_child(strip_margin)
 	var strip_scroll := ScrollContainer.new()
-	strip_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_IF_NEEDED
+	strip_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	strip_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	strip_margin.add_child(strip_scroll)
 	var strip_box := HBoxContainer.new()
@@ -977,7 +977,7 @@ func _create_ui() -> void:
 		btn.custom_minimum_size = Vector2(72, 14)
 		btn.add_theme_font_size_override("font_size", 9)
 		btn.flat = true
-		btn.pressed.connect(_select_building_for_placement.bind(building_type))
+		btn.pressed.connect(begin_placement.bind(building_type))
 		btn_vbox.add_child(btn)
 		build_strip_buttons.append(btn)
 
