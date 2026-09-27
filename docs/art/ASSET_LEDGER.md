@@ -90,3 +90,22 @@ Meshes are merged by material into one mesh per model for compatibility with ins
 ### Environment follow-up — 2026-09-26
 
 Playtest.4 expands the authored opening-style set from twelve to nineteen model scenes, adding Quarry, Barracks, Lumen Pillar, rival camp, grass, bush and wheat. Existing wall geometry receives stone crenellations. Character clothing and terrain colour changes use project-authored runtime shaders; no vendor bitmap or rig is edited. The previously generated meadow/roof bitmap prototypes remain unused. Geometry continues to derive from the recorded AI art direction; see OPENING_STYLE_MODELS.md for integration and validation limits.
+
+### Settlement SFX — 2026-09-27 (Playtest.7)
+
+The core settlement sound effects in `assets/settlement/audio/` are **procedurally generated** using Python/NumPy sine synthesis, envelope shaping, and noise generation. Style inspiration: clear, punchy colony-sim audio reminiscent of The Settlers II (Amiga) character, but all sounds are original procedural synthesis—no sampling, ripping, or copyrighted audio sources.
+
+**Generated SFX** (CC0 - original procedural work):
+- `ui_click.wav` — UI button/selection confirmation (0.08s)
+- `build_start.wav` — Construction hammer start (0.12s)
+- `build_complete.wav` — Building finished chime (0.4s)
+- `road.wav` — Road construction (0.12s)
+- `delivery.wav` — Resource delivery confirmation (0.18s)
+- `attack.wav` — Combat hit/impact (0.14s)
+- `tower.wav` — Watchtower projectile launch (0.25s)
+- `night.wav` — Night warning bell (0.8s)
+- `enemy.wav` — Enemy spawn/appearance (0.3s)
+
+**License**: CC0 Public Domain Dedication. These are original procedurally generated audio created for this project via `tools/generate_settlement_sfx.py`. No external samples, commercial assets, or copyrighted audio were used. Attribution optional.
+
+**Retained**: `ambience.wav`, `music.wav`, `destroyed.wav`, and `soldier.wav` from earlier phases remain unchanged pending further audio direction.

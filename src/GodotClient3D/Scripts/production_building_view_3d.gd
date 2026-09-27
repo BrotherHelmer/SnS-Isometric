@@ -101,6 +101,12 @@ func _rebuild() -> void:
 	construction_root = null
 	workyard_root = null
 	selection_ring = null
+	ownership_banner = null
+	damage_marker = null
+	window_light = null
+	window_emission = null
+	work_smoke = null
+	lantern_light = null
 	selection_area = null
 	progress_label = null
 	ownership_banner = null
@@ -118,6 +124,7 @@ func _rebuild() -> void:
 	else:
 		_create_completed_model()
 		_create_workyard()
+		_create_building_identity_markers()
 	_create_ownership_banner()
 
 
@@ -499,9 +506,9 @@ func _update_damage_visual(hp: int, max_hp: int) -> void:
 
 
 func _update_night_presentation(night: bool, occupants: int) -> void:
-	if building_type not in ["HOUSE", "TOWN_HALL", "BAKERY", "BARRACKS", "STOREHOUSE"]:
+	if building_type not in ["HOUSE", "TOWN_HALL", "BAKERY", "BARRACKS", "STOREHOUSE", "LUMBER_CAMP", "QUARRY", "SAWMILL", "FARM", "WATCHTOWER"]:
 		return
-	var inhabited := occupants > 0 if building_type == "HOUSE" else bool(last_snapshot.get("connected", false))
+	var inhabited := occupants > 0 if building_type == "HOUSE" else bool(last_snapshot.get("connected", false)) and (int(last_snapshot.get("assigned_staff", 0)) > 0 or int(last_snapshot.get("soldiers_assigned", 0)) > 0 or building_type in ["TOWN_HALL", "STOREHOUSE"])
 	if window_light == null:
 		window_light = OmniLight3D.new()
 		window_light.name = "InhabitedWindowGlow"
@@ -526,6 +533,15 @@ func _update_night_presentation(night: bool, occupants: int) -> void:
 	window_light.visible = night and inhabited
 	if window_emission != null:
 		window_emission.visible = night and inhabited
+	
+	if not night and inhabited and building_type not in ["TOWN_HALL", "STOREHOUSE"]:
+		if window_emission != null:
+			window_emission.visible = true
+			var daytime_material := _material(Color("#9fc6a5"), 0.0)
+			daytime_material.emission_enabled = true
+			daytime_material.emission = Color("#7da88a")
+			daytime_material.emission_energy_multiplier = 0.8
+			window_emission.material_override = daytime_material
 
 
 func _update_activity_presentation(active: bool, night: bool) -> void:
@@ -614,6 +630,98 @@ func _material(color: Color, transparency: float) -> StandardMaterial3D:
 	if transparency > 0.0 or color.a < 1.0:
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	return material
+
+
+func _create_building_identity_markers() -> void:
+	if building_type == "CONSTRUCTION_SITE" or building_type == "ROAD" or building_type == "WALL":
+		return
+	
+	var roof_pos := sockets["vfx"].position + Vector3(0.0, 1.2, 0.0)
+	
+	var identity_color := Color.WHITE
+	var roof_marker: MeshInstance3D = null
+	
+	match building_type:
+		"LUMBER_CAMP":
+			identity_color = Color("#8b6f47")
+			roof_marker = _create_roof_marker(roof_pos, Color("#6b4423"), Vector3(0.5, 0.3, 0.5))
+		"SAWMILL":
+			identity_color = Color("#5a4a3a")
+			roof_marker = _create_roof_marker(roof_pos, Color("#4a3a2a"), Vector3(0.6, 0.4, 0.6))
+		"QUARRY":
+			identity_color = Color("#9a9588")
+			roof_marker = _create_roof_marker(roof_pos, Color("#7a7568"), Vector3(0.5, 0.35, 0.5))
+		"FARM":
+			identity_color = Color("#d4b86a")
+			roof_marker = _create_roof_marker(roof_pos, Color("#c4a850"), Vector3(0.5, 0.3, 0.5))
+		"BAKERY":
+			identity_color = Color("#c8524a")
+			roof_marker = _create_roof_marker(roof_pos, Color("#a83830"), Vector3(0.5, 0.4, 0.5))
+			_create_chimney_marker(roof_pos + Vector3(0.3, 0.5, 0.0))
+		"BARRACKS":
+			identity_color = Color("#6a4a4a")
+			roof_marker = _create_roof_marker(roof_pos, Color("#5a3a3a"), Vector3(0.6, 0.35, 0.6))
+			_create_military_banner(roof_pos + Vector3(0.0, 0.8, 0.0))
+		"WATCHTOWER":
+			_create_military_banner(roof_pos + Vector3(0.0, 1.5, 0.0))
+		"STOREHOUSE":
+			identity_color = Color("#8a7a5a")
+	
+	if roof_marker != null:
+		add_child(roof_marker)
+
+
+func _create_roof_marker(position: Vector3, color: Color, size: Vector3) -> MeshInstance3D:
+	var marker := MeshInstance3D.new()
+	marker.name = "RoofAccent"
+	var box := BoxMesh.new()
+	box.size = size
+	marker.mesh = box
+	marker.position = position
+	marker.material_override = _material(color, 0.0)
+	return marker
+
+
+func _create_chimney_marker(position: Vector3) -> void:
+	var chimney := MeshInstance3D.new()
+	chimney.name = "Chimney"
+	var cylinder := CylinderMesh.new()
+	cylinder.height = 0.8
+	cylinder.top_radius = 0.15
+	cylinder.bottom_radius = 0.18
+	chimney.mesh = cylinder
+	chimney.position = position
+	chimney.material_override = _material(Color("#3a2a2a"), 0.0)
+	add_child(chimney)
+
+
+func _create_military_banner(position: Vector3) -> void:
+	var pole := MeshInstance3D.new()
+	pole.name = "BannerPole"
+	var pole_mesh := CylinderMesh.new()
+	pole_mesh.height = 1.2
+	pole_mesh.top_radius = 0.05
+	pole_mesh.bottom_radius = 0.06
+	pole.mesh = pole_mesh
+	pole.position = position
+	pole.material_override = _material(Color("#4a3a2a"), 0.0)
+	add_child(pole)
+	
+	var flag := MeshInstance3D.new()
+	flag.name = "Banner"
+	var flag_mesh := BoxMesh.new()
+	flag_mesh.size = Vector3(0.5, 0.35, 0.04)
+	flag.mesh = flag_mesh
+	flag.position = position + Vector3(0.25, 0.4, 0.0)
+	
+	var is_manned := int(last_snapshot.get("soldiers_assigned", 0)) > 0
+	var flag_color := Color("#c84a4a") if is_manned else Color("#6a5a5a")
+	var flag_mat := _material(flag_color, 0.0)
+	flag_mat.emission_enabled = is_manned
+	flag_mat.emission = Color("#d86a6a") if is_manned else Color.BLACK
+	flag_mat.emission_energy_multiplier = 0.5
+	flag.material_override = flag_mat
+	add_child(flag)
 
 
 func _visual_size() -> Vector3:

@@ -120,6 +120,8 @@ var build_category_select: OptionButton
 var build_category_sections: Dictionary = {}
 var debug_info_button: Button
 var current_build_category := "ESSENTIALS"
+var build_strip: PanelContainer
+var build_strip_buttons: Array = []
 var startup_overlay: Control
 var menu_backdrop: TextureRect
 var seed_edit: LineEdit
@@ -925,6 +927,59 @@ func _create_ui() -> void:
 	debug_info_button.visible = false
 	build_panel.visible = false
 	_set_build_category(0)
+	
+	build_strip = PanelContainer.new()
+	build_strip.name = "BuildStrip"
+	build_strip.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	build_strip.offset_left = 16.0
+	build_strip.offset_right = -16.0
+	build_strip.offset_top = -76.0
+	build_strip.offset_bottom = -12.0
+	build_strip.add_theme_stylebox_override("panel", _panel_style(Color(0.050, 0.048, 0.040, 0.92), Color("#6b5d3e")))
+	root.add_child(build_strip)
+	var strip_margin := MarginContainer.new()
+	strip_margin.add_theme_constant_override("margin_left", 8)
+	strip_margin.add_theme_constant_override("margin_right", 8)
+	strip_margin.add_theme_constant_override("margin_top", 6)
+	strip_margin.add_theme_constant_override("margin_bottom", 6)
+	build_strip.add_child(strip_margin)
+	var strip_scroll := ScrollContainer.new()
+	strip_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_IF_NEEDED
+	strip_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	strip_margin.add_child(strip_scroll)
+	var strip_box := HBoxContainer.new()
+	strip_box.add_theme_constant_override("separation", 4)
+	strip_scroll.add_child(strip_box)
+	for building_type in BUILD_PALETTE:
+		var btn_container := PanelContainer.new()
+		var btn_style := StyleBoxFlat.new()
+		btn_style.bg_color = _building_icon_color(building_type)
+		btn_style.border_color = Color("#3a3a3a")
+		btn_style.set_border_width_all(1)
+		btn_style.corner_radius_top_left = 3
+		btn_style.corner_radius_top_right = 3
+		btn_style.corner_radius_bottom_left = 3
+		btn_style.corner_radius_bottom_right = 3
+		btn_container.add_theme_stylebox_override("panel", btn_style)
+		strip_box.add_child(btn_container)
+		
+		var btn_vbox := VBoxContainer.new()
+		btn_vbox.add_theme_constant_override("separation", 2)
+		btn_container.add_child(btn_vbox)
+		
+		var icon_rect := ColorRect.new()
+		icon_rect.custom_minimum_size = Vector2(72, 32)
+		icon_rect.color = _building_icon_accent(building_type)
+		btn_vbox.add_child(icon_rect)
+		
+		var btn := Button.new()
+		btn.text = Defs.building_name(building_type) if building_type != Defs.TOOL_CLEAR_AREA else "Clear"
+		btn.custom_minimum_size = Vector2(72, 14)
+		btn.add_theme_font_size_override("font_size", 9)
+		btn.flat = true
+		btn.pressed.connect(_select_building_for_placement.bind(building_type))
+		btn_vbox.add_child(btn)
+		build_strip_buttons.append(btn)
 
 	inspector_panel = PanelContainer.new()
 	inspector_panel.name = "Inspector"
@@ -1706,15 +1761,17 @@ func _update_inspector() -> void:
 			selected_worker_id = 0
 		else:
 			var descriptor: Dictionary = presentation_adapter.worker_descriptor(worker, simulation_host.simulation)
-			inspector_label.text = "\n".join([
+			var lines := [
 				"[font_size=22][color=#efcf8a]%s[/color][/font_size]" % String(descriptor.get("profession", "Worker")),
 				"[color=#9fc6a5]%s[/color]" % _worker_player_status(String(descriptor.get("simulation_state", "Idle"))),
 				"",
 				"%s" % ("Fed" if not bool(worker.get("hungry", false)) else "[color=#f0a06e]Hungry[/color]"),
 				"%s" % ("Healthy" if int(worker.get("hp", 0)) >= int(worker.get("max_hp", 1)) else "Injured  %d / %d HP" % [int(worker.get("hp", 0)), int(worker.get("max_hp", 1))]),
-				"Carrying  %s" % ("%s ×%d" % [String(descriptor.get("cargo", "")).capitalize(), int(descriptor.get("cargo_amount", 0))] if int(descriptor.get("cargo_amount", 0)) > 0 else "—"),
-				_debug_id_line(selected_worker_id),
-			])
+			]
+			if String(worker.get("type", "")) not in ["guard"]:
+				lines.append("Carrying  %s" % ("%s ×%d" % [String(descriptor.get("cargo", "")).capitalize(), int(descriptor.get("cargo_amount", 0))] if int(descriptor.get("cargo_amount", 0)) > 0 else "—"))
+			lines.append(_debug_id_line(selected_worker_id))
+			inspector_label.text = "\n".join(lines)
 			inspector_panel.visible = true
 			return
 	if debug_visible:
@@ -1999,33 +2056,7 @@ func _focus_from_minimap(world_position: Vector3) -> void:
 func _update_shard_compass() -> void:
 	if shard_compass == null:
 		return
-	if not play_has_begun or camera_rig == null or camera_rig.camera == null or world_view == null or simulation_host.simulation == null:
-		shard_compass.visible = false
-		return
-	if startup_overlay != null and startup_overlay.visible:
-		shard_compass.visible = false
-		return
-	if result_overlay != null and result_overlay.visible:
-		shard_compass.visible = false
-		return
-	var shard_world := world_view.tile_to_world(Vector2(simulation_host.simulation.shard_position)) + Vector3(0.0, 8.0, 0.0)
-	var screen := camera_rig.camera.unproject_position(shard_world)
-	var viewport_size := get_viewport().get_visible_rect().size
-	var onscreen := screen.x > 64.0 and screen.x < viewport_size.x - 64.0 and screen.y > 72.0 and screen.y < viewport_size.y - 64.0
-	if onscreen:
-		shard_compass.visible = false
-		return
-	var center := viewport_size * 0.5
-	var direction := (screen - center)
-	if direction.length() < 1.0:
-		shard_compass.visible = false
-		return
-	direction = direction.normalized()
-	var edge := center + direction * minf(viewport_size.x, viewport_size.y) * 0.36
-	edge.x = clampf(edge.x, 56.0, viewport_size.x - 120.0)
-	edge.y = clampf(edge.y, 88.0, viewport_size.y - 48.0)
-	shard_compass.position = edge
-	shard_compass.visible = true
+	shard_compass.visible = false
 
 
 func _should_recommend_frontier(building_type: String) -> bool:
@@ -2946,6 +2977,44 @@ func _apply_requested_fixture() -> void:
 		if candidates.has(Defs.BUILDING_LUMBER_CAMP):
 			preview_placement_at(Defs.BUILDING_LUMBER_CAMP, Vector2i(candidates[Defs.BUILDING_LUMBER_CAMP]))
 	status_label.text = "Fixture %s: %s" % [fixture_stage, "ready" if bool(fixture_result.get("success", false)) else "; ".join(fixture_result.get("report", []))]
+
+
+func _building_icon_color(building_type: String) -> Color:
+	match building_type:
+		Defs.BUILDING_LUMBER_CAMP: return Color("#8b6f47")
+		Defs.BUILDING_SAWMILL: return Color("#5a4a3a")
+		Defs.BUILDING_QUARRY: return Color("#9a9588")
+		Defs.BUILDING_FARM: return Color("#d4b86a")
+		Defs.BUILDING_BAKERY: return Color("#c8524a")
+		Defs.BUILDING_BARRACKS: return Color("#6a4a4a")
+		Defs.BUILDING_WATCHTOWER: return Color("#6a4a4a")
+		Defs.BUILDING_HOUSE: return Color("#a99377")
+		Defs.BUILDING_STOREHOUSE: return Color("#8a7a5a")
+		Defs.BUILDING_LUMEN_PILLAR: return Color("#6bcfe0")
+		Defs.BUILDING_OUTPOST: return Color("#8b6f47")
+		Defs.BUILDING_ROAD: return Color("#7a6a4a")
+		Defs.BUILDING_WALL: return Color("#9a9588")
+		Defs.TOOL_CLEAR_AREA: return Color("#597a59")
+		_: return Color("#6a6a6a")
+
+
+func _building_icon_accent(building_type: String) -> Color:
+	match building_type:
+		Defs.BUILDING_LUMBER_CAMP: return Color("#6b4423")
+		Defs.BUILDING_SAWMILL: return Color("#4a3a2a")
+		Defs.BUILDING_QUARRY: return Color("#7a7568")
+		Defs.BUILDING_FARM: return Color("#c4a850")
+		Defs.BUILDING_BAKERY: return Color("#a83830")
+		Defs.BUILDING_BARRACKS: return Color("#c84a4a")
+		Defs.BUILDING_WATCHTOWER: return Color("#c84a4a")
+		Defs.BUILDING_HOUSE: return Color("#779367")
+		Defs.BUILDING_STOREHOUSE: return Color("#6a5a3a")
+		Defs.BUILDING_LUMEN_PILLAR: return Color("#4bafc0")
+		Defs.BUILDING_OUTPOST: return Color("#c8524a")
+		Defs.BUILDING_ROAD: return Color("#5a4a2a")
+		Defs.BUILDING_WALL: return Color("#7a7568")
+		Defs.TOOL_CLEAR_AREA: return Color("#3a5a3a")
+		_: return Color("#4a4a4a")
 
 
 func preview_placement_at(building_type: String, tile: Vector2i) -> void:
