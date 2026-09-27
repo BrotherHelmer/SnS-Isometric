@@ -400,33 +400,7 @@ func start_presentation_run(seed_value: int = 0) -> void:
 	var town_center: Vector2i = _footprint_center(town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
 	_clear_area(town_center, 10)
 	_flatten_area(town_center, 10)
-	# Place decorative props near entrance to establish a lived-in founding yard.
-	# Spawn visual props (wood stacks, stone piles, barrels, crates) rendered by presentation layer.
-	# These are decorative only and do not double-count as spendable resources.
-	# Props placed relative to entrance (not town_center) to avoid Town Hall footprint collision.
-	decorative_props.clear()
-	var next_prop_id := 1
-	var prop_placements := [
-		{"type": "wood_stack", "offset": Vector2i(-2, -1), "rotation": 0.0, "scale": 1.1},
-		{"type": "wood_stack", "offset": Vector2i(2, -1), "rotation": 45.0, "scale": 0.9},
-		{"type": "stone_stack", "offset": Vector2i(-3, 0), "rotation": 0.0, "scale": 1.0},
-		{"type": "stone_stack", "offset": Vector2i(3, 0), "rotation": 30.0, "scale": 0.85},
-		{"type": "barrel", "offset": Vector2i(-2, 1), "rotation": 0.0, "scale": 1.0},
-		{"type": "crate", "offset": Vector2i(2, 1), "rotation": 15.0, "scale": 1.0},
-		{"type": "barrel", "offset": Vector2i(-3, 3), "rotation": 0.0, "scale": 1.0},
-		{"type": "crate", "offset": Vector2i(3, 3), "rotation": -20.0, "scale": 0.95},
-	]
-	for placement in prop_placements:
-		var prop_tile: Vector2i = entrance + Vector2i(placement["offset"])
-		if is_inside_map(prop_tile) and String(get_tile(prop_tile)) == Defs.TILE_GRASS and get_building_at_tile(prop_tile).is_empty():
-			decorative_props.append({
-				"id": next_prop_id,
-				"type": String(placement["type"]),
-				"position": prop_tile,
-				"rotation": float(placement["rotation"]),
-				"scale": float(placement["scale"])
-			})
-			next_prop_id += 1
+	_spawn_founding_yard_props(entrance)
 	for offset in [
 		Vector2i(-8, -5), Vector2i(-9, -3), Vector2i(-8, 1), Vector2i(-7, 5),
 		Vector2i(7, -6), Vector2i(9, -3), Vector2i(9, 2), Vector2i(7, 6)
@@ -540,6 +514,33 @@ func _finish_founding_setup() -> void:
 	_update_objective_flag("found")
 	_ensure_carriers()
 	_reveal_from_world()
+	_spawn_founding_yard_props(_town_hall_entrance_tile())
+
+
+func _spawn_founding_yard_props(entrance: Vector2i) -> void:
+	decorative_props.clear()
+	var next_prop_id := 1
+	var prop_placements := [
+		{"type": "wood_stack", "offset": Vector2i(-2, -1), "rotation": 0.0, "scale": 1.1},
+		{"type": "wood_stack", "offset": Vector2i(2, -1), "rotation": 45.0, "scale": 0.9},
+		{"type": "stone_stack", "offset": Vector2i(-3, 0), "rotation": 0.0, "scale": 1.0},
+		{"type": "stone_stack", "offset": Vector2i(3, 0), "rotation": 30.0, "scale": 0.85},
+		{"type": "barrel", "offset": Vector2i(-2, 1), "rotation": 0.0, "scale": 1.0},
+		{"type": "crate", "offset": Vector2i(2, 1), "rotation": 15.0, "scale": 1.0},
+		{"type": "barrel", "offset": Vector2i(-3, 3), "rotation": 0.0, "scale": 1.0},
+		{"type": "crate", "offset": Vector2i(3, 3), "rotation": -20.0, "scale": 0.95},
+	]
+	for placement in prop_placements:
+		var prop_tile: Vector2i = entrance + Vector2i(placement["offset"])
+		if is_inside_map(prop_tile) and String(get_tile(prop_tile)) == Defs.TILE_GRASS and get_building_at_tile(prop_tile).is_empty():
+			decorative_props.append({
+				"id": next_prop_id,
+				"type": String(placement["type"]),
+				"position": prop_tile,
+				"rotation": float(placement["rotation"]),
+				"scale": float(placement["scale"])
+			})
+			next_prop_id += 1
 
 
 func advance_tick() -> void:
