@@ -14,11 +14,24 @@ try {
         $stdout = "$outputRoot/logs/$testName.stdout.txt"
         $stderr = "$outputRoot/logs/$testName.stderr.txt"
         $arguments = @('--headless', '--path', $workspaceRoot, '--log-file', "$outputRoot/logs/$testName.log", '--script', "res://tests/$testName.gd")
-        $quotedArguments = $arguments | ForEach-Object { '"' + $_ + '"' }
-        $process = Start-Process -FilePath $engine -ArgumentList $quotedArguments -WindowStyle Hidden -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = $engine
+        $psi.Arguments = ($arguments -join ' ')
+        $psi.UseShellExecute = $false
+        $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError = $true
+        $psi.CreateNoWindow = $true
+        $psi.WorkingDirectory = $workspaceRoot
+        $process = New-Object System.Diagnostics.Process
+        $process.StartInfo = $psi
+        $process.Start() | Out-Null
         $timedOut = -not $process.WaitForExit($TimeoutSeconds * 1000)
         if ($timedOut) { $process.Kill(); $process.WaitForExit() }
-        $output = (Get-Content -LiteralPath $stdout -Raw) + (Get-Content -LiteralPath $stderr -Raw)
+        $stdoutContent = $process.StandardOutput.ReadToEnd()
+        $stderrContent = $process.StandardError.ReadToEnd()
+        $stdoutContent | Set-Content -LiteralPath $stdout
+        $stderrContent | Set-Content -LiteralPath $stderr
+        $output = $stdoutContent + $stderrContent
         # This exact Windows certificate message was reproduced only under the
         # restricted execution environment; unrestricted verification is clean.
         $errors = @($output -split "`n" | Where-Object { $_ -match '^(SCRIPT ERROR:|ERROR:|FAIL[: ]|.*_FAIL)' -and $_ -notmatch '^ERROR: Failed to read the root certificate store\.' })
