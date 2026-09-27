@@ -239,7 +239,7 @@ Prepare a validated Windows package for supervised external testing. The game mu
 ## Release Blockers
 
 **Cannot distribute to external testers until:**
-1. ✅ Versioned reproducible build exists (playtest.13 current)
+1. ✅ Versioned reproducible build exists (playtest.15 current)
 2. ✅ Saves are safe (validated temp writes, backup recovery, version rejection, structural validation)
 3. ✅ No unresolved reproducible crash, save loss, or progression blocker in automated checks (20/20 suites pass)
 4. ❌ **60-minute rendered package soak with audio device reconnection validation**
