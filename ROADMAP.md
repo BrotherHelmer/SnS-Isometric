@@ -1,7 +1,7 @@
 # Shard & Sovereign — Development Roadmap
 
 **Last updated:** 2026-09-27  
-**Current version:** 0.2.0-playtest.25  
+**Current version:** 0.2.0-playtest.26  
 **Target:** Closed Steam Playtest → Public Demo
 
 This roadmap tracks progress toward a releasable Windows settlement survival game: build an economy with autonomous workers, defend against night raids, race a rival realm to Bind the central Shard. Owner-confirmed route: **closed Steam Playtest first, then public demo** after validation gates pass.
@@ -14,11 +14,19 @@ This roadmap tracks progress toward a releasable Windows settlement survival gam
 
 Prepare a validated Windows package for supervised external testing. The game must demonstrate a complete playable loop (founding → economy → defense → Shard race → victory/defeat) with comprehensible onboarding, reliable saves, and no progression blockers.
 
-**Status:** Playtest.25 hardens night-verification check (threshold now matches actual night lighting design: 0.35 + tolerance vs incorrect 0.28) and integrates export packing audit as build preflight (missing packed assets now fail early). Playtest.24 hardened runtime asset export packing (all audio now packed). Playtest.23 fixed castle.tscn export omission (Wine castle morph PASS). Playtest.22 fixed critical castle morph failure. Core gameplay loop is implemented and passes automated checks. External human validation gates remain open.
+**Status:** Playtest.26 fixes PowerShell exit code capture in verification suite (replaced fragile Start-Process with reliable ProcessStartInfo). Playtest.25 hardened night-verification check (threshold now matches actual night lighting design: 0.35 + tolerance vs incorrect 0.28) and integrated export packing audit as build preflight. Core gameplay loop is implemented and passes automated checks. External human validation gates remain open.
 
 ---
 
 ## Completed Work (Recent)
+
+### Playtest.26 (2026-09-27) — PowerShell Exit Code Capture Fix
+- **PowerShell verification hardening**: Fixed `tools/verify_release.ps1` exit code capture using `System.Diagnostics.Process` with `ProcessStartInfo` instead of fragile `Start-Process -PassThru`
+- **Root cause**: `Start-Process` with `-RedirectStandardOutput`/`-RedirectStandardError` can leave `ExitCode` property null even after `WaitForExit()` completes, especially on PowerShell 5.1. This caused false FAIL during playtest.25 ship even though all suite checks printed PASS
+- **Solution**: Switched to `ProcessStartInfo` pattern with explicit stream redirection and reliable exit code capture via `Process.ExitCode`. Now works consistently on both PowerShell 5.1 and PowerShell 7
+- **Prevention**: CI/automation wrappers using Start-Process for child script invocation no longer vulnerable to null exit code races
+- Version bumped to 0.2.0-playtest.26 in both `project.godot` and `tools/build_release.ps1`
+- Verification suite now safe for automated build pipelines without workarounds
 
 ### Playtest.25 (2026-09-27) — Night Verification Hardening + Audit Preflight Integration
 - **Night check hardened**: Fixed flaky "night is obviously darker than day" verification that forced `-SkipVerification` workaround in playtest.24 release builds
