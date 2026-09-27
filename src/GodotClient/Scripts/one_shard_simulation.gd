@@ -386,6 +386,7 @@ func start_presentation_run(seed_value: int = 0) -> void:
 	presentation_worker_id = next_worker_id
 	next_worker_id += 1
 	objectives = [
+		{"id": "found", "text": "Choose a clear site and build the Town Hall", "complete": true},
 		{"id": "first_order", "text": "Give your settler their first order.", "complete": false},
 		{"id": "road", "text": "Extend the entrance road.", "complete": false},
 		{"id": "house", "text": "Build a House for shelter and growth.", "complete": false},
@@ -399,32 +400,35 @@ func start_presentation_run(seed_value: int = 0) -> void:
 	var town_center: Vector2i = _footprint_center(town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
 	_clear_area(town_center, 10)
 	_flatten_area(town_center, 10)
-	# Place decorative resource clusters near Town Hall to establish a lived-in founding yard.
+	# Place decorative props near Town Hall entrance to establish a lived-in founding yard.
 	# Spawn visual props (wood stacks, stone piles, barrels, crates) rendered by presentation layer.
 	# These are decorative only and do not double-count as spendable resources.
+	# Props placed relative to entrance (not town_center) to avoid Town Hall footprint and entrance roads.
 	decorative_props.clear()
 	var next_prop_id := 1
 	var prop_placements := [
-		{"type": "wood_stack", "offset": Vector2i(-2, -3), "rotation": 0.0, "scale": 1.1},
-		{"type": "wood_stack", "offset": Vector2i(-3, -2), "rotation": 45.0, "scale": 0.9},
-		{"type": "stone_stack", "offset": Vector2i(2, -3), "rotation": 0.0, "scale": 1.0},
-		{"type": "stone_stack", "offset": Vector2i(3, -2), "rotation": 30.0, "scale": 0.85},
-		{"type": "barrel", "offset": Vector2i(-2, 3), "rotation": 0.0, "scale": 1.0},
-		{"type": "crate", "offset": Vector2i(-3, 2), "rotation": 15.0, "scale": 1.0},
-		{"type": "barrel", "offset": Vector2i(2, 3), "rotation": 0.0, "scale": 1.0},
-		{"type": "crate", "offset": Vector2i(3, 2), "rotation": -20.0, "scale": 0.95},
+		{"type": "wood_stack", "offset": Vector2i(-2, -1), "rotation": 0.0, "scale": 1.1},
+		{"type": "wood_stack", "offset": Vector2i(2, -1), "rotation": 45.0, "scale": 0.9},
+		{"type": "stone_stack", "offset": Vector2i(-3, 0), "rotation": 0.0, "scale": 1.0},
+		{"type": "stone_stack", "offset": Vector2i(3, 0), "rotation": 30.0, "scale": 0.85},
+		{"type": "barrel", "offset": Vector2i(-2, 1), "rotation": 0.0, "scale": 1.0},
+		{"type": "crate", "offset": Vector2i(2, 1), "rotation": 15.0, "scale": 1.0},
+		{"type": "barrel", "offset": Vector2i(-3, 3), "rotation": 0.0, "scale": 1.0},
+		{"type": "crate", "offset": Vector2i(3, 3), "rotation": -20.0, "scale": 0.95},
 	]
 	for placement in prop_placements:
-		var prop_tile: Vector2i = town_center + Vector2i(placement["offset"])
-		if is_inside_map(prop_tile) and String(get_tile(prop_tile)) == Defs.TILE_GRASS:
-			decorative_props.append({
-				"id": next_prop_id,
-				"type": String(placement["type"]),
-				"position": prop_tile,
-				"rotation": float(placement["rotation"]),
-				"scale": float(placement["scale"])
-			})
-			next_prop_id += 1
+		var prop_tile: Vector2i = entrance + Vector2i(placement["offset"])
+		if is_inside_map(prop_tile):
+			var tile_type := String(get_tile(prop_tile))
+			if tile_type == Defs.TILE_GRASS and get_building_at_tile(prop_tile).is_empty():
+				decorative_props.append({
+					"id": next_prop_id,
+					"type": String(placement["type"]),
+					"position": prop_tile,
+					"rotation": float(placement["rotation"]),
+					"scale": float(placement["scale"])
+				})
+				next_prop_id += 1
 	for offset in [
 		Vector2i(-8, -5), Vector2i(-9, -3), Vector2i(-8, 1), Vector2i(-7, 5),
 		Vector2i(7, -6), Vector2i(9, -3), Vector2i(9, 2), Vector2i(7, 6)

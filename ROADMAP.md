@@ -1,7 +1,7 @@
 # Shard & Sovereign — Development Roadmap
 
 **Last updated:** 2026-09-27  
-**Current version:** 0.2.0-playtest.16  
+**Current version:** 0.2.0-playtest.17  
 **Target:** Closed Steam Playtest → Public Demo
 
 This roadmap tracks progress toward a releasable Windows settlement survival game: build an economy with autonomous workers, defend against night raids, race a rival realm to Bind the central Shard. Owner-confirmed route: **closed Steam Playtest first, then public demo** after validation gates pass.
@@ -14,13 +14,23 @@ This roadmap tracks progress toward a releasable Windows settlement survival gam
 
 Prepare a validated Windows package for supervised external testing. The game must demonstrate a complete playable loop (founding → economy → defense → Shard race → victory/defeat) with comprehensible onboarding, reliable saves, and no progression blockers.
 
-**Status:** Playtest.16 makes founding yard visually inhabited using decorative props and wires Goals UI to show House/Lumber/Farm progression objectives. Core gameplay loop is implemented and passes automated checks. External human validation gates remain open.
+**Status:** Playtest.17 fixes founding yard props placement (now Wine-verified visible) and Goals panel to show correct next steps. Core gameplay loop is implemented and passes automated checks. External human validation gates remain open.
 
 ---
 
 ## Completed Work (Recent)
 
-### Playtest.16 (2026-09-27) — Founding Yard Props & Goals UI Clarity
+### Playtest.17 (2026-09-27) — Founding Yard Props Placement Fix
+- Fixed decorative props spawning: props now placed relative to entrance (not town_center) with building-tile check
+- Props verified visible in Wine self-test: 8 props (wood stacks, stone piles, barrels, crates) appear beside entrance road
+- Fixed Goals panel stale "Choose a clear site and build the Town Hall" objective: marked "found" as complete in start_presentation_run
+- Goals now correctly show first incomplete objective (Give first order → Extend road → Build House...)
+- Props placement: entrance ± offsets (-3 to +3 laterally, -1 to +3 forward) avoids Town Hall footprint and entrance roads
+- Added `get_building_at_tile()` check to prevent props on road tiles
+- Note on playtest.16: grass-check logic was correct, but props were placed relative to town_center (overlapped footprint); entrance-relative placement resolves spawn failure
+- Version bumped to 0.2.0-playtest.17
+
+### Playtest.16 (2026-09-27) — Founding Yard Props & Goals UI Clarity (FAILED in Wine test)
 - Fixed founding yard visual emptiness: added decorative wood stacks, stone piles, barrels, and crates near Town Hall using existing WORKYARD_PROPS (8 props placed)
 - Decorative props are presentation-only and do not double-count as spendable resources (inventory unchanged at Wood 50 / Stone 18)
 - Goals UI now displays simulation objectives (Give first order → Extend road → Build House → Build Lumber Camp → Build Farm) instead of only high-level "FEED THE SETTLEMENT"
