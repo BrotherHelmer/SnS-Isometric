@@ -39,7 +39,7 @@
 		"size": "(3.0, 3.7, 2.8)",
 		"source": "Authored geometry adapted from opening_style_v1 image references",
 		"surfaces": 11,
-		"triangles": 4628
+		"triangles": 5552
 	},
 	"fence": {
 		"size": "(1.95, 1.2, 0.15)",
@@ -105,7 +105,7 @@
 		"size": "(3.0, 3.7, 2.8)",
 		"source": "Authored geometry adapted from opening_style_v1 image references",
 		"surfaces": 11,
-		"triangles": 4628
+		"triangles": 5552
 	},
 	"watchtower": {
 		"size": "(0.9933, 2.192, 1.1533)",

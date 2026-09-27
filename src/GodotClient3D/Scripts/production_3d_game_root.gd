@@ -433,7 +433,14 @@ func begin_placement(building_type: String) -> void:
 	world_view.set_watchtower_overlay(Vector2.ZERO, 0.0, false)
 	inspector_panel.visible = false
 	placement_panel.visible = true
-	placement_label.text = "%s · %s" % [Defs.building_name(building_type), "drag to mark trees · right-click cancels" if building_type == Defs.TOOL_CLEAR_AREA else ("hold and drag to draw · right-click cancels" if building_type in [Defs.BUILDING_ROAD, Defs.BUILDING_WALL] else "R rotates · right-click cancels")]
+	var instruction := ""
+	if building_type == Defs.TOOL_CLEAR_AREA:
+		instruction = "drag to mark trees · right-click cancels"
+	elif building_type in [Defs.BUILDING_ROAD, Defs.BUILDING_WALL]:
+		instruction = "hold and drag to draw · right-click cancels"
+	else:
+		instruction = "GREEN = valid · YELLOW = needs clearing · RED = blocked · R rotates · click to place · right-click cancels"
+	placement_label.text = "%s · %s" % [Defs.building_name(building_type), instruction]
 	world_view.set_claim_overlay_visible(building_type in [Defs.BUILDING_LUMEN_PILLAR, Defs.BUILDING_OUTPOST])
 	_set_build_palette_visible(false)
 	_show_objective_detail(false)

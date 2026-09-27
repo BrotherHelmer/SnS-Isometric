@@ -523,12 +523,16 @@ func _spawn_founding_yard_props(entrance: Vector2i) -> void:
 	var prop_placements := [
 		{"type": "wood_stack", "offset": Vector2i(-2, -1), "rotation": 0.0, "scale": 1.1},
 		{"type": "wood_stack", "offset": Vector2i(2, -1), "rotation": 45.0, "scale": 0.9},
+		{"type": "wood_stack", "offset": Vector2i(-1, 2), "rotation": -30.0, "scale": 1.0},
 		{"type": "stone_stack", "offset": Vector2i(-3, 0), "rotation": 0.0, "scale": 1.0},
 		{"type": "stone_stack", "offset": Vector2i(3, 0), "rotation": 30.0, "scale": 0.85},
+		{"type": "stone_stack", "offset": Vector2i(1, 3), "rotation": -15.0, "scale": 0.95},
 		{"type": "barrel", "offset": Vector2i(-2, 1), "rotation": 0.0, "scale": 1.0},
 		{"type": "crate", "offset": Vector2i(2, 1), "rotation": 15.0, "scale": 1.0},
 		{"type": "barrel", "offset": Vector2i(-3, 3), "rotation": 0.0, "scale": 1.0},
 		{"type": "crate", "offset": Vector2i(3, 3), "rotation": -20.0, "scale": 0.95},
+		{"type": "crate", "offset": Vector2i(-1, -1), "rotation": 45.0, "scale": 0.9},
+		{"type": "barrel", "offset": Vector2i(0, 2), "rotation": 0.0, "scale": 1.05},
 	]
 	for placement in prop_placements:
 		var prop_tile: Vector2i = entrance + Vector2i(placement["offset"])
@@ -785,14 +789,14 @@ func validate_placement(building_type: String, tile: Vector2i, rotation: int = 0
 		return _failure("OutsideMap", "That footprint extends outside the province.")
 	for footprint_tile in footprint_tiles:
 		if not is_revealed(footprint_tile):
-			return _failure("Fog", "Scout the whole building site first.")
+			return _failure("Fog", "Unrevealed terrain. Build closer to existing structures to scout ahead, or wait for workers/soldiers to explore nearby.")
 		if _enemy_camp_at_tile(footprint_tile):
 			return _failure("EnemyCamp", "Clear the enemy camp before building here.")
 		if rivalry != null and rivalry.is_rivalry_occupied(footprint_tile):
-			return _failure("Occupied", "That footprint overlaps a realm road or rivalry structure.")
+			return _failure("Occupied", "Footprint blocked by road or rival structure. Try rotating (R) or move away from rival territory.")
 		var existing := get_building_at_tile(footprint_tile)
 		if not existing.is_empty():
-			return _failure("Occupied", "That footprint overlaps another structure.")
+			return _failure("Occupied", "Footprint overlaps another building. Move the ghost to an empty area.")
 
 	if building_type == Defs.BUILDING_QUARRY:
 		if not _footprint_has_terrain(tile, footprint, Defs.TILE_ROCK):
@@ -809,15 +813,15 @@ func validate_placement(building_type: String, tile: Vector2i, rotation: int = 0
 
 	if building_type == Defs.BUILDING_ROAD:
 		if not _has_adjacent_planned_or_connected_road(tile):
-			return _failure("RoadConnection", "Roads must extend from the Town Hall network.")
+			return _failure("RoadConnection", "Roads must connect. Extend from existing road network starting at Town Hall.")
 		if not _road_grade_is_valid(tile):
-			return _failure("Slope", "Roads can climb at most two height steps at a time.")
+			return _failure("Slope", "Road too steep. Roads can climb at most 2 height steps at once.")
 		if not trees_to_clear.is_empty():
 			return _success("CLEARING REQUIRED — woodcutters will clear the site first.")
 		return _success("Road can be planned. A free peasant will build it when time is running.")
 	if building_type == Defs.BUILDING_WALL:
 		if not _has_adjacent_wall_support(tile):
-			return _failure("TowerFoundation", "Build a Watchtower first, then hold and drag walls from it.")
+			return _failure("TowerFoundation", "Walls need a Watchtower anchor. Build Watchtower first, then drag walls from it.")
 
 	var cost := Defs.building_cost(building_type)
 	for resource_type in cost.keys():
@@ -843,7 +847,7 @@ func validate_placement(building_type: String, tile: Vector2i, rotation: int = 0
 			return _success("CLEARING REQUIRED — a short road will also be extended.")
 		return _success("Will extend a short road to this site.")
 
-	return _failure("RoadConnection", "Must touch your connected road network. Extend roads from the Town Hall, then place buildings beside them.")
+	return _failure("RoadConnection", "No road access. Extend roads from Town Hall first, then place buildings beside connected roads.")
 
 
 func validate_road_route(route: Array) -> Dictionary:

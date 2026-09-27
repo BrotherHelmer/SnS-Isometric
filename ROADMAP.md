@@ -1,7 +1,7 @@
 # Shard & Sovereign — Development Roadmap
 
 **Last updated:** 2026-09-27  
-**Current version:** 0.2.0-playtest.18  
+**Current version:** 0.2.0-playtest.19  
 **Target:** Closed Steam Playtest → Public Demo
 
 This roadmap tracks progress toward a releasable Windows settlement survival game: build an economy with autonomous workers, defend against night raids, race a rival realm to Bind the central Shard. Owner-confirmed route: **closed Steam Playtest first, then public demo** after validation gates pass.
@@ -14,11 +14,23 @@ This roadmap tracks progress toward a releasable Windows settlement survival gam
 
 Prepare a validated Windows package for supervised external testing. The game must demonstrate a complete playable loop (founding → economy → defense → Shard race → victory/defeat) with comprehensible onboarding, reliable saves, and no progression blockers.
 
-**Status:** Playtest.18 fixes founding yard props on 3D client path. Core gameplay loop is implemented and passes automated checks. External human validation gates remain open.
+**Status:** Playtest.19 fixes placement UX and Town Hall art distinctiveness. Core gameplay loop is implemented and passes automated checks. External human validation gates remain open.
 
 ---
 
 ## Completed Work (Recent)
+
+### Playtest.19 (2026-09-27) — Placement UX & Town Hall Art Improvements (Wine playtest feedback)
+- **Placement UX fixes**: Single-click placement interaction clarified with on-screen color legend (GREEN = valid, YELLOW = needs clearing, RED = blocked)
+- **Actionable error messages**: Validation failures now explain what to do next (e.g., "Unrevealed terrain. Build closer to existing structures..." instead of "Scout the whole building site first")
+- **Camera zoom improvements**: Reduced max strategic zoom (85.0→68.0) and scroll step (4.0→3.5) to prevent accidentally zooming to "lost" speck view
+- **Town Hall distinctive appearance**: Taller civic tower (3.9m vs 2.7m), wider footprint (4.2×3.0 vs 3.8×2.8), dual windows, extended entrance porch for clear civic vs cottage distinction at founding
+- **Denser founding yard**: Added 4 more props (12 total vs 8) — additional wood/stone stacks, barrels, crates near entrance for inhabited settlement feel
+- **C&C bar functionality**: Build strip buttons verified working for all types including Military (Watchtower/Barracks) — already connected via `begin_placement` bind
+- Footprint color meanings explained in placement instructions panel for first-time clarity
+- All road/wall/building validation messages shortened and action-oriented (e.g., "No road access. Extend roads from Town Hall first...")
+- Castle freeze-guard preserved (TOWN_HALL + has_barracks → cached CASTLE view); no per-frame rebuild regression
+- Version bumped to 0.2.0-playtest.19
 
 ### Playtest.18 (2026-09-27) — Founding Yard Props on 3D Client Path (FIXED Wine failure)
 - Fixed decorative props spawning on 3D client path: props now appear when starting New Realm via production_3d.tscn (Windows build)

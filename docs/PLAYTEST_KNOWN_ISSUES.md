@@ -1,10 +1,10 @@
 # Internal candidate limitations
 
-Build: 0.2.0-playtest.13
+Build: 0.2.0-playtest.19
 
 - This candidate is not yet cleared for public Steam release. Steamworks setup and IDs are deferred at the owner's request.
 - Human first-session comprehension, unassisted full-match wins/losses, integrated-GPU performance and clean physical Windows-machine testing remain external gates.
-- The prior playtest.1 build passed a clean 60-minute rerun after an earlier Windows audio-device invalidation. Playtest.13 awaits its own hour-long soak and audible device-reconnection check.
+- The prior playtest.1 build passed a clean 60-minute rerun after an earlier Windows audio-device invalidation. Playtest.19 awaits its own hour-long soak and audible device-reconnection check.
 - Nineteen opening-style model scenes, coordinated terrain/lighting and character materials are integrated. This is a stylized adaptation; animated character geometry is retained. Lower-end performance with the new geometry remains unmeasured.
 - The three-seed command-only bot now completes all three matches, including mid-Binding save/reload. Human strategy, difficulty and session length remain unvalidated.
 - The intended 35–55 minute session length is provisional. Automated checks and accelerated simulations do not establish whether the game is fun or well paced.
@@ -16,6 +16,8 @@ Build: 0.2.0-playtest.13
 See `docs/RELEASE_EXECUTION_STATUS.md` in the project for current validation results and remaining work.
 
 ## Recent UX Improvements (post-playtest.4)
+
+**Placement Clarity & Zoom** (playtest.19): Building placement now shows color-coded feedback directly on the ghost footprint with legend (GREEN = valid, YELLOW = clearing needed, RED = blocked). Validation errors are more actionable ("No road access. Extend roads from Town Hall first..." instead of vague messages). Camera zoom range reduced (max 68 vs 85) and scroll step smoothed (3.5 vs 4.0) to prevent accidentally zooming to "lost" speck view. Town Hall now has taller civic tower and wider footprint for clearer distinction from Houses at founding.
 
 **Early Defense** (playtest.6): Increased initial fog-of-war reveal radius (8→12 tiles) around the starting Town Hall. Players can now place a Watchtower in a sensible spot near the Town Hall during Day 1, before the first night raid arrives.
 
