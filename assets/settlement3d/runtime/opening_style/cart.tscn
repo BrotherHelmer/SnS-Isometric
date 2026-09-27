@@ -1,8 +1,8 @@
-[gd_scene format=3]
+[gd_scene load_steps=2 format=3]
 
-[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/cart.res" id="1_shtua"]
+[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/cart.res" id="1_tcag1"]
 
-[node name="Cart" type="Node3D" unique_id=413125017]
+[node name="Cart" type="Node3D"]
 
-[node name="Model" type="MeshInstance3D" parent="." unique_id=716349766]
-mesh = ExtResource("1_shtua")
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1_tcag1")
