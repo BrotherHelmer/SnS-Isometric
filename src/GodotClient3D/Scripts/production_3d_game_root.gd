@@ -951,6 +951,7 @@ func _create_ui() -> void:
 	strip_box.add_theme_constant_override("separation", 4)
 	strip_scroll.add_child(strip_box)
 	for building_type in BUILD_PALETTE:
+		# Issue #7 fix: Better C&C-style icons with tooltips showing requirements
 		var btn_container := PanelContainer.new()
 		var btn_style := StyleBoxFlat.new()
 		btn_style.bg_color = _building_icon_color(building_type)
@@ -967,10 +968,13 @@ func _create_ui() -> void:
 		btn_vbox.add_theme_constant_override("separation", 2)
 		btn_container.add_child(btn_vbox)
 		
-		var icon_rect := ColorRect.new()
-		icon_rect.custom_minimum_size = Vector2(72, 32)
-		icon_rect.color = _building_icon_accent(building_type)
-		btn_vbox.add_child(icon_rect)
+		# Create visual icon representation instead of plain color rect
+		var icon_canvas := Control.new()
+		icon_canvas.custom_minimum_size = Vector2(72, 32)
+		icon_canvas.mouse_filter = Control.MOUSE_FILTER_PASS
+		var icon_drawing := _create_building_icon_visual(building_type)
+		icon_canvas.add_child(icon_drawing)
+		btn_vbox.add_child(icon_canvas)
 		
 		var btn := Button.new()
 		btn.text = Defs.building_name(building_type) if building_type != Defs.TOOL_CLEAR_AREA else "Clear"
@@ -978,6 +982,10 @@ func _create_ui() -> void:
 		btn.add_theme_font_size_override("font_size", 9)
 		btn.flat = true
 		btn.pressed.connect(begin_placement.bind(building_type))
+		# Add tooltip with what it does + resource cost
+		var purpose := String(BUILD_PURPOSES.get(building_type, "Settlement building."))
+		var cost := Defs.formatted_cost(building_type)
+		btn.tooltip_text = "%s\n\n%s\nCost: %s" % [Defs.building_name(building_type), purpose, cost]
 		btn_vbox.add_child(btn)
 		build_strip_buttons.append(btn)
 
@@ -1621,9 +1629,10 @@ func _update_loop_hud() -> void:
 			objective_button.text = String(objective.get("title", "FEED THE SETTLEMENT"))
 		objective_button.tooltip_text = "%s — %s" % [String(objective.get("title", "")), String(objective.get("detail", "Click for the next step."))]
 	var objective_id := String(objective.get("id", ""))
-	if objective_id == "reach" and not reach_guidance_shown and play_has_begun:
-		reach_guidance_shown = true
-		_glance_at_shard()
+	# Issue #1 fix: Do NOT snap camera to shard location automatically
+	# if objective_id == "reach" and not reach_guidance_shown and play_has_begun:
+	#	reach_guidance_shown = true
+	#	_glance_at_shard()
 	last_objective_id = objective_id
 	var pressure: Dictionary = wyrdfall.get("pressure", {})
 	if pressure_meter != null and pressure_meter.has_method("set_pressure"):
@@ -2802,15 +2811,18 @@ func _panel_style(background: Color, border: Color) -> StyleBoxFlat:
 
 
 func _add_resource_chip(host: HBoxContainer, key: String, caption: String) -> Label:
+	# Issue #8 fix: Use visual icons instead of just color bars
 	var cell := HBoxContainer.new()
 	cell.name = "Chip_%s" % key
-	cell.add_theme_constant_override("separation", 4)
+	cell.add_theme_constant_override("separation", 6)
 	cell.tooltip_text = caption
 	cell.mouse_filter = Control.MOUSE_FILTER_STOP
-	var swatch := ColorRect.new()
-	swatch.custom_minimum_size = Vector2(8, 18)
-	swatch.color = Identity.RESOURCE_CHIP_COLORS.get(key, Identity.COLOR_NEUTRAL)
-	cell.add_child(swatch)
+	# Create an icon representation for each resource
+	var icon_container := Control.new()
+	icon_container.custom_minimum_size = Vector2(20, 20)
+	var icon := _create_resource_icon(key)
+	icon_container.add_child(icon)
+	cell.add_child(icon_container)
 	var stack := VBoxContainer.new()
 	stack.add_theme_constant_override("separation", -1)
 	var code := Label.new()
@@ -3015,6 +3027,218 @@ func _building_icon_accent(building_type: String) -> Color:
 		Defs.BUILDING_WALL: return Color("#7a7568")
 		Defs.TOOL_CLEAR_AREA: return Color("#3a5a3a")
 		_: return Color("#4a4a4a")
+
+
+func _create_building_icon_visual(building_type: String) -> Control:
+	# Issue #7: Create simple visual icons that represent each building type
+	var canvas := Control.new()
+	canvas.set_anchors_preset(Control.PRESET_FULL_RECT)
+	canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var accent_color := _building_icon_accent(building_type)
+	match building_type:
+		Defs.BUILDING_HOUSE:
+			var roof := ColorRect.new()
+			roof.color = accent_color
+			roof.position = Vector2(18, 8)
+			roof.size = Vector2(36, 8)
+			canvas.add_child(roof)
+			var walls := ColorRect.new()
+			walls.color = accent_color.darkened(0.2)
+			walls.position = Vector2(22, 16)
+			walls.size = Vector2(28, 14)
+			canvas.add_child(walls)
+		Defs.BUILDING_LUMBER_CAMP:
+			var tent := ColorRect.new()
+			tent.color = accent_color
+			tent.position = Vector2(12, 10)
+			tent.size = Vector2(22, 18)
+			canvas.add_child(tent)
+			var log := ColorRect.new()
+			log.color = accent_color.darkened(0.3)
+			log.position = Vector2(38, 16)
+			log.size = Vector2(18, 6)
+			canvas.add_child(log)
+		Defs.BUILDING_SAWMILL:
+			var blade := ColorRect.new()
+			blade.color = accent_color
+			blade.position = Vector2(24, 6)
+			blade.size = Vector2(24, 24)
+			canvas.add_child(blade)
+			for i in 4:
+				var tooth := ColorRect.new()
+				tooth.color = accent_color.lightened(0.2)
+				tooth.size = Vector2(3, 6)
+				match i:
+					0: tooth.position = Vector2(34, 2)
+					1: tooth.position = Vector2(50, 12)
+					2: tooth.position = Vector2(34, 30)
+					3: tooth.position = Vector2(18, 12)
+				canvas.add_child(tooth)
+		Defs.BUILDING_FARM:
+			for row in 3:
+				var crop := ColorRect.new()
+				crop.color = accent_color
+				crop.position = Vector2(16 + row * 12, 8)
+				crop.size = Vector2(8, 22)
+				canvas.add_child(crop)
+		Defs.BUILDING_QUARRY:
+			for i in 3:
+				var rock := ColorRect.new()
+				rock.color = accent_color.darkened(i * 0.1)
+				rock.position = Vector2(18 + i * 10, 14 - i * 3)
+				rock.size = Vector2(12, 12 + i * 2)
+				canvas.add_child(rock)
+		Defs.BUILDING_BAKERY:
+			var oven := ColorRect.new()
+			oven.color = accent_color
+			oven.position = Vector2(22, 14)
+			oven.size = Vector2(28, 16)
+			canvas.add_child(oven)
+			var chimney := ColorRect.new()
+			chimney.color = accent_color.darkened(0.3)
+			chimney.position = Vector2(40, 4)
+			chimney.size = Vector2(6, 12)
+			canvas.add_child(chimney)
+		Defs.BUILDING_BARRACKS:
+			var shield := ColorRect.new()
+			shield.color = accent_color
+			shield.position = Vector2(18, 8)
+			shield.size = Vector2(18, 20)
+			canvas.add_child(shield)
+			var spear := ColorRect.new()
+			spear.color = accent_color.darkened(0.2)
+			spear.position = Vector2(42, 6)
+			spear.size = Vector2(4, 24)
+			canvas.add_child(spear)
+		Defs.BUILDING_WATCHTOWER:
+			var tower := ColorRect.new()
+			tower.color = accent_color
+			tower.position = Vector2(28, 4)
+			tower.size = Vector2(16, 26)
+			canvas.add_child(tower)
+			var top := ColorRect.new()
+			top.color = accent_color.lightened(0.2)
+			top.position = Vector2(26, 2)
+			top.size = Vector2(20, 4)
+			canvas.add_child(top)
+		Defs.BUILDING_STOREHOUSE:
+			for i in 2:
+				for j in 2:
+					var crate := ColorRect.new()
+					crate.color = accent_color.darkened(0.1 * (i + j))
+					crate.position = Vector2(18 + i * 18, 10 + j * 10)
+					crate.size = Vector2(14, 9)
+					canvas.add_child(crate)
+		Defs.BUILDING_LUMEN_PILLAR:
+			var pillar := ColorRect.new()
+			pillar.color = accent_color
+			pillar.position = Vector2(30, 6)
+			pillar.size = Vector2(12, 24)
+			canvas.add_child(pillar)
+			var glow := ColorRect.new()
+			glow.color = accent_color.lightened(0.4)
+			glow.position = Vector2(32, 8)
+			glow.size = Vector2(8, 8)
+			canvas.add_child(glow)
+		Defs.BUILDING_ROAD:
+			var path := ColorRect.new()
+			path.color = accent_color
+			path.position = Vector2(12, 14)
+			path.size = Vector2(48, 8)
+			canvas.add_child(path)
+		Defs.BUILDING_WALL:
+			for i in 3:
+				var segment := ColorRect.new()
+				segment.color = accent_color
+				segment.position = Vector2(16 + i * 14, 10)
+				segment.size = Vector2(10, 18)
+				canvas.add_child(segment)
+		_:
+			var box := ColorRect.new()
+			box.color = accent_color
+			box.position = Vector2(24, 10)
+			box.size = Vector2(24, 18)
+			canvas.add_child(box)
+	return canvas
+
+
+func _create_resource_icon(resource_key: String) -> Control:
+	# Issue #8: Create visual icons for resources
+	var icon := Control.new()
+	icon.set_anchors_preset(Control.PRESET_FULL_RECT)
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var color := Identity.RESOURCE_CHIP_COLORS.get(resource_key, Identity.COLOR_NEUTRAL)
+	match resource_key:
+		"wood":
+			var log := ColorRect.new()
+			log.color = color
+			log.position = Vector2(2, 8)
+			log.size = Vector2(16, 6)
+			icon.add_child(log)
+			var rings := ColorRect.new()
+			rings.color = color.darkened(0.3)
+			rings.position = Vector2(14, 9)
+			rings.size = Vector2(3, 4)
+			icon.add_child(rings)
+		"planks":
+			for i in 3:
+				var plank := ColorRect.new()
+				plank.color = color.darkened(i * 0.1)
+				plank.position = Vector2(3, 6 + i * 4)
+				plank.size = Vector2(14, 2)
+				icon.add_child(plank)
+		"stone":
+			var rock := ColorRect.new()
+			rock.color = color
+			rock.position = Vector2(4, 6)
+			rock.size = Vector2(12, 10)
+			icon.add_child(rock)
+			var highlight := ColorRect.new()
+			highlight.color = color.lightened(0.3)
+			highlight.position = Vector2(6, 7)
+			highlight.size = Vector2(4, 3)
+			icon.add_child(highlight)
+		"wheat":
+			for i in 3:
+				var stalk := ColorRect.new()
+				stalk.color = color
+				stalk.position = Vector2(5 + i * 4, 8)
+				stalk.size = Vector2(2, 10)
+				icon.add_child(stalk)
+				var grain := ColorRect.new()
+				grain.color = color.lightened(0.2)
+				grain.position = Vector2(4 + i * 4, 6)
+				grain.size = Vector2(3, 3)
+				icon.add_child(grain)
+		"bread":
+			var loaf := ColorRect.new()
+			loaf.color = color
+			loaf.position = Vector2(4, 9)
+			loaf.size = Vector2(12, 7)
+			icon.add_child(loaf)
+			var crust := ColorRect.new()
+			crust.color = color.darkened(0.2)
+			crust.position = Vector2(5, 8)
+			crust.size = Vector2(10, 2)
+			icon.add_child(crust)
+		"wyrd":
+			var crystal := ColorRect.new()
+			crystal.color = color
+			crystal.position = Vector2(7, 4)
+			crystal.size = Vector2(6, 12)
+			icon.add_child(crystal)
+			var glow := ColorRect.new()
+			glow.color = color.lightened(0.5)
+			glow.position = Vector2(9, 8)
+			glow.size = Vector2(2, 4)
+			icon.add_child(glow)
+		_:
+			var box := ColorRect.new()
+			box.color = color
+			box.position = Vector2(5, 6)
+			box.size = Vector2(10, 10)
+			icon.add_child(box)
+	return icon
 
 
 func preview_placement_at(building_type: String, tile: Vector2i) -> void:
