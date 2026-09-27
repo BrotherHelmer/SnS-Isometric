@@ -89,6 +89,12 @@
 - Day stem: -8dB (was -11dB, +3dB boost)
 - Ambience: -11dB (was -13dB, +2dB boost)
 
+**BGM Integration (Playtest.10):**
+- Primary settlement BGM: `bgm_settlement_loop.ogg` (94.5s pastoral town theme, cynicmusic CC0)
+- Replaces: `score_pastoral_foundation.wav` (now using full-length original CC0 theme)
+- Ambient bed: `ambient_world.wav` (26s nature bed, Spring Spring CC0)
+- Replaces: `settlement_wind_birds.wav` (now using dedicated nature-only ambient)
+
 **Failure Indicator:**
 - ❌ BGM is silent or barely audible even at full volume
 - ❌ Farm completion plays no sound
@@ -96,12 +102,13 @@
 - ❌ Audio clips/distorts during gameplay
 
 **Files Verified Present:**
-- `assets/settlement/audio/farm_animal.wav` (farm completion)
+- `assets/settlement/audio/farm_animal.wav` (farm completion - updated louder/clearer)
 - `assets/settlement/audio/settler_arrive_worker.wav` (civilian spawn)
 - `assets/settlement/audio/settler_arrive_soldier.wav` (military spawn)
 - `assets/settlement/audio/barracks_ready.wav` (barracks ready)
-- `assets/settlement/audio/presentation/score_pastoral_foundation.wav` (BGM day)
-- All files are CC0 from PR #5 (documented in AUDIO_LICENSE_LEDGER.md)
+- `assets/settlement/audio/presentation/bgm_settlement_loop.ogg` (BGM day - NEW playtest.10)
+- `assets/settlement/audio/presentation/ambient_world.wav` (ambient - NEW playtest.10)
+- All files are CC0 from PR #5 and playtest.10 curated pack (documented in AUDIO_LICENSE_LEDGER.md)
 
 ---
 
