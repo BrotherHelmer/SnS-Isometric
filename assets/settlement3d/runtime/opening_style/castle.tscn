@@ -1,7 +1,8 @@
 [gd_scene load_steps=2 format=3]
 
-[ext_resource type="PackedScene" path="res://assets/settlement3d/runtime/buildings/building_castle_green.gltf" id="1_castle"]
+[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/castle.res" id="1_ixk7k"]
 
 [node name="Castle" type="Node3D"]
 
-[node name="CastleModel" parent="." instance=ExtResource("1_castle")]
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1_ixk7k")

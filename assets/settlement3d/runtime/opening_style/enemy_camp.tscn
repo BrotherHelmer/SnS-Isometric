@@ -1,8 +1,8 @@
-[gd_scene format=3]
+[gd_scene load_steps=2 format=3]
 
-[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/enemy_camp.res" id="1_waygt"]
+[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/enemy_camp.res" id="1_wbi61"]
 
-[node name="EnemyCamp" type="Node3D" unique_id=1558916418]
+[node name="EnemyCamp" type="Node3D"]
 
-[node name="Model" type="MeshInstance3D" parent="." unique_id=1699684618]
-mesh = ExtResource("1_waygt")
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1_wbi61")
