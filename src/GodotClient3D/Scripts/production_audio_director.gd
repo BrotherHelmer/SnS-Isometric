@@ -7,12 +7,12 @@ extends Node
 const Identity = preload("res://src/GodotClient3D/Scripts/production_identity.gd")
 
 const STEM_PATHS := {
-	"day": "res://assets/settlement/audio/presentation/score_pastoral_foundation.wav",
+	"day": "res://assets/settlement/audio/presentation/bgm_settlement_loop.ogg",
 	"activity": "res://assets/settlement/audio/presentation/score_settlement_activity.wav",
 	"dusk": "res://assets/settlement/audio/presentation/score_dusk_tension.wav",
 	"night": "res://assets/settlement/audio/presentation/score_night_percussion.wav",
 	"raid": "res://assets/settlement/audio/presentation/score_metal_combat.wav",
-	"ambience": "res://assets/settlement/audio/presentation/settlement_wind_birds.wav",
+	"ambience": "res://assets/settlement/audio/presentation/ambient_world.wav",
 	"wyrd": "res://assets/settlement/audio/presentation/wyrd_drone.wav",
 	"lumen": "res://assets/settlement/audio/presentation/lumen_hum.wav"
 }
@@ -79,6 +79,8 @@ func setup(host: Node, camera_value: Camera3D) -> void:
 			player.stream = stream
 			if stream is AudioStreamWAV:
 				(stream as AudioStreamWAV).loop_mode = AudioStreamWAV.LOOP_FORWARD
+			elif stream is AudioStreamOggVorbis:
+				(stream as AudioStreamOggVorbis).loop = true
 		player.volume_db = -80.0
 		host.add_child(player)
 		stem_players[stem_name] = player
@@ -105,9 +107,9 @@ func setup(host: Node, camera_value: Camera3D) -> void:
 func apply_settings(next: Dictionary) -> void:
 	settings = next
 	_set_bus_volume("Master", float(settings.get("master", 1.0)))
-	_set_bus_volume("Music", float(settings.get("music", 0.72)))
-	_set_bus_volume("SFX", float(settings.get("sfx", 0.85)))
-	_set_bus_volume("Ambience", float(settings.get("sfx", 0.85)) * 0.9)
+	_set_bus_volume("Music", float(settings.get("music", 0.85)))
+	_set_bus_volume("SFX", float(settings.get("sfx", 1.0)))
+	_set_bus_volume("Ambience", float(settings.get("sfx", 1.0)) * 0.9)
 	Identity.save_audio_settings(settings)
 
 
@@ -272,16 +274,16 @@ func _update_stem_targets(simulation, menu_visible: bool) -> void:
 	var pop := 3
 	if simulation != null:
 		pop = int(simulation.population_current)
-	var activity_db := lerpf(-26.0, -12.0, clampf(float(pop) / 10.0, 0.0, 1.0))
+	var activity_db := lerpf(-26.0, -8.0, clampf(float(pop) / 10.0, 0.0, 1.0))
 	match current_state:
 		"menu":
 			stem_targets["day"] = -16.0
 			stem_targets["ambience"] = -14.0
 			stem_targets["wyrd"] = -34.0
 		"day":
-			stem_targets["day"] = -11.0
+			stem_targets["day"] = -8.0
 			stem_targets["activity"] = activity_db
-			stem_targets["ambience"] = -13.0
+			stem_targets["ambience"] = -11.0
 			stem_targets["lumen"] = -30.0
 		"dusk":
 			stem_targets["day"] = -20.0

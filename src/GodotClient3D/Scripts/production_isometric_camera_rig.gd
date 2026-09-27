@@ -4,8 +4,8 @@ extends Node3D
 const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_profile.gd")
 
 const CLOSE_ZOOM := 18.0
-const NORMAL_ZOOM := 22.0
-const STRATEGIC_ZOOM := 58.0
+const NORMAL_ZOOM := 38.0
+const STRATEGIC_ZOOM := 85.0
 const PREFERRED_YAW := -0.62
 
 var camera: Camera3D
