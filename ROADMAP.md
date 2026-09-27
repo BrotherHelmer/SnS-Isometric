@@ -1,7 +1,7 @@
 # Shard & Sovereign — Development Roadmap
 
 **Last updated:** 2026-09-27  
-**Current version:** 0.2.0-playtest.19  
+**Current version:** 0.2.0-playtest.20  
 **Target:** Closed Steam Playtest → Public Demo
 
 This roadmap tracks progress toward a releasable Windows settlement survival game: build an economy with autonomous workers, defend against night raids, race a rival realm to Bind the central Shard. Owner-confirmed route: **closed Steam Playtest first, then public demo** after validation gates pass.
@@ -14,11 +14,17 @@ This roadmap tracks progress toward a releasable Windows settlement survival gam
 
 Prepare a validated Windows package for supervised external testing. The game must demonstrate a complete playable loop (founding → economy → defense → Shard race → victory/defeat) with comprehensible onboarding, reliable saves, and no progression blockers.
 
-**Status:** Playtest.19 fixes placement UX and Town Hall art distinctiveness. Core gameplay loop is implemented and passes automated checks. External human validation gates remain open.
+**Status:** Playtest.20 fixes placement legend visibility (headline) and adds denser founding yard props. Core gameplay loop is implemented and passes automated checks. External human validation gates remain open.
 
 ---
 
 ## Completed Work (Recent)
+
+### Playtest.20 (2026-09-27) — Placement Legend Stays Visible (headline fix)
+- **Placement legend dual-line fix**: Color legend now stays visible during hover. Before: legend text replaced by VALID/INVALID when mouse moved over footprint. After: legend ("GREEN = valid · YELLOW = needs clearing · RED = blocked") shown persistently on one line, status ("VALID · Can place here") updates dynamically on second line. Two-label UI (placement_legend_label + placement_label) with VBoxContainer layout ensures both visible simultaneously.
+- **Founding yard props density**: Increased from 12 to 15 props (added wood_stack, long_crate, crate) with better clustering around entrance for more inhabited settlement feel at founding camera.
+- Placement panel height adjusted (+20px) to accommodate two-line layout; legend styled slightly smaller/muted to emphasize dynamic status.
+- Version bumped to 0.2.0-playtest.20
 
 ### Playtest.19 (2026-09-27) — Placement UX & Town Hall Art Improvements (Wine playtest feedback)
 - **Placement UX fixes**: Single-click placement interaction clarified with on-screen color legend (GREEN = valid, YELLOW = needs clearing, RED = blocked)

@@ -524,6 +524,7 @@ func _spawn_founding_yard_props(entrance: Vector2i) -> void:
 		{"type": "wood_stack", "offset": Vector2i(-2, -1), "rotation": 0.0, "scale": 1.1},
 		{"type": "wood_stack", "offset": Vector2i(2, -1), "rotation": 45.0, "scale": 0.9},
 		{"type": "wood_stack", "offset": Vector2i(-1, 2), "rotation": -30.0, "scale": 1.0},
+		{"type": "wood_stack", "offset": Vector2i(1, -2), "rotation": 60.0, "scale": 0.95},
 		{"type": "stone_stack", "offset": Vector2i(-3, 0), "rotation": 0.0, "scale": 1.0},
 		{"type": "stone_stack", "offset": Vector2i(3, 0), "rotation": 30.0, "scale": 0.85},
 		{"type": "stone_stack", "offset": Vector2i(1, 3), "rotation": -15.0, "scale": 0.95},
@@ -533,6 +534,8 @@ func _spawn_founding_yard_props(entrance: Vector2i) -> void:
 		{"type": "crate", "offset": Vector2i(3, 3), "rotation": -20.0, "scale": 0.95},
 		{"type": "crate", "offset": Vector2i(-1, -1), "rotation": 45.0, "scale": 0.9},
 		{"type": "barrel", "offset": Vector2i(0, 2), "rotation": 0.0, "scale": 1.05},
+		{"type": "long_crate", "offset": Vector2i(-3, -2), "rotation": -45.0, "scale": 0.9},
+		{"type": "crate", "offset": Vector2i(2, 3), "rotation": 30.0, "scale": 0.85},
 	]
 	for placement in prop_placements:
 		var prop_tile: Vector2i = entrance + Vector2i(placement["offset"])

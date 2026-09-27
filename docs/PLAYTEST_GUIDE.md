@@ -1,6 +1,6 @@
 # Shard & Sovereign — Windows playtest
 
-Build: 0.2.0-playtest.19. This is a local internal candidate for the planned closed Steam Playtest. Steam distribution is not configured yet.
+Build: 0.2.0-playtest.20. This is a local internal candidate for the planned closed Steam Playtest. Steam distribution is not configured yet.
 
 ## Start
 
@@ -27,7 +27,7 @@ To remove a contesting rival Outpost, select it and choose **ASSAULT RIVAL OUTPO
 
 ## First session
 
-**Roads connect everything**: Extend roads from the Town Hall first, then place buildings beside them. Roads cost no resources but workers must construct them. When placing buildings, the ghost footprint shows GREEN for valid sites, YELLOW when trees need clearing first, and RED when blocked. Press R to rotate buildings before placing.
+**Roads connect everything**: Extend roads from the Town Hall first, then place buildings beside them. Roads cost no resources but workers must construct them. When placing buildings, the placement panel shows the color legend (GREEN = valid, YELLOW = needs clearing, RED = blocked) on one line and the current site status on another. Both stay visible so you can learn the color meanings. Press R to rotate buildings before placing.
 
 **Build the basics**: Start with a House and Lumber Camp near connected roads; watch the first delivery. Establish a Farm and Bakery for the food chain (Farm produces Wheat, Bakery converts it to Bread). If storage fills up, build a Storehouse to expand capacity for all resources.
 
