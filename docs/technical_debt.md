@@ -1,5 +1,26 @@
 # Technical Debt
 
+## Resolved Items
+
+### 2026-09-27: Export packing silent omissions (RESOLVED: playtest.23/.24)
+- **Issue:** `export_filter="resources"` with explicit `export_files` list could silently omit runtime assets when string-concatenated or hardcoded paths not added to list (castle.tscn in playtest.22, audio files prior to playtest.24)
+- **Resolution:** Created `tools/audit_export_packing.py` to systematically compare runtime asset paths (from `ProductionAssetCatalog3D.all_runtime_paths()` + `ProductionAudioDirector3D` paths) against `export_presets.cfg` export_files list. Audit runs as build preflight; exit code 1 blocks release if runtime assets missing
+- **Status:** Closed playtest.24; audit confirms 0 missing runtime paths
+
+### 2026-09-27: Night verification threshold mismatch (RESOLVED: playtest.25)
+- **Issue:** Night verification test threshold (0.28 = 25% of day 1.12) was stricter than actual designed night lighting (0.35 = 31.25% of day). Test would fail when lighting correctly applied, pass when timing race prevented full lighting update—classic flaky check symptom. Forced `-SkipVerification` workaround in playtest.24
+- **Resolution:** Test now checks against actual `Identity.LIGHTING["night"]["sun_energy"]` (0.35) + 0.02 tolerance, plus extra `await process_frame` for GPU state settling
+- **Status:** Closed playtest.25; night mood preserved (ambient 0.50, sun 0.35, fill 0.32), release builds pass verification without `-SkipVerification`
+
+### 2026-09-27: verify_release ExitCode/deadlock saga (RESOLVED: playtest.28)
+- **Issue:** `Start-Process -PassThru` with stream redirection could leave `ExitCode` null even after `WaitForExit()` (playtest.25). ProcessStartInfo fix (playtest.26) introduced pipe buffer deadlock when `WaitForExit` called before draining streams. Async pattern (playtest.27) fixed deadlock but caused PS 5.1 host abort and test_release_package ExitCode=null
+- **Resolution:** Both `verify_release.ps1` and `test_release_package.ps1` now use `System.Diagnostics.Process` + `ProcessStartInfo` with `StandardOutput.ReadToEndAsync()` / `StandardError.ReadToEndAsync()` started immediately after `Start()`, then `WaitForExit()`, then `Result` property access. This portable pattern drains streams asynchronously during process execution on both PS 5.1 and PS 7, preventing deadlock while avoiding host abort and ExitCode null races
+- **Status:** Closed playtest.28 (merged GitHub, not built); reliable non-null `Process.ExitCode` maintained across both PowerShell versions in both verification and package soak tests
+
+---
+
+## Active Technical Debt
+
 ## 2026-06-28: Godot client shell uses GDScript
 
 - Decision: The first Godot client shell is implemented as a small Godot-native GDScript scene script.

@@ -2,8 +2,29 @@
 
 Milestone: internal Windows candidate for closed Steam Playtest, then public demo. Steamworks setup remains deferred by the owner. **Not approved for external release.**
 
-**Current version:** 0.2.0-playtest.25  
+**Current version:** 0.2.0-playtest.27 (shipped) / 0.2.0-playtest.28 (merged, not built)  
 **Comprehensive tracking:** See [ROADMAP.md](../ROADMAP.md) for current work, prioritized backlog, and release gates.
+
+---
+
+## Overnight Work Evidence (playtest.23–.28)
+
+| Version | Date | Focus | Ship Status | Evidence |
+|---------|------|-------|-------------|----------|
+| **playtest.23** | 2026-09-27 | Castle morph export packing | Merged | Added `opening_style/castle.tscn` to export_files; Wine PASS (Town Hall → Castle morph visual confirmed) |
+| **playtest.24** | 2026-09-27 | Audio export packing | Merged | 9 missing audio files added to export_files (bgm_settlement_loop.ogg, ambient_world.wav, saw.wav, 6 settler/building cues); audit tool confirms 0 missing runtime paths |
+| **playtest.25** | 2026-09-27 | Night verify + audit preflight | Merged | Night threshold fixed (0.35 + 0.02 tolerance vs incorrect 0.28); audit_export_packing.py preflight integrated; **60-min soak: PARTIAL** (in-game RELEASE_PACKAGE_PROBE PASS 3601s / 0 errors; strict runner FAIL ExitCode=null) |
+| **playtest.26** | 2026-09-27 | ExitCode capture fix | Merged (FAILED) | ProcessStartInfo pattern for reliable ExitCode; **introduced pipe buffer deadlock** (180s timeout, all test suites) |
+| **playtest.27** | 2026-09-27 | Deadlock fix | **SHIPPED to Downloads** | Async stream draining (BeginOutputReadLine) fixed deadlock; full verification PASS; castle+audio packed; **SHA: zip DDDE0DF6… / HEAD c3601749** |
+| **playtest.28** | 2026-09-27 | PS 5.1 compat + ExitCode | Merged, **NOT BUILT** | ReadToEndAsync pattern for PS 5.1/7 + verify_release + test_release_package; **Spawn offline overnight**, no build/ship |
+
+**Key outcomes:**
+- **Current playable:** 0.2.0-playtest.27 (Spawn Downloads, full verify PASS)
+- **Soak status:** Playtest.25 60-min PARTIAL (in-game PASS, runner ExitCode=null fixed in .28 source but unshipped)
+- **Steam status:** NO-GO (gates: Steamworks, pilots, full matches, low-end GPU, clean PC, WASAPI reconnect)
+- **WASAPI reconnect:** NOT tested yet
+
+---
 
 ## Implemented (playtest.25 and earlier)
 
@@ -75,7 +96,9 @@ Milestone: internal Windows candidate for closed Steam Playtest, then public dem
 
 ## Evidence and limits
 
-Current candidate **0.2.0-playtest.25** hardens night verification (test threshold now 0.35 + 0.02 vs incorrect 0.28, matching actual lighting design) and integrates export packing audit as build preflight. The flaky night check that forced `-SkipVerification` in playtest.24 release builds is resolved: test now checks against `Identity.LIGHTING["night"]["sun_energy"]` (0.35) with tolerance and extra frame wait for GPU state settling. Export packing audit (`tools/audit_export_packing.py`) runs after import, before verify/export; exit code 1 blocks release if runtime assets missing from `export_presets.cfg`. This prevents silent export omissions (castle.tscn in playtest.22, audio files in playtest.24) from reaching release packages.
+Current playable **0.2.0-playtest.27** is shipped to Spawn Downloads with full verification PASS, castle+audio packing confirmed (SHA: zip DDDE0DF6… / HEAD c3601749). Playtest.27 fixed the critical pipe buffer deadlock introduced in .26 via async stream draining (BeginOutputReadLine). Playtest.28 merged to GitHub (`82d587b50ccd888d385d5e2c2f5dbb68449747ca`) with ReadToEndAsync pattern for PowerShell 5.1/7 compatibility + ExitCode reliability in both verify_release and test_release_package, but **not built/shipped** (Spawn offline overnight).
+
+Playtest.25 60-min soak: **PARTIAL pass** (in-game RELEASE_PACKAGE_PROBE PASS after 3601s with 0 errors; strict runner FAIL solely because `$process.ExitCode` was null, fixed in .28 source). Export packing audit (`tools/audit_export_packing.py`) runs as build preflight; exit code 1 blocks release if runtime assets missing from `export_presets.cfg`. This prevents silent export omissions (castle.tscn in playtest.23, audio files in playtest.24) from reaching release packages.
 
 All **20** suite checks pass. The opening-style model set includes 19 authored scenes covering buildings, terrain features, and props. Character geometry and animations are retained with palette-adapted materials. See `docs/art/OPENING_STYLE_MODELS.md` for scope and limitations.
 
@@ -84,13 +107,14 @@ All **20** suite checks pass. The opening-style model set includes 19 authored s
 - ✅ Three-seed command-only bot completes all matches including mid-Binding save/reload (seeds 260821, 424242, 717171)
 - ✅ Save safety: temporary writes, backup recovery, version rejection, structural validation
 - ✅ Construction/logistics/rivalry/persistence cross-process checks pass
-- ❌ 60-minute rendered package soak with audio-mixer sampling (awaiting)
+- ⚠️ 60-minute rendered package soak: playtest.25 PARTIAL (in-game PASS, runner ExitCode=null fixed in .28 source; awaiting .28 build+ship for complete soak)
 - ❌ Observed new-player pilot (5-person, target 4/5 comprehension)
 - ❌ Human complete matches (3+ natural sessions)
 - ❌ Lower-end GPU performance (current evidence: RTX 4070 only)
 - ❌ Clean physical Windows machine test
+- ❌ WASAPI reconnect audible validation (not tested)
 
-No hour-long soak, lower-end GPU test, or physical clean-machine validation has been performed for playtest.25.
+No complete hour-long soak, lower-end GPU test, or physical clean-machine validation has been performed for playtest.27 or .28.
 
 
 
