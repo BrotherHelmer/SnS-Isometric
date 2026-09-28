@@ -1,7 +1,26 @@
-param([int]$SoakSeconds = 4, [switch]$Rendered, [string]$ValidationSave = '')
+param(
+    [int]$SoakSeconds = 4,
+    [switch]$Rendered,
+    [string]$ValidationSave = '',
+    [string]$SourceDirectory = ''
+)
 $ErrorActionPreference = 'Stop'
 $workspaceRoot = Split-Path -Parent $PSScriptRoot
-$sourceDirectory = Join-Path $workspaceRoot 'dist/ShardAndSovereign_0.2.0-playtest.4'
+
+if (-not $SourceDirectory) {
+    $SourceDirectory = Join-Path $workspaceRoot 'dist/ShardAndSovereign_0.2.0-playtest.4'
+}
+$sourceDirectory = if ([System.IO.Path]::IsPathRooted($SourceDirectory)) { $SourceDirectory } else { Join-Path $workspaceRoot $SourceDirectory }
+
+if (-not (Test-Path $sourceDirectory -PathType Container)) {
+    throw "Source directory does not exist: $sourceDirectory"
+}
+if (-not (Test-Path (Join-Path $sourceDirectory 'ShardAndSovereign.exe') -PathType Leaf)) {
+    throw "ShardAndSovereign.exe not found in source directory: $sourceDirectory"
+}
+if (-not (Test-Path (Join-Path $sourceDirectory 'ShardAndSovereign.pck') -PathType Leaf)) {
+    throw "ShardAndSovereign.pck not found in source directory: $sourceDirectory"
+}
 $mode = if ($Rendered) { 'rendered' } else { 'headless' }
 $validationDirectory = Join-Path $env:TEMP "SnS_Playtest_Validation_$mode"
 $evidenceDirectory = Join-Path $workspaceRoot "artifacts/release_candidate/package_$mode"
