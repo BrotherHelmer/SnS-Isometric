@@ -417,6 +417,23 @@ func load_game() -> bool:
 
 
 func begin_placement(building_type: String) -> void:
+	# Check affordability first
+	if simulation_host.simulation != null and building_type != Defs.TOOL_CLEAR_AREA:
+		var cost := Defs.building_cost(building_type)
+		var resources := simulation_host.simulation.get_resources()
+		var can_afford := true
+		var missing: Array[String] = []
+		for resource_type in cost:
+			var needed: int = cost[resource_type]
+			var available: int = resources.get(resource_type, 0)
+			if available < needed:
+				can_afford = false
+				missing.append("%s (%d/%d)" % [String(resource_type).capitalize(), available, needed])
+		if not can_afford:
+			audio_director.play_ui_click()
+			_show_toast("Insufficient Resources", "Need: %s" % ", ".join(missing), "warning", 3.5)
+			return
+	
 	# Cancel any existing placement or dragging state first
 	_cancel_road_drag()
 	_cancel_wall_drag()
@@ -1061,8 +1078,8 @@ func _create_ui() -> void:
 	placement_panel.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	placement_panel.offset_left = -235.0
 	placement_panel.offset_right = 235.0
-	placement_panel.offset_top = -74.0
-	placement_panel.offset_bottom = -12.0
+	placement_panel.offset_top = -150.0
+	placement_panel.offset_bottom = -88.0
 	placement_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.045, 0.055, 0.052, 0.90), Color("#6e8e72")))
 	root.add_child(placement_panel)
 	var placement_vbox := VBoxContainer.new()
