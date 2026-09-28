@@ -420,7 +420,7 @@ func begin_placement(building_type: String) -> void:
 	# Check affordability first
 	if simulation_host.simulation != null and building_type != Defs.TOOL_CLEAR_AREA:
 		var cost := Defs.building_cost(building_type)
-		var resources := simulation_host.simulation.get_resources()
+		var resources: Dictionary = simulation_host.simulation.get_resources()
 		var can_afford := true
 		var missing: Array[String] = []
 		for resource_type in cost:
@@ -1974,7 +1974,7 @@ func _ingest_simulation_notices() -> void:
 	_refresh_event_log()
 
 
-func _show_toast(title: String, body: String, severity: String = "info") -> void:
+func _show_toast(title: String, body: String, severity: String = "info", hold_seconds: float = -1.0) -> void:
 	if title == "":
 		return
 	var key := "%s:%s" % [title, body]
@@ -1986,7 +1986,7 @@ func _show_toast(title: String, body: String, severity: String = "info") -> void
 		toast_title.text = title
 	if toast_body != null:
 		toast_body.text = body
-	var hold := 7.5 if severity == "critical" else 4.2
+	var hold := hold_seconds if hold_seconds > 0.0 else (7.5 if severity == "critical" else 4.2)
 	toast_until = Time.get_ticks_msec() / 1000.0 + hold
 	if alert_panel != null:
 		alert_panel.visible = startup_overlay == null or not startup_overlay.visible
