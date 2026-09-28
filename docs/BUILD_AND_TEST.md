@@ -16,6 +16,12 @@ From PowerShell at the repository root:
 ./tools/test_release_package.ps1 -Rendered -SoakSeconds 3600 -ValidationSave artifacts/phase3_2/persistence/eighteen_step_playthrough.json
 ```
 
+`test_release_package.ps1` defaults to `dist/ShardAndSovereign_0.2.0-playtest.4`. To test a different package version, pass `-SourceDirectory`:
+
+```powershell
+./tools/test_release_package.ps1 -SourceDirectory dist/ShardAndSovereign_0.2.0-playtest.28 -Rendered -SoakSeconds 3600
+```
+
 On a fresh checkout, run `build_release.ps1` first: it imports GLB/textures before invoking verification. Use `verify_release.ps1` alone for an already imported workspace. Verification isolates user data for each test, imposes timeouts, records exit codes/PASS markers and rejects unexpected engine errors. `artifacts/release_candidate/verification.json` is the result index. The exact certificate-store error observed only under restricted execution is permitted; ordinary game/script errors are not.
 
 The build imports assets, exports the pinned production project, records source/output hashes and source revision, copies playtest instructions/notices, and creates a ZIP. `-SkipVerification` is for internal packaging diagnosis only; it is not a release approval.
