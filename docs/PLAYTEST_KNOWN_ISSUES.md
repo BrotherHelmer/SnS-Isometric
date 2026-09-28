@@ -1,10 +1,16 @@
 # Internal candidate limitations
 
-Build: 0.2.0-playtest.25
+Build: 0.2.0-playtest.27 (shipped) / 0.2.0-playtest.28 (merged, not built)
+
+**Current playtest guidance:**
+- **Use playtest.27** from Spawn Downloads until playtest.28 ships (Spawn offline overnight)
+- **Avoid playtest.22:** castle morph visual FAIL (fixed in .23)
+- **Avoid playtest.26:** use `-SkipVerification` workaround if building (pipe deadlock, fixed in .27)
+- Playtest.28 merged to GitHub with ReadToEndAsync fix for PS 5.1/7 compatibility but not built/shipped yet
 
 - This candidate is not yet cleared for public Steam release. Steamworks setup and IDs are deferred at the owner's request.
 - Human first-session comprehension, unassisted full-match wins/losses, integrated-GPU performance and clean physical Windows-machine testing remain external gates.
-- The prior playtest.1 build passed a clean 60-minute rerun after an earlier Windows audio-device invalidation. Playtest.25 awaits its own hour-long soak and audible device-reconnection check.
+- Playtest.25 60-min soak: **PARTIAL** (in-game RELEASE_PACKAGE_PROBE PASS 3601s / 0 errors; strict runner FAIL ExitCode=null, fixed in .28 source). Playtest.27 and .28 await their own complete hour-long soak and audible device-reconnection check.
 - Nineteen opening-style model scenes, coordinated terrain/lighting and character materials are integrated. This is a stylized adaptation; animated character geometry is retained. Lower-end performance with the new geometry remains unmeasured.
 - The three-seed command-only bot now completes all three matches, including mid-Binding save/reload. Human strategy, difficulty and session length remain unvalidated.
 - The intended 35–55 minute session length is provisional. Automated checks and accelerated simulations do not establish whether the game is fun or well paced.

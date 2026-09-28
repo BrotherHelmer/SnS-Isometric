@@ -1,7 +1,7 @@
 # Shard & Sovereign — Development Roadmap
 
-**Last updated:** 2026-09-27  
-**Current version:** 0.2.0-playtest.28  
+**Last updated:** 2026-09-28  
+**Current version:** 0.2.0-playtest.27 (shipped) / 0.2.0-playtest.28 (merged, not built)  
 **Target:** Closed Steam Playtest → Public Demo
 
 This roadmap tracks progress toward a releasable Windows settlement survival game: build an economy with autonomous workers, defend against night raids, race a rival realm to Bind the central Shard. Owner-confirmed route: **closed Steam Playtest first, then public demo** after validation gates pass.
@@ -14,7 +14,7 @@ This roadmap tracks progress toward a releasable Windows settlement survival gam
 
 Prepare a validated Windows package for supervised external testing. The game must demonstrate a complete playable loop (founding → economy → defense → Shard race → victory/defeat) with comprehensible onboarding, reliable saves, and no progression blockers.
 
-**Status:** Playtest.27 fixes critical deadlock in verification suite (playtest.26 ExitCode capture introduced pipe buffer deadlock). Playtest.25 hardened night-verification check (threshold now matches actual night lighting design: 0.35 + tolerance vs incorrect 0.28) and integrated export packing audit as build preflight. Core gameplay loop is implemented and passes automated checks. External human validation gates remain open.
+**Status:** Playtest.27 is the current playable package (shipped to Spawn Downloads, full verification PASS, castle+audio packed, SHA zip DDDE0DF6… / HEAD c3601749). Playtest.28 merged to GitHub (`82d587b50ccd888d385d5e2c2f5dbb68449747ca`) with ReadToEndAsync fix for verify_release + test_release_package but **not built/shipped** (Spawn offline overnight). 60-min soak of playtest.25: PARTIAL pass (in-game RELEASE_PACKAGE_PROBE PASS 3601s / 0 errors; strict runner FAIL ExitCode=null, fixed in .28 source). Core gameplay loop implemented; automated checks pass. External human validation gates remain open. Steam closed beta: **NO-GO** (remaining gates: Steamworks, pilots, full matches, low-end GPU, clean PC, WASAPI reconnect).
 
 ---
 
@@ -233,9 +233,17 @@ Prepare a validated Windows package for supervised external testing. The game mu
 ## Current Work
 
 **First-Ten-Minutes Validation**
-- Execute remaining P0 validation gates (60-min soak, pilot, full matches, lower-GPU, clean machine)
+- Execute remaining P0 validation gates (60-min soak with .27 or .28 once shipped, pilot, full matches, lower-GPU, clean machine)
 - Owner: initiate Steamworks setup in parallel
 - Closed playtest cohort → feedback → fixes → public demo
+
+**Overnight Work (playtest.23–.28) Summary:**
+- Playtest.23: castle morph visual fixed (castle.tscn export packing)
+- Playtest.24: 9 missing audio files added to export packing
+- Playtest.25: night verification hardened (threshold 0.35 vs incorrect 0.28) + audit preflight; 60-min soak PARTIAL (in-game PASS, runner ExitCode=null)
+- Playtest.26: ExitCode fix attempt (FAILED: introduced pipe deadlock)
+- Playtest.27: deadlock fixed (async stream draining), shipped to Downloads
+- Playtest.28: ReadToEndAsync pattern for PS 5.1/7 compatibility + ExitCode reliability (merged GitHub, **not built/shipped** due to Spawn offline)
 
 **Next Steps**
 
@@ -433,11 +441,11 @@ Prepare a validated Windows package for supervised external testing. The game mu
 
 ## Summary
 
-**Current Status:** Playtest.25 delivers hardened night verification (check now matches actual lighting design: 0.35 vs incorrect 0.28 threshold) and export packing audit preflight (missing runtime assets fail build early). Core gameplay loop implemented, 20/20 automated checks pass, saves validated. Ready for human validation gates.
+**Current Status:** Playtest.27 shipped to Spawn Downloads (full verification PASS, castle+audio packed). Playtest.28 merged to GitHub with ReadToEndAsync fix for PowerShell 5.1/7 compatibility + ExitCode reliability but **not built/shipped** (Spawn offline overnight). Playtest.25 60-min soak: PARTIAL (in-game PASS 3601s / 0 errors; runner ExitCode=null fixed in .28 source). Overnight work (.23–.28) resolved export packing silent omissions (castle.tscn, audio), night verification threshold mismatch, and verify_release/test_release_package ExitCode/deadlock saga. Core gameplay loop implemented, 20/20 automated checks pass, saves validated. **Steam closed beta: NO-GO** (remaining gates: Steamworks, pilots, full matches, low-end GPU, clean PC, WASAPI reconnect).
 
 **Next Critical Path:** 
-1. Complete documentation sync (version references, task pointers)
-2. Execute remaining P0 validation gates (60-min soak, pilot, full matches, lower-GPU, clean machine)
+1. Wait for Spawn to come online, build+ship playtest.28, complete 60-min soak with audible WASAPI reconnect validation
+2. Execute remaining P0 validation gates (pilot, full matches, lower-GPU, clean machine)
 3. Owner: initiate Steamworks setup in parallel
 4. Closed playtest cohort → feedback → fixes → public demo
 

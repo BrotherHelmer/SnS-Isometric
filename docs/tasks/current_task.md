@@ -1,7 +1,7 @@
 # Current Task
 
-**Last updated:** 2026-09-27  
-**Current version:** 0.2.0-playtest.13
+**Last updated:** 2026-09-28  
+**Current version:** 0.2.0-playtest.27 (shipped) / 0.2.0-playtest.28 (merged, not built)
 
 This document is maintained for historical reference. **Current work tracking has moved to the repository root:**
 

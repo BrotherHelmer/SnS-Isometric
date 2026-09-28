@@ -1,7 +1,7 @@
 # Backlog
 
-**Last updated:** 2026-09-27  
-**Current version:** 0.2.0-playtest.13
+**Last updated:** 2026-09-28  
+**Current version:** 0.2.0-playtest.27 (shipped) / 0.2.0-playtest.28 (merged, not built)
 
 This document contains historical prototype milestones and is maintained for reference only.
 
@@ -26,7 +26,7 @@ The ROADMAP includes:
 
 ## Historical Prototype Milestones (Completed)
 
-The milestones below represent the original Codex build brief's foundational work. They have been completed and evolved into the current production 3D game (version 0.2.0-playtest.13).
+The milestones below represent the original Codex build brief's foundational work. They have been completed and evolved into the current production 3D game (version 0.2.0-playtest.27 shipped, playtest.28 merged).
 
 ### ✅ Milestone 1: Simulation Foundation
 - Core simulation domain classes (GDScript: `one_shard_simulation.gd`, `one_shard_defs.gd`)
