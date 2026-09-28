@@ -5913,6 +5913,7 @@ func _damage_worker(worker_id: int, amount: int, attacker_position: Vector2i = V
 				tower["staffed"] = false
 				tower["status"] = "Soldier lost in the night."
 			population_current = max(0, population_current - 1)
+			_emit_audio("soldier_death")
 		else:
 			var building := _find_building_by_id(int(worker.get("building_id", 0)))
 			if not building.is_empty():

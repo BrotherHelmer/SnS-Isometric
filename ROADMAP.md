@@ -232,6 +232,13 @@ Prepare a validated Windows package for supervised external testing. The game mu
 
 ## Current Work
 
+**Playtest.29 (2026-09-28) — Quick Wins from Helmer Feedback (T-SNS-008)**
+- **Toast/placement panel positioning fixed**: Placement hints and validation messages no longer overlap the bottom C&C build bar. Panel repositioned from offset_top=-74 to offset_top=-150 (62px above build strip) with 12px safe margin
+- **Building affordance improved**: Clicking unaffordable buildings in C&C bar now shows clear visual+audio feedback with toast explaining missing resources instead of no response
+- **Combat audio hooks added**: Soldiers cheering when night raid cleared (raid→night transition), dramatic sting when soldier dies, existing delivery cheer verified working
+- **Worker SFX verified**: Saw/chop work loops confirmed playing at sawmills/lumber camps via existing `play_work_at` calls; delivery.wav already wired
+- Version bumped to 0.2.0-playtest.29 in both `project.godot` and `tools/build_release.ps1`
+
 **First-Ten-Minutes Validation**
 - Execute remaining P0 validation gates (60-min soak with .27 or .28 once shipped, pilot, full matches, lower-GPU, clean machine)
 - Owner: initiate Steamworks setup in parallel

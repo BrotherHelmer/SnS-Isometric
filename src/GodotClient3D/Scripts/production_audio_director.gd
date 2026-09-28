@@ -37,7 +37,10 @@ const CUE_PATHS := {
 	"barracks_complete": "res://assets/settlement/audio/barracks_ready.wav",
 	"settler_spawn_worker": "res://assets/settlement/audio/settler_arrive_worker.wav",
 	"settler_spawn_soldier": "res://assets/settlement/audio/settler_arrive_soldier.wav",
-	"settler_spawn_generic": "res://assets/settlement/audio/settler_arrive_generic.wav"
+	"settler_spawn_generic": "res://assets/settlement/audio/settler_arrive_generic.wav",
+	"combat_win": "res://assets/settlement/audio/presentation/victory_motif.wav",
+	"soldier_death": "res://assets/settlement/audio/presentation/defeat_motif.wav",
+	"delivery": "res://assets/settlement/audio/delivery.wav"
 }
 
 var settings: Dictionary = {}
@@ -203,6 +206,10 @@ func handle_sim_event(event_name: String) -> void:
 			play_cue("settler_spawn_soldier")
 		"settler_spawn_generic":
 			play_cue("settler_spawn_generic")
+		"soldier_death":
+			play_cue("soldier_death")
+		"delivery":
+			play_cue("delivery")
 		_:
 			pass
 
@@ -253,6 +260,8 @@ func _on_state_entered(next_state: String, previous: String, simulation) -> void
 				play_cue("enemy")
 				scream_cooldown = 1.6
 		"night":
+			if previous == "raid":
+				play_cue("combat_win")
 			if previous in ["dusk", "day"]:
 				scream_cooldown = 3.2
 		"reckoning":
