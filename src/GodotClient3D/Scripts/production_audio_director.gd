@@ -72,9 +72,25 @@ var audible_stems: Dictionary = {}
 var stem_restarts: Dictionary = {}
 var transition_log: Array[String] = []
 var verbose_log := true
+## Evidence tooling (debug-only; every field stays inert without the CLI flags).
+## --audio-master=<0..1>          in-memory master override, never persisted
+## --no-persist-settings          never write user://one_shard_audio.json
+## --evidence-audio-record=<wav>  AudioEffectRecord on Master (+ Music/SFX stems)
+var persist_settings := true
+var master_override := -1.0
+var record_path := ""
+var record_effects: Dictionary = {}
+var record_clock: AudioEffectCapture
+var record_frames := 0
+var record_active := false
+var record_snapshot_next := 0.0
+var stem_last_positions: Dictionary = {}
+var loop_wraps := 0
 
 
 func _exit_tree() -> void:
+	if record_active:
+		finish_recording()
 	for player in stem_players.values() + cue_players.values() + work_pool:
 		if is_instance_valid(player):
 			player.stop()
@@ -87,7 +103,13 @@ func _exit_tree() -> void:
 func setup(host: Node, camera_value: Camera3D) -> void:
 	camera = camera_value
 	_ensure_buses()
+	_parse_evidence_flags()
 	settings = Identity.load_audio_settings()
+	if master_override >= 0.0 or not persist_settings:
+		_audio_log("AUDIO_SETTINGS file_master=%.3f file_music=%.3f file_sfx=%.3f master_override=%s persist=%s" % [
+			float(settings.get("master", 1.0)), float(settings.get("music", 0.72)), float(settings.get("sfx", 0.85)),
+			("%.3f" % master_override) if master_override >= 0.0 else "none", str(persist_settings)
+		])
 	apply_settings(settings)
 	for stem_name in STEM_PATHS:
 		var player := AudioStreamPlayer.new()
@@ -128,15 +150,21 @@ func setup(host: Node, camera_value: Camera3D) -> void:
 		spatial.attenuation_model = AudioStreamPlayer3D.ATTENUATION_INVERSE_DISTANCE
 		host.add_child(spatial)
 		work_pool.append(spatial)
+	if record_path != "":
+		_start_recording()
 
 
 func apply_settings(next: Dictionary) -> void:
 	settings = next
-	_set_bus_volume("Master", float(settings.get("master", 1.0)))
+	var master_linear := float(settings.get("master", 1.0))
+	if master_override >= 0.0:
+		master_linear = master_override
+	_set_bus_volume("Master", master_linear)
 	_set_bus_volume("Music", float(settings.get("music", 0.72)))
 	_set_bus_volume("SFX", float(settings.get("sfx", 0.85)))
 	_set_bus_volume("Ambience", float(settings.get("sfx", 0.85)) * 0.9)
-	Identity.save_audio_settings(settings)
+	if persist_settings:
+		Identity.save_audio_settings(settings)
 
 
 func tick(simulation, delta: float, menu_visible: bool, result_visible: bool, paused_value := false) -> void:
@@ -159,6 +187,8 @@ func tick(simulation, delta: float, menu_visible: bool, result_visible: bool, pa
 			if restarts <= 3:
 				_audio_log("AUDIO_STEM_RESTART name=%s count=%d" % [stem_name, restarts])
 	_log_stem_audibility()
+	if record_active:
+		_tick_recording()
 	_tick_night_screams(delta)
 	if simulation != null:
 		last_night = bool(simulation.is_night)
@@ -291,7 +321,104 @@ static func state_label(state_name: String) -> String:
 
 func _audio_log(line: String) -> void:
 	if verbose_log:
-		print("[%s] %s" % [Time.get_datetime_string_from_system(), line])
+		if record_active:
+			print("[%s] t_wav=%.3f %s" % [Time.get_datetime_string_from_system(), wav_time(), line])
+		else:
+			print("[%s] %s" % [Time.get_datetime_string_from_system(), line])
+
+
+func _parse_evidence_flags() -> void:
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--audio-master="):
+			master_override = clampf(float(argument.trim_prefix("--audio-master=")), 0.0, 1.0)
+			persist_settings = false
+		elif argument == "--no-persist-settings" or argument.begins_with("--evidence-") or argument.begins_with("--debug-"):
+			persist_settings = false
+		if argument.begins_with("--evidence-audio-record="):
+			record_path = argument.trim_prefix("--evidence-audio-record=")
+
+
+## Seconds of mixed audio since recording started: frames that passed the Master
+## bus effect chain (same chain as the AudioEffectRecord), so log and WAV share
+## one time base.
+func wav_time() -> float:
+	if record_clock == null:
+		return -1.0
+	var pending := record_clock.get_frames_available()
+	return float(record_frames + pending) / maxf(1.0, AudioServer.get_mix_rate())
+
+
+func _start_recording() -> void:
+	var master_index := _bus_index("Master")
+	for bus_name in ["Master", "Music", "SFX"]:
+		var record := AudioEffectRecord.new()
+		record.format = AudioStreamWAV.FORMAT_16_BITS
+		AudioServer.add_bus_effect(_bus_index(bus_name), record)
+		record_effects[bus_name] = record
+	record_clock = AudioEffectCapture.new()
+	record_clock.buffer_length = 5.0
+	AudioServer.add_bus_effect(master_index, record_clock)
+	for bus_name in record_effects:
+		(record_effects[bus_name] as AudioEffectRecord).set_recording_active(true)
+	record_active = true
+	record_frames = 0
+	_audio_log("AUDIO_RECORD_START path=%s mix_rate=%d args=%s" % [record_path, int(AudioServer.get_mix_rate()), " ".join(OS.get_cmdline_args())])
+
+
+func _tick_recording() -> void:
+	var available := record_clock.get_frames_available()
+	if available > 0:
+		record_clock.get_buffer(available)
+		record_frames += available
+	for stem_name in stem_players:
+		var player: AudioStreamPlayer = stem_players[stem_name]
+		if not player.playing:
+			continue
+		var position: float = player.get_playback_position()
+		var last := float(stem_last_positions.get(stem_name, -1.0))
+		if last >= 0.0 and position + 0.25 < last:
+			loop_wraps += 1
+			_audio_log("AUDIO_LOOP_WRAP name=%s from=%.3f to=%.3f length=%.3f volume_db=%.1f restarts=%d" % [
+				stem_name, last, position, player.stream.get_length() if player.stream != null else 0.0,
+				player.volume_db, int(stem_restarts.get(stem_name, 0))
+			])
+		stem_last_positions[stem_name] = position
+	var now := wav_time()
+	if now >= record_snapshot_next:
+		record_snapshot_next = now + 0.5
+		var parts: Array[String] = []
+		for stem_name in stem_players:
+			var player: AudioStreamPlayer = stem_players[stem_name]
+			parts.append("%s=%.1f%s" % [stem_name, player.volume_db, "" if player.playing else "(stopped)"])
+		var cues: Array[String] = []
+		for cue_name in cue_players:
+			if (cue_players[cue_name] as AudioStreamPlayer).playing:
+				cues.append(String(cue_name))
+		_audio_log("AUDIO_STEMS state=%s %s cues=%s" % [state_label(current_state), " ".join(parts), ",".join(cues)])
+
+
+## Stops the evidence recording and writes Master (record_path) plus Music/SFX
+## stems next to it. Returns the Master path, or "" if nothing was recording.
+func finish_recording() -> String:
+	if not record_active:
+		return ""
+	_tick_recording()
+	var final_time := wav_time()
+	record_active = false
+	for bus_name in record_effects:
+		var record: AudioEffectRecord = record_effects[bus_name]
+		record.set_recording_active(false)
+		var wav: AudioStreamWAV = record.get_recording()
+		var path := record_path if bus_name == "Master" else "%s_%s.wav" % [record_path.get_basename(), String(bus_name).to_lower()]
+		var err: int = int(wav.save_to_wav(path)) if wav != null else int(ERR_UNAVAILABLE)
+		print("[%s] t_wav=%.3f AUDIO_RECORD_SAVED bus=%s path=%s err=%d length=%.3f mix_rate=%d stereo=%s" % [
+			Time.get_datetime_string_from_system(), final_time, bus_name, path, err,
+			wav.get_length() if wav != null else 0.0, wav.mix_rate if wav != null else 0, str(wav.stereo if wav != null else false)
+		])
+	print("[%s] t_wav=%.3f AUDIO_RECORD_DONE frames=%d loop_wraps=%d restarts=%s cheers=%d throttled=%d" % [
+		Time.get_datetime_string_from_system(), final_time, record_frames, loop_wraps, JSON.stringify(stem_restarts), cheers_played, cheers_throttled
+	])
+	return record_path
 
 
 func _log_stem_audibility() -> void:

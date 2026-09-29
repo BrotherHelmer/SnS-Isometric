@@ -130,6 +130,9 @@ var debug_ui_scene := ""
 var debug_quit_after := false
 var debug_clock := 0.0
 var debug_stage := 0
+## --evidence-capture=<dir>: scripted in-engine PNG captures of the CoS UI scenes
+## (viewport texture only; never the desktop). Inert without the flag.
+var evidence_capture_dir := ""
 ## Playtest.31 UI: per-button type/container/cost label for affordability + tooltip gating.
 var build_strip_types: Array[String] = []
 var build_strip_containers: Array = []
@@ -255,6 +258,9 @@ func _ready() -> void:
 	debug_audio_cycle_active = bool(launch.get("debug_audio_cycle", false))
 	debug_ui_scene = String(launch.get("debug_ui_scene", ""))
 	debug_quit_after = bool(launch.get("debug_quit", false))
+	evidence_capture_dir = String(launch.get("evidence_capture", ""))
+	if evidence_capture_dir != "":
+		call_deferred("_run_evidence_capture")
 	if debug_audio_cycle_active or debug_ui_scene != "":
 		print("[%s] DEBUG_LAUNCH audio_cycle=%s ui_scene=%s version=%s" % [Time.get_datetime_string_from_system(), str(debug_audio_cycle_active), debug_ui_scene, String(ProjectSettings.get_setting("application/config/version", ""))])
 
@@ -3146,7 +3152,7 @@ func _ghost_material(color: Color) -> StandardMaterial3D:
 
 
 func _parse_launch_options() -> Dictionary:
-	var options := {"seed": DEFAULT_SEED, "load": false, "fixture": "", "quality": "recommended", "autostart": false, "debug_audio_cycle": false, "debug_ui_scene": "", "debug_quit": false}
+	var options := {"seed": DEFAULT_SEED, "load": false, "fixture": "", "quality": "recommended", "autostart": false, "debug_audio_cycle": false, "debug_ui_scene": "", "debug_quit": false, "evidence_capture": ""}
 	for argument in OS.get_cmdline_user_args():
 		if argument == "--load":
 			options["load"] = true
@@ -3166,6 +3172,9 @@ func _parse_launch_options() -> Dictionary:
 			options["autostart"] = true
 		elif argument == "--debug-quit-after":
 			options["debug_quit"] = true
+		elif argument.begins_with("--evidence-capture="):
+			options["evidence_capture"] = argument.trim_prefix("--evidence-capture=")
+			options["autostart"] = true
 	return options
 
 
@@ -3945,6 +3954,8 @@ func _tick_debug_harness(delta: float) -> void:
 				])
 				debug_stage = 7
 				debug_audio_cycle_active = false
+				if audio_director != null:
+					audio_director.finish_recording()
 				if debug_quit_after:
 					get_tree().quit(0)
 
@@ -3999,4 +4010,116 @@ func _strip_tooltips_suppressed() -> bool:
 
 
 func _debug_log(line: String) -> void:
-	print("[%s] DEBUG_HARNESS t=%.2f %s" % [Time.get_datetime_string_from_system(), debug_clock, line])
+	if audio_director != null and audio_director.record_active:
+		print("[%s] t_wav=%.3f DEBUG_HARNESS t=%.2f %s" % [Time.get_datetime_string_from_system(), audio_director.wav_time(), debug_clock, line])
+	else:
+		print("[%s] DEBUG_HARNESS t=%.2f %s" % [Time.get_datetime_string_from_system(), debug_clock, line])
+
+
+## Evidence capture for the CoS UI MAJORs. Scene setup is scripted; hover is a
+## synthetic InputEventMouseMotion (the OS cursor is never moved) and every image
+## is the game's own viewport texture.
+func _run_evidence_capture() -> void:
+	var dir := evidence_capture_dir
+	DirAccess.make_dir_recursive_absolute(dir)
+	var simulation = simulation_host.simulation
+	_evidence_log("start dir=%s viewport=%s window=%s pos=%s" % [dir, str(get_viewport().get_visible_rect().size), str(get_window().size), str(get_window().position)])
+	await _evidence_wait(4.0)
+	_evidence_hover_point(Vector2(640, 300))
+	await _evidence_wait(0.5)
+	await _evidence_shot("20_after", "clean autostart: cost line on every strip button, minimap above the strip, Clear visible")
+	var outpost_button := _evidence_strip_button(Defs.BUILDING_OUTPOST)
+	_evidence_hover_control(outpost_button)
+	await _evidence_wait(1.4)
+	_evidence_hover_control(outpost_button, Vector2(2, 1))
+	await _evidence_wait(1.2)
+	await _evidence_shot("44_after_hover_only", "hovering Outpost while not placing: the building tooltip alone (reference)")
+	begin_placement(Defs.BUILDING_OUTPOST)
+	_evidence_hover_control(outpost_button, Vector2(-2, 0))
+	await _evidence_wait(1.4)
+	_evidence_hover_control(outpost_button, Vector2(1, 1))
+	await _evidence_wait(1.2)
+	await _evidence_shot("44_after", "Outpost placement while hovering its button: only the placement hint, tooltip suppressed")
+	cancel_placement()
+	_evidence_hover_point(Vector2(640, 300))
+	simulation.day_count = maxi(1, int(simulation.day_count))
+	simulation.phase_time = float(simulation.DAY_LENGTH_SECONDS) - 0.05
+	await _evidence_wait(3.0)
+	if int(simulation.living_hostile_count()) == 0:
+		for index in 3:
+			simulation._spawn_enemy(simulation.town_hall_position + Vector2i(9, 7 + index), 30, 1, 0.0, 0, simulation.ENEMY_RAIDER)
+	simulation.central_inventory[Defs.RESOURCE_PLANKS] = 8
+	simulation.central_inventory[Defs.RESOURCE_STONE] = 10
+	await _evidence_wait(0.5)
+	begin_placement(Defs.BUILDING_BAKERY)
+	_evidence_hover_point(Vector2(60, 200))
+	await _evidence_wait(1.0)
+	_evidence_hover_point(Vector2(62, 202))
+	await _evidence_wait(0.8)
+	await _evidence_shot("71_after_stale_invalid", "night raid, Bakery placement over an invalid tile: INVALID hint (state before the unaffordable click)")
+	var barracks_button := _evidence_strip_button(Defs.BUILDING_BARRACKS)
+	_evidence_hover_control(barracks_button)
+	simulation.central_inventory[Defs.RESOURCE_PLANKS] = 8
+	begin_placement(Defs.BUILDING_BARRACKS)
+	await _evidence_wait(0.7)
+	for attempt in 30:
+		if int(Time.get_ticks_msec() / 1000.0 * 4.0) % 2 == 0:
+			break
+		await get_tree().process_frame
+	await _evidence_shot("71_after", "night raid, unaffordable Barracks click: one toast, INVALID hint gone, dimmed buttons, red cost, Planks chip highlighted, RAID badge")
+	_evidence_log("done")
+	if audio_director != null:
+		audio_director.finish_recording()
+	get_tree().quit(0)
+
+
+func _evidence_wait(seconds: float) -> void:
+	await get_tree().create_timer(seconds).timeout
+
+
+func _evidence_strip_button(building_type: String) -> Control:
+	var index := build_strip_types.find(building_type)
+	if index < 0 or index >= build_strip_buttons.size():
+		return null
+	return build_strip_buttons[index]
+
+
+func _evidence_hover_control(control: Control, nudge := Vector2.ZERO) -> void:
+	if control == null:
+		_evidence_log("hover target missing")
+		return
+	_evidence_hover_point(control.get_global_rect().get_center() + nudge)
+
+
+func _evidence_hover_point(point: Vector2) -> void:
+	var motion := InputEventMouseMotion.new()
+	motion.position = point
+	motion.global_position = point
+	motion.relative = Vector2(1, 0)
+	Input.parse_input_event(motion)
+	Input.flush_buffered_events()
+
+
+func _evidence_shot(shot_name: String, description: String) -> void:
+	_update_ui()
+	_refresh_resource_chip_flash()
+	await RenderingServer.frame_post_draw
+	var image := get_viewport().get_texture().get_image()
+	var path := evidence_capture_dir.path_join(shot_name + ".png")
+	var err := ERR_UNAVAILABLE
+	if image != null and not image.is_empty():
+		err = image.save_png(path)
+	var planks_color := ""
+	if resource_chips.has("planks"):
+		planks_color = (resource_chips["planks"] as Label).get_theme_color("font_color").to_html(false)
+	_evidence_log("shot name=%s err=%d size=%s placing=%s placement_panel=%s toast=%s toast_body='%s' pressure='%s' hostiles=%d night=%s planks_chip=#%s what=%s" % [
+		shot_name, err, str(image.get_size()) if image != null else "-", placement_type,
+		str(placement_panel.visible if placement_panel != null else false),
+		str(alert_panel.visible if alert_panel != null else false), toast_body.text if toast_body != null else "",
+		pressure_meter.display_text() if pressure_meter != null and pressure_meter.has_method("display_text") else "",
+		int(simulation_host.simulation.living_hostile_count()), str(simulation_host.simulation.is_night), planks_color, description
+	])
+
+
+func _evidence_log(line: String) -> void:
+	print("[%s] EVIDENCE_CAPTURE %s" % [Time.get_datetime_string_from_system(), line])
