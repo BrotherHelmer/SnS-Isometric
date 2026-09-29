@@ -45,6 +45,14 @@ func _ready() -> void:
 	box.add_child(map_image)
 
 
+## T-SNS-UI: compact framed variant for the bottom console.
+func apply_console_layout(inner: float, style: StyleBox) -> void:
+	custom_minimum_size = Vector2(inner + 12.0, inner + 28.0)
+	if map_image != null:
+		map_image.custom_minimum_size = Vector2(inner, inner)
+	add_theme_stylebox_override("panel", style)
+
+
 func bind(simulation_value, world_view_value, camera_rig_value) -> void:
 	simulation = simulation_value
 	world_view = world_view_value
