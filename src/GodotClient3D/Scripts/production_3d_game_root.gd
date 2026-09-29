@@ -4052,11 +4052,14 @@ func _run_evidence_capture() -> void:
 	simulation.central_inventory[Defs.RESOURCE_STONE] = 10
 	await _evidence_wait(0.5)
 	begin_placement(Defs.BUILDING_BAKERY)
-	_evidence_hover_point(Vector2(60, 200))
+	# Hover the Town Hall footprint so the stale placement hint reads INVALID
+	# (the 71 before showed INVALID + resource toast for one click).
+	_evidence_hover_point(Vector2(655, 330))
 	await _evidence_wait(1.0)
-	_evidence_hover_point(Vector2(62, 202))
+	_evidence_hover_point(Vector2(657, 332))
+	_update_placement_ghost(true)
 	await _evidence_wait(0.8)
-	await _evidence_shot("71_after_stale_invalid", "night raid, Bakery placement over an invalid tile: INVALID hint (state before the unaffordable click)")
+	await _evidence_shot("71_after_stale_invalid", "night raid, Bakery placement hovering the Town Hall: stale INVALID hint (state before the unaffordable click)")
 	var barracks_button := _evidence_strip_button(Defs.BUILDING_BARRACKS)
 	_evidence_hover_control(barracks_button)
 	simulation.central_inventory[Defs.RESOURCE_PLANKS] = 8
