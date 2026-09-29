@@ -269,6 +269,9 @@ func _ready() -> void:
 	evidence_capture_dir = String(launch.get("evidence_capture", ""))
 	if evidence_capture_dir != "":
 		call_deferred("_run_evidence_capture")
+	elif String(launch.get("evidence_ui", "")) != "":
+		evidence_capture_dir = String(launch.get("evidence_ui", ""))
+		call_deferred("_run_ui_evidence_capture")
 	if debug_audio_cycle_active or debug_ui_scene != "":
 		print("[%s] DEBUG_LAUNCH audio_cycle=%s ui_scene=%s version=%s" % [Time.get_datetime_string_from_system(), str(debug_audio_cycle_active), debug_ui_scene, String(ProjectSettings.get_setting("application/config/version", ""))])
 
@@ -3176,7 +3179,7 @@ func _ghost_material(color: Color) -> StandardMaterial3D:
 
 
 func _parse_launch_options() -> Dictionary:
-	var options := {"seed": DEFAULT_SEED, "load": false, "fixture": "", "quality": "recommended", "autostart": false, "debug_audio_cycle": false, "debug_ui_scene": "", "debug_quit": false, "evidence_capture": ""}
+	var options := {"seed": DEFAULT_SEED, "load": false, "fixture": "", "quality": "recommended", "autostart": false, "debug_audio_cycle": false, "debug_ui_scene": "", "debug_quit": false, "evidence_capture": "", "evidence_ui": ""}
 	for argument in OS.get_cmdline_user_args():
 		if argument == "--load":
 			options["load"] = true
@@ -3198,6 +3201,8 @@ func _parse_launch_options() -> Dictionary:
 			options["debug_quit"] = true
 		elif argument.begins_with("--evidence-capture="):
 			options["evidence_capture"] = argument.trim_prefix("--evidence-capture=")
+		elif argument.begins_with("--evidence-ui="):
+			options["evidence_ui"] = argument.trim_prefix("--evidence-ui=")
 			options["autostart"] = true
 	return options
 
@@ -4180,6 +4185,55 @@ func _evidence_capture_t009(simulation) -> void:
 	await _evidence_shot("t009_long_invalid_hint", "House placement over the longest INVALID reason on screen: text wraps inside the hint panel, clear of the minimap")
 	evidence_mouse_override = Vector2(-1, -1)
 	cancel_placement()
+
+
+## T-SNS-UI: the same four scenes before and after the UI rework (Day 1 start,
+## a building selected, the build menu open, night raid pressure). In-engine
+## viewport PNGs only; the window is moved offscreen first.
+func _run_ui_evidence_capture() -> void:
+	var dir := evidence_capture_dir
+	DirAccess.make_dir_recursive_absolute(dir)
+	var simulation = simulation_host.simulation
+	var shown_at := get_window().position
+	if DisplayServer.get_name() != "headless":
+		get_window().position = Vector2i(-6000, -6000)
+	_evidence_log("ui_start dir=%s viewport=%s pos_initial=%s pos_now=%s" % [dir, str(get_viewport().get_visible_rect().size), str(shown_at), str(get_window().position)])
+	await _evidence_wait(6.0)
+	_evidence_hover_point(Vector2(640, 330))
+	await _evidence_wait(0.5)
+	await _evidence_shot("ui_01_day1_start", "Day 1 autostart, nothing selected")
+	var hall_id := 0
+	for building in simulation.buildings:
+		if String(building.get("type", "")) == Defs.BUILDING_TOWN_HALL:
+			hall_id = int(building.get("id", 0))
+	if hall_id > 0:
+		select_building(hall_id)
+	await _evidence_wait(0.6)
+	await _evidence_shot("ui_02_building_selected", "Town Hall selected: inspector / selection panel")
+	selected_building_id = 0
+	selected_entity_kind = ""
+	world_view.set_selection(0, 0)
+	_update_inspector()
+	_set_build_palette_visible(true)
+	var farm_button := _evidence_strip_button(Defs.BUILDING_FARM)
+	_evidence_hover_control(farm_button)
+	await _evidence_wait(1.4)
+	_evidence_hover_control(farm_button, Vector2(2, 1))
+	await _evidence_wait(1.2)
+	await _evidence_shot("ui_03_build_menu_open", "BUILD menu open, hovering the Farm plan (tooltip with cost)")
+	_set_build_palette_visible(false)
+	_evidence_hover_point(Vector2(640, 330))
+	simulation.phase_time = float(simulation.DAY_LENGTH_SECONDS) - 0.05
+	await _evidence_wait(3.0)
+	if int(simulation.living_hostile_count()) == 0:
+		for index in 3:
+			simulation._spawn_enemy(simulation.town_hall_position + Vector2i(9, 7 + index), 30, 1, 0.0, 0, simulation.ENEMY_RAIDER)
+	await _evidence_wait(2.5)
+	await _evidence_shot("ui_04_night_raid", "night 1 with raiders alive: pressure indicator, notifications")
+	_evidence_log("ui_done pos=%s" % str(get_window().position))
+	if audio_director != null:
+		audio_director.finish_recording()
+	get_tree().quit(0)
 
 
 func _evidence_wait(seconds: float) -> void:
