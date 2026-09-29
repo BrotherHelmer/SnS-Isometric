@@ -133,6 +133,9 @@ var debug_stage := 0
 ## --evidence-capture=<dir>: scripted in-engine PNG captures of the CoS UI scenes
 ## (viewport texture only; never the desktop). Inert without the flag.
 var evidence_capture_dir := ""
+## Evidence-only pointer for the placement ghost (synthetic events do not move
+## the OS cursor, which get_mouse_position() reports on Windows). x < 0 = unused.
+var evidence_mouse_override := Vector2(-1, -1)
 ## Playtest.31 UI: per-button type/container/cost label for affordability + tooltip gating.
 var build_strip_types: Array[String] = []
 var build_strip_containers: Array = []
@@ -1234,7 +1237,8 @@ func _update_placement_ghost(force := false) -> void:
 		return
 	if placement_preview_locked or road_dragging or wall_dragging:
 		return
-	var hit := _raycast_terrain(get_viewport().get_mouse_position())
+	var pointer := evidence_mouse_override if evidence_mouse_override.x >= 0.0 else get_viewport().get_mouse_position()
+	var hit := _raycast_terrain(pointer)
 	if hit.is_empty():
 		placement_ghost.visible = false
 		return
@@ -4050,20 +4054,25 @@ func _run_evidence_capture() -> void:
 			simulation._spawn_enemy(simulation.town_hall_position + Vector2i(9, 7 + index), 30, 1, 0.0, 0, simulation.ENEMY_RAIDER)
 	simulation.central_inventory[Defs.RESOURCE_PLANKS] = 8
 	simulation.central_inventory[Defs.RESOURCE_STONE] = 10
-	await _evidence_wait(0.5)
+	# Let the nightfall RAID notice expire on its own so the pre-click frame
+	# shows only the stale placement hint.
+	for attempt in 120:
+		if alert_panel == null or not alert_panel.visible:
+			break
+		await _evidence_wait(0.1)
 	begin_placement(Defs.BUILDING_BAKERY)
-	# Hover the Town Hall footprint so the stale placement hint reads INVALID
-	# (the 71 before showed INVALID + resource toast for one click).
-	_evidence_hover_point(Vector2(655, 330))
-	await _evidence_wait(1.0)
-	_evidence_hover_point(Vector2(657, 332))
+	# Point the ghost at the Town Hall footprint so the stale placement hint
+	# reads INVALID (the 71 before showed INVALID + resource toast for one click).
+	evidence_mouse_override = Vector2(655, 330)
+	_evidence_hover_point(evidence_mouse_override)
 	_update_placement_ghost(true)
 	await _evidence_wait(0.8)
-	await _evidence_shot("71_after_stale_invalid", "night raid, Bakery placement hovering the Town Hall: stale INVALID hint (state before the unaffordable click)")
+	await _evidence_shot("71_after_pre_click", "night raid, Bakery placement over the Town Hall: stale INVALID placement hint only (frame BEFORE the unaffordable click)")
 	var barracks_button := _evidence_strip_button(Defs.BUILDING_BARRACKS)
 	_evidence_hover_control(barracks_button)
 	simulation.central_inventory[Defs.RESOURCE_PLANKS] = 8
 	begin_placement(Defs.BUILDING_BARRACKS)
+	evidence_mouse_override = Vector2(-1, -1)
 	await _evidence_wait(0.7)
 	for attempt in 30:
 		if int(Time.get_ticks_msec() / 1000.0 * 4.0) % 2 == 0:
@@ -4115,9 +4124,10 @@ func _evidence_shot(shot_name: String, description: String) -> void:
 	var planks_color := ""
 	if resource_chips.has("planks"):
 		planks_color = (resource_chips["planks"] as Label).get_theme_color("font_color").to_html(false)
-	_evidence_log("shot name=%s err=%d size=%s placing=%s placement_panel=%s toast=%s toast_body='%s' pressure='%s' hostiles=%d night=%s planks_chip=#%s what=%s" % [
+	_evidence_log("shot name=%s err=%d size=%s placing=%s placement_panel=%s hint='%s' toast=%s toast_body='%s' pressure='%s' hostiles=%d night=%s planks_chip=#%s what=%s" % [
 		shot_name, err, str(image.get_size()) if image != null else "-", placement_type,
 		str(placement_panel.visible if placement_panel != null else false),
+		placement_label.text if placement_label != null and placement_panel != null and placement_panel.visible else "",
 		str(alert_panel.visible if alert_panel != null else false), toast_body.text if toast_body != null else "",
 		pressure_meter.display_text() if pressure_meter != null and pressure_meter.has_method("display_text") else "",
 		int(simulation_host.simulation.living_hostile_count()), str(simulation_host.simulation.is_night), planks_color, description
