@@ -36,7 +36,8 @@ const AUDIO_CUE_PATHS := {
 	"barracks_complete": "res://assets/settlement/audio/barracks_ready.wav",
 	"settler_spawn_worker": "res://assets/settlement/audio/settler_arrive_worker.wav",
 	"settler_spawn_soldier": "res://assets/settlement/audio/settler_arrive_soldier.wav",
-	"settler_spawn_generic": "res://assets/settlement/audio/settler_arrive_generic.wav"
+	"settler_spawn_generic": "res://assets/settlement/audio/settler_arrive_generic.wav",
+	"monster_kill_cheer": "res://assets/settlement/audio/monster_kill_cheer.wav"
 }
 
 const AUDIO_WORK_PATHS := [

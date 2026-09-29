@@ -123,6 +123,7 @@ AUDIO_CUE_PATHS = [
     "res://assets/settlement/audio/settler_arrive_worker.wav",
     "res://assets/settlement/audio/settler_arrive_soldier.wav",
     "res://assets/settlement/audio/settler_arrive_generic.wav",
+    "res://assets/settlement/audio/monster_kill_cheer.wav",
 ]
 
 AUDIO_WORK_PATHS = [

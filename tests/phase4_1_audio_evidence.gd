@@ -38,6 +38,7 @@ func _run() -> void:
 		simulation.enemies.clear()
 		simulation.day_count = 4
 		simulation._spawn_wave()
+		simulation._note_combat()
 		game._tick_audio(0.4)
 		_expect_state(game, "raid", failures)
 		_configure_ready_claim(simulation, simulation.rivalry, Tuning.PLAYER_REALM)
