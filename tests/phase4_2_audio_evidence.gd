@@ -41,6 +41,8 @@ func _run() -> void:
 		simulation.enemies.clear()
 		simulation.day_count = 2
 		simulation._spawn_wave()
+		# Playtest.31: the combat bed follows real engagement, not mere enemy presence.
+		simulation._note_combat()
 		game._tick_audio(0.4)
 		_expect_state(game, "raid", failures)
 		_expect_stem(game, "raid", failures)

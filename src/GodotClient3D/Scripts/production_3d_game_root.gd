@@ -124,6 +124,23 @@ var debug_info_button: Button
 var current_build_category := "ESSENTIALS"
 var build_strip: PanelContainer
 var build_strip_buttons: Array = []
+## Playtest.31 debug harness (command-line only: --debug-audio-cycle / --debug-ui-scene=).
+var debug_audio_cycle_active := false
+var debug_ui_scene := ""
+var debug_quit_after := false
+var debug_clock := 0.0
+var debug_stage := 0
+## Playtest.31 UI: per-button type/container/cost label for affordability + tooltip gating.
+var build_strip_types: Array[String] = []
+var build_strip_containers: Array = []
+var build_strip_cost_labels: Array = []
+var build_strip_tooltips: Array[String] = []
+var resource_chip_flash_until: Dictionary = {}
+var resource_chip_base_colors: Dictionary = {}
+const CHIP_KEYS_BY_RESOURCE := {
+	"wood": "wood", "planks": "planks", "stone": "stone", "wheat": "wheat", "bread": "bread", "wyrd": "wyrd"
+}
+const COLOR_UNAFFORDABLE := Color("#ff6b5a")
 var startup_overlay: Control
 var menu_backdrop: TextureRect
 var seed_edit: LineEdit
@@ -235,6 +252,11 @@ func _ready() -> void:
 		_show_start_menu()
 	if "--verify-release" in OS.get_cmdline_user_args():
 		call_deferred("_run_release_check")
+	debug_audio_cycle_active = bool(launch.get("debug_audio_cycle", false))
+	debug_ui_scene = String(launch.get("debug_ui_scene", ""))
+	debug_quit_after = bool(launch.get("debug_quit", false))
+	if debug_audio_cycle_active or debug_ui_scene != "":
+		print("[%s] DEBUG_LAUNCH audio_cycle=%s ui_scene=%s version=%s" % [Time.get_datetime_string_from_system(), str(debug_audio_cycle_active), debug_ui_scene, String(ProjectSettings.get_setting("application/config/version", ""))])
 
 
 func _run_release_check() -> void:
@@ -254,6 +276,8 @@ func _process(delta: float) -> void:
 		_update_day_night_lighting()
 	_process_audio_events()
 	_tick_audio(delta)
+	if debug_audio_cycle_active or debug_ui_scene != "":
+		_tick_debug_harness(delta)
 	_tick_toasts(delta)
 	_tick_shard_glance()
 	_tick_edge_pan(delta)
@@ -419,19 +443,19 @@ func load_game() -> bool:
 func begin_placement(building_type: String) -> void:
 	# Check affordability first
 	if simulation_host.simulation != null and building_type != Defs.TOOL_CLEAR_AREA:
-		var cost := Defs.building_cost(building_type)
-		var resources: Dictionary = simulation_host.simulation.get_resources()
-		var can_afford := true
-		var missing: Array[String] = []
-		for resource_type in cost:
-			var needed: int = cost[resource_type]
-			var available: int = resources.get(resource_type, 0)
-			if available < needed:
-				can_afford = false
-				missing.append("%s (%d/%d)" % [String(resource_type).capitalize(), available, needed])
-		if not can_afford:
+		var missing_info: Array = _missing_resources(building_type)
+		if not missing_info.is_empty():
+			var missing: Array[String] = []
+			for entry_value in missing_info:
+				var entry: Dictionary = entry_value
+				missing.append("%s (%d/%d)" % [String(entry["resource"]).capitalize(), int(entry["have"]), int(entry["need"])])
+				_flash_resource_chip(String(entry["resource"]), 2.6)
+			# One action -> one message: drop any stale placement (and its INVALID
+			# footprint hint) so only the resource toast explains the refusal.
+			if placement_type != "":
+				cancel_placement()
 			audio_director.play_ui_click()
-			_show_toast("Insufficient Resources", "Need: %s" % ", ".join(missing), "warning", 3.5)
+			_show_toast("Insufficient Resources", "%s needs %s" % [Defs.building_name(building_type), ", ".join(missing)], "warning", 3.5)
 			return
 	
 	# Cancel any existing placement or dragging state first
@@ -972,7 +996,7 @@ func _create_ui() -> void:
 	build_strip.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	build_strip.offset_left = 16.0
 	build_strip.offset_right = -16.0
-	build_strip.offset_top = -76.0
+	build_strip.offset_top = -88.0
 	build_strip.offset_bottom = -12.0
 	build_strip.add_theme_stylebox_override("panel", _panel_style(Color(0.050, 0.048, 0.040, 0.92), Color("#6b5d3e")))
 	root.add_child(build_strip)
@@ -1011,6 +1035,7 @@ func _create_ui() -> void:
 		var purpose := String(BUILD_PURPOSES.get(building_type, "Settlement building."))
 		var cost := Defs.formatted_cost(building_type)
 		btn.tooltip_text = "%s\n\n%s\nCost: %s" % [Defs.building_name(building_type), purpose, cost]
+		btn.mouse_entered.connect(_on_strip_button_hovered.bind(String(building_type)))
 		btn_container.add_child(btn)
 		
 		var btn_vbox := VBoxContainer.new()
@@ -1031,8 +1056,20 @@ func _create_ui() -> void:
 		label.add_theme_font_size_override("font_size", 9)
 		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		btn_vbox.add_child(label)
+		var cost_label := Label.new()
+		cost_label.name = "Cost"
+		cost_label.text = _compact_cost(String(building_type))
+		cost_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		cost_label.add_theme_font_size_override("font_size", 9)
+		cost_label.add_theme_color_override("font_color", Color("#e8dcb4"))
+		cost_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		btn_vbox.add_child(cost_label)
 		
 		build_strip_buttons.append(btn)
+		build_strip_types.append(String(building_type))
+		build_strip_containers.append(btn_container)
+		build_strip_cost_labels.append(cost_label)
+		build_strip_tooltips.append(btn.tooltip_text)
 
 	inspector_panel = PanelContainer.new()
 	inspector_panel.name = "Inspector"
@@ -1078,8 +1115,8 @@ func _create_ui() -> void:
 	placement_panel.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	placement_panel.offset_left = -235.0
 	placement_panel.offset_right = 235.0
-	placement_panel.offset_top = -150.0
-	placement_panel.offset_bottom = -88.0
+	placement_panel.offset_top = -164.0
+	placement_panel.offset_bottom = -100.0
 	placement_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.045, 0.055, 0.052, 0.90), Color("#6e8e72")))
 	root.add_child(placement_panel)
 	var placement_vbox := VBoxContainer.new()
@@ -1107,10 +1144,12 @@ func _create_ui() -> void:
 	minimap.anchor_right = 1.0
 	minimap.anchor_top = 1.0
 	minimap.anchor_bottom = 1.0
+	# Playtest.31: minimap sits above the build strip instead of covering its
+	# right end (the Clear tool was hidden under it).
 	minimap.offset_left = -214.0
-	minimap.offset_top = -248.0
-	minimap.offset_right = -12.0
-	minimap.offset_bottom = -12.0
+	minimap.offset_top = -334.0
+	minimap.offset_right = -16.0
+	minimap.offset_bottom = -98.0
 	minimap.visible = false
 	minimap.focus_requested.connect(_focus_from_minimap)
 	root.add_child(minimap)
@@ -1661,7 +1700,83 @@ func _update_ui() -> void:
 			label = "FRONTIER  ·  " + label
 		button.text = label
 		button.tooltip_text = _building_tooltip(String(building_type)) + ("\n\nUnavailable: %s" % reason if reason != "" else "")
+	_refresh_build_strip_state()
+	_refresh_resource_chip_flash()
 	_update_inspector()
+
+
+## Playtest.31 UI: affordability on the C&C strip (cost on button, dimmed when
+## unaffordable) and building tooltips suppressed while the placement hint is up
+## so only one panel is visible at a time.
+func _refresh_build_strip_state() -> void:
+	var placing := placement_type != ""
+	for index in build_strip_buttons.size():
+		var building_type: String = build_strip_types[index] if index < build_strip_types.size() else ""
+		var btn: Button = build_strip_buttons[index]
+		var affordable := building_type == Defs.TOOL_CLEAR_AREA or _missing_resources(building_type).is_empty()
+		if index < build_strip_containers.size():
+			(build_strip_containers[index] as Control).modulate = Color(1, 1, 1, 1) if affordable else Color(0.62, 0.62, 0.62, 0.55)
+		if index < build_strip_cost_labels.size():
+			(build_strip_cost_labels[index] as Label).add_theme_color_override("font_color", Color("#e8dcb4") if affordable else COLOR_UNAFFORDABLE)
+		var base_tip: String = build_strip_tooltips[index] if index < build_strip_tooltips.size() else btn.tooltip_text
+		btn.tooltip_text = "" if placing else (base_tip if affordable else base_tip + "\n\nCannot afford yet.")
+
+
+func _missing_resources(building_type: String) -> Array:
+	var missing: Array = []
+	if simulation_host == null or simulation_host.simulation == null or building_type == Defs.TOOL_CLEAR_AREA:
+		return missing
+	var resources: Dictionary = simulation_host.simulation.get_resources()
+	var cost: Dictionary = Defs.building_cost(building_type)
+	for resource_type in cost:
+		var needed := int(cost[resource_type])
+		var available := int(resources.get(resource_type, 0))
+		if available < needed:
+			missing.append({"resource": String(resource_type), "have": available, "need": needed})
+	return missing
+
+
+func _compact_cost(building_type: String) -> String:
+	if building_type == Defs.TOOL_CLEAR_AREA:
+		return "Free"
+	var cost: Dictionary = Defs.building_cost(building_type)
+	if cost.is_empty():
+		return "Free"
+	var parts: Array[String] = []
+	for resource_type in Defs.RESOURCE_TYPES:
+		if cost.has(resource_type):
+			parts.append("%d%s" % [int(cost[resource_type]), Defs.resource_name(resource_type).substr(0, 2)])
+	return " ".join(parts)
+
+
+func _on_strip_button_hovered(building_type: String) -> void:
+	for entry_value in _missing_resources(building_type):
+		_flash_resource_chip(String(Dictionary(entry_value)["resource"]), 1.4)
+	_refresh_resource_chip_flash()
+
+
+func _flash_resource_chip(resource_type: String, seconds: float) -> void:
+	var key := String(CHIP_KEYS_BY_RESOURCE.get(resource_type, ""))
+	if key == "":
+		return
+	resource_chip_flash_until[key] = maxf(float(resource_chip_flash_until.get(key, 0.0)), Time.get_ticks_msec() / 1000.0 + seconds)
+
+
+func _refresh_resource_chip_flash() -> void:
+	var now := Time.get_ticks_msec() / 1000.0
+	for key in resource_chips:
+		var value_label: Label = resource_chips[key]
+		var flashing := now < float(resource_chip_flash_until.get(key, 0.0))
+		if flashing:
+			if not resource_chip_base_colors.has(key):
+				resource_chip_base_colors[key] = value_label.get_theme_color("font_color")
+			var blink := int(now * 4.0) % 2 == 0
+			value_label.add_theme_color_override("font_color", COLOR_UNAFFORDABLE if blink else Color("#ffd2c8"))
+		elif resource_chip_flash_until.has(key):
+			if resource_chip_base_colors.has(key):
+				value_label.add_theme_color_override("font_color", Color(resource_chip_base_colors[key]))
+				resource_chip_base_colors.erase(key)
+			resource_chip_flash_until.erase(key)
 
 
 func _update_loop_hud() -> void:
@@ -1696,9 +1811,14 @@ func _update_loop_hud() -> void:
 	#	_glance_at_shard()
 	last_objective_id = objective_id
 	var pressure: Dictionary = wyrdfall.get("pressure", {})
+	var hostiles := 0
+	if simulation_host.simulation.has_method("living_hostile_count"):
+		hostiles = int(simulation_host.simulation.living_hostile_count())
 	if pressure_meter != null and pressure_meter.has_method("set_pressure"):
 		pressure_meter.visible = play_has_begun
 		pressure_meter.set_pressure(pressure)
+		if pressure_meter.has_method("set_threat"):
+			pressure_meter.set_threat(bool(simulation_host.simulation.is_night), hostiles)
 		pressure_meter.tooltip_text = String(wyrdfall.get("pressure_tooltip", "Wyrd Pressure"))
 	if pressure_label != null:
 		pressure_label.text = String(pressure.get("band", "QUIET"))
@@ -1710,7 +1830,7 @@ func _update_loop_hud() -> void:
 		if binding_active:
 			parts.append("Reckoning")
 		elif simulation_host.simulation.is_night:
-			parts.append("RAID")
+			parts.append("RAID · %d hostiles" % hostiles if hostiles > 0 else "NIGHT · no hostiles in sight")
 		else:
 			var remaining: float = float(simulation_host.simulation.DAY_LENGTH_SECONDS) - float(simulation_host.simulation.phase_time)
 			if remaining <= 90.0:
@@ -3026,7 +3146,7 @@ func _ghost_material(color: Color) -> StandardMaterial3D:
 
 
 func _parse_launch_options() -> Dictionary:
-	var options := {"seed": DEFAULT_SEED, "load": false, "fixture": "", "quality": "recommended", "autostart": false}
+	var options := {"seed": DEFAULT_SEED, "load": false, "fixture": "", "quality": "recommended", "autostart": false, "debug_audio_cycle": false, "debug_ui_scene": "", "debug_quit": false}
 	for argument in OS.get_cmdline_user_args():
 		if argument == "--load":
 			options["load"] = true
@@ -3038,6 +3158,14 @@ func _parse_launch_options() -> Dictionary:
 			options["quality"] = argument.trim_prefix("--quality=")
 		elif argument == "--autostart":
 			options["autostart"] = true
+		elif argument == "--debug-audio-cycle":
+			options["debug_audio_cycle"] = true
+			options["autostart"] = true
+		elif argument.begins_with("--debug-ui-scene="):
+			options["debug_ui_scene"] = argument.trim_prefix("--debug-ui-scene=")
+			options["autostart"] = true
+		elif argument == "--debug-quit-after":
+			options["debug_quit"] = true
 	return options
 
 
@@ -3748,3 +3876,94 @@ func preview_placement_at(building_type: String, tile: Vector2i) -> void:
 	ghost_access.position.z = float(footprint.y) * ScaleProfile.LOGICAL_CELL_METRES * 0.5 + 0.72
 	placement_ghost.visible = true
 	placement_label.text = "%s · %s footprint and access preview" % ["VALID" if valid else "INVALID", Defs.building_name(building_type)]
+
+
+## Scripted, deterministic walk through day -> dusk -> night -> night_combat ->
+## night -> day so packaged builds can prove the music state machine and the
+## monster-kill cheer from logs alone. Never runs without the launch flag.
+func _tick_debug_harness(delta: float) -> void:
+	var simulation = simulation_host.simulation
+	if simulation == null:
+		return
+	debug_clock += delta
+	if debug_ui_scene != "":
+		_tick_debug_ui_scene(simulation)
+		return
+	match debug_stage:
+		0:
+			if debug_clock >= 4.0:
+				_debug_log("stage=dusk")
+				simulation.phase_time = float(simulation.DAY_LENGTH_SECONDS) - 50.0
+				debug_stage = 1
+		1:
+			if debug_clock >= 9.0:
+				_debug_log("stage=nightfall")
+				simulation.day_count = maxi(2, int(simulation.day_count))
+				simulation.phase_time = float(simulation.DAY_LENGTH_SECONDS) - 0.05
+				debug_stage = 2
+		2:
+			if debug_clock >= 17.0:
+				var guard: Dictionary = simulation._create_patrol_worker(0, "debug_cycle")
+				var guard_tile: Vector2i = simulation.town_hall_position + Vector2i(3, 0)
+				guard["position"] = guard_tile
+				guard["path"] = []
+				simulation.workers.append(guard)
+				simulation._reveal_radius(guard_tile, 6)
+				for index in 3:
+					simulation._spawn_enemy(guard_tile + Vector2i(1, 0), simulation.GUARD_DAMAGE, 1, 0.0, 0, simulation.ENEMY_RAIDER)
+				_debug_log("stage=engage guard=%d at=%s hostiles_spawned=3 hp_each=%d" % [int(guard.get("id", 0)), str(guard_tile), int(simulation.GUARD_DAMAGE)])
+				debug_stage = 3
+		3:
+			if debug_clock >= 40.0:
+				_debug_log("stage=dawn kills=%d cheers=%d throttled=%d" % [int(simulation.player_monster_kills), int(audio_director.cheers_played), int(audio_director.cheers_throttled)])
+				simulation.phase_time = float(simulation.NIGHT_LENGTH_SECONDS) - 0.05
+				debug_stage = 4
+		4:
+			if debug_clock >= 48.0:
+				var snapshot: Dictionary = audio_director.evidence_snapshot()
+				_debug_log("DONE transitions=%s stems=%s buses=%s kills=%d cheers=%d" % [
+					",".join(snapshot.get("transitions", [])), ",".join(snapshot.get("stems", [])),
+					JSON.stringify(snapshot.get("buses", {})), int(simulation.player_monster_kills), int(snapshot.get("cheers_played", 0))
+				])
+				debug_stage = 5
+				debug_audio_cycle_active = false
+				if debug_quit_after:
+					get_tree().quit(0)
+
+
+func _tick_debug_ui_scene(simulation) -> void:
+	match debug_ui_scene:
+		"outpost_placing":
+			if debug_stage == 0 and debug_clock >= 3.0:
+				begin_placement(Defs.BUILDING_OUTPOST)
+				_debug_log("ui_scene=outpost_placing placement=%s strip_tooltips_suppressed=%s" % [placement_type, str(_strip_tooltips_suppressed())])
+				debug_stage = 1
+		"night_unafford":
+			if debug_stage == 0 and debug_clock >= 3.0:
+				simulation.day_count = maxi(1, int(simulation.day_count))
+				simulation.phase_time = float(simulation.DAY_LENGTH_SECONDS) - 0.05
+				debug_stage = 1
+			elif debug_stage == 1 and debug_clock >= 6.0:
+				simulation.central_inventory[Defs.RESOURCE_PLANKS] = 8
+				begin_placement(Defs.BUILDING_BAKERY)
+				_debug_log("ui_scene=night_unafford first placement=%s panel=%s" % [placement_type, str(placement_panel.visible)])
+				debug_stage = 2
+			elif debug_stage == 2 and debug_clock >= 7.0:
+				simulation.central_inventory[Defs.RESOURCE_PLANKS] = 8
+				begin_placement(Defs.BUILDING_BARRACKS)
+				_debug_log("ui_scene=night_unafford barracks_click placement=%s placement_panel_visible=%s toast_visible=%s toast=%s" % [placement_type, str(placement_panel.visible), str(alert_panel.visible if alert_panel != null else false), toast_body.text if toast_body != null else ""])
+				debug_stage = 3
+		_:
+			pass
+
+
+func _strip_tooltips_suppressed() -> bool:
+	_refresh_build_strip_state()
+	for btn in build_strip_buttons:
+		if String((btn as Button).tooltip_text) != "":
+			return false
+	return true
+
+
+func _debug_log(line: String) -> void:
+	print("[%s] DEBUG_HARNESS t=%.2f %s" % [Time.get_datetime_string_from_system(), debug_clock, line])

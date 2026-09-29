@@ -113,6 +113,12 @@ var next_worker_id := 1
 var next_enemy_id := 1
 var tick_number := 0
 var elapsed_seconds := 0.0
+## Playtest.31: real engagement clock for adaptive music (not just "enemies exist").
+const COMBAT_LINGER_SECONDS := 6.0
+const COMBAT_TOWN_RADIUS := 10.0
+var last_combat_elapsed := -1000.0
+var player_monster_kills := 0
+var last_player_kill: Dictionary = {}
 var phase_time := 0.0
 var pop_growth_timer := 0.0
 var hunger_penalty_remaining := 0.0
@@ -219,6 +225,9 @@ func start_new_run(width: int = MAP_WIDTH, height: int = MAP_HEIGHT, seed_value:
 	enemies.clear()
 	projectiles.clear()
 	audio_events.clear()
+	last_combat_elapsed = -1000.0
+	player_monster_kills = 0
+	last_player_kill = {}
 	path_grid = null
 	hostile_path_grid = null
 	path_grid_dirty = true
@@ -5245,6 +5254,53 @@ func _enemy_camp_at_tile(tile: Vector2i) -> bool:
 	return false
 
 
+func _note_combat() -> void:
+	last_combat_elapsed = elapsed_seconds
+
+
+## Credits a monster kill to a player unit exactly once (soldier strike or
+## soldier-staffed tower bolt) and raises the "monster_kill" audio cue.
+func _credit_player_kill(enemy: Dictionary, source: String, unit_id: int) -> void:
+	if int(enemy.get("hp", 0)) > 0 or bool(enemy.get("kill_credited", false)):
+		return
+	enemy["kill_credited"] = true
+	player_monster_kills += 1
+	last_player_kill = {
+		"enemy_id": int(enemy.get("id", 0)),
+		"enemy_type": String(enemy.get("enemy_type", ENEMY_RAIDER)),
+		"source": source,
+		"unit_id": unit_id,
+		"elapsed": elapsed_seconds,
+		"kills": player_monster_kills
+	}
+	_record_event("monster_killed_by_player", "A defender felled a monster.", last_player_kill.duplicate())
+	_emit_audio("monster_kill")
+
+
+func living_hostile_count() -> int:
+	var count := 0
+	for enemy in enemies:
+		if int(enemy.get("hp", 0)) > 0 and not bool(enemy.get("retreating", false)):
+			count += 1
+	return count
+
+
+## True while defenders and monsters are actually engaged (recent strike, tower
+## fire or hit) or a living hostile is inside the settlement radius. Used by the
+## audio director so the night bed changes when combat starts, not at nightfall.
+func is_combat_active() -> bool:
+	if living_hostile_count() <= 0:
+		return false
+	if elapsed_seconds - last_combat_elapsed <= COMBAT_LINGER_SECONDS:
+		return true
+	for enemy in enemies:
+		if int(enemy.get("hp", 0)) <= 0 or bool(enemy.get("retreating", false)):
+			continue
+		if _tile_distance(town_hall_position, enemy["position"]) <= COMBAT_TOWN_RADIUS:
+			return true
+	return false
+
+
 func _emit_audio(event_name: String) -> void:
 	if not audio_events.has(event_name):
 		audio_events.append(event_name)
@@ -5657,6 +5713,7 @@ func _update_enemy(enemy: Dictionary, delta: float) -> void:
 					_damage_worker(target_id, int(enemy["damage"]), enemy["position"])
 				else:
 					_damage_building(target, int(enemy["damage"]))
+				_note_combat()
 				_emit_audio("attack")
 			return
 		enemy["attack_timer"] = float(enemy.get("attack_timer", 0.0)) - delta
@@ -6065,6 +6122,7 @@ func _update_towers(delta: float) -> void:
 			"enemy_hp_before_impact": int(enemy["hp"]),
 			"distance": _tile_distance(tower_center, enemy["position"])
 		})
+		_note_combat()
 		_emit_audio("tower")
 
 
@@ -6105,6 +6163,8 @@ func _update_patrol_combat(delta: float) -> void:
 					target_enemy["hp"] = int(target_enemy.get("hp", 0)) - GUARD_DAMAGE
 					target_enemy["hit_until"] = elapsed_seconds + 0.26
 					target_enemy["hit_direction"] = _vector_to_data(guard["position"])
+					_note_combat()
+					_credit_player_kill(target_enemy, "soldier", int(guard.get("id", 0)))
 					_emit_audio("attack")
 					_record_event("patrol_attack", "A patrol soldier engaged a raider.", {
 						"soldier_id": int(guard.get("id", 0)),
@@ -6179,6 +6239,8 @@ func _update_projectiles(delta: float) -> void:
 					target["hp"] = int(target.get("hp", 0)) - int(projectiles[i].get("damage", 0))
 					target["hit_until"] = elapsed_seconds + 0.26
 					target["hit_direction"] = projectiles[i].get("from", _vector_to_data(Vector2i.ZERO))
+					_note_combat()
+					_credit_player_kill(target, "tower", 0)
 				projectiles[i]["damage_applied"] = true
 			projectiles.remove_at(i)
 

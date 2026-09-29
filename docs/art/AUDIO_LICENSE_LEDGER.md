@@ -180,6 +180,14 @@ No attribution required by license. Optional credit:
 - **URL**: https://bigsoundbank.com/flock-sheep-and-cows-s3220.html
 - **Processing**: Highpass 120Hz + lowpass 3.5kHz for distant bed; mono 44.1kHz s16; peak -6 dBFS
 
+#### monster_kill_cheer.wav (playtest.31)
+- **Purpose**: Short cheer when a soldier (patrol strike) or soldier-staffed Watchtower bolt kills a monster; throttled to one cheer per 0.8 s
+- **Character**: Single human voice "cheers"/victory shout (≈1.75s)
+- **Source**: OpenGameArt "Cheers" by **Nocturnal_Vanguard** (AuraVoice), file `cheers_1.ogg` (sha256 `10d9f614307127a8c2b2b129e9a291b6071c8fc91f1fed4916f78ad47c956b25`)
+- **License**: CC0 (public domain dedication; "use however you like, no credit required")
+- **URL**: https://opengameart.org/content/cheers-0
+- **Processing**: Trim 0–1.75 s, mono 44.1 kHz PCM16, 10 ms fade-in, 0.25 s fade-out; peak -4.2 dBFS (no gain change)
+
 #### settler_arrive_worker.wav
 - **Purpose**: Civilian/worker settler spawn
 - **Character**: Soft friendly arrival (footstep + cloth/leather, ≈0.49s)

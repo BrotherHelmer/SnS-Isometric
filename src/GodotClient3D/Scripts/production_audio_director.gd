@@ -40,8 +40,16 @@ const CUE_PATHS := {
 	"settler_spawn_generic": "res://assets/settlement/audio/settler_arrive_generic.wav",
 	"combat_win": "res://assets/settlement/audio/presentation/victory_motif.wav",
 	"soldier_death": "res://assets/settlement/audio/presentation/defeat_motif.wav",
-	"delivery": "res://assets/settlement/audio/delivery.wav"
+	"delivery": "res://assets/settlement/audio/delivery.wav",
+	"monster_kill_cheer": "res://assets/settlement/audio/monster_kill_cheer.wav"
 }
+
+## Playtest.31: log-facing names for music states ("raid" is the night combat bed).
+const STATE_LABELS := {
+	"raid": "night_combat"
+}
+const CHEER_MIN_INTERVAL_SECONDS := 0.8
+const AUDIBLE_STEM_DB := -40.0
 
 var settings: Dictionary = {}
 var current_state := "day"
@@ -56,6 +64,13 @@ var camera: Camera3D
 var last_listen_log: Array[String] = []
 var scream_cooldown := 4.0
 var paused := false
+var audio_clock := 0.0
+var last_cheer_clock := -1000.0
+var cheers_played := 0
+var cheers_throttled := 0
+var audible_stems: Dictionary = {}
+var transition_log: Array[String] = []
+var verbose_log := true
 
 
 func _exit_tree() -> void:
@@ -118,6 +133,7 @@ func apply_settings(next: Dictionary) -> void:
 
 func tick(simulation, delta: float, menu_visible: bool, result_visible: bool, paused_value := false) -> void:
 	paused = paused_value
+	audio_clock += delta
 	var next_state := _resolve_state(simulation, menu_visible, result_visible)
 	if next_state != current_state:
 		_on_state_entered(next_state, current_state, simulation)
@@ -130,6 +146,7 @@ func tick(simulation, delta: float, menu_visible: bool, result_visible: bool, pa
 		player.volume_db = move_toward(player.volume_db, target, delta * 28.0)
 		if not player.playing and player.stream != null:
 			player.play()
+	_log_stem_audibility()
 	_tick_night_screams(delta)
 	if simulation != null:
 		last_night = bool(simulation.is_night)
@@ -145,6 +162,26 @@ func play_cue(cue_name: String) -> void:
 		last_listen_log.append("%s cue %s" % [Time.get_time_string_from_system(), cue_name])
 		if last_listen_log.size() > 24:
 			last_listen_log.pop_front()
+
+
+## Short cheer when a soldier or soldier-staffed tower fells a monster. Throttled
+## so a multi-kill in one volley produces one cheer, not a spam burst.
+func play_monster_kill_cheer() -> bool:
+	if audio_clock - last_cheer_clock < CHEER_MIN_INTERVAL_SECONDS:
+		cheers_throttled += 1
+		_audio_log("AUDIO_CHEER_THROTTLED t=%.2f since_last=%.2f throttled=%d" % [audio_clock, audio_clock - last_cheer_clock, cheers_throttled])
+		return false
+	last_cheer_clock = audio_clock
+	cheers_played += 1
+	var path := String(CUE_PATHS.get("monster_kill_cheer", ""))
+	var cue: AudioStreamPlayer = cue_players.get("monster_kill_cheer", null)
+	var loaded := cue != null and cue.stream != null
+	play_cue("monster_kill_cheer")
+	_audio_log("AUDIO_CHEER t=%.2f path=%s loaded=%s bus=%s sfx_linear=%.3f played=%d" % [
+		audio_clock, path, str(loaded), String(cue.bus) if cue != null else "-",
+		db_to_linear(AudioServer.get_bus_volume_db(_bus_index("SFX"))), cheers_played
+	])
+	return true
 
 
 func play_ui_click() -> void:
@@ -210,6 +247,8 @@ func handle_sim_event(event_name: String) -> void:
 			play_cue("soldier_death")
 		"delivery":
 			play_cue("delivery")
+		"monster_kill":
+			play_monster_kill_cheer()
 		_:
 			pass
 
@@ -227,8 +266,33 @@ func evidence_snapshot() -> Dictionary:
 			"music": db_to_linear(AudioServer.get_bus_volume_db(_bus_index("Music"))),
 			"sfx": db_to_linear(AudioServer.get_bus_volume_db(_bus_index("SFX")))
 		},
-		"log": last_listen_log.duplicate()
+		"log": last_listen_log.duplicate(),
+		"transitions": transition_log.duplicate(),
+		"cheers_played": cheers_played,
+		"cheers_throttled": cheers_throttled
 	}
+
+
+static func state_label(state_name: String) -> String:
+	return String(STATE_LABELS.get(state_name, state_name))
+
+
+func _audio_log(line: String) -> void:
+	if verbose_log:
+		print("[%s] %s" % [Time.get_datetime_string_from_system(), line])
+
+
+func _log_stem_audibility() -> void:
+	for stem_name in stem_players:
+		var player: AudioStreamPlayer = stem_players[stem_name]
+		var audible := player.volume_db > AUDIBLE_STEM_DB and player.playing
+		if bool(audible_stems.get(stem_name, false)) == audible:
+			continue
+		audible_stems[stem_name] = audible
+		_audio_log("AUDIO_STEM %s name=%s path=%s volume_db=%.1f target_db=%.1f bus=%s state=%s" % [
+			"ON" if audible else "OFF", stem_name, String(STEM_PATHS.get(stem_name, "")),
+			player.volume_db, float(stem_targets.get(stem_name, -80.0)), player.bus, state_label(current_state)
+		])
 
 
 func _resolve_state(simulation, menu_visible: bool, result_visible: bool) -> String:
@@ -240,7 +304,7 @@ func _resolve_state(simulation, menu_visible: bool, result_visible: bool) -> Str
 		return "day"
 	if bool(simulation.reckoning_active):
 		return "reckoning"
-	if bool(simulation.is_night) and simulation.enemies.size() > 0:
+	if bool(simulation.is_night) and _combat_active(simulation):
 		return "raid"
 	if bool(simulation.is_night):
 		return "night"
@@ -248,6 +312,26 @@ func _resolve_state(simulation, menu_visible: bool, result_visible: bool) -> Str
 	if remaining <= 60.0:
 		return "dusk"
 	return "day"
+
+
+## Root cause fix (playtest.31): the old test was "night and any enemy exists".
+## Waves spawn inside _start_night(), so "raid" began at the nightfall frame and
+## persisted all night; actual fighting never changed the mix. Now the combat bed
+## follows real engagement reported by the simulation.
+func _combat_active(simulation) -> bool:
+	if simulation == null:
+		return false
+	if simulation.has_method("is_combat_active"):
+		return bool(simulation.is_combat_active())
+	return simulation.enemies.size() > 0
+
+
+func _living_hostiles(simulation) -> int:
+	if simulation == null:
+		return 0
+	if simulation.has_method("living_hostile_count"):
+		return int(simulation.living_hostile_count())
+	return simulation.enemies.size()
 
 
 func _on_state_entered(next_state: String, previous: String, simulation) -> void:
@@ -260,7 +344,7 @@ func _on_state_entered(next_state: String, previous: String, simulation) -> void
 				play_cue("enemy")
 				scream_cooldown = 1.6
 		"night":
-			if previous == "raid":
+			if previous == "raid" and _living_hostiles(simulation) == 0:
 				play_cue("combat_win")
 			if previous in ["dusk", "day"]:
 				scream_cooldown = 3.2
@@ -274,6 +358,19 @@ func _on_state_entered(next_state: String, previous: String, simulation) -> void
 			if previous in ["night", "raid", "dusk"] and simulation != null and int(simulation.day_count) > 1:
 				play_cue("dawn")
 	last_listen_log.append("state %s -> %s" % [previous, next_state])
+	var line := "%s->%s" % [state_label(previous), state_label(next_state)]
+	transition_log.append(line)
+	if transition_log.size() > 48:
+		transition_log.pop_front()
+	_audio_log("AUDIO_MUSIC_STATE t=%.2f from=%s to=%s night=%s combat=%s hostiles=%d day=%d music_bus=%.3f master_bus=%.3f" % [
+		audio_clock, state_label(previous), state_label(next_state),
+		str(bool(simulation.is_night)) if simulation != null else "-",
+		str(_combat_active(simulation)) if simulation != null else "-",
+		_living_hostiles(simulation),
+		int(simulation.day_count) if simulation != null else 0,
+		db_to_linear(AudioServer.get_bus_volume_db(_bus_index("Music"))),
+		db_to_linear(AudioServer.get_bus_volume_db(_bus_index("Master")))
+	])
 
 
 func _update_stem_targets(simulation, menu_visible: bool) -> void:
@@ -308,11 +405,11 @@ func _update_stem_targets(simulation, menu_visible: bool) -> void:
 			stem_targets["wyrd"] = -16.0
 			stem_targets["lumen"] = -18.0
 		"raid":
-			stem_targets["night"] = -12.0
-			stem_targets["raid"] = -7.0
-			stem_targets["dusk"] = -28.0
+			# Night combat: the calm night percussion bed is faded out completely and
+			# the danger/combat score takes over (was night -12 dB under raid -7 dB).
+			stem_targets["raid"] = -6.0
 			stem_targets["ambience"] = -32.0
-			stem_targets["wyrd"] = -12.0
+			stem_targets["wyrd"] = -18.0
 		"reckoning":
 			stem_targets["raid"] = -8.0
 			stem_targets["night"] = -14.0

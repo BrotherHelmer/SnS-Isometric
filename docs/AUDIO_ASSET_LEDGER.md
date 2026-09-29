@@ -44,6 +44,7 @@ All settlement sound effects are **curated real CC0 recordings** from trusted ga
 | `assets/settlement/audio/night.wav` | Nightfall warning | 1.05 s; mono PCM16 44.1 kHz | Kresiek dark_stinger + congusbongus | Descending ominous bed | CC0 |
 | `assets/settlement/audio/soldier.wav` | Military ready | 0.85 s; mono PCM16 44.1 kHz | Kenney Music Jingles + Interface | Steel jingle + confirmation | CC0 |
 | `assets/settlement/audio/destroyed.wav` | Building collapse | 1.16 s; mono PCM16 44.1 kHz | rubberduck 100 CC0 SFX (5 wood files) | Break → crack → slam → collapse | CC0 |
+| `assets/settlement/audio/monster_kill_cheer.wav` | Monster-kill cheer (playtest.31) | 1.75 s; mono PCM16 44.1 kHz | OpenGameArt "Cheers" (Nocturnal_Vanguard) | Single-voice victory cheer | CC0 |
 
 **Source archive**: `cc0-settlement-sfx-v3.zip` (installed September 27, 2026)  
 **Full attribution**: See `docs/art/AUDIO_PROVENANCE_V3.md` for per-file original filenames, authors, URLs, and processing notes.

@@ -8,8 +8,10 @@ The preserved vendor licenses identify CC0 1.0.
 See ASSET_LEDGER.md for source archives, versions and recorded hashes.
 https://creativecommons.org/publicdomain/zero/1.0/
 
-Audio: original project synthesis; see AUDIO_LICENSE_LEDGER.md.
-No third-party recordings or samples are identified in that ledger.
+Audio: original project synthesis plus curated CC0 (public domain) recordings
+(Kenney, OpenGameArt contributors and others); see AUDIO_LICENSE_LEDGER.md.
+Monster-kill cheer (playtest.31): "Cheers" by Nocturnal_Vanguard, CC0,
+https://opengameart.org/content/cheers-0
 
 Title-screen background: pre-generated AI illustration created for this
 project with OpenAI image generation. See ASSET_LEDGER.md for provenance.

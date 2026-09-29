@@ -152,7 +152,7 @@ All runtime assets are properly exported and have documented provenance. Key fin
 - **Ledger:** AUDIO_LICENSE_LEDGER.md lines 12-99; AUDIO_PROVENANCE_V3.md has full per-file attribution
 
 **Playtest.9 Atmosphere (6 files) — CC0 Real Foley:**
-- farm_animal.wav, farm_ambient.wav, settler_arrive_worker.wav, settler_arrive_soldier.wav, settler_arrive_generic.wav, barracks_ready.wav
+- farm_animal.wav, farm_ambient.wav, settler_arrive_worker.wav, settler_arrive_soldier.wav, settler_arrive_generic.wav, barracks_ready.wav, monster_kill_cheer.wav (CC0, OpenGameArt "Cheers" by Nocturnal_Vanguard, playtest.31)
 - **Sources:** Sheep Baa (mikewest/AntumDeluge), BigSoundBank (Joseph Sardin/Axeline T.), Kenney, Vehicle, artisticdude
 - **Ledger:** AUDIO_LICENSE_LEDGER.md lines 147-239
 
