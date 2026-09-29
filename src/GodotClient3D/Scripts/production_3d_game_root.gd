@@ -996,7 +996,7 @@ func _create_ui() -> void:
 	build_strip.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	build_strip.offset_left = 16.0
 	build_strip.offset_right = -16.0
-	build_strip.offset_top = -88.0
+	build_strip.offset_top = -100.0
 	build_strip.offset_bottom = -12.0
 	build_strip.add_theme_stylebox_override("panel", _panel_style(Color(0.050, 0.048, 0.040, 0.92), Color("#6b5d3e")))
 	root.add_child(build_strip)
@@ -1029,7 +1029,7 @@ func _create_ui() -> void:
 		
 		# Make the entire area (icon + text) a single clickable button
 		var btn := Button.new()
-		btn.custom_minimum_size = Vector2(72, 52)
+		btn.custom_minimum_size = Vector2(72, 62)
 		btn.flat = true
 		btn.pressed.connect(begin_placement.bind(building_type))
 		var purpose := String(BUILD_PURPOSES.get(building_type, "Settlement building."))
@@ -1115,8 +1115,8 @@ func _create_ui() -> void:
 	placement_panel.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	placement_panel.offset_left = -235.0
 	placement_panel.offset_right = 235.0
-	placement_panel.offset_top = -164.0
-	placement_panel.offset_bottom = -100.0
+	placement_panel.offset_top = -176.0
+	placement_panel.offset_bottom = -112.0
 	placement_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.045, 0.055, 0.052, 0.90), Color("#6e8e72")))
 	root.add_child(placement_panel)
 	var placement_vbox := VBoxContainer.new()
@@ -1147,9 +1147,9 @@ func _create_ui() -> void:
 	# Playtest.31: minimap sits above the build strip instead of covering its
 	# right end (the Clear tool was hidden under it).
 	minimap.offset_left = -214.0
-	minimap.offset_top = -334.0
+	minimap.offset_top = -346.0
 	minimap.offset_right = -16.0
-	minimap.offset_bottom = -98.0
+	minimap.offset_bottom = -110.0
 	minimap.visible = false
 	minimap.focus_requested.connect(_focus_from_minimap)
 	root.add_child(minimap)

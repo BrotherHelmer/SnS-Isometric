@@ -31,6 +31,9 @@ func _run() -> void:
 	var minimap_rect: Rect2 = game.minimap.get_global_rect()
 	print("PT31_UI strip=%s minimap=%s" % [str(strip_rect), str(minimap_rect)])
 	_check(not strip_rect.intersects(minimap_rect), "minimap does not overlap the build strip")
+	_check(strip_rect.end.y <= 720.0 - 8.0, "build strip keeps its bottom margin")
+	var hint_rect: Rect2 = game.placement_panel.get_global_rect()
+	_check(not hint_rect.intersects(strip_rect), "placement hint sits above the build strip")
 	var last_btn: Button = game.build_strip_buttons[game.build_strip_buttons.size() - 1]
 	var last_rect: Rect2 = last_btn.get_global_rect()
 	print("PT31_UI last_button=%s type=%s" % [str(last_rect), String(game.build_strip_types[game.build_strip_types.size() - 1])])
@@ -38,6 +41,11 @@ func _run() -> void:
 
 	# 3) Cost on every button; unaffordable dimmed + red cost; missing chip flashes.
 	_check(game.build_strip_cost_labels.size() == game.build_strip_buttons.size(), "every strip button carries a cost label")
+	var first_cost: Label = game.build_strip_cost_labels[1]
+	var first_btn_rect: Rect2 = (game.build_strip_buttons[1] as Button).get_global_rect()
+	var cost_rect: Rect2 = first_cost.get_global_rect()
+	print("PT31_UI cost_label=%s button=%s strip=%s" % [str(cost_rect), str(first_btn_rect), str(strip_rect)])
+	_check(cost_rect.end.y <= first_btn_rect.end.y + 1.0 and cost_rect.end.y <= strip_rect.end.y, "cost label is drawn inside its button (not clipped)")
 	for key in sim.central_inventory.keys():
 		sim.central_inventory[key] = 0
 	sim.central_inventory[Defs.RESOURCE_PLANKS] = 8
