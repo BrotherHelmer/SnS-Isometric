@@ -3924,18 +3924,26 @@ func _tick_debug_harness(delta: float) -> void:
 				_debug_log("stage=engage guard=%d at=%s hostiles_spawned=3 hp_each=%d" % [int(guard.get("id", 0)), str(guard_tile), int(simulation.GUARD_DAMAGE)])
 				debug_stage = 3
 		3:
+			if debug_clock >= 28.0:
+				_debug_kill_hostiles(simulation, 2, "volley_1")
+				debug_stage = 4
+		4:
+			if debug_clock >= 28.3:
+				_debug_kill_hostiles(simulation, 1000, "volley_2")
+				debug_stage = 5
+		5:
 			if debug_clock >= 40.0:
 				_debug_log("stage=dawn kills=%d cheers=%d throttled=%d" % [int(simulation.player_monster_kills), int(audio_director.cheers_played), int(audio_director.cheers_throttled)])
 				simulation.phase_time = float(simulation.NIGHT_LENGTH_SECONDS) - 0.05
-				debug_stage = 4
-		4:
+				debug_stage = 6
+		6:
 			if debug_clock >= 48.0:
 				var snapshot: Dictionary = audio_director.evidence_snapshot()
 				_debug_log("DONE transitions=%s stems=%s buses=%s kills=%d cheers=%d" % [
 					",".join(snapshot.get("transitions", [])), ",".join(snapshot.get("stems", [])),
 					JSON.stringify(snapshot.get("buses", {})), int(simulation.player_monster_kills), int(snapshot.get("cheers_played", 0))
 				])
-				debug_stage = 5
+				debug_stage = 7
 				debug_audio_cycle_active = false
 				if debug_quit_after:
 					get_tree().quit(0)
@@ -3965,6 +3973,21 @@ func _tick_debug_ui_scene(simulation) -> void:
 				debug_stage = 3
 		_:
 			pass
+
+
+## Simulates a Watchtower volley finishing living hostiles through the same kill
+## credit path as real bolts (one audio event per frame, cheer throttle applies).
+func _debug_kill_hostiles(simulation, limit: int, label: String) -> void:
+	var killed := 0
+	for enemy_value in simulation.enemies:
+		var enemy: Dictionary = enemy_value
+		if killed >= limit or int(enemy.get("hp", 0)) <= 0 or bool(enemy.get("retreating", false)):
+			continue
+		enemy["hp"] = 0
+		simulation._note_combat()
+		simulation._credit_player_kill(enemy, "tower", 0)
+		killed += 1
+	_debug_log("stage=%s killed=%d living_left=%d kills_total=%d" % [label, killed, int(simulation.living_hostile_count()), int(simulation.player_monster_kills)])
 
 
 func _strip_tooltips_suppressed() -> bool:
