@@ -140,6 +140,7 @@ var evidence_mouse_override := Vector2(-1, -1)
 var build_strip_types: Array[String] = []
 var build_strip_containers: Array = []
 var build_strip_cost_labels: Array = []
+var build_strip_dim_nodes: Array = []
 var build_strip_tooltips: Array[String] = []
 var resource_chip_flash_until: Dictionary = {}
 var resource_chip_base_colors: Dictionary = {}
@@ -147,6 +148,10 @@ const CHIP_KEYS_BY_RESOURCE := {
 	"wood": "wood", "planks": "planks", "stone": "stone", "wheat": "wheat", "bread": "bread", "wyrd": "wyrd"
 }
 const COLOR_UNAFFORDABLE := Color("#ff6b5a")
+# Playtest.31 (T-SNS-009): dimmed buttons keep their cost at full opacity in a
+# lighter red with a dark outline so it stays readable.
+const COLOR_UNAFFORDABLE_COST := Color("#ff9d8f")
+const PLACEMENT_HINT_TEXT_WIDTH := 440.0
 var startup_overlay: Control
 var menu_backdrop: TextureRect
 var seed_edit: LineEdit
@@ -1078,6 +1083,7 @@ func _create_ui() -> void:
 		build_strip_types.append(String(building_type))
 		build_strip_containers.append(btn_container)
 		build_strip_cost_labels.append(cost_label)
+		build_strip_dim_nodes.append([icon_canvas, label])
 		build_strip_tooltips.append(btn.tooltip_text)
 
 	inspector_panel = PanelContainer.new()
@@ -1126,6 +1132,10 @@ func _create_ui() -> void:
 	placement_panel.offset_right = 235.0
 	placement_panel.offset_top = -176.0
 	placement_panel.offset_bottom = -112.0
+	# Playtest.31 (T-SNS-009): long INVALID reasons wrap inside a fixed-width
+	# panel that grows upward, so they never run under the minimap.
+	placement_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	placement_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	placement_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.045, 0.055, 0.052, 0.90), Color("#6e8e72")))
 	root.add_child(placement_panel)
 	var placement_vbox := VBoxContainer.new()
@@ -1145,6 +1155,8 @@ func _create_ui() -> void:
 	placement_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	placement_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	placement_label.add_theme_color_override("font_color", Color("#e2d4ad"))
+	placement_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	placement_label.custom_minimum_size = Vector2(PLACEMENT_HINT_TEXT_WIDTH, 0)
 	placement_vbox.add_child(placement_label)
 	placement_panel.visible = false
 	minimap = MinimapScript.new()
@@ -1724,10 +1736,18 @@ func _refresh_build_strip_state() -> void:
 		var building_type: String = build_strip_types[index] if index < build_strip_types.size() else ""
 		var btn: Button = build_strip_buttons[index]
 		var affordable := building_type == Defs.TOOL_CLEAR_AREA or _missing_resources(building_type).is_empty()
+		# Dim the button background, icon and name, but never the cost label:
+		# the red cost is the one thing the player needs to read here.
 		if index < build_strip_containers.size():
-			(build_strip_containers[index] as Control).modulate = Color(1, 1, 1, 1) if affordable else Color(0.62, 0.62, 0.62, 0.55)
+			(build_strip_containers[index] as Control).self_modulate = Color(1, 1, 1, 1) if affordable else Color(0.42, 0.42, 0.42, 1.0)
+		if index < build_strip_dim_nodes.size():
+			for node in build_strip_dim_nodes[index]:
+				(node as CanvasItem).modulate = Color(1, 1, 1, 1) if affordable else Color(0.6, 0.6, 0.6, 0.55)
 		if index < build_strip_cost_labels.size():
-			(build_strip_cost_labels[index] as Label).add_theme_color_override("font_color", Color("#e8dcb4") if affordable else COLOR_UNAFFORDABLE)
+			var cost_label := build_strip_cost_labels[index] as Label
+			cost_label.add_theme_color_override("font_color", Color("#e8dcb4") if affordable else COLOR_UNAFFORDABLE_COST)
+			cost_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.0) if affordable else Color("#140806"))
+			cost_label.add_theme_constant_override("outline_size", 0 if affordable else 4)
 		var base_tip: String = build_strip_tooltips[index] if index < build_strip_tooltips.size() else btn.tooltip_text
 		btn.tooltip_text = "" if placing else (base_tip if affordable else base_tip + "\n\nCannot afford yet.")
 
@@ -4027,7 +4047,12 @@ func _run_evidence_capture() -> void:
 	var dir := evidence_capture_dir
 	DirAccess.make_dir_recursive_absolute(dir)
 	var simulation = simulation_host.simulation
-	_evidence_log("start dir=%s viewport=%s window=%s pos=%s" % [dir, str(get_viewport().get_visible_rect().size), str(get_window().size), str(get_window().position)])
+	var shown_at := get_window().position
+	if DisplayServer.get_name() != "headless":
+		# Keep the evidence window off the user's desktop: the viewport texture
+		# still renders while the window sits outside every screen.
+		get_window().position = Vector2i(-6000, -6000)
+	_evidence_log("start dir=%s viewport=%s window=%s pos_initial=%s pos_now=%s" % [dir, str(get_viewport().get_visible_rect().size), str(get_window().size), str(shown_at), str(get_window().position)])
 	await _evidence_wait(4.0)
 	_evidence_hover_point(Vector2(640, 300))
 	await _evidence_wait(0.5)
@@ -4079,10 +4104,82 @@ func _run_evidence_capture() -> void:
 			break
 		await get_tree().process_frame
 	await _evidence_shot("71_after", "night raid, unaffordable Barracks click: one toast, INVALID hint gone, dimmed buttons, red cost, Planks chip highlighted, RAID badge")
-	_evidence_log("done")
+	await _evidence_capture_t009(simulation)
+	_evidence_log("done pos=%s" % str(get_window().position))
 	if audio_director != null:
 		audio_director.finish_recording()
 	get_tree().quit(0)
+
+
+## T-SNS-009 round 3: readable dimmed cost, own Town Hall hover, long INVALID
+## hint beside the minimap. Target tiles are picked from the simulation and
+## projected through the camera; the OS cursor is never moved.
+func _evidence_capture_t009(simulation) -> void:
+	cancel_placement()
+	evidence_mouse_override = Vector2(-1, -1)
+	_evidence_hover_point(Vector2(640, 300))
+	for attempt in 120:
+		if alert_panel == null or not alert_panel.visible:
+			break
+		await _evidence_wait(0.1)
+	simulation.central_inventory[Defs.RESOURCE_PLANKS] = 8
+	simulation.central_inventory[Defs.RESOURCE_STONE] = 10
+	await _evidence_wait(0.4)
+	var barracks_button := _evidence_strip_button(Defs.BUILDING_BARRACKS)
+	var barracks_index := build_strip_types.find(Defs.BUILDING_BARRACKS)
+	var barracks_cost: Label = build_strip_cost_labels[barracks_index] if barracks_index >= 0 else null
+	_evidence_log("rect name=t009_dimmed_cost barracks_button=%s cost_label=%s cost_text='%s' cost_color=#%s outline=%d container_self_modulate=%s" % [
+		str(barracks_button.get_global_rect()) if barracks_button != null else "-",
+		str(barracks_cost.get_global_rect()) if barracks_cost != null else "-",
+		barracks_cost.text if barracks_cost != null else "",
+		barracks_cost.get_theme_color("font_color").to_html(false) if barracks_cost != null else "",
+		barracks_cost.get_theme_constant("outline_size") if barracks_cost != null else -1,
+		str((build_strip_containers[barracks_index] as Control).self_modulate) if barracks_index >= 0 else "-"])
+	await _evidence_shot("t009_dimmed_cost", "not placing, Planks 8 / Stone 10: unaffordable buttons dimmed, cost label full opacity, light red with dark outline")
+	simulation.central_inventory[Defs.RESOURCE_WOOD] = 200
+	simulation.central_inventory[Defs.RESOURCE_STONE] = 200
+	simulation.central_inventory[Defs.RESOURCE_PLANKS] = 200
+	begin_placement(Defs.BUILDING_HOUSE)
+	var hall_tile: Vector2i = simulation.town_hall_position
+	var hall_fp: Vector2i = Defs.building_footprint(Defs.BUILDING_TOWN_HALL)
+	var hall_world := world_view.tile_to_world(Vector2(hall_tile) + Vector2(hall_fp - Vector2i.ONE) * 0.5)
+	evidence_mouse_override = camera_rig.camera.unproject_position(hall_world)
+	_evidence_hover_point(evidence_mouse_override)
+	_update_placement_ghost(true)
+	await _evidence_wait(0.6)
+	_update_placement_ghost(true)
+	_evidence_log("rect name=t009_town_hall_hover pointer=%s tile=%s hall=%s panel=%s minimap=%s" % [str(evidence_mouse_override), str(placement_tile), str(hall_tile), str(placement_panel.get_global_rect()), str(minimap.get_global_rect())])
+	await _evidence_shot("t009_town_hall_hover", "House placement hovering the player's own Town Hall: names the Town Hall, no road/rival wording")
+	var best_tile := Vector2i(-1, -1)
+	var best_point := Vector2(-1, -1)
+	var best_len := 0
+	var view_size := get_viewport().get_visible_rect().size
+	for y in range(0, int(simulation.map_size.y), 2):
+		for x in range(0, int(simulation.map_size.x), 2):
+			var tile := Vector2i(x, y)
+			var world_point := world_view.tile_to_world(Vector2(tile))
+			if camera_rig.camera.is_position_behind(world_point):
+				continue
+			var screen_point := camera_rig.camera.unproject_position(world_point)
+			if screen_point.x < 120.0 or screen_point.x > view_size.x - 260.0 or screen_point.y < 110.0 or screen_point.y > view_size.y - 380.0:
+				continue
+			var check: Dictionary = simulation.validate_placement(Defs.BUILDING_HOUSE, tile, 0)
+			var message := String(check.get("message", ""))
+			if not bool(check.get("success", false)) and message.length() > best_len:
+				best_len = message.length()
+				best_tile = tile
+				best_point = screen_point
+	if best_tile.x >= 0:
+		evidence_mouse_override = best_point
+		_evidence_hover_point(best_point)
+		_update_placement_ghost(true)
+		await _evidence_wait(0.6)
+		_update_placement_ghost(true)
+	await get_tree().process_frame
+	_evidence_log("rect name=t009_long_invalid_hint pointer=%s tile=%s message_len=%d panel=%s label=%s minimap=%s" % [str(best_point), str(placement_tile), best_len, str(placement_panel.get_global_rect()), str(placement_label.get_global_rect()), str(minimap.get_global_rect())])
+	await _evidence_shot("t009_long_invalid_hint", "House placement over the longest INVALID reason on screen: text wraps inside the hint panel, clear of the minimap")
+	evidence_mouse_override = Vector2(-1, -1)
+	cancel_placement()
 
 
 func _evidence_wait(seconds: float) -> void:

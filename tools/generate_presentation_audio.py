@@ -40,15 +40,24 @@ def add_tone(
     frequency: float,
     amplitude: float,
     voice: str,
+    wrap: bool = False,
 ) -> None:
+    # wrap=True folds anything that rings past the loop end back onto the loop
+    # start (circular render), so looping stems join seamlessly at the wrap.
     first = max(0, int(start * SAMPLE_RATE))
-    last = min(SAMPLES, int((start + duration) * SAMPLE_RATE))
+    last = int((start + duration) * SAMPLE_RATE) if wrap else min(SAMPLES, int((start + duration) * SAMPLE_RATE))
     for index in range(first, last):
         local = (index - first) / SAMPLE_RATE
         phase = math.tau * frequency * local
         attack = min(1.0, local / 0.025)
         release = min(1.0, max(0.0, (duration - local) / 0.12))
-        if voice == "pluck":
+        if voice == "pluck_ring":
+            # Same timbre and decay rate as the 0.16 s activity pluck, but it
+            # rings out to the next note (short release) instead of being
+            # truncated into 173 ms of digital silence.
+            envelope = attack * math.exp(-3.8 * local / 0.16) * min(1.0, max(0.0, (duration - local) / 0.03))
+            sample = math.sin(phase) + 0.32 * math.sin(phase * 2.0) + 0.12 * math.sin(phase * 3.0)
+        elif voice == "pluck":
             envelope = attack * math.exp(-3.8 * local / max(duration, 0.05))
             sample = math.sin(phase) + 0.32 * math.sin(phase * 2.0) + 0.12 * math.sin(phase * 3.0)
         elif voice == "flute":
@@ -67,7 +76,7 @@ def add_tone(
         else:
             envelope = attack * release
             sample = math.sin(phase)
-        target[index] += sample * amplitude * envelope
+        target[index % SAMPLES] += sample * amplitude * envelope
 
 
 def add_noise_hit(
@@ -129,7 +138,9 @@ def render_activity() -> list[float]:
         start = bar * 4 * BEAT
         for eighth in range(8):
             pitch = bounce[(bar + eighth) % len(bounce)]
-            add_tone(track, start + eighth * BEAT * 0.5, BEAT * 0.24, midi(pitch), 0.09, "pluck")
+            # Playtest.31 (T-SNS-009): ring to the next eighth (was a 0.24-beat
+            # truncated pluck leaving 173 ms of digital silence per note).
+            add_tone(track, start + eighth * BEAT * 0.5, BEAT * 0.5 + 0.03, midi(pitch), 0.09, "pluck_ring", True)
         add_noise_hit(track, start, 0.12, 0.06, True)
         add_noise_hit(track, start + BEAT, 0.05, 0.03, False)
         add_noise_hit(track, start + 2 * BEAT, 0.11, 0.05, True)
@@ -170,8 +181,12 @@ def render_metal() -> list[float]:
         start = bar * 4 * BEAT
         for eighth in range(8):
             note = dark_motif[(bar * 2 + eighth // 2) % len(dark_motif)]
-            add_tone(track, start + eighth * BEAT * 0.5, BEAT * 0.43, midi(note), 0.16, "metal")
-            add_tone(track, start + eighth * BEAT * 0.5, BEAT * 0.43, midi(note + 7), 0.07, "metal")
+            # Playtest.31 (T-SNS-009): 0.55-beat notes overlap the next eighth
+            # (was 0.43 beat = 46.8 ms of digital silence after every note,
+            # including the loop wrap); circular render joins the loop end.
+            # Amplitudes -1.5 dB so the stem RMS stays at -19.4 dBFS.
+            add_tone(track, start + eighth * BEAT * 0.5, BEAT * 0.55, midi(note), 0.135, "metal", True)
+            add_tone(track, start + eighth * BEAT * 0.5, BEAT * 0.55, midi(note + 7), 0.059, "metal", True)
     return track
 
 

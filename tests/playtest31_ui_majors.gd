@@ -55,9 +55,35 @@ func _run() -> void:
 	if barracks_index >= 0:
 		var container: Control = game.build_strip_containers[barracks_index]
 		var cost_label: Label = game.build_strip_cost_labels[barracks_index]
-		print("PT31_UI barracks_cost='%s' modulate=%s" % [cost_label.text, str(container.modulate)])
+		print("PT31_UI barracks_cost='%s' self_modulate=%s cost_modulate=%s" % [cost_label.text, str(container.self_modulate), str(cost_label.modulate)])
 		_check(cost_label.text != "", "barracks shows its cost on the button")
-		_check(container.modulate.a < 0.9, "unaffordable barracks is dimmed")
+		_check(container.self_modulate.v < 0.9, "unaffordable barracks background is dimmed")
+		_check(container.modulate.a >= 0.99 and cost_label.modulate.a >= 0.99, "dimmed button keeps its cost label at full opacity")
+		_check(cost_label.get_theme_constant("outline_size") > 0, "unaffordable cost label has a dark outline")
+		var hall_tile := Vector2i(-1, -1)
+		for building in sim.buildings:
+			if String(building.get("type", "")) == Defs.BUILDING_TOWN_HALL:
+				hall_tile = building["position"]
+		if hall_tile.x >= 0:
+			var hall_check: Dictionary = sim.validate_placement(Defs.BUILDING_HOUSE, hall_tile, 0)
+			var hall_msg := String(hall_check.get("message", ""))
+			print("PT31_UI town_hall_hover='%s'" % hall_msg)
+			_check(not hall_msg.contains("rival"), "hovering own Town Hall does not blame a road or rival structure")
+			_check(hall_msg.contains("Town Hall"), "hovering own Town Hall names the Town Hall")
+
+	# Long INVALID hint wraps inside its panel and stays clear of the minimap.
+	sim.central_inventory[Defs.RESOURCE_WOOD] = 200
+	sim.central_inventory[Defs.RESOURCE_STONE] = 200
+	sim.central_inventory[Defs.RESOURCE_PLANKS] = 200
+	game.begin_placement(Defs.BUILDING_HOUSE)
+	game.placement_label.text = "INVALID: Footprint blocked by a rival road or structure. Try rotating (R) or move away from rival territory."
+	await process_frame
+	await process_frame
+	var long_rect: Rect2 = game.placement_panel.get_global_rect()
+	print("PT31_UI long_hint_rect=%s minimap=%s" % [str(long_rect), str(game.minimap.get_global_rect())])
+	_check(not long_rect.intersects(game.minimap.get_global_rect()), "long INVALID hint does not run under the minimap")
+	_check(not long_rect.intersects(game.build_strip.get_global_rect()), "long INVALID hint grows upward, not into the build strip")
+	game.cancel_placement()
 
 	# 5) One action -> one message: placing Bakery then clicking unaffordable Barracks.
 	sim.central_inventory[Defs.RESOURCE_WOOD] = 200

@@ -803,11 +803,16 @@ func validate_placement(building_type: String, tile: Vector2i, rotation: int = 0
 			return _failure("Fog", "Unrevealed terrain. Build closer to existing structures to scout ahead, or wait for workers/soldiers to explore nearby.")
 		if _enemy_camp_at_tile(footprint_tile):
 			return _failure("EnemyCamp", "Clear the enemy camp before building here.")
-		if rivalry != null and rivalry.is_rivalry_occupied(footprint_tile):
-			return _failure("Occupied", "Footprint blocked by road or rival structure. Try rotating (R) or move away from rival territory.")
+		# Playtest.31 (T-SNS-009): check the player's own buildings first so
+		# hovering your Town Hall (which is also a rivalry realm home) names it
+		# instead of blaming a road or rival structure.
 		var existing := get_building_at_tile(footprint_tile)
 		if not existing.is_empty():
-			return _failure("Occupied", "Footprint overlaps another building. Move the ghost to an empty area.")
+			return _failure("Occupied", "Footprint overlaps your %s. Move the ghost to an empty area." % Defs.building_name(String(existing.get("type", ""))))
+		if rivalry != null and rivalry.is_rivalry_occupied(footprint_tile):
+			if rivalry.owns_road(RivalryTuning.PLAYER_REALM, footprint_tile):
+				return _failure("Occupied", "Footprint crosses your road. Try rotating (R) or move the ghost off the road.")
+			return _failure("Occupied", "Footprint blocked by a rival road or structure. Try rotating (R) or move away from rival territory.")
 
 	if building_type == Defs.BUILDING_QUARRY:
 		if not _footprint_has_terrain(tile, footprint, Defs.TILE_ROCK):

@@ -4,6 +4,8 @@ extends Node
 ## State-driven mix for Day / Dusk / Night / Raid / Reckoning / Victory / Defeat.
 ## Music stems crossfade. Work SFX are distance-limited.
 
+const SFX_LIMITER_CEILING_DB := -1.5
+const MASTER_LIMITER_CEILING_DB := -1.5
 const Identity = preload("res://src/GodotClient3D/Scripts/production_identity.gd")
 
 const STEM_PATHS := {
@@ -588,6 +590,25 @@ func _ensure_buses() -> void:
 	_ensure_bus("Music")
 	_ensure_bus("SFX")
 	_ensure_bus("Ambience")
+	# Playtest.31 (T-SNS-009): stacked cues (nightfall sting + raid hits +
+	# cheers) clipped the SFX and Master buses. A hard limiter first in each
+	# chain keeps them under -1 dBFS true peak; it only acts on the peaks, so
+	# the nightfall punch (RMS) is kept.
+	_ensure_limiter("SFX", SFX_LIMITER_CEILING_DB)
+	_ensure_limiter("Master", MASTER_LIMITER_CEILING_DB)
+
+
+func _ensure_limiter(bus_name: String, ceiling_db: float) -> void:
+	var index := AudioServer.get_bus_index(bus_name)
+	if index < 0:
+		return
+	for effect_index in AudioServer.get_bus_effect_count(index):
+		if AudioServer.get_bus_effect(index, effect_index) is AudioEffectHardLimiter:
+			return
+	var limiter := AudioEffectHardLimiter.new()
+	limiter.ceiling_db = ceiling_db
+	limiter.release = 0.1
+	AudioServer.add_bus_effect(index, limiter, 0)
 
 
 func _ensure_bus(bus_name: String) -> void:
