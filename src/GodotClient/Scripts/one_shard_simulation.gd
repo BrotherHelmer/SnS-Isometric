@@ -115,7 +115,6 @@ var tick_number := 0
 var elapsed_seconds := 0.0
 ## Playtest.31: real engagement clock for adaptive music (not just "enemies exist").
 const COMBAT_LINGER_SECONDS := 6.0
-const COMBAT_TOWN_RADIUS := 10.0
 var last_combat_elapsed := -1000.0
 var player_monster_kills := 0
 var last_player_kill: Dictionary = {}
@@ -5285,20 +5284,14 @@ func living_hostile_count() -> int:
 	return count
 
 
-## True while defenders and monsters are actually engaged (recent strike, tower
-## fire or hit) or a living hostile is inside the settlement radius. Used by the
-## audio director so the night bed changes when combat starts, not at nightfall.
+## True while defenders and monsters are actually engaged (enemy strike,
+## soldier strike, tower fire or bolt impact within COMBAT_LINGER_SECONDS) and a
+## living hostile remains. Proximity alone is not combat: early waves spawn close
+## to the Town Hall, which made nightfall itself read as combat.
 func is_combat_active() -> bool:
 	if living_hostile_count() <= 0:
 		return false
-	if elapsed_seconds - last_combat_elapsed <= COMBAT_LINGER_SECONDS:
-		return true
-	for enemy in enemies:
-		if int(enemy.get("hp", 0)) <= 0 or bool(enemy.get("retreating", false)):
-			continue
-		if _tile_distance(town_hall_position, enemy["position"]) <= COMBAT_TOWN_RADIUS:
-			return true
-	return false
+	return elapsed_seconds - last_combat_elapsed <= COMBAT_LINGER_SECONDS
 
 
 func _emit_audio(event_name: String) -> void:

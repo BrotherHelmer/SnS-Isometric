@@ -69,6 +69,7 @@ var last_cheer_clock := -1000.0
 var cheers_played := 0
 var cheers_throttled := 0
 var audible_stems: Dictionary = {}
+var stem_restarts: Dictionary = {}
 var transition_log: Array[String] = []
 var verbose_log := true
 
@@ -96,7 +97,14 @@ func setup(host: Node, camera_value: Camera3D) -> void:
 		if stream != null:
 			player.stream = stream
 			if stream is AudioStreamWAV:
-				(stream as AudioStreamWAV).loop_mode = AudioStreamWAV.LOOP_FORWARD
+				var wav := stream as AudioStreamWAV
+				wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
+				# Imported stems carry loop_end=-1/0; without a real loop end the
+				# player stops at the end and tick() restarted it from 0 (stem
+				# desync / audible restart). Loop over the whole sample instead.
+				if wav.loop_end <= wav.loop_begin:
+					wav.loop_begin = 0
+					wav.loop_end = int(round(wav.get_length() * float(wav.mix_rate)))
 			elif stream is AudioStreamOggVorbis:
 				(stream as AudioStreamOggVorbis).loop = true
 		player.volume_db = -80.0
@@ -146,6 +154,10 @@ func tick(simulation, delta: float, menu_visible: bool, result_visible: bool, pa
 		player.volume_db = move_toward(player.volume_db, target, delta * 28.0)
 		if not player.playing and player.stream != null:
 			player.play()
+			var restarts := int(stem_restarts.get(stem_name, 0)) + 1
+			stem_restarts[stem_name] = restarts
+			if restarts <= 3:
+				_audio_log("AUDIO_STEM_RESTART name=%s count=%d" % [stem_name, restarts])
 	_log_stem_audibility()
 	_tick_night_screams(delta)
 	if simulation != null:
@@ -285,7 +297,7 @@ func _audio_log(line: String) -> void:
 func _log_stem_audibility() -> void:
 	for stem_name in stem_players:
 		var player: AudioStreamPlayer = stem_players[stem_name]
-		var audible := player.volume_db > AUDIBLE_STEM_DB and player.playing
+		var audible := player.volume_db > AUDIBLE_STEM_DB
 		if bool(audible_stems.get(stem_name, false)) == audible:
 			continue
 		audible_stems[stem_name] = audible

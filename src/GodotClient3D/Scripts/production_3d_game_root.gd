@@ -3903,11 +3903,21 @@ func _tick_debug_harness(delta: float) -> void:
 				debug_stage = 2
 		2:
 			if debug_clock >= 17.0:
-				var guard: Dictionary = simulation._create_patrol_worker(0, "debug_cycle")
+				# A real patrol soldier (survives _sync_production_workers).
+				simulation.soldiers_total = int(simulation.soldiers_total) + 1
+				simulation._sync_production_workers()
+				var guard: Dictionary = {}
+				for worker_value in simulation.workers:
+					var worker: Dictionary = worker_value
+					if String(worker.get("type", "")) == "guard" and int(worker.get("building_id", 0)) == 0:
+						guard = worker
+				if guard.is_empty():
+					_debug_log("stage=engage NO_PATROL_SOLDIER")
+					debug_stage = 3
+					return
 				var guard_tile: Vector2i = simulation.town_hall_position + Vector2i(3, 0)
 				guard["position"] = guard_tile
 				guard["path"] = []
-				simulation.workers.append(guard)
 				simulation._reveal_radius(guard_tile, 6)
 				for index in 3:
 					simulation._spawn_enemy(guard_tile + Vector2i(1, 0), simulation.GUARD_DAMAGE, 1, 0.0, 0, simulation.ENEMY_RAIDER)
