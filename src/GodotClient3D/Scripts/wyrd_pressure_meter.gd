@@ -116,5 +116,7 @@ func _draw() -> void:
 	var baseline := Vector2(text_x, size.y * 0.5 + 5.0)
 	var font_size := 13
 	var text_color := Color("#fff1e6") if raid else HudSkin.COLOR_GOLD
-	draw_string_outline(ThemeDB.fallback_font, baseline, label, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, 5, Color(0.01, 0.02, 0.03, 1.0))
-	draw_string(ThemeDB.fallback_font, baseline, label, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, text_color)
+	# Look lift: drawn in the HUD's Source Sans 3 (semibold) like the rest of the bar.
+	var font: Font = HudSkin.ui_font(700)
+	draw_string_outline(font, baseline, label, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, 5, Color(0.01, 0.02, 0.03, 1.0))
+	draw_string(font, baseline, label, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, text_color)

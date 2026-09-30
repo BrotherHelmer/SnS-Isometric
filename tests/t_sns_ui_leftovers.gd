@@ -50,7 +50,8 @@ func _run() -> void:
 	var console_rect: Rect2 = game.hud_console.get_global_rect()
 	print("TSNSUI idle_button=%s console=%s" % [str(idle_rect), str(console_rect)])
 	_check(Rect2(Vector2.ZERO, Vector2(1280, 720)).encloses(idle_rect), "idle button is on screen")
-	_check(not idle_rect.intersects(console_rect) and idle_rect.end.y <= console_rect.position.y, "idle button sits just above the console")
+	# Look lift: the idle count moved from above the console into the top-bar population group.
+	_check(game.hud_root.find_child("PeopleGroup", true, false).is_ancestor_of(button) and idle_rect.end.y <= game.TOP_BAR_HEIGHT, "idle count sits in the top-bar population group")
 	var bar_row: Control = game.hud_root.find_child("TopBar", false, false).get_child(0)
 	_check(bar_row.get_combined_minimum_size().x <= 1280.0 - 12.0, "top bar still fits 1280 px with the framed badge")
 	var before: int = game.notice_feed_entries.size()

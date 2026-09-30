@@ -28,7 +28,8 @@ func _run() -> void:
 	var fog: Dictionary = game.world_view.fog_configuration()
 	_check(failures, bool(fog.get("volume_mesh", false)) and bool(fog.get("exterior_opaque", false)), "FOW volume covers off-map samples")
 	_check(failures, game.world_view.fog_plane != null and game.world_view.fog_skirts.size() >= 4, "FOW skirts seal the slab")
-	_check(failures, game.pressure_meter.visible, "pressure meter is on at founding")
+	# T-SNS-UI Look lift: the chip exists at founding but only shows when not QUIET / at night / in a raid.
+	_check(failures, game.pressure_meter != null and not game.pressure_meter.visible, "pressure chip is wired at founding and hidden while QUIET")
 	_check(failures, "QUIET" in game.pressure_meter.band, "opening pressure band is QUIET")
 	var presentation: Dictionary = game.simulation_host.simulation.get_wyrdfall_presentation()
 	_check(failures, String(presentation.get("rival_line", "")) != "", "rival line is present at t=0")

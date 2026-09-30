@@ -111,7 +111,15 @@ var inspector_label: RichTextLabel
 var assault_button: Button
 var recall_button: Button
 var pause_button: Button
+var play_button: Button
 var speed_button: Button
+var phase_label: Label
+var raid_banner_icon: TextureRect
+var raid_eta_row: HBoxContainer
+var raid_eta_label: Label
+var raid_banner_dismissed := false
+var raid_banner_active := false
+const RAID_BANNER_WIDTH := 372.0
 var alert_label: Label
 var alert_panel: PanelContainer
 var build_panel: PanelContainer
@@ -173,6 +181,7 @@ var realm_overview: RichTextLabel
 var portrait_host: Control
 var portrait_hp_bar: ProgressBar
 var portrait_hp_fill: StyleBoxFlat
+var portrait_hp_label: Label
 var portrait_key := ""
 var status_plate: PanelContainer
 var notice_feed: VBoxContainer
@@ -725,6 +734,11 @@ func _create_ui() -> void:
 	# T-SNS-UI: one shared stone-and-gold theme for every HUD control.
 	root.theme = HudSkin.hud_theme()
 
+	# T-SNS-UI Look lift: the top bar is regrouped into navy capsules —
+	# economy (values with per-minute rates underneath), people (population with
+	# the idle count as a sub-label, soldiers), the clock ("Night in m:ss"), a
+	# pressure chip that only appears when something is happening, then BUILD
+	# and the icon speed controls on the right.
 	var top_panel := PanelContainer.new()
 	top_panel.name = "TopBar"
 	top_panel.set_anchors_preset(Control.PRESET_TOP_WIDE)
@@ -732,15 +746,15 @@ func _create_ui() -> void:
 	top_panel.offset_top = 0.0
 	top_panel.offset_right = 0.0
 	top_panel.offset_bottom = TOP_BAR_HEIGHT
-	top_panel.add_theme_stylebox_override("panel", HudSkin.frame("bar", 6.0))
+	var bar_style := HudSkin.frame("bar", 6.0)
+	bar_style.content_margin_top = 4.0
+	bar_style.content_margin_bottom = 4.0
+	top_panel.add_theme_stylebox_override("panel", bar_style)
 	root.add_child(top_panel)
 	var top_row := HBoxContainer.new()
 	top_row.add_theme_constant_override("separation", 6)
 	top_panel.add_child(top_row)
-	var chip_host := HBoxContainer.new()
-	chip_host.name = "ResourceStrip"
-	chip_host.add_theme_constant_override("separation", 4)
-	top_row.add_child(chip_host)
+	var chip_host := _top_capsule(top_row, "ResourceStrip")
 	resource_label = Label.new()
 	resource_label.visible = false
 	chip_host.add_child(resource_label)
@@ -750,37 +764,47 @@ func _create_ui() -> void:
 	resource_chips["wheat"] = _add_resource_chip(chip_host, "wheat", "Wheat")
 	resource_chips["bread"] = _add_resource_chip(chip_host, "bread", "Bread")
 	resource_chips["wyrd"] = _add_resource_chip(chip_host, "wyrd", "Wyrd")
-	top_row.add_child(_hud_divider())
-	population_label = _add_top_stat(top_row, "PopulationChip", "pop", "Population / housing. Free workers are shown in the Realm panel.")
-	soldier_label = _add_top_stat(top_row, "SoldierChip", "soldier", "Soldiers (free / total)")
+	var people_host := _top_capsule(top_row, "PeopleGroup")
+	population_label = _add_top_stat(people_host, "PopulationChip", "pop", "Population / housing")
+	idle_workers_button = _add_idle_workers_button(population_label.get_parent())
+	soldier_label = _add_top_stat(people_host, "SoldierChip", "soldier", "Soldiers (free / total)")
+	var soldier_sub := Label.new()
+	soldier_sub.name = "SoldierSub"
+	soldier_sub.text = "free / total"
+	soldier_sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	HudSkin.set_font(soldier_sub, HudSkin.ui_font(400), HudSkin.SIZE_MIN, HudSkin.COLOR_CAPTION)
+	soldier_label.get_parent().add_child(soldier_sub)
 	var top_spacer := Control.new()
 	top_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top_row.add_child(top_spacer)
-	var clock := HBoxContainer.new()
-	clock.name = "DayClock"
-	clock.add_theme_constant_override("separation", 6)
+	var clock := _top_capsule(top_row, "DayClock")
 	clock.tooltip_text = "Day and time until the next phase"
-	clock.mouse_filter = Control.MOUSE_FILTER_STOP
-	top_row.add_child(clock)
-	day_icon = HudSkin.icon_rect("sun", 26.0)
+	clock.get_parent().tooltip_text = clock.tooltip_text
+	clock.get_parent().mouse_filter = Control.MOUSE_FILTER_STOP
+	day_icon = HudSkin.icon_rect("sun", 24.0)
 	clock.add_child(day_icon)
 	var clock_stack := VBoxContainer.new()
-	clock_stack.add_theme_constant_override("separation", 1)
+	clock_stack.add_theme_constant_override("separation", -2)
 	clock_stack.alignment = BoxContainer.ALIGNMENT_CENTER
 	clock_stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	clock_stack.custom_minimum_size.x = 84.0
 	clock.add_child(clock_stack)
 	time_label = Label.new()
 	time_label.name = "TimeChip"
 	time_label.tooltip_text = "Day and time"
 	time_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	time_label.add_theme_font_size_override("font_size", 15)
-	time_label.add_theme_color_override("font_color", HudSkin.COLOR_GOLD)
+	HudSkin.set_font(time_label, HudSkin.ui_font(700), HudSkin.SIZE_VALUE - 1, HudSkin.COLOR_GOLD)
 	clock_stack.add_child(time_label)
+	phase_label = Label.new()
+	phase_label.name = "PhaseCountdown"
+	phase_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	HudSkin.set_font(phase_label, HudSkin.ui_font(600), HudSkin.SIZE_CAPTION, HudSkin.COLOR_TEXT)
+	clock_stack.add_child(phase_label)
 	phase_bar = ProgressBar.new()
 	phase_bar.name = "PhaseProgress"
 	phase_bar.show_percentage = false
-	phase_bar.custom_minimum_size = Vector2(112, 5)
+	phase_bar.custom_minimum_size = Vector2(84, 3)
 	phase_bar.max_value = 1.0
 	phase_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var phase_bg := StyleBoxFlat.new()
@@ -792,7 +816,9 @@ func _create_ui() -> void:
 	clock_stack.add_child(phase_bar)
 	pressure_meter = PressureMeterScript.new()
 	pressure_meter.name = "WyrdPressure"
-	pressure_meter.visible = true
+	# Look lift: the chip is hidden while the realm is QUIET by day (see
+	# _pressure_chip_should_show); it appears for rising pressure, night or a raid.
+	pressure_meter.visible = false
 	pressure_meter.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	top_row.add_child(pressure_meter)
 	var top_spacer_right := Control.new()
@@ -809,38 +835,62 @@ func _create_ui() -> void:
 	root.add_child(status_label)
 	build_toggle_button = Button.new()
 	build_toggle_button.name = "BuildMenuToggle"
-	build_toggle_button.text = "BUILD"
+	build_toggle_button.text = "Build"
+	build_toggle_button.icon = HudSkin.icon("hammer")
 	build_toggle_button.toggle_mode = true
 	build_toggle_button.tooltip_text = "Open the full list of settlement plans  [B]"
 	build_toggle_button.pressed.connect(_toggle_build_palette)
-	top_row.add_child(build_toggle_button)
-	pause_button = Button.new()
-	pause_button.name = "PauseGame"
-	pause_button.text = "PAUSE"
-	pause_button.tooltip_text = "Pause or resume  [Space]"
-	pause_button.pressed.connect(_toggle_pause)
-	top_row.add_child(pause_button)
-	speed_button = Button.new()
-	speed_button.name = "GameSpeed"
-	speed_button.text = "1x"
-	speed_button.tooltip_text = "Game speed: 1x / 2x / 4x"
-	speed_button.pressed.connect(_cycle_speed)
-	top_row.add_child(speed_button)
-	var menu_button := Button.new()
-	menu_button.name = "MainMenu"
-	menu_button.text = "MENU"
-	menu_button.tooltip_text = "Main menu, save and settings"
-	menu_button.pressed.connect(_show_start_menu)
-	top_row.add_child(menu_button)
-	var compact_button_widths := [66.0, 70.0, 44.0, 64.0]
-	var compact_button_index := 0
-	for compact_button in [build_toggle_button, pause_button, speed_button, menu_button]:
-		(compact_button as Button).add_theme_font_size_override("font_size", 13)
-		(compact_button as Button).custom_minimum_size = Vector2(compact_button_widths[compact_button_index], 30)
-		(compact_button as Button).size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		(compact_button as Button).focus_mode = Control.FOCUS_NONE
-		compact_button_index += 1
+	build_toggle_button.custom_minimum_size = Vector2(84, 32)
+	build_toggle_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	build_toggle_button.focus_mode = Control.FOCUS_NONE
+	build_toggle_button.add_theme_constant_override("icon_max_width", 18)
 	HudSkin.apply_button(build_toggle_button, true)
+	HudSkin.set_font(build_toggle_button, HudSkin.ui_font(700), HudSkin.SIZE_BODY)
+	var build_cell := Control.new()
+	build_cell.name = "BuildToggleCell"
+	build_cell.custom_minimum_size = build_toggle_button.custom_minimum_size
+	build_cell.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	build_cell.add_child(build_toggle_button)
+	build_toggle_button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_attach_hotkey_badge(build_cell, "B")
+	top_row.add_child(build_cell)
+	var controls := _top_capsule(top_row, "SpeedControls")
+	controls.add_theme_constant_override("separation", 3)
+	pause_button = HudSkin.icon_button("pause", "Pause  [Space]", 30.0)
+	pause_button.name = "PauseGame"
+	pause_button.toggle_mode = true
+	pause_button.focus_mode = Control.FOCUS_NONE
+	pause_button.pressed.connect(_toggle_pause)
+	controls.add_child(pause_button)
+	play_button = HudSkin.icon_button("play", "Play at normal speed (1x)", 30.0)
+	play_button.name = "PlayNormal"
+	play_button.toggle_mode = true
+	play_button.focus_mode = Control.FOCUS_NONE
+	play_button.pressed.connect(_play_normal_speed)
+	controls.add_child(play_button)
+	speed_button = HudSkin.icon_button("fast", "Fast forward: 2x, press again for 4x", 30.0)
+	speed_button.name = "GameSpeed"
+	speed_button.toggle_mode = true
+	speed_button.focus_mode = Control.FOCUS_NONE
+	speed_button.custom_minimum_size.x = 30.0
+	speed_button.pressed.connect(_cycle_speed)
+	controls.add_child(speed_button)
+	for control_button in [pause_button, play_button, speed_button]:
+		HudSkin.apply_button(control_button, true)
+		for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+			var box: StyleBoxTexture = (control_button as Button).get_theme_stylebox(state)
+			box.content_margin_left = 6.0
+			box.content_margin_right = 6.0
+			box.content_margin_top = 6.0
+			box.content_margin_bottom = 6.0
+	var menu_button := HudSkin.icon_button("menu", "Main menu, save and settings", 30.0)
+	menu_button.name = "MainMenu"
+	menu_button.focus_mode = Control.FOCUS_NONE
+	menu_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	menu_button.pressed.connect(_show_start_menu)
+	controls.add_child(_hud_divider())
+	controls.add_child(menu_button)
+	_sync_speed_controls()
 
 	# Objective plate (left) and pressure/rival status plate (right) replace the
 	# old full-width loop bar; the gap between them stays click-through.
@@ -856,15 +906,18 @@ func _create_ui() -> void:
 	root.add_child(loop_panel)
 	var objective_plate := PanelContainer.new()
 	objective_plate.name = "ObjectivePlate"
-	objective_plate.custom_minimum_size.x = 520.0
-	objective_plate.add_theme_stylebox_override("panel", HudSkin.frame("panel", 5.0))
+	# Look lift: the objective is a slim pill (quest icon, text, chevron that
+	# opens the goal list); LOG is its own button beside it.
+	objective_plate.custom_minimum_size.x = 440.0
+	var pill_style := HudSkin.frame("capsule", 4.0)
+	pill_style.content_margin_left = 6.0
+	pill_style.content_margin_right = 4.0
+	objective_plate.add_theme_stylebox_override("panel", pill_style)
 	loop_panel.add_child(objective_plate)
 	var loop_row := HBoxContainer.new()
-	loop_row.add_theme_constant_override("separation", 8)
+	loop_row.add_theme_constant_override("separation", 6)
 	objective_plate.add_child(loop_row)
-	var objective_caption := HudSkin.caption("  OBJECTIVE", 11)
-	objective_caption.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	loop_row.add_child(objective_caption)
+	loop_row.add_child(HudSkin.icon_rect("quest", 22.0))
 	objective_button = Button.new()
 	objective_button.name = "MacroObjective"
 	objective_button.flat = true
@@ -878,24 +931,43 @@ func _create_ui() -> void:
 	var objective_hover := StyleBoxFlat.new()
 	objective_hover.bg_color = Color(0.94, 0.78, 0.5, 0.10)
 	objective_button.add_theme_stylebox_override("hover", objective_hover)
-	objective_button.add_theme_font_size_override("font_size", 15)
-	objective_button.add_theme_color_override("font_color", Color("#fff1cf"))
+	HudSkin.set_font(objective_button, HudSkin.ui_font(600), HudSkin.SIZE_BODY + 1, Color("#fff1cf"))
+	objective_button.tooltip_text = "Current objective: click for the goal list"
 	loop_row.add_child(objective_button)
+	var chevron := Button.new()
+	chevron.name = "ObjectiveChevron"
+	chevron.text = "›"
+	chevron.flat = true
+	chevron.focus_mode = Control.FOCUS_NONE
+	chevron.custom_minimum_size = Vector2(22, 24)
+	chevron.tooltip_text = "Show all goals"
+	HudSkin.set_font(chevron, HudSkin.ui_font(700), HudSkin.SIZE_TITLE + 2, HudSkin.COLOR_GOLD)
+	chevron.pressed.connect(_toggle_objective_detail)
+	loop_row.add_child(chevron)
 	objective_label = Label.new()
 	objective_label.visible = false
 	loop_row.add_child(objective_label)
 	event_log_button = Button.new()
 	event_log_button.name = "EventLogToggle"
-	event_log_button.text = "LOG"
+	event_log_button.text = "Log"
 	event_log_button.tooltip_text = "Event log: every notice this realm has raised  [L]"
-	event_log_button.custom_minimum_size = Vector2(52.0, 26.0)
-	Identity.apply_button(event_log_button)
-	event_log_button.add_theme_font_size_override("font_size", 12)
+	event_log_button.custom_minimum_size = Vector2(52.0, 30.0)
+	event_log_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	event_log_button.focus_mode = Control.FOCUS_NONE
+	HudSkin.apply_button(event_log_button)
+	HudSkin.set_font(event_log_button, HudSkin.ui_font(700), HudSkin.SIZE_CAPTION + 1)
 	event_log_button.pressed.connect(_toggle_event_log)
-	loop_row.add_child(event_log_button)
+	var log_cell := Control.new()
+	log_cell.name = "EventLogCell"
+	log_cell.custom_minimum_size = event_log_button.custom_minimum_size
+	log_cell.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	log_cell.add_child(event_log_button)
+	event_log_button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_attach_hotkey_badge(log_cell, "L")
+	loop_panel.add_child(log_cell)
 	pressure_label = Label.new()
 	pressure_label.visible = false
-	loop_row.add_child(pressure_label)
+	loop_panel.add_child(pressure_label)
 	var loop_gap := Control.new()
 	loop_gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	loop_gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -942,51 +1014,65 @@ func _create_ui() -> void:
 	notice_feed.add_theme_constant_override("separation", 4)
 	root.add_child(notice_feed)
 
+	# Look lift: no centre pop-ups during play. Critical notices (RAID, Town
+	# Hall under attack) use this top-right banner; everything else goes to the
+	# left feed. While a raid is on, the banner keeps a live count, direction
+	# and ETA. (Node/var names kept: alert_panel / toast_title / toast_body.)
 	alert_panel = PanelContainer.new()
-	alert_panel.name = "AlertToast"
-	alert_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	alert_panel.offset_left = -210.0
-	alert_panel.offset_top = TOP_BAR_HEIGHT + 48.0
-	alert_panel.offset_right = 210.0
-	alert_panel.offset_bottom = TOP_BAR_HEIGHT + 112.0
-	alert_panel.add_theme_stylebox_override("panel", HudSkin.frame("toast", 8.0))
-	root.add_child(alert_panel)
+	alert_panel.name = "RaidBanner"
+	alert_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	alert_panel.offset_left = -RAID_BANNER_WIDTH - 8.0
+	alert_panel.offset_top = TOP_BAR_HEIGHT + 4.0
+	alert_panel.offset_right = -8.0
+	alert_panel.offset_bottom = TOP_BAR_HEIGHT + 96.0
+	alert_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	alert_panel.add_theme_stylebox_override("panel", HudSkin.frame("alert", 10.0))
 	var alert_margin := MarginContainer.new()
-	alert_margin.add_theme_constant_override("margin_left", 12)
-	alert_margin.add_theme_constant_override("margin_right", 8)
-	alert_margin.add_theme_constant_override("margin_top", 8)
-	alert_margin.add_theme_constant_override("margin_bottom", 8)
+	alert_margin.add_theme_constant_override("margin_left", 4)
+	alert_margin.add_theme_constant_override("margin_right", 0)
+	alert_margin.add_theme_constant_override("margin_top", 0)
+	alert_margin.add_theme_constant_override("margin_bottom", 0)
 	alert_panel.add_child(alert_margin)
 	var alert_row := HBoxContainer.new()
 	alert_row.add_theme_constant_override("separation", 10)
 	alert_margin.add_child(alert_row)
-	var toast_icon := Label.new()
-	toast_icon.name = "ToastIcon"
-	toast_icon.text = "!"
-	toast_icon.custom_minimum_size = Vector2(18, 18)
-	toast_icon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	toast_icon.add_theme_font_size_override("font_size", 16)
-	toast_icon.add_theme_color_override("font_color", Color("#ffd3a8"))
-	alert_row.add_child(toast_icon)
+	raid_banner_icon = HudSkin.icon_rect("swords", 40.0)
+	raid_banner_icon.name = "ToastIcon"
+	raid_banner_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	alert_row.add_child(raid_banner_icon)
 	var toast_copy := VBoxContainer.new()
 	toast_copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	toast_copy.add_theme_constant_override("separation", 0)
 	alert_row.add_child(toast_copy)
-	toast_title = Label.new()
+	toast_title = HudSkin.title_label("", HudSkin.SIZE_TITLE, Color("#ffe2c8"))
 	toast_title.name = "ToastTitle"
-	toast_title.add_theme_font_size_override("font_size", 15)
-	toast_title.add_theme_color_override("font_color", Color("#ffd3a8"))
 	toast_copy.add_child(toast_title)
 	toast_body = Label.new()
 	toast_body.name = "ToastBody"
 	toast_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	toast_body.add_theme_font_size_override("font_size", 13)
-	toast_body.add_theme_color_override("font_color", Color("#d7c4b2"))
+	toast_body.max_lines_visible = 2
+	HudSkin.set_font(toast_body, HudSkin.ui_font(400), HudSkin.SIZE_BODY - 1, Color("#f2dcd0"))
 	toast_copy.add_child(toast_body)
+	raid_eta_row = HBoxContainer.new()
+	raid_eta_row.name = "RaidEtaRow"
+	raid_eta_row.add_theme_constant_override("separation", 4)
+	raid_eta_row.visible = false
+	toast_copy.add_child(raid_eta_row)
+	raid_eta_row.add_child(HudSkin.icon_rect("hourglass", 16.0))
+	raid_eta_label = Label.new()
+	raid_eta_label.name = "RaidEta"
+	HudSkin.set_font(raid_eta_label, HudSkin.ui_font(700), HudSkin.SIZE_CAPTION, Color("#ffcf9a"))
+	raid_eta_row.add_child(raid_eta_label)
 	alert_label = toast_title
 	var dismiss := Button.new()
-	dismiss.text = "X"
-	dismiss.custom_minimum_size = Vector2(28, 28)
-	Identity.apply_button(dismiss)
+	dismiss.name = "DismissBanner"
+	dismiss.text = "×"
+	dismiss.flat = true
+	dismiss.focus_mode = Control.FOCUS_NONE
+	dismiss.custom_minimum_size = Vector2(24, 24)
+	dismiss.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	dismiss.tooltip_text = "Dismiss (the raid stays in the feed and the Log)"
+	HudSkin.set_font(dismiss, HudSkin.ui_font(700), HudSkin.SIZE_TITLE, Color("#ffd3c0"))
 	dismiss.pressed.connect(_dismiss_toast)
 	alert_row.add_child(dismiss)
 	alert_panel.visible = false
@@ -1012,6 +1098,8 @@ func _create_ui() -> void:
 	event_log_body.add_theme_font_size_override("normal_font_size", Identity.SIZE_BODY)
 	event_log_body.add_theme_color_override("default_color", Identity.COLOR_NEUTRAL)
 	log_margin.add_child(event_log_body)
+
+	root.add_child(alert_panel)
 
 	objective_detail_panel = PanelContainer.new()
 	objective_detail_panel.name = "ObjectiveDetail"
@@ -1196,8 +1284,8 @@ func _create_ui() -> void:
 	var strip_header := HBoxContainer.new()
 	strip_header.add_theme_constant_override("separation", 8)
 	strip_box.add_child(strip_header)
-	strip_header.add_child(HudSkin.caption("BUILD", 12))
-	var strip_hint := HudSkin.caption("hover for cost  ·  hotkeys shown on each plan  ·  R rotates", 10)
+	strip_header.add_child(HudSkin.title_label("Build", HudSkin.SIZE_BODY, HudSkin.COLOR_GOLD))
+	var strip_hint := HudSkin.caption("Hover for cost  ·  R rotates", HudSkin.SIZE_MIN)
 	strip_hint.add_theme_color_override("font_color", Color("#8f8a76"))
 	strip_header.add_child(strip_hint)
 	var strip_grid := GridContainer.new()
@@ -1236,19 +1324,29 @@ func _create_ui() -> void:
 		btn_container.add_child(btn)
 
 		var btn_vbox := VBoxContainer.new()
-		btn_vbox.add_theme_constant_override("separation", 0)
+		# Look lift: Source Sans 3 lines are ~17 px at 11 px, so the stack overlaps by 1 px each.
+		btn_vbox.add_theme_constant_override("separation", -1)
 		btn_vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		btn_vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		btn.add_child(btn_vbox)
 
 		var icon_canvas := Control.new()
-		icon_canvas.custom_minimum_size = Vector2(BUILD_SLOT_SIZE.x, 26)
+		icon_canvas.custom_minimum_size = Vector2(BUILD_SLOT_SIZE.x, 24)
 		icon_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var icon_drawing := _create_building_icon_visual(building_type)
-		icon_drawing.set_anchors_preset(Control.PRESET_TOP_LEFT)
-		icon_drawing.size = Vector2(72, 34)
-		icon_drawing.scale = Vector2(0.8, 0.8)
-		icon_drawing.position = Vector2((BUILD_SLOT_SIZE.x - 72.0 * 0.8) * 0.5, 0)
+		# Look lift: rendered thumbnail (glyph fallback if a type has none). It is
+		# taller than the 24 px row and sits behind the outlined name label.
+		var icon_drawing: Control
+		if HudSkin.thumbnail(String(building_type)) != null:
+			icon_drawing = HudSkin.thumbnail_rect(String(building_type), Vector2(58, 34))
+			icon_drawing.name = "Thumbnail"
+			icon_drawing.set_anchors_preset(Control.PRESET_TOP_LEFT)
+			icon_drawing.position = Vector2((BUILD_SLOT_SIZE.x - 58.0) * 0.5, -3)
+		else:
+			icon_drawing = _create_building_icon_visual(building_type)
+			icon_drawing.set_anchors_preset(Control.PRESET_TOP_LEFT)
+			icon_drawing.size = Vector2(72, 34)
+			icon_drawing.scale = Vector2(0.8, 0.8)
+			icon_drawing.position = Vector2((BUILD_SLOT_SIZE.x - 72.0 * 0.8) * 0.5, 0)
 		icon_canvas.add_child(icon_drawing)
 		btn_vbox.add_child(icon_canvas)
 
@@ -1256,7 +1354,7 @@ func _create_ui() -> void:
 		label.text = String(STRIP_SHORT_NAMES.get(building_type, Defs.building_name(building_type)))
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label.clip_text = true
-		label.add_theme_font_size_override("font_size", 11)
+		HudSkin.set_font(label, HudSkin.ui_font(600), HudSkin.SIZE_MIN)
 		label.add_theme_constant_override("outline_size", 3)
 		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		btn_vbox.add_child(label)
@@ -1265,17 +1363,14 @@ func _create_ui() -> void:
 		cost_label.text = _compact_cost(String(building_type))
 		cost_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		cost_label.clip_text = true
-		cost_label.add_theme_font_size_override("font_size", 10)
+		HudSkin.set_font(cost_label, HudSkin.ui_font(600), HudSkin.SIZE_MIN)
 		cost_label.add_theme_color_override("font_color", Color("#e8dcb4"))
 		cost_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		btn_vbox.add_child(cost_label)
-		var key_badge := Label.new()
+		var key_badge := HudSkin.hotkey_badge(hotkey)
 		key_badge.name = "Hotkey"
-		key_badge.text = hotkey
-		key_badge.position = Vector2(4, 1)
-		key_badge.add_theme_font_size_override("font_size", 10)
-		key_badge.add_theme_color_override("font_color", HudSkin.COLOR_GOLD)
-		key_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		key_badge.position = Vector2(3, 2)
+		key_badge.visible = hotkey != ""
 		btn.add_child(key_badge)
 
 		build_strip_buttons.append(btn)
@@ -1288,7 +1383,6 @@ func _create_ui() -> void:
 
 	# T-SNS-UI leftovers: RoN-style idle-worker button, floating just above the
 	# console's right end (outside every container, so it cannot push layout).
-	idle_workers_button = _add_idle_workers_button(root)
 
 	# Centre: framed province map. The holder keeps a fixed rect even while the
 	# minimap itself is hidden (menu), so layout never collapses.
@@ -1333,8 +1427,8 @@ func _create_ui() -> void:
 	inspector_row.add_child(portrait_column)
 	var portrait_frame := PanelContainer.new()
 	portrait_frame.name = "Portrait"
-	portrait_frame.custom_minimum_size = Vector2(104, 96)
-	portrait_frame.add_theme_stylebox_override("panel", HudSkin.frame("slot", 4.0))
+	portrait_frame.custom_minimum_size = Vector2(104, 92)
+	portrait_frame.add_theme_stylebox_override("panel", HudSkin.frame("panel", 4.0))
 	portrait_column.add_child(portrait_frame)
 	portrait_host = Control.new()
 	portrait_host.clip_contents = true
@@ -1344,7 +1438,17 @@ func _create_ui() -> void:
 	portrait_hp_bar.name = "PortraitHP"
 	portrait_hp_bar.show_percentage = false
 	portrait_hp_bar.max_value = 1.0
-	portrait_hp_bar.custom_minimum_size = Vector2(104, 8)
+	portrait_hp_bar.custom_minimum_size = Vector2(104, 16)
+	# Look lift: thick HP bar with the value written on it.
+	portrait_hp_label = Label.new()
+	portrait_hp_label.name = "PortraitHPValue"
+	portrait_hp_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	portrait_hp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	portrait_hp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	HudSkin.set_font(portrait_hp_label, HudSkin.ui_font(700), HudSkin.SIZE_MIN, Color("#f6f2e4"))
+	portrait_hp_label.add_theme_constant_override("outline_size", 3)
+	portrait_hp_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	portrait_hp_bar.add_child(portrait_hp_label)
 	var hp_bg := StyleBoxFlat.new()
 	hp_bg.bg_color = Color(0.05, 0.04, 0.03, 0.95)
 	hp_bg.border_color = Color("#5c5c54")
@@ -1954,9 +2058,12 @@ func _update_ui() -> void:
 	if soldier_label != null:
 		soldier_label.text = "%d/%d" % [int(simulation_host.simulation.soldiers_available()), int(simulation_host.simulation.soldiers_total)]
 	_update_idle_workers()
-	if time_label != null:
-		time_label.text = simulation_host.simulation.get_time_label()
 	var night_now := bool(simulation_host.simulation.is_night)
+	if time_label != null:
+		time_label.text = _clock_title()
+	if phase_label != null:
+		phase_label.text = _phase_countdown_text()
+	_sync_speed_controls()
 	if day_icon != null:
 		day_icon.texture = HudSkin.icon("moon" if night_now else "sun")
 	if phase_bar != null:
@@ -1969,6 +2076,7 @@ func _update_ui() -> void:
 		status_label.text = ""
 		status_message_text = ""
 	_ingest_simulation_notices()
+	_update_raid_banner()
 	_update_loop_hud()
 	for building_type in build_buttons:
 		var button: Button = build_buttons[building_type]
@@ -2103,11 +2211,14 @@ func _update_loop_hud() -> void:
 	if simulation_host.simulation.has_method("living_hostile_count"):
 		hostiles = int(simulation_host.simulation.living_hostile_count())
 	if pressure_meter != null and pressure_meter.has_method("set_pressure"):
-		pressure_meter.visible = play_has_begun
 		pressure_meter.set_pressure(pressure)
 		if pressure_meter.has_method("set_threat"):
 			pressure_meter.set_threat(bool(simulation_host.simulation.is_night), hostiles)
+		pressure_meter.visible = _pressure_chip_should_show(pressure_meter.band, bool(simulation_host.simulation.is_night), hostiles)
 		pressure_meter.tooltip_text = String(wyrdfall.get("pressure_tooltip", "Wyrd Pressure"))
+		# Q6: while the chip is hidden the QUIET state lives in the clock tooltip.
+		if day_icon != null and day_icon.get_parent() != null and day_icon.get_parent().get_parent() is Control:
+			(day_icon.get_parent().get_parent() as Control).tooltip_text = "Day and time until the next phase" + ("" if pressure_meter.visible else "\nWyrd Pressure: %s" % String(pressure_meter.band).capitalize())
 	if pressure_label != null:
 		pressure_label.text = String(pressure.get("band", "QUIET"))
 	if binding_percent_label != null:
@@ -2130,7 +2241,7 @@ func _update_loop_hud() -> void:
 			parts.append(rival_line)
 		loop_label.text = "  ·  ".join(parts)
 		if status_plate != null:
-			status_plate.visible = loop_label.text != "" or (bind_button != null and bind_button.visible) or binding_active
+			status_plate.visible = (loop_label.text != "" or (bind_button != null and bind_button.visible) or binding_active) and not (alert_panel != null and alert_panel.visible)
 			var raid_now := bool(simulation_host.simulation.is_night) and hostiles > 0
 			loop_label.add_theme_color_override("font_color", Color("#ff9d8f") if raid_now else (Color("#b9c8ff") if simulation_host.simulation.is_night else Color("#e6dcc0")))
 	if bind_button != null:
@@ -2280,12 +2391,46 @@ func _update_inspector_core() -> void:
 		inspector_panel.visible = false
 
 
+## Look lift: stat rows get an icon, a muted label and a bold value, laid out
+## in two columns; the name uses the Cinzel display face.
+const DISPLAY_FONT_PATH := "res://assets/settlement3d/runtime/interface/fonts/cinzel_bold.tres"
+const UI_ICON_PATH := "res://assets/settlement3d/runtime/interface/ui/icon_%s.png"
+const STAT_ICON_KEYS := [
+	["Workers", "worker"], ["Residents", "house"], ["Recruit", "pop"], ["Road", "road"],
+	["HP", "shield"], ["Healthy", "shield"], ["Injured", "shield"], ["Hungry", "hunger"], ["Fed", "bread"],
+	["Bread", "bread"], ["Training", "soldier"], ["Wood", "wood"], ["Planks", "planks"], ["Stone", "stone"],
+	["Wheat", "wheat"], ["Wyrd", "wyrd"], ["Lumen", "wyrd"], ["Carrying", "worker"], ["Delivered", "hammer"],
+	["Needed", "hammer"], ["Population", "pop"], ["Free workers", "worker"], ["Soldiers", "soldier"],
+	["Buildings", "house"],
+]
+
+
+static func stat_icon_key(line: String) -> String:
+	var plain := line.strip_edges()
+	for pair in STAT_ICON_KEYS:
+		if plain.begins_with(String(pair[0])) or plain.begins_with("[color=#f0a06e]" + String(pair[0])):
+			return String(pair[1])
+	return ""
+
+
+static func _stat_cell(line: String, padding := "0,0,16,2") -> String:
+	var key := stat_icon_key(line)
+	var icon := ("[img=16x16]%s[/img] " % (UI_ICON_PATH % key)) if key != "" else ""
+	var split := line.find("  ")
+	var body := line
+	if split > 0 and not line.begins_with("["):
+		body = "[color=#b9ab86]%s[/color]  [b]%s[/b]" % [line.substr(0, split), line.substr(split + 2)]
+	return "[cell padding=%s]%s%s[/cell]" % [padding, icon, body]
+
+
 func _decorate_inspector() -> void:
 	var lines: PackedStringArray = inspector_label.text.split("\n")
 	var header: Array[String] = []
 	var stats: Array[String] = []
 	for index in lines.size():
-		var line := String(lines[index]).replace("[font_size=22]", "[font_size=19]").replace("[font_size=20]", "[font_size=19]")
+		var line := String(lines[index]).replace("[font_size=22]", "[font_size=20]").replace("[font_size=19]", "[font_size=20]")
+		if index == 0:
+			line = "[font=%s]%s[/font]" % [DISPLAY_FONT_PATH, line]
 		if index < 2:
 			header.append(line)
 			if index == 1:
@@ -2304,11 +2449,13 @@ func _decorate_inspector() -> void:
 		if found != null and hp < 0:
 			hp = int(found.get_string(1) if found.get_string(1) != "" else found.get_string(3))
 			max_hp = int(found.get_string(2) if found.get_string(2) != "" else found.get_string(4))
-		cells += "[cell padding=0,0,18,1]%s[/cell]" % stat
+		cells += _stat_cell(stat)
 	var text := "\n".join(header)
 	if cells != "":
 		text += "\n[table=2]%s[/table]" % cells
 	inspector_label.text = text
+	if portrait_hp_label != null:
+		portrait_hp_label.text = "%d / %d" % [hp, max_hp] if max_hp > 0 else "Healthy"
 	var portrait := _selection_portrait_key()
 	if portrait != portrait_key:
 		portrait_key = portrait
@@ -2352,6 +2499,13 @@ func _rebuild_portrait(key: String) -> void:
 		return
 	for child in portrait_host.get_children():
 		child.queue_free()
+	if key.begins_with("building:") and HudSkin.thumbnail(key.substr(9)) != null:
+		# Look lift: the portrait is the rendered building thumbnail.
+		var thumb := HudSkin.thumbnail_rect(key.substr(9), Vector2(96, 72))
+		thumb.name = "PortraitThumbnail"
+		thumb.position = Vector2(0, 8)
+		portrait_host.add_child(thumb)
+		return
 	if key.begins_with("building:"):
 		var holder := Control.new()
 		holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -2424,17 +2578,16 @@ func _update_realm_overview() -> void:
 	var free_workers := int(sim.workers_free())
 	var food := int(settlement.get("food", 0))
 	var demand := int(settlement.get("next_food_demand", 0))
-	var cell := "[cell padding=0,0,22,2]%s[/cell]"
 	var cells: Array[String] = [
-		cell % ("Population  [b]%d / %d[/b]" % [int(sim.population_current), int(sim.housing_capacity)]),
-		cell % ("Free workers  [b]%s[/b]" % ("[color=#8fe08a]%d[/color]" % free_workers if free_workers > 0 else "[color=#ff9d8f]0[/color]")),
-		cell % ("Soldiers  [b]%d[/b]" % int(sim.soldiers_total)),
-		cell % ("Buildings  [b]%d[/b]%s" % [buildings, ("  (+%d rising)" % constructing) if constructing > 0 else ""]),
-		cell % ("Bread  [b]%s[/b]" % ("%d / %d needed" % [food, demand] if demand > 0 else str(food))),
-		cell % ("Hungry  [b]%s[/b]" % ("[color=#ff9d8f]%d[/color]" % int(settlement.get("hungry", 0)) if int(settlement.get("hungry", 0)) > 0 else "0")),
+		_stat_cell("Population  %d / %d" % [int(sim.population_current), int(sim.housing_capacity)], "0,0,22,2"),
+		_stat_cell("Free workers  %s" % ("[color=#8fe08a]%d[/color]" % free_workers if free_workers > 0 else "[color=#ff9d8f]0[/color]"), "0,0,22,2"),
+		_stat_cell("Soldiers  %d" % int(sim.soldiers_total), "0,0,22,2"),
+		_stat_cell("Buildings  %d%s" % [buildings, ("  (+%d rising)" % constructing) if constructing > 0 else ""], "0,0,22,2"),
+		_stat_cell("Bread  %s" % ("%d / %d needed" % [food, demand] if demand > 0 else str(food)), "0,0,22,2"),
+		_stat_cell("Hungry  %s" % ("[color=#ff9d8f]%d[/color]" % int(settlement.get("hungry", 0)) if int(settlement.get("hungry", 0)) > 0 else "0"), "0,0,22,2"),
 	]
-	realm_overview.text = "[font_size=19][color=#f0c880]Your Realm[/color][/font_size]   [color=#b9ab86]%s[/color]\n[table=2]%s[/table]\n[color=#8f8a76]Click a building or settler to inspect it  ·  H jumps to the Town Hall[/color]" % [
-		sim.get_time_label(), "".join(cells)]
+	realm_overview.text = "[font=%s][font_size=20][color=#f0c880]Your Realm[/color][/font_size][/font]   [color=#b9ab86]%s  ·  %s[/color]\n[table=2]%s[/table]\n[font_size=12][color=#8f8a76]Click a building or settler to inspect it  ·  H jumps to the Town Hall[/color][/font_size]" % [
+		DISPLAY_FONT_PATH, _clock_title(), _phase_countdown_text(), "".join(cells)]
 
 
 func _building_player_status(building: Dictionary, type_name: String) -> String:
@@ -2550,7 +2703,7 @@ func _ingest_simulation_notices() -> void:
 	for notice_value in simulation_host.simulation.consume_pending_notices():
 		var notice: Dictionary = notice_value
 		var severity := String(notice.get("severity", "info"))
-		# T-SNS-UI: critical notices interrupt with the centre toast; everything
+		# Look lift: critical notices go to the top-right banner; everything
 		# else lands in the left-hand feed. All of it stays in the LOG.
 		if severity == "critical" or notice_feed == null:
 			_show_toast(String(notice.get("title", "")), String(notice.get("body", "")), severity)
@@ -2561,6 +2714,11 @@ func _ingest_simulation_notices() -> void:
 
 func _push_notice_feed(title: String, body: String, severity: String) -> void:
 	if notice_feed == null or title == "":
+		return
+	# Repeats of the newest entry refresh it instead of stacking copies.
+	if not notice_feed_entries.is_empty() and String(notice_feed_entries[0].get("key", "")) == "%s:%s" % [title, body] and is_instance_valid(notice_feed_entries[0]["node"]):
+		notice_feed_entries[0]["until"] = hud_clock + (16.0 if severity == "critical" else 11.0)
+		(notice_feed_entries[0]["node"] as Control).modulate.a = 1.0
 		return
 	var entry := PanelContainer.new()
 	entry.name = "Notice"
@@ -2582,8 +2740,7 @@ func _push_notice_feed(title: String, body: String, severity: String) -> void:
 	row.add_child(copy)
 	var title_label := Label.new()
 	title_label.text = title
-	title_label.add_theme_font_size_override("font_size", 14)
-	title_label.add_theme_color_override("font_color", HudSkin.COLOR_GOLD if severity != "critical" else Color("#ffb4a4"))
+	HudSkin.set_font(title_label, HudSkin.ui_font(700), HudSkin.SIZE_BODY, HudSkin.COLOR_GOLD if severity != "critical" else Color("#ffb4a4"))
 	title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	copy.add_child(title_label)
 	if body != "":
@@ -2591,14 +2748,13 @@ func _push_notice_feed(title: String, body: String, severity: String) -> void:
 		body_label.text = body
 		body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		body_label.max_lines_visible = 2
-		body_label.add_theme_font_size_override("font_size", 12)
-		body_label.add_theme_color_override("font_color", Color("#ddd4bd"))
+		HudSkin.set_font(body_label, HudSkin.ui_font(400), HudSkin.SIZE_CAPTION, Color("#ddd4bd"))
 		body_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		copy.add_child(body_label)
 	notice_feed.add_child(entry)
 	notice_feed.move_child(entry, 0)
 	var hold := 16.0 if severity == "critical" else 11.0
-	notice_feed_entries.push_front({"node": entry, "until": hud_clock + hold})
+	notice_feed_entries.push_front({"node": entry, "until": hud_clock + hold, "key": "%s:%s" % [title, body]})
 	while notice_feed_entries.size() > NOTICE_FEED_LIMIT:
 		var dropped: Dictionary = notice_feed_entries.pop_back()
 		(dropped["node"] as Node).queue_free()
@@ -2626,6 +2782,11 @@ func _tick_notice_feed() -> void:
 func _show_toast(title: String, body: String, severity: String = "info", hold_seconds: float = -1.0) -> void:
 	if title == "":
 		return
+	# Look lift: no centre pop-ups. Only critical notices use the banner; the
+	# rest (e.g. "Insufficient Resources") go to the left feed.
+	if severity != "critical" and notice_feed != null:
+		_push_notice_feed(title, body, severity)
+		return
 	var key := "%s:%s" % [title, body]
 	if key == last_toast_key and hud_clock < toast_until:
 		return
@@ -2642,8 +2803,76 @@ func _show_toast(title: String, body: String, severity: String = "info", hold_se
 		alert_panel.modulate.a = 1.0
 
 
+## Look lift raid banner: while hostiles are alive at night the banner shows
+## "N raiders · from the west · ETA ~0:45" and stays up (unless dismissed for
+## this raid). ETA = the soonest raider's remaining path x step time, or the
+## straight-line tile distance to the Town Hall when it has no path yet.
+func raid_status() -> Dictionary:
+	var sim = simulation_host.simulation
+	if sim == null:
+		return {}
+	var count := int(sim.living_hostile_count())
+	if count <= 0:
+		return {"count": 0}
+	var town: Vector2i = sim._footprint_center(sim.town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
+	var best_eta := INF
+	var nearest := Vector2i.ZERO
+	var nearest_distance := INF
+	for enemy_value in sim.enemies:
+		var enemy: Dictionary = enemy_value
+		if int(enemy.get("hp", 0)) <= 0 or bool(enemy.get("retreating", false)):
+			continue
+		var position := Vector2i(enemy.get("position", Vector2i.ZERO))
+		var distance := float(maxi(absi(position.x - town.x), absi(position.y - town.y)))
+		var step := float(sim.ENEMY_STEP_SECONDS) * float(enemy.get("speed_multiplier", 1.0))
+		var path: Array = enemy.get("path", [])
+		var eta := float(path.size()) * step if not path.is_empty() else distance * step
+		best_eta = minf(best_eta, eta)
+		if distance < nearest_distance:
+			nearest_distance = distance
+			nearest = position
+	var bearing := String(sim._bearing_from_town(nearest))
+	var eta_seconds := 0 if best_eta == INF else int(ceil(best_eta))
+	var at_gates := nearest_distance <= 4.0
+	var eta_text := "at the Town Hall" if at_gates else "ETA ~%d:%02d" % [eta_seconds / 60, eta_seconds % 60]
+	return {
+		"count": count,
+		"bearing": bearing,
+		"eta_seconds": eta_seconds,
+		"at_gates": at_gates,
+		"line": "%d raider%s  ·  from %s  ·  %s" % [count, "" if count == 1 else "s", bearing, eta_text],
+	}
+
+
+func _update_raid_banner() -> void:
+	if alert_panel == null or simulation_host.simulation == null:
+		return
+	var status := raid_status()
+	var raiding := int(status.get("count", 0)) > 0 and play_has_begun
+	if raiding and not raid_banner_active:
+		raid_banner_dismissed = false
+	raid_banner_active = raiding
+	if raid_eta_row != null:
+		raid_eta_row.visible = raiding
+	if not raiding:
+		return
+	raid_eta_label.text = String(status.get("line", ""))
+	if raid_banner_dismissed:
+		return
+	if toast_title.text != "RAID" and toast_until > hud_clock and toast_severity == "critical" and last_toast_key != "":
+		return  # another critical notice (e.g. Town Hall under attack) is showing
+	toast_title.text = "RAID"
+	toast_body.text = "%d hostile%s coming from %s." % [int(status.get("count", 0)), " is" if int(status.get("count", 0)) == 1 else "s are", String(status.get("bearing", "the wilds"))]
+	toast_until = maxf(toast_until, hud_clock + 1.5)
+	toast_severity = "critical"
+	alert_panel.visible = startup_overlay == null or not startup_overlay.visible
+	alert_panel.modulate.a = 1.0
+
+
 func _dismiss_toast() -> void:
 	toast_until = 0.0
+	if raid_banner_active:
+		raid_banner_dismissed = true
 	if alert_panel != null:
 		alert_panel.visible = false
 
@@ -2862,15 +3091,44 @@ func _format_inventory(inventory_value) -> String:
 
 func _toggle_pause() -> void:
 	simulation_host.paused = not simulation_host.paused
-	pause_button.text = "Resume" if simulation_host.paused else "Pause"
 	world_view.set_presentation_paused(simulation_host.paused)
+	_sync_speed_controls()
 
 
+## ▶: resume (if paused) at normal speed.
+func _play_normal_speed() -> void:
+	simulation_host.speed_multiplier = 1.0
+	if simulation_host.paused:
+		simulation_host.paused = false
+		world_view.set_presentation_paused(false)
+	_sync_speed_controls()
+
+
+## ⏩: 1x -> 2x -> 4x -> 2x ... (▶ returns to 1x). Also resumes a paused game.
 func _cycle_speed() -> void:
-	var speeds := [1.0, 2.0, 4.0]
-	var current := speeds.find(simulation_host.speed_multiplier)
-	simulation_host.speed_multiplier = speeds[(current + 1) % speeds.size()]
-	speed_button.text = "%dx" % int(simulation_host.speed_multiplier)
+	simulation_host.speed_multiplier = 4.0 if is_equal_approx(simulation_host.speed_multiplier, 2.0) else 2.0
+	if simulation_host.paused:
+		simulation_host.paused = false
+		world_view.set_presentation_paused(false)
+	_sync_speed_controls()
+
+
+## Look lift: the three icon buttons behave like one radio group; the active
+## state is shown by the gold "pressed" frame, the details live in tooltips.
+func _sync_speed_controls() -> void:
+	if pause_button == null or simulation_host == null:
+		return
+	var paused := bool(simulation_host.paused)
+	var speed := float(simulation_host.speed_multiplier)
+	pause_button.set_pressed_no_signal(paused)
+	pause_button.tooltip_text = ("Resume" if paused else "Pause") + "  [Space]"
+	if play_button != null:
+		play_button.set_pressed_no_signal(not paused and speed <= 1.0)
+	if speed_button != null:
+		speed_button.set_pressed_no_signal(not paused and speed > 1.0)
+		speed_button.text = ("%dx" % int(speed)) if speed > 1.0 else ""
+		speed_button.custom_minimum_size.x = 50.0 if speed > 1.0 else 30.0
+		speed_button.tooltip_text = "Fast forward (now %dx): 2x, press again for 4x" % int(speed) if speed > 1.0 else "Fast forward: 2x, press again for 4x"
 
 
 func _create_start_menu(root: Control) -> void:
@@ -3334,8 +3592,7 @@ func _show_start_menu() -> void:
 	simulation_host.paused = true
 	world_view.set_presentation_paused(true)
 	camera_rig.input_enabled = false
-	if pause_button != null:
-		pause_button.text = "Resume"
+	_sync_speed_controls()
 	_author_title_composition()
 	_update_day_night_lighting()
 	call_deferred("_place_start_column", menu_card, 360.0)
@@ -3353,8 +3610,7 @@ func _hide_start_menu() -> void:
 		world_view.set_presentation_paused(false)
 	if camera_rig != null:
 		camera_rig.input_enabled = true
-	if pause_button != null:
-		pause_button.text = "Pause"
+	_sync_speed_controls()
 	play_has_begun = true
 
 
@@ -3532,36 +3788,97 @@ func _panel_style(_background: Color, _border: Color) -> StyleBox:
 	return HudSkin.frame("panel")
 
 
+## Look lift pressure-chip rule: hidden while the realm is QUIET by day with
+## no hostiles; shown for any higher band, at night, or during a raid.
+func _pressure_chip_should_show(band: String, night: bool, hostiles: int) -> bool:
+	if not play_has_begun:
+		return false
+	return night or hostiles > 0 or not String(band).to_upper().contains("QUIET")
+
+
+## Look lift clock: "Day 3" / "Night 3" on top, "Night in 4:12" underneath
+## (the game has no seasons; the next phase is what the player plans for).
+func _clock_title() -> String:
+	var sim = simulation_host.simulation
+	if sim == null:
+		return ""
+	return "%s %d" % ["Night" if bool(sim.is_night) else "Day", int(sim.day_count)]
+
+
+func _phase_countdown_text() -> String:
+	var sim = simulation_host.simulation
+	if sim == null:
+		return ""
+	var night := bool(sim.is_night)
+	var length := float(sim.NIGHT_LENGTH_SECONDS if night else sim.DAY_LENGTH_SECONDS)
+	var remaining := maxi(0, int(ceil(length - float(sim.phase_time))))
+	return "%s in %d:%02d" % ["Dawn" if night else "Night", remaining / 60, remaining % 60]
+
+
+## Look lift: a navy capsule (gold hairline) in the top bar; returns the row
+## that holds the capsule's content.
+func _top_capsule(host: HBoxContainer, node_name: String) -> HBoxContainer:
+	var capsule := PanelContainer.new()
+	capsule.name = node_name
+	capsule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	capsule.size_flags_vertical = Control.SIZE_FILL
+	var style := HudSkin.frame("capsule", 4.0)
+	style.content_margin_left = 8.0
+	style.content_margin_right = 8.0
+	style.content_margin_top = 1.0
+	style.content_margin_bottom = 1.0
+	capsule.add_theme_stylebox_override("panel", style)
+	host.add_child(capsule)
+	var row := HBoxContainer.new()
+	row.name = "Row"
+	row.add_theme_constant_override("separation", 8)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	capsule.add_child(row)
+	return row
+
+
+## Small dim hotkey badge pinned to the top-right corner of a control.
+func _attach_hotkey_badge(host: Control, text: String) -> Label:
+	var badge := HudSkin.hotkey_badge(text)
+	badge.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	badge.offset_left = -14.0
+	badge.offset_right = 1.0
+	badge.offset_top = -3.0
+	badge.offset_bottom = 12.0
+	badge.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	host.add_child(badge)
+	return badge
+
+
 func _add_resource_chip(host: HBoxContainer, key: String, caption: String) -> Label:
-	# T-SNS-UI: real icon, readable amount and a live +rate per minute.
+	# T-SNS-UI: real icon, readable amount and a live rate per minute
+	# (Look lift: the rate sits underneath the value).
 	var cell := PanelContainer.new()
 	cell.name = "Chip_%s" % key
 	cell.tooltip_text = caption
 	cell.mouse_filter = Control.MOUSE_FILTER_STOP
 	cell.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 4)
+	row.add_theme_constant_override("separation", 3)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cell.add_child(row)
-	row.add_child(HudSkin.icon_rect(key, 28.0))
+	row.add_child(HudSkin.icon_rect(key, 24.0))
 	var stack := VBoxContainer.new()
-	stack.add_theme_constant_override("separation", -3)
+	stack.add_theme_constant_override("separation", -4)
 	stack.alignment = BoxContainer.ALIGNMENT_CENTER
 	stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	stack.custom_minimum_size.x = 40.0
+	stack.custom_minimum_size.x = 38.0
 	row.add_child(stack)
 	var value := Label.new()
 	value.name = "Value"
 	value.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	value.add_theme_font_size_override("font_size", 17)
-	value.add_theme_color_override("font_color", Identity.COLOR_WYRD if key == "wyrd" else Color("#f6eed6"))
+	HudSkin.set_font(value, HudSkin.ui_font(700), HudSkin.SIZE_VALUE, Identity.COLOR_WYRD if key == "wyrd" else Color("#f6eed6"))
 	stack.add_child(value)
 	var rate := Label.new()
 	rate.name = "Rate"
 	rate.text = ""
 	rate.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	rate.add_theme_font_size_override("font_size", 11)
-	rate.add_theme_color_override("font_color", HudSkin.COLOR_GAIN)
+	HudSkin.set_font(rate, HudSkin.ui_font(600), HudSkin.SIZE_MIN, HudSkin.COLOR_GAIN)
 	stack.add_child(rate)
 	resource_rate_labels[key] = rate
 	host.add_child(cell)
@@ -3574,15 +3891,21 @@ func _add_top_stat(host: HBoxContainer, node_name: String, icon_key: String, tip
 	cell.add_theme_constant_override("separation", 4)
 	cell.tooltip_text = tip
 	cell.mouse_filter = Control.MOUSE_FILTER_STOP
-	cell.add_child(HudSkin.icon_rect(icon_key, 28.0))
+	cell.add_child(HudSkin.icon_rect(icon_key, 24.0))
+	var stack := VBoxContainer.new()
+	stack.name = node_name + "Stack"
+	stack.add_theme_constant_override("separation", -4)
+	stack.alignment = BoxContainer.ALIGNMENT_CENTER
+	stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stack.custom_minimum_size.x = 44.0
+	cell.add_child(stack)
 	var label := Label.new()
 	label.name = node_name
 	label.tooltip_text = tip
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 16)
-	label.add_theme_color_override("font_color", Color("#f6eed6"))
-	cell.add_child(label)
+	HudSkin.set_font(label, HudSkin.ui_font(700), HudSkin.SIZE_VALUE, Color("#f6eed6"))
+	stack.add_child(label)
 	host.add_child(cell)
 	return label
 
@@ -3595,22 +3918,22 @@ func idle_worker_count() -> int:
 	return maxi(0, int(sim.workers_free()) - int(sim._clearer_count()))
 
 
+## Look lift: the idle count is a sub-label of the population group (it used
+## to float above the console). Clicking it still opens the BUILD plans.
 func _add_idle_workers_button(host: Control) -> Button:
 	var button := Button.new()
 	button.name = "IdleWorkers"
-	button.icon = HudSkin.icon("pop")
 	button.text = "0 idle"
+	button.flat = true
 	button.focus_mode = Control.FOCUS_NONE
-	button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	button.offset_left = -118.0
-	button.offset_right = -10.0
-	button.offset_top = -CONSOLE_HEIGHT - 40.0
-	button.offset_bottom = -CONSOLE_HEIGHT - 6.0
-	button.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	button.add_theme_constant_override("icon_max_width", 20)
-	button.add_theme_font_size_override("font_size", 14)
-	HudSkin.apply_button(button)
-	button.add_theme_color_override("font_color", Color("#ffcf7a"))
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled", "focus"]:
+		var box := StyleBoxEmpty.new()
+		button.add_theme_stylebox_override(state, box)
+	HudSkin.set_font(button, HudSkin.ui_font(700), HudSkin.SIZE_MIN, Color("#ffcf7a"))
+	button.add_theme_color_override("font_hover_color", HudSkin.COLOR_GOLD)
+	button.add_theme_color_override("font_outline_color", HudSkin.COLOR_OUTLINE)
+	button.add_theme_constant_override("outline_size", 2)
 	button.pressed.connect(_on_idle_workers_pressed)
 	button.visible = false
 	host.add_child(button)
@@ -3628,6 +3951,8 @@ func _update_idle_workers() -> void:
 		idle_workers_button.text = "%d idle" % idle
 		# Hidden at night: settlers shelter then, so "idle" would be noise mid-raid.
 		idle_workers_button.visible = idle > 0 and play_has_begun and not bool(simulation_host.simulation.is_night) and (startup_overlay == null or not startup_overlay.visible)
+		if population_label != null:
+			population_label.get_parent().get_parent().tooltip_text = "Population / housing" + ("\n%d idle: click to open Build" % idle if idle_workers_button.visible else "")
 		idle_workers_button.tooltip_text = "%d free worker%s without a job. Click to open BUILD: each workplace (Lumber Camp, Quarry, Farm, Sawmill, Bakery) employs settlers." % [idle, "" if idle == 1 else "s"]
 	_tick_idle_workers(idle)
 
@@ -3792,7 +4117,8 @@ func _maybe_show_nightfall(wyrdfall: Dictionary) -> void:
 			String(forecast.get("threat", "QUIET")),
 			String(forecast.get("activity", "Unknown"))
 		]
-	nightfall_event_until = Time.get_ticks_msec() / 1000.0 + 5.2
+	# Look lift: no centre pop-ups; the nightfall forecast is a feed notice.
+	_push_notice_feed("Nightfall soon", "Threat: %s  ·  Likely activity: %s" % [String(forecast.get("threat", "QUIET")).capitalize(), String(forecast.get("activity", "Unknown"))], "warning")
 
 
 func _ghost_material(color: Color) -> StandardMaterial3D:
