@@ -163,6 +163,10 @@ const BUILD_HOTKEY_LABELS := ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", 
 const RATE_WINDOW_SECONDS := 30.0
 const STRIP_SHORT_NAMES := {"LUMBER_CAMP": "Lumber", "LUMEN_PILLAR": "Lumen", "CLEAR_AREA": "Clear"}
 const NOTICE_FEED_LIMIT := 4
+## T-SNS-UI leftovers: idle-worker notice. Game seconds a free worker may stand
+## idle (by day) before the left feed says so, and the minimum gap between notices.
+const IDLE_NOTICE_AFTER_SECONDS := 40.0
+const IDLE_NOTICE_COOLDOWN_SECONDS := 150.0
 var hud_console: PanelContainer
 var selection_host: PanelContainer
 var realm_overview: RichTextLabel
@@ -254,6 +258,13 @@ var minimap
 var clear_dragging := false
 var clear_drag_start := Vector2i(-1, -1)
 var last_toast_key := ""
+## HUD clock: accumulated frame time. Toasts and feed entries age on it instead of
+## the wall clock, so a slow frame (software GL, hitch) cannot swallow a notice.
+var hud_clock := 0.0
+var idle_workers_button: Button
+var idle_workers_since := 0.0
+var idle_workers_tracking := false
+var idle_notice_last := -1000000.0
 
 
 func _ready() -> void:
@@ -308,6 +319,7 @@ func _run_release_check() -> void:
 
 
 func _process(delta: float) -> void:
+	hud_clock += delta
 	var ticks := simulation_host.advance(delta)
 	if ticks > 0 or last_synced_tick < 0:
 		_sync_presentation()
@@ -1274,6 +1286,10 @@ func _create_ui() -> void:
 		build_strip_tooltips.append(btn.tooltip_text)
 		slot_index += 1
 
+	# T-SNS-UI leftovers: RoN-style idle-worker button, floating just above the
+	# console's right end (outside every container, so it cannot push layout).
+	idle_workers_button = _add_idle_workers_button(root)
+
 	# Centre: framed province map. The holder keeps a fixed rect even while the
 	# minimap itself is hidden (menu), so layout never collapses.
 	var map_holder := Control.new()
@@ -1937,6 +1953,7 @@ func _update_ui() -> void:
 		population_label.text = "%d/%d" % [int(resources.get(Defs.RESOURCE_POPULATION_USED, 0)), int(resources.get(Defs.RESOURCE_POPULATION_MAX, 0))]
 	if soldier_label != null:
 		soldier_label.text = "%d/%d" % [int(simulation_host.simulation.soldiers_available()), int(simulation_host.simulation.soldiers_total)]
+	_update_idle_workers()
 	if time_label != null:
 		time_label.text = simulation_host.simulation.get_time_label()
 	var night_now := bool(simulation_host.simulation.is_night)
@@ -2581,7 +2598,7 @@ func _push_notice_feed(title: String, body: String, severity: String) -> void:
 	notice_feed.add_child(entry)
 	notice_feed.move_child(entry, 0)
 	var hold := 16.0 if severity == "critical" else 11.0
-	notice_feed_entries.push_front({"node": entry, "until": Time.get_ticks_msec() / 1000.0 + hold})
+	notice_feed_entries.push_front({"node": entry, "until": hud_clock + hold})
 	while notice_feed_entries.size() > NOTICE_FEED_LIMIT:
 		var dropped: Dictionary = notice_feed_entries.pop_back()
 		(dropped["node"] as Node).queue_free()
@@ -2590,7 +2607,7 @@ func _push_notice_feed(title: String, body: String, severity: String) -> void:
 func _tick_notice_feed() -> void:
 	if notice_feed_entries.is_empty():
 		return
-	var now := Time.get_ticks_msec() / 1000.0
+	var now := hud_clock
 	for index in range(notice_feed_entries.size() - 1, -1, -1):
 		var entry: Dictionary = notice_feed_entries[index]
 		var node_value = entry["node"]
@@ -2610,7 +2627,7 @@ func _show_toast(title: String, body: String, severity: String = "info", hold_se
 	if title == "":
 		return
 	var key := "%s:%s" % [title, body]
-	if key == last_toast_key and Time.get_ticks_msec() / 1000.0 < toast_until:
+	if key == last_toast_key and hud_clock < toast_until:
 		return
 	last_toast_key = key
 	toast_severity = severity
@@ -2619,7 +2636,7 @@ func _show_toast(title: String, body: String, severity: String = "info", hold_se
 	if toast_body != null:
 		toast_body.text = body
 	var hold := hold_seconds if hold_seconds > 0.0 else (7.5 if severity == "critical" else 4.2)
-	toast_until = Time.get_ticks_msec() / 1000.0 + hold
+	toast_until = hud_clock + hold
 	if alert_panel != null:
 		alert_panel.visible = startup_overlay == null or not startup_overlay.visible
 		alert_panel.modulate.a = 1.0
@@ -2634,7 +2651,7 @@ func _dismiss_toast() -> void:
 func _tick_toasts(_delta: float) -> void:
 	if alert_panel == null or not alert_panel.visible:
 		return
-	var remaining := toast_until - Time.get_ticks_msec() / 1000.0
+	var remaining := toast_until - hud_clock
 	if remaining <= 0.0:
 		alert_panel.visible = false
 		return
@@ -3568,6 +3585,73 @@ func _add_top_stat(host: HBoxContainer, node_name: String, icon_key: String, tip
 	cell.add_child(label)
 	host.add_child(cell)
 	return label
+
+
+## Idle free workers: settlers with no workplace, clearing order or road job.
+func idle_worker_count() -> int:
+	var sim = simulation_host.simulation
+	if sim == null:
+		return 0
+	return maxi(0, int(sim.workers_free()) - int(sim._clearer_count()))
+
+
+func _add_idle_workers_button(host: Control) -> Button:
+	var button := Button.new()
+	button.name = "IdleWorkers"
+	button.icon = HudSkin.icon("pop")
+	button.text = "0 idle"
+	button.focus_mode = Control.FOCUS_NONE
+	button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	button.offset_left = -118.0
+	button.offset_right = -10.0
+	button.offset_top = -CONSOLE_HEIGHT - 40.0
+	button.offset_bottom = -CONSOLE_HEIGHT - 6.0
+	button.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	button.add_theme_constant_override("icon_max_width", 20)
+	button.add_theme_font_size_override("font_size", 14)
+	HudSkin.apply_button(button)
+	button.add_theme_color_override("font_color", Color("#ffcf7a"))
+	button.pressed.connect(_on_idle_workers_pressed)
+	button.visible = false
+	host.add_child(button)
+	return button
+
+
+func _on_idle_workers_pressed() -> void:
+	# Idle settlers only get work from a new workplace: open the BUILD plans.
+	_set_build_palette_visible(true)
+
+
+func _update_idle_workers() -> void:
+	var idle := idle_worker_count()
+	if idle_workers_button != null:
+		idle_workers_button.text = "%d idle" % idle
+		# Hidden at night: settlers shelter then, so "idle" would be noise mid-raid.
+		idle_workers_button.visible = idle > 0 and play_has_begun and not bool(simulation_host.simulation.is_night) and (startup_overlay == null or not startup_overlay.visible)
+		idle_workers_button.tooltip_text = "%d free worker%s without a job. Click to open BUILD: each workplace (Lumber Camp, Quarry, Farm, Sawmill, Bakery) employs settlers." % [idle, "" if idle == 1 else "s"]
+	_tick_idle_workers(idle)
+
+
+func _tick_idle_workers(idle: int) -> void:
+	var sim = simulation_host.simulation
+	if sim == null or not play_has_begun or bool(sim.game_finished):
+		idle_workers_tracking = false
+		return
+	var now := float(sim.elapsed_seconds)
+	# Workers shelter at night; idle only counts by day.
+	if idle <= 0 or bool(sim.is_night):
+		idle_workers_tracking = false
+		return
+	if not idle_workers_tracking or now < idle_workers_since:
+		idle_workers_tracking = true
+		idle_workers_since = now
+		return
+	if now - idle_workers_since < IDLE_NOTICE_AFTER_SECONDS:
+		return
+	if now - idle_notice_last < IDLE_NOTICE_COOLDOWN_SECONDS and now >= idle_notice_last:
+		return
+	idle_notice_last = now
+	_push_notice_feed("Idle workers", "%d settler%s been idle for %ds. Build a Lumber Camp, Quarry or Farm to put them to work." % [idle, " has" if idle == 1 else "s have", int(now - idle_workers_since)], "warning")
 
 
 func _hud_divider() -> Control:
@@ -4765,6 +4849,21 @@ func _run_ui_evidence_capture() -> void:
 	await _evidence_shot("ui_03_build_menu_open", "BUILD menu open, hovering the Farm plan (tooltip with cost)")
 	_set_build_palette_visible(false)
 	_evidence_hover_point(Vector2(640, 330))
+	# T-SNS-UI leftovers (after-only scene): idle-worker notice + top-bar idle count.
+	# Time-shift the idle timer (like phase_time below) so the real rule fires now.
+	if idle_worker_count() > 0:
+		idle_workers_tracking = true
+		idle_workers_since = float(simulation.elapsed_seconds) - IDLE_NOTICE_AFTER_SECONDS - 1.0
+		idle_notice_last = -1000000.0
+		_update_ui()
+		await _evidence_wait(0.6)
+		await _evidence_shot("ui_06_idle_workers", "Day 1: idle-worker notice in the left feed, idle button above the console")
+		for feed_entry in notice_feed_entries:
+			if is_instance_valid(feed_entry["node"]):
+				(feed_entry["node"] as Node).queue_free()
+		notice_feed_entries.clear()
+	else:
+		_evidence_log("ui_06 skipped: no idle workers")
 	simulation.phase_time = float(simulation.DAY_LENGTH_SECONDS) - 0.05
 	await _evidence_wait(3.0)
 	if int(simulation.living_hostile_count()) == 0:
@@ -4829,6 +4928,7 @@ func _evidence_shot(shot_name: String, description: String) -> void:
 	var planks_color := ""
 	if resource_chips.has("planks"):
 		planks_color = (resource_chips["planks"] as Label).get_theme_color("font_color").to_html(false)
+	_evidence_log("shot name=%s idle=%d" % [shot_name, idle_worker_count()])
 	_evidence_log("shot name=%s err=%d size=%s placing=%s placement_panel=%s hint='%s' toast=%s toast_body='%s' pressure='%s' hostiles=%d night=%s planks_chip=#%s what=%s" % [
 		shot_name, err, str(image.get_size()) if image != null else "-", placement_type,
 		str(placement_panel.visible if placement_panel != null else false),
