@@ -29,7 +29,7 @@ REF_LABEL="Reference"
 LABEL="This run (Linux, Xvfb + lavapipe)"
 # Extra checks beyond the 22 Windows release tests; reported separately so the
 # 22/22 figure stays comparable with verify_release.ps1. Skipped if absent.
-EXTRA_TESTS=(t_sns_ui_leftovers)
+EXTRA_TESTS=(t_sns_ui_leftovers t_sns_ui_look)
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --out) OUT="$2"; shift 2;;

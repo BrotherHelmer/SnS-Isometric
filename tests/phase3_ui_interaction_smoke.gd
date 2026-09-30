@@ -46,9 +46,9 @@ func _run() -> void:
 	_check(failures, game.selected_entity_kind == "building" and game.inspector_label.text.contains("Lumber"), "selection opens a useful building inspector")
 	var pause: Button = game.pause_button
 	pause.pressed.emit()
-	_check(failures, simulation != null and game.simulation_host.paused and game.world_view.presentation_paused and pause.text == "Resume", "Pause stops authoritative and presentation motion")
+	_check(failures, simulation != null and game.simulation_host.paused and game.world_view.presentation_paused and pause.button_pressed and pause.tooltip_text.begins_with("Resume"), "Pause stops authoritative and presentation motion")
 	pause.pressed.emit()
-	_check(failures, not game.simulation_host.paused and not game.world_view.presentation_paused and pause.text == "Pause", "Resume restores authoritative and presentation motion")
+	_check(failures, not game.simulation_host.paused and not game.world_view.presentation_paused and not pause.button_pressed and pause.tooltip_text.begins_with("Pause"), "Resume restores authoritative and presentation motion")
 	var saved: bool = game.save_game()
 	print("SAVE_EVIDENCE saved=%s message=%s" % [saved, simulation.last_message])
 	var tick_before_load: int = simulation.get_tick_number()

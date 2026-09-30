@@ -24,6 +24,15 @@ STONE_LO = (44, 44, 40)
 GOLD = (196, 150, 84)
 GOLD_HI = (240, 200, 128)
 GOLD_LO = (112, 80, 42)
+# T-SNS-UI Look lift: navy-black panels with a thin gold double hairline
+# (measured from the approved mockup: fill ~#0d151b, hairline ~#ba9066).
+NAVY_TOP = (19, 29, 36)
+NAVY_BOTTOM = (10, 16, 21)
+HAIR = (186, 144, 102)
+HAIR_HI = (227, 192, 126)
+HAIR_DIM = (111, 88, 54)
+EDGE = (4, 7, 9)
+CREAM = (236, 222, 184)
 
 
 def rng(seed: int) -> random.Random:
@@ -115,6 +124,64 @@ def frame(name, size, border, trim_inset, seed, rivets=True, alpha=235, top=SLAT
             r_, g_, b_, a_ = px[x, y]
             px[x, y] = (r_, g_, b_, alpha)
     img.save(OUT / f"{name}.png")
+
+
+def corner_ornament(d, w, h, inset, arm, colour):
+    """Small gold L-brackets with a diamond stud in each corner."""
+    lw = SS
+    for cx, cy, sx, sy in ((inset, inset, 1, 1), (w - 1 - inset, inset, -1, 1), (inset, h - 1 - inset, 1, -1), (w - 1 - inset, h - 1 - inset, -1, -1)):
+        d.line([cx, cy, cx + sx * arm, cy], fill=colour + (255,), width=lw * 2)
+        d.line([cx, cy, cx, cy + sy * arm], fill=colour + (255,), width=lw * 2)
+        r = 2 * SS
+        mx, my = cx + sx * 3 * SS, cy + sy * 3 * SS
+        d.polygon([(mx, my - r), (mx + r, my), (mx, my + r), (mx - r, my)], fill=HAIR_HI + (255,))
+
+
+def navy_frame(name, size, outer_inset, inner_inset, seed, ornaments=True, alpha=236, top=NAVY_TOP, bottom=NAVY_BOTTOM, hair=HAIR, hair_dim=HAIR_DIM, radius=0):
+    """Look-lift 9-slice: navy gradient, 1 px dark edge, gold hairline + dim inner hairline."""
+    w = h = size * SS
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    fill = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    noise_fill(fill, (0, 0, w, h), top, bottom, seed, 2)
+    mask = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, w - 1, h - 1], radius=radius * SS, fill=255)
+    img.paste(fill, (0, 0), mask)
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle([0, 0, w - 1, h - 1], radius=radius * SS, outline=EDGE + (255,), width=SS)
+    o = outer_inset * SS
+    d.rounded_rectangle([o, o, w - 1 - o, h - 1 - o], radius=max(0, radius - outer_inset) * SS, outline=hair + (255,), width=SS)
+    if inner_inset > 0:
+        i = inner_inset * SS
+        d.rounded_rectangle([i, i, w - 1 - i, h - 1 - i], radius=max(0, radius - inner_inset) * SS, outline=hair_dim + (255,), width=SS)
+    if ornaments:
+        corner_ornament(d, w, h, o, 9 * SS, HAIR_HI)
+    img = img.resize((size, size), Image.LANCZOS)
+    px = img.load()
+    inner = (inner_inset if inner_inset > 0 else outer_inset) + 1
+    for y in range(inner, size - inner):
+        for x in range(inner, size - inner):
+            r_, g_, b_, a_ = px[x, y]
+            px[x, y] = (r_, g_, b_, min(a_, alpha))
+    img.save(OUT / f"{name}.png")
+
+
+def navy_button(name, fill_top, fill_bottom, edge, seed, glow=False):
+    size = 32
+    w = h = size * SS
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    rad = 4 * SS
+    ImageDraw.Draw(img).rounded_rectangle([0, 0, w - 1, h - 1], radius=rad, fill=EDGE + (255,))
+    inner = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    noise_fill(inner, (0, 0, w, h), fill_top, fill_bottom, seed, 2)
+    mask = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(mask).rounded_rectangle([SS, SS, w - 1 - SS, h - 1 - SS], radius=rad - SS, fill=255)
+    img.paste(inner, (0, 0), mask)
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle([SS, SS, w - 1 - SS, h - 1 - SS], radius=rad - SS, outline=edge + (255,), width=SS)
+    d.line([3 * SS, 2 * SS, w - 3 * SS, 2 * SS], fill=tuple(min(255, c + 30) for c in fill_top) + (255,), width=SS)
+    if glow:
+        d.rounded_rectangle([2 * SS, 2 * SS, w - 1 - 2 * SS, h - 1 - 2 * SS], radius=rad - 2 * SS, outline=edge + (110,), width=SS)
+    img.resize((size, size), Image.LANCZOS).save(OUT / f"{name}.png")
 
 
 def button(name, fill_top, fill_bottom, edge, seed):
@@ -254,19 +321,138 @@ def icon_soldier():
     finish_icon(img, "soldier")
 
 
+def glyph_canvas():
+    return icon_canvas()
+
+
+def icon_pause():
+    img, s = glyph_canvas(); d = ImageDraw.Draw(img)
+    d.rounded_rectangle([S(13), S(10), S(21), S(38)], radius=S(2), fill=CREAM + (255,))
+    d.rounded_rectangle([S(27), S(10), S(35), S(38)], radius=S(2), fill=CREAM + (255,))
+    finish_icon(img, "pause")
+
+
+def icon_play():
+    img, s = glyph_canvas(); d = ImageDraw.Draw(img)
+    d.polygon([(S(15), S(9)), (S(38), S(24)), (S(15), S(39))], fill=CREAM + (255,))
+    finish_icon(img, "play")
+
+
+def icon_fast():
+    img, s = glyph_canvas(); d = ImageDraw.Draw(img)
+    d.polygon([(S(6), S(11)), (S(24), S(24)), (S(6), S(37))], fill=CREAM + (255,))
+    d.polygon([(S(24), S(11)), (S(42), S(24)), (S(24), S(37))], fill=CREAM + (255,))
+    finish_icon(img, "fast")
+
+
+def icon_menu():
+    img, s = glyph_canvas(); d = ImageDraw.Draw(img)
+    for y in (12, 22, 32):
+        d.rounded_rectangle([S(9), S(y), S(39), S(y + 5)], radius=S(2), fill=CREAM + (255,))
+    finish_icon(img, "menu")
+
+
+def icon_hammer():
+    img, s = glyph_canvas(); d = ImageDraw.Draw(img)
+    d.polygon([(S(20), S(22)), (S(25), S(18)), (S(42), S(38)), (S(37), S(42))], fill=(150, 104, 58, 255), outline=(70, 46, 22, 255))
+    d.polygon([(S(8), S(16)), (S(20), S(5)), (S(31), S(16)), (S(26), S(21)), (S(19), S(15)), (S(13), S(21))], fill=(196, 198, 196, 255), outline=(70, 72, 74, 255))
+    d.line([S(12), S(15), S(20), S(8)], fill=(240, 240, 236, 255), width=S(1))
+    finish_icon(img, "hammer")
+
+
+def icon_hourglass():
+    img, s = glyph_canvas(); d = ImageDraw.Draw(img)
+    d.rectangle([S(11), S(6), S(37), S(10)], fill=(214, 90, 70, 255))
+    d.rectangle([S(11), S(38), S(37), S(42)], fill=(214, 90, 70, 255))
+    d.polygon([(S(14), S(10)), (S(34), S(10)), (S(26), S(24)), (S(34), S(38)), (S(14), S(38)), (S(22), S(24))], outline=(214, 90, 70, 255), width=S(2))
+    d.polygon([(S(17), S(13)), (S(31), S(13)), (S(24), S(22))], fill=(236, 150, 110, 255))
+    d.polygon([(S(24), S(29)), (S(31), S(36)), (S(17), S(36))], fill=(236, 150, 110, 255))
+    finish_icon(img, "hourglass")
+
+
+def icon_swords():
+    img, s = glyph_canvas(); d = ImageDraw.Draw(img)
+    red, dark = (226, 74, 58, 255), (110, 22, 18, 255)
+    for flip in (1, -1):
+        def P(x, y):
+            return (S(24 + (x - 24) * flip), S(y))
+        d.polygon([P(8, 6), P(12, 6), P(34, 32), P(31, 35)], fill=red, outline=dark)
+        d.line([P(26, 36), P(36, 26)], fill=red, width=S(3))
+        d.line([P(33, 33), P(41, 41)], fill=red, width=S(4))
+    finish_icon(img, "swords")
+
+
+def icon_quest():
+    img, s = glyph_canvas(); d = ImageDraw.Draw(img)
+    d.ellipse([S(6), S(6), S(42), S(42)], fill=(58, 44, 24, 255), outline=HAIR_HI + (255,), width=S(2))
+    d.polygon([(S(24), S(12)), (S(33), S(24)), (S(24), S(36)), (S(15), S(24))], fill=HAIR_HI + (255,))
+    d.polygon([(S(24), S(17)), (S(29), S(24)), (S(24), S(31)), (S(19), S(24))], fill=(120, 88, 42, 255))
+    finish_icon(img, "quest")
+
+
+def icon_house():
+    img, s = glyph_canvas(); d = ImageDraw.Draw(img)
+    d.polygon([(S(6), S(24)), (S(24), S(8)), (S(42), S(24))], fill=(170, 84, 60, 255), outline=(80, 34, 22, 255))
+    d.rectangle([S(11), S(24), S(37), S(42)], fill=(214, 190, 150, 255), outline=(90, 70, 44, 255))
+    d.rectangle([S(21), S(30), S(28), S(42)], fill=(110, 72, 40, 255))
+    finish_icon(img, "house")
+
+
+def icon_worker():
+    img, s = glyph_canvas(); d = ImageDraw.Draw(img)
+    d.ellipse([S(17), S(6), S(31), S(20)], fill=(222, 206, 176, 255), outline=(60, 50, 36, 255))
+    d.rounded_rectangle([S(12), S(22), S(36), S(42)], radius=S(7), fill=(150, 124, 86, 255), outline=(60, 50, 36, 255))
+    d.line([S(33), S(24), S(42), S(12)], fill=(150, 104, 58, 255), width=S(3))
+    d.rectangle([S(38), S(8), S(46), S(13)], fill=(196, 198, 196, 255))
+    finish_icon(img, "worker")
+
+
+def icon_hunger():
+    img, s = glyph_canvas(); d = ImageDraw.Draw(img)
+    c = (226, 196, 120, 255)
+    for x in (12, 16, 20):
+        d.line([S(x), S(6), S(x), S(18)], fill=c, width=S(2))
+    d.rounded_rectangle([S(11), S(16), S(21), S(22)], radius=S(3), fill=c)
+    d.line([S(16), S(20), S(16), S(42)], fill=c, width=S(3))
+    d.ellipse([S(28), S(6), S(38), S(26)], fill=c)
+    d.line([S(33), S(24), S(33), S(42)], fill=c, width=S(3))
+    finish_icon(img, "hunger")
+
+
+def icon_shield():
+    img, s = glyph_canvas(); d = ImageDraw.Draw(img)
+    d.polygon([(S(24), S(5)), (S(40), S(11)), (S(38), S(28)), (S(24), S(43)), (S(10), S(28)), (S(8), S(11))], fill=(80, 150, 90, 255), outline=(30, 60, 36, 255))
+    d.polygon([(S(24), S(9)), (S(36), S(13)), (S(35), S(27)), (S(24), S(38))], fill=(118, 190, 120, 255))
+    finish_icon(img, "shield")
+
+
+def icon_road():
+    img, s = glyph_canvas(); d = ImageDraw.Draw(img)
+    d.polygon([(S(18), S(6)), (S(30), S(6)), (S(42), S(42)), (S(6), S(42))], fill=(140, 110, 72, 255), outline=(70, 50, 30, 255))
+    for y in (10, 20, 31):
+        d.line([S(24), S(y), S(24), S(y + 6)], fill=(230, 210, 160, 255), width=S(2))
+    finish_icon(img, "road")
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
-    frame("frame_panel", 64, 5, 3, 11)
-    frame("frame_console", 96, 8, 4, 23, alpha=242)
-    frame("frame_bar", 64, 4, 2, 31, rivets=False, alpha=238)
-    frame("frame_slot", 48, 3, 1, 41, rivets=False, alpha=225, top=(22, 28, 30), bottom=(12, 16, 18))
-    frame("frame_toast", 64, 4, 2, 53, alpha=245, top=(58, 34, 24), bottom=(34, 20, 14))
-    button("btn_normal", (58, 56, 48), (38, 37, 32), (150, 116, 66), 61)
-    button("btn_hover", (82, 76, 60), (52, 49, 40), (226, 184, 112), 62)
-    button("btn_pressed", (30, 29, 26), (46, 44, 38), (240, 200, 128), 63)
-    button("btn_disabled", (40, 40, 38), (30, 30, 28), (80, 78, 70), 64)
-    button("btn_tab_active", (92, 70, 38), (62, 46, 24), (240, 200, 128), 65)
-    for fn in (icon_wood, icon_planks, icon_stone, icon_wheat, icon_bread, icon_wyrd, icon_pop, icon_sun, icon_moon, icon_soldier):
+    # T-SNS-UI Look lift (30/9 2026): navy + gold-hairline frames replace the
+    # stone set (the stone generators above are kept for reference/rollback).
+    navy_frame("frame_panel", 64, 2, 5, 11)
+    navy_frame("frame_console", 96, 3, 7, 23, alpha=242)
+    navy_frame("frame_bar", 64, 1, 4, 31, ornaments=False, alpha=240)
+    navy_frame("frame_slot", 48, 1, 0, 41, ornaments=False, alpha=228, hair=HAIR_DIM)
+    navy_frame("frame_toast", 64, 1, 4, 53, ornaments=False, alpha=240)
+    navy_frame("frame_capsule", 32, 1, 0, 57, ornaments=False, alpha=225, top=(14, 22, 28), bottom=(8, 13, 17), hair=HAIR_DIM, radius=5)
+    navy_frame("frame_alert", 64, 2, 5, 59, alpha=246, top=(92, 22, 18), bottom=(40, 10, 9), hair=(214, 110, 86), hair_dim=(120, 40, 30))
+    navy_button("btn_normal", (30, 43, 51), (17, 26, 32), HAIR_DIM, 61)
+    navy_button("btn_hover", (44, 60, 70), (25, 36, 44), HAIR_HI, 62, glow=True)
+    navy_button("btn_pressed", (12, 19, 24), (22, 32, 39), HAIR, 63)
+    navy_button("btn_disabled", (26, 30, 32), (18, 21, 23), (70, 72, 70), 64)
+    navy_button("btn_tab_active", (84, 64, 34), (48, 36, 18), HAIR_HI, 65, glow=True)
+    for fn in (icon_wood, icon_planks, icon_stone, icon_wheat, icon_bread, icon_wyrd, icon_pop, icon_sun, icon_moon, icon_soldier,
+               icon_pause, icon_play, icon_fast, icon_menu, icon_hammer, icon_hourglass, icon_swords, icon_quest, icon_house,
+               icon_worker, icon_hunger, icon_shield, icon_road):
         fn()
     print("UI art written to", OUT)
 

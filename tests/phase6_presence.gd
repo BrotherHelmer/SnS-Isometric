@@ -33,7 +33,10 @@ func _run() -> void:
 	var fog: Dictionary = game.world_view.fog_configuration()
 	_check(failures, bool(fog.get("volume_mesh", false)), "fog of war is a covering volume")
 	_check(failures, game.world_view.fog_plane != null and game.world_view.fog_skirts.size() >= 4, "fog sheet and skirts cover the island edge")
-	_check(failures, game.pressure_meter != null and game.pressure_meter.visible, "Wyrd Pressure is visible from minute zero")
+	# T-SNS-UI Look lift: the pressure chip is wired from minute zero but hidden
+	# while the realm is QUIET by day; it appears at night, in a raid or above QUIET.
+	_check(failures, game.pressure_meter != null and not game.pressure_meter.visible and "QUIET" in game.pressure_meter.band, "Wyrd Pressure chip is wired from minute zero and hidden while QUIET")
+	_check(failures, game.pressure_meter != null and game._pressure_chip_should_show("RISING", false, 0) and game._pressure_chip_should_show("QUIET", true, 0), "Wyrd Pressure chip appears above QUIET or at night")
 	var rival_line := String(game.simulation_host.simulation.get_wyrdfall_presentation().get("rival_line", ""))
 	_check(failures, rival_line != "", "rival threat is named from the opening")
 	game._update_shard_compass()

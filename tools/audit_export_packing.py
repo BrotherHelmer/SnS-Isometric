@@ -166,6 +166,23 @@ def file_exists(res_path):
     return os.path.exists(local_path)
 
 
+def preload_targets(export_files):
+    """T-SNS-UI Look lift: preload("res://...") targets of exported scripts.
+
+    With export_filter="resources" Godot does not follow a .gd script's
+    preload() calls as dependencies, so every preloaded file must be listed in
+    export_files itself (a missing one only shows up as a parse error in the
+    packaged build)."""
+    targets = set()
+    for script in export_files:
+        if not script.endswith(".gd") or not file_exists(script):
+            continue
+        with open(script.replace("res://", ""), "r") as f:
+            for target in re.findall(r'preload\(\s*"(res://[^"]+)"\s*\)', f.read()):
+                targets.add(target)
+    return sorted(targets)
+
+
 def main():
     repo_root = Path(__file__).parent.parent
     os.chdir(repo_root)
@@ -180,6 +197,10 @@ def main():
     export_files = parse_export_files("export_presets.cfg")
     print(f"Export files count: {len(export_files)}")
     
+    preloads = preload_targets(export_files)
+    print(f"Preloads in exported scripts: {len(preloads)}")
+    runtime_paths = sorted(set(runtime_paths) | set(preloads))
+
     # Find missing paths
     export_set = set(export_files)
     missing = []
