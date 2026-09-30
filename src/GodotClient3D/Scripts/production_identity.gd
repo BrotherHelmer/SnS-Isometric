@@ -3,6 +3,8 @@ extends RefCounted
 ## Central presentation identity for Shards & Sovereign.
 ## Lumen = warm civilisation. Wyrd = cyan/violet temptation. UI supports the world.
 
+const HudSkin = preload("res://src/GodotClient3D/Scripts/production_hud_skin.gd")
+
 const COLOR_LUMEN := Color("#efcf8a")
 const COLOR_LUMEN_WARM := Color("#ffc879")
 const COLOR_LUMEN_FIRE := Color("#ff9a52")
@@ -160,14 +162,12 @@ static func button_style(kind: String = "normal") -> StyleBoxFlat:
 
 
 static func apply_button(button: Button, confirm := false) -> void:
-	button.add_theme_stylebox_override("normal", button_style("confirm" if confirm else "normal"))
-	button.add_theme_stylebox_override("hover", button_style("hover"))
-	button.add_theme_stylebox_override("pressed", button_style("pressed"))
-	button.add_theme_stylebox_override("disabled", button_style("disabled"))
+	# T-SNS-UI: stone-and-gold buttons everywhere (menu and HUD alike).
+	HudSkin.apply_button(button)
+	if confirm:
+		button.add_theme_stylebox_override("normal", HudSkin.button_box("active"))
 	button.add_theme_font_size_override("font_size", SIZE_BODY)
-	button.add_theme_color_override("font_color", COLOR_NEUTRAL)
 	button.add_theme_color_override("font_hover_color", COLOR_LUMEN)
-	button.add_theme_color_override("font_disabled_color", COLOR_DISABLED)
 
 
 static func apply_label(label: Label, role: String) -> void:
