@@ -7,6 +7,7 @@ const Identity = preload("res://src/GodotClient3D/Scripts/production_identity.gd
 const HaloCatalog = preload("res://src/GodotClient3D/Scripts/production_building_halo.gd")
 const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
 const QualityProfile = preload("res://src/GodotClient3D/Scripts/production_quality_profile.gd")
+const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_profile.gd")
 
 var failures: Array[String] = []
 
@@ -73,6 +74,26 @@ func _run() -> void:
 		_check(detail_m >= 0.8 and detail_m <= 2.0, "terrain detail layer is 0.8–2 m")
 	else:
 		_check(false, "terrain uses the settlement ground shader")
+	_check(ScaleProfile.ROAD_WIDTH_SCALE <= 1.00 and ScaleProfile.ROAD_WIDTH_SCALE >= 0.90, "roads are 15–20% narrower than GFX-1")
+	var sample_road: Node = null
+	for view in game.world_view.road_views.values():
+		sample_road = view
+		break
+	if sample_road != null:
+		var lane := sample_road.find_child("ContinuousDirt", true, false)
+		if lane is MeshInstance3D and (lane as MeshInstance3D).material_override is ShaderMaterial:
+			var road_mat := (lane as MeshInstance3D).material_override as ShaderMaterial
+			_check(float(road_mat.get_shader_parameter("shoulder_lift")) <= 0.02, "road shoulders are not a bright graphic border")
+		else:
+			_check(false, "player roads use the settlement road shader")
+	else:
+		_check(true, "road shader checked when a lane exists")
+	var stamp_batches := 0
+	if game.world_view.road_stamp_root != null:
+		for child in game.world_view.road_stamp_root.get_children():
+			if child is MultiMeshInstance3D:
+				stamp_batches += 1
+	_check(stamp_batches <= 3, "road detail is 2–3 batched stamps, not per-tile Decals")
 	_check(game.sun_light.directional_shadow_mode == DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS, "sun uses PSSM 2-split")
 	_check(is_zero_approx(game.sun_light.light_angular_distance), "sun angular distance is 0 (no PCSS)")
 	_check(game.sun_light.directional_shadow_max_distance <= 52.0, "shadow distance stays near the play volume")

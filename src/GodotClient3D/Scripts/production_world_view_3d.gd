@@ -13,6 +13,7 @@ const FogShader = preload("res://src/GodotClient3D/Shaders/production_fog_of_war
 const FogScreenShader = preload("res://src/GodotClient3D/Shaders/production_fog_screen.gdshader")
 const BoundaryMistShader = preload("res://src/GodotClient3D/Shaders/production_boundary_mist.gdshader")
 const ContactAO = preload("res://src/GodotClient3D/Scripts/production_contact_ao.gd")
+const RoadStampShader = preload("res://src/GodotClient3D/Shaders/settlement_road_stamp.gdshader")
 const FOG_MASK_DIVISOR := 1
 const FOG_VOLUME_PAD_METRES := 110.0
 const FOG_VOLUME_HEIGHT_METRES := 56.0
@@ -30,6 +31,7 @@ var terrain_root: Node3D
 var water_root: Node3D
 var roads_root: Node3D
 var road_preview_root: Node3D
+var road_stamp_root: Node3D
 var buildings_root: Node3D
 var characters_root: Node3D
 var resource_visuals_root: Node3D
@@ -117,6 +119,7 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 		water_root = null
 		roads_root = null
 		road_preview_root = null
+		road_stamp_root = null
 		buildings_root = null
 		characters_root = null
 		resource_visuals_root = null
@@ -432,6 +435,7 @@ func _create_roots() -> void:
 	water_root = _named_root("Water")
 	roads_root = _named_root("Roads")
 	road_preview_root = _named_root("RoadPreview")
+	road_stamp_root = _named_root("RoadStamps")
 	buildings_root = _named_root("Buildings")
 	characters_root = _named_root("Characters")
 	resource_visuals_root = _named_root("ResourceVisuals")
@@ -1272,6 +1276,72 @@ func _sync_roads(road_snapshots: Array) -> void:
 		elif String(road_signatures.get(key_value, "")) != next_signature:
 			(road_views[key_value] as ProductionRoadView3D).configure(int(snapshot.get("id", 0)), tile, mask, planned)
 			road_signatures[key_value] = next_signature
+	_rebuild_road_stamps(desired)
+
+
+func _rebuild_road_stamps(desired: Dictionary) -> void:
+	if road_stamp_root == null:
+		return
+	for child in road_stamp_root.get_children():
+		road_stamp_root.remove_child(child)
+		child.free()
+	var tracks: Array = []
+	var muds: Array = []
+	var breaks: Array = []
+	var dirs := [Vector2(0.0, -1.0), Vector2(1.0, 0.0), Vector2(0.0, 1.0), Vector2(-1.0, 0.0)]
+	for key_value in desired:
+		var snapshot: Dictionary = desired[key_value]
+		if bool(snapshot.get("construction", false)):
+			continue
+		var tile := Vector2i(snapshot.get("anchor", Vector2i.ZERO))
+		var mask := 0
+		var tile_dirs := [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]
+		for index in tile_dirs.size():
+			if desired.has(_tile_key(tile + tile_dirs[index])):
+				mask |= 1 << index
+		var world := tile_to_world(Vector2(tile))
+		var connections := 0
+		for index in dirs.size():
+			if mask & (1 << index) == 0:
+				continue
+			connections += 1
+			var direction: Vector2 = dirs[index]
+			var mid := world + Vector3(direction.x * 0.62, 0.032, direction.y * 0.62)
+			var yaw := atan2(direction.x, direction.y)
+			tracks.append(Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3(0.18, 1.0, 0.72)), mid))
+			if _tile_hash(tile, 7 + index) % 3 == 0:
+				var perp := Vector2(-direction.y, direction.x)
+				var side := 1.0 if _tile_hash(tile, 11 + index) % 2 == 0 else -1.0
+				var br := world + Vector3(direction.x * 0.38 + perp.x * 0.52 * side, 0.028, direction.y * 0.38 + perp.y * 0.52 * side)
+				breaks.append(Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3(0.36, 1.0, 0.20)), br))
+		if connections >= 3:
+			muds.append(Transform3D(Basis().scaled(Vector3(0.58, 1.0, 0.58)), world + Vector3(0.0, 0.026, 0.0)))
+	_spawn_road_stamp_multimesh("RoadTracks", tracks, Color(0.43, 0.33, 0.25, 0.50))
+	_spawn_road_stamp_multimesh("RoadMud", muds, Color(0.502, 0.388, 0.278, 0.42))
+	_spawn_road_stamp_multimesh("RoadEdgeBreaks", breaks, Color(0.36, 0.26, 0.20, 0.38))
+
+
+func _spawn_road_stamp_multimesh(node_name: String, transforms: Array, color: Color) -> void:
+	if road_stamp_root == null or transforms.is_empty():
+		return
+	var mesh := PlaneMesh.new()
+	mesh.size = Vector2(2.0, 2.0)
+	var multimesh := MultiMesh.new()
+	multimesh.transform_format = MultiMesh.TRANSFORM_3D
+	multimesh.mesh = mesh
+	multimesh.instance_count = transforms.size()
+	for index in transforms.size():
+		multimesh.set_instance_transform(index, transforms[index])
+	var instance := MultiMeshInstance3D.new()
+	instance.name = node_name
+	instance.multimesh = multimesh
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var material := ShaderMaterial.new()
+	material.shader = RoadStampShader
+	material.set_shader_parameter("stamp_color", color)
+	material.render_priority = -1
+	instance.material_override = material
+	road_stamp_root.add_child(instance)
 
 
 func _sync_buildings(building_snapshots: Array) -> void:

@@ -10,7 +10,8 @@ const CANONICAL_CHARACTER_HEIGHT_METRES := 1.80
 const CHARACTER_GROUND_OFFSET := 0.03
 const TOOL_MODEL_SCALE := 0.82
 const CARGO_MODEL_SCALE := 1.08
-const ROAD_WIDTH_SCALE := 1.18
+# GFX-06: 18% narrower than GFX-1 (1.18 → 0.97) so lanes sit in the soil.
+const ROAD_WIDTH_SCALE := 0.97
 
 # Phase 2.1 visual calibration. Characters remain the reference; these values
 # change presentation mass only and never alter authoritative footprints.

@@ -1,13 +1,15 @@
 shader_type spatial;
 render_mode diffuse_lambert, specular_disabled, cull_disabled, blend_mix;
 
-// Lit dirt lane: worn darker centre, dusty shoulders, irregular feathered edge.
-// Responds to the sun so night roads keep a readable value lift.
-uniform vec4 road_color : source_color = vec4(0.55, 0.40, 0.26, 1.0);
+// The Director: GFX-06 roads as terrain. Compacted clay centre, darker dirt
+// edges, noisy smoothstep into the grass. No uniform bright shoulder.
+uniform vec4 road_color : source_color = vec4(0.659, 0.537, 0.384, 1.0); // #A88962
+uniform vec3 clay_color : source_color = vec3(0.659, 0.537, 0.384); // #A88962
+uniform vec3 dirt_edge : source_color = vec3(0.502, 0.388, 0.278); // #806347
 uniform vec3 light_tint : source_color = vec3(1.0);
 uniform float value_lift = 0.06;
-uniform float worn_darken = 0.22;
-uniform float shoulder_lift = 0.16;
+uniform float worn_darken = 0.10;
+uniform float shoulder_lift = 0.0;
 uniform float edge_noise = 0.55;
 
 varying vec3 world_pos;
@@ -28,32 +30,27 @@ void vertex() {
 }
 
 void fragment() {
-	float across = UV.x;
-	float centre = 1.0 - smoothstep(0.16, 0.46, abs(across - 0.5) * 2.0);
-	float shoulder = smoothstep(0.42, 0.78, abs(across - 0.5) * 2.0);
-	float grain = mix(0.92, 1.08, noise2(world_pos.xz * 2.4));
-	vec3 worn = road_color.rgb * (1.0 - worn_darken);
-	vec3 dust = road_color.rgb * (1.0 + shoulder_lift);
-	vec3 albedo = mix(road_color.rgb, worn, centre);
-	albedo = mix(albedo, dust, shoulder * 0.85);
-	albedo *= grain * light_tint * (1.0 + value_lift);
-	float rim = min(across, 1.0 - across);
-	float chew = noise2(world_pos.xz * 3.1 + vec2(17.0, 9.0));
+	float across = abs(UV.x - 0.5) * 2.0;
+	float chew = noise2(world_pos.xz * 2.7 + vec2(9.0, 4.0));
+	float edge = smoothstep(0.32 + chew * 0.16, 0.88 + chew * 0.10, across);
+	vec3 clay = mix(road_color.rgb, clay_color, 0.62) * (1.0 - worn_darken * (1.0 - edge));
+	vec3 dirt = mix(road_color.rgb, dirt_edge, 0.78);
+	// shoulder_lift stays 0 — pale graphic borders were the board-game read.
+	vec3 albedo = mix(clay, dirt * (1.0 + shoulder_lift), edge);
+	albedo *= mix(0.94, 1.05, noise2(world_pos.xz * 3.2)) * light_tint * (1.0 + value_lift);
+	float rim = min(UV.x, 1.0 - UV.x);
 	float alpha = road_color.a;
-	if (rim < 0.14) {
-		alpha *= mix(0.15, 1.0, smoothstep(0.02, 0.14, rim + (chew - 0.5) * edge_noise * 0.12));
-		if (alpha < 0.12) {
+	if (rim < 0.16) {
+		alpha *= mix(0.12, 1.0, smoothstep(0.02, 0.16, rim + (chew - 0.5) * edge_noise * 0.14));
+		if (alpha < 0.10) {
 			discard;
 		}
 	}
 	ALBEDO = albedo;
-	// World up, expressed in view space. A raw vec3(0,1,0) is view-up and
-	// lights the lanes as if they face the camera.
 	NORMAL = normalize((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
-	ROUGHNESS = mix(0.94, 0.80, shoulder);
+	ROUGHNESS = mix(0.90, 0.96, edge);
 	ALPHA = alpha;
 	SPECULAR = 0.0;
-	// The Director: moonlit pale-stone lift, never an orange carpet.
-	vec3 moonlit = mix(albedo, vec3(0.62, 0.68, 0.78), 0.40);
-	EMISSION = moonlit * value_lift * 0.22;
+	vec3 moonlit = mix(albedo, vec3(0.62, 0.68, 0.78), 0.28);
+	EMISSION = moonlit * value_lift * 0.16;
 }
