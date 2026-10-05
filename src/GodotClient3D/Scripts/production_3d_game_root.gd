@@ -3758,21 +3758,21 @@ func _apply_quality_features() -> void:
 	if environment_resource == null:
 		return
 	var night := simulation_host != null and simulation_host.simulation != null and bool(simulation_host.simulation.is_night)
-	environment_resource.ssao_enabled = bool(quality_profile.get("ssao", quality_profile.get("shadows", true)))
-	# The Director: night keeps SSAO on but Very-Low/half-res + softer
-	# intensity so lavapipe night stays ≤ +15% vs GFX-1. Day stays Low.
-	environment_resource.ssao_radius = 0.70 if night else 0.95
-	environment_resource.ssao_intensity = 0.42 if night else 1.15
-	environment_resource.ssao_detail = 0.12 if night else 0.50
+	var want_ssao := bool(quality_profile.get("ssao", quality_profile.get("shadows", true)))
+	# The Director: night drops SSAO. Very-Low still left lavapipe 1 ms
+	# over the +15% GFX-1 guard; windows/moon carry night form instead.
+	environment_resource.ssao_enabled = want_ssao and not night
+	environment_resource.ssao_radius = 0.95
+	environment_resource.ssao_intensity = 1.15
+	environment_resource.ssao_detail = 0.50
 	environment_resource.ssao_light_affect = 0.10
-	# Night: Very-Low + 1 blur pass + earlier fade. Day stays Low/half-res.
 	RenderingServer.environment_set_ssao_quality(
-		RenderingServer.ENV_SSAO_QUALITY_VERY_LOW if night else RenderingServer.ENV_SSAO_QUALITY_LOW,
+		RenderingServer.ENV_SSAO_QUALITY_LOW,
 		true,
 		0.5,
-		1 if night else 2,
-		20.0 if night else 50.0,
-		42.0 if night else 300.0
+		2,
+		50.0,
+		300.0
 	)
 	environment_resource.ssil_enabled = bool(quality_profile.get("ssil", false))
 	environment_resource.glow_enabled = bool(quality_profile.get("glow", false))

@@ -45,7 +45,9 @@ void fragment() {
 	vec2 macro_uv = world_pos.xz / max(macro_metres, 1.0);
 	vec2 detail_uv = world_pos.xz / max(detail_metres, 0.4) + vec2(8.2, 3.7);
 	float macro = lod_cheap > 0.5 ? noise2(macro_uv) : fbm(macro_uv);
-	float detail = lod_cheap > 0.5 ? noise2(detail_uv) : fbm(detail_uv);
+	// Night LOD: skip the 0.8–2 m octave. Strategy cam barely reads it
+	// and the extra noise2 is the last lavapipe millisecond we can spare.
+	float detail = lod_cheap > 0.5 ? 0.5 : fbm(detail_uv);
 	float dirt_noise = lod_cheap > 0.5 ? macro : fbm(world_pos.xz / (macro_metres * 1.35) + vec2(4.8, 21.0));
 	float dirt_mask = smoothstep(0.52, 0.84, dirt_noise);
 	vec3 grass = mix(grass_moss, grass_sunlit, clamp(macro * 0.7 + detail * 0.3, 0.0, 1.0));
