@@ -73,6 +73,15 @@ func _run() -> void:
 		_check(detail_m >= 0.8 and detail_m <= 2.0, "terrain detail layer is 0.8–2 m")
 	else:
 		_check(false, "terrain uses the settlement ground shader")
+	_check(game.sun_light.directional_shadow_mode == DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS, "sun uses PSSM 2-split")
+	_check(is_zero_approx(game.sun_light.light_angular_distance), "sun angular distance is 0 (no PCSS)")
+	_check(game.sun_light.directional_shadow_max_distance <= 52.0, "shadow distance stays near the play volume")
+	var shadow_suns := 0
+	for child in game.lighting_rig.get_children():
+		if child is DirectionalLight3D and (child as DirectionalLight3D).shadow_enabled:
+			shadow_suns += 1
+	_check(shadow_suns == 1, "only the key sun casts directional shadows")
+	_check(game.fill_light != null and not game.fill_light.shadow_enabled, "cool fill stays shadowless")
 	_check(game.environment_resource.ssao_enabled, "recommended profile keeps Forward+ SSAO on")
 	_check(game.environment_resource.ssao_radius >= 0.70 and game.environment_resource.ssao_radius <= 1.20, "SSAO radius is 0.7–1.2 m")
 	_check(game.environment_resource.ssao_light_affect <= 0.20, "SSAO direct-light influence stays low")
