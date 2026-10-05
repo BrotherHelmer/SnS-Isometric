@@ -9,6 +9,7 @@ const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
 const QualityProfile = preload("res://src/GodotClient3D/Scripts/production_quality_profile.gd")
 const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_profile.gd")
 const BuildingMaterials = preload("res://src/GodotClient3D/Scripts/production_building_materials.gd")
+const Catalog = preload("res://src/GodotClient3D/Scripts/production_asset_catalog.gd")
 
 var failures: Array[String] = []
 
@@ -117,6 +118,8 @@ func _run() -> void:
 	_check(is_equal_approx(BuildingMaterials.roughness_for("timber"), 0.70), "timber roughness is 0.70")
 	_check(is_equal_approx(BuildingMaterials.roughness_for("roof"), 0.72), "roof roughness is 0.72")
 	_check(is_equal_approx(BuildingMaterials.roughness_for("stone"), 0.85), "stone roughness is 0.85")
+	_check(Catalog.TREES.size() >= 4 and Catalog.TREES.size() <= 8, "vegetation kit is 4–6 tree silhouettes")
+	_check(Catalog.EDGE_TREES.size() >= 4, "edge forest uses more than one cone")
 
 	game.apply_quality_profile("recommended")
 	_check(not game.environment_resource.ssil_enabled and not game.environment_resource.glow_enabled, "recommended profile keeps SSIL and glow off")
