@@ -84,7 +84,7 @@ const LIGHTING := {
 		"ground_wash_hi": 0.94,
 		"window_color": PALETTE_WINDOW,
 		"torch_color": PALETTE_WINDOW,
-		"torch_range": 5.5,
+		"torch_range": 3.2,
 		"road_lift": 0.03,
 		"atmosphere_scale": 1.0,
 		"terrain_lod_cheap": 0.0
@@ -120,7 +120,7 @@ const LIGHTING := {
 		"ground_wash_hi": 0.78,
 		"window_color": PALETTE_WINDOW,
 		"torch_color": PALETTE_WINDOW,
-		"torch_range": 5.8,
+		"torch_range": 3.6,
 		"road_lift": 0.04,
 		"atmosphere_scale": 0.55,
 		"terrain_lod_cheap": 0.0
@@ -156,7 +156,7 @@ const LIGHTING := {
 		"ground_wash_hi": 0.94,
 		"window_color": PALETTE_WINDOW,
 		"torch_color": PALETTE_WINDOW,
-		"torch_range": 6.2,
+		"torch_range": 3.8,
 		"road_lift": 0.12,
 		"atmosphere_scale": 0.35,
 		"terrain_lod_cheap": 1.0
@@ -192,7 +192,7 @@ const LIGHTING := {
 		"ground_wash_hi": 0.94,
 		"window_color": PALETTE_WINDOW,
 		"torch_color": PALETTE_WINDOW,
-		"torch_range": 6.5,
+		"torch_range": 4.0,
 		"road_lift": 0.10,
 		"atmosphere_scale": 0.28,
 		"terrain_lod_cheap": 1.0

@@ -711,14 +711,16 @@ func _update_stall_icon(snapshot: Dictionary) -> void:
 func apply_light_palette(window_color: Color, torch_color: Color, torch_range: float) -> void:
 	if window_light != null:
 		window_light.light_color = window_color
-		window_light.omni_range = torch_range
+		window_light.omni_range = clampf(torch_range, 2.6, 4.4)
+		window_light.light_energy = 0.42 if building_type != "TOWN_HALL" else 0.58
 	if window_emission != null and window_emission.material_override is StandardMaterial3D:
 		var glow_material := window_emission.material_override as StandardMaterial3D
 		glow_material.emission = window_color
 		glow_material.albedo_color = window_color
+		glow_material.emission_energy_multiplier = 1.55
 	if lantern_light != null:
 		lantern_light.light_color = torch_color
-		lantern_light.omni_range = clampf(torch_range, 4.0, 7.0)
+		lantern_light.omni_range = clampf(torch_range, 2.6, 4.0)
 
 
 func _update_night_presentation(night: bool, occupants: int) -> void:
@@ -726,38 +728,34 @@ func _update_night_presentation(night: bool, occupants: int) -> void:
 		return
 	var inhabited := occupants > 0 if building_type == "HOUSE" else bool(last_snapshot.get("connected", false)) and (int(last_snapshot.get("assigned_staff", 0)) > 0 or int(last_snapshot.get("soldiers_assigned", 0)) > 0 or building_type in ["TOWN_HALL", "STOREHOUSE"])
 	if window_light == null:
+		# The Director: GFX-09 — one shadowless pool per inhabited building,
+		# not a circular halo. Windows are the bright pixels (#F2B56B).
 		window_light = OmniLight3D.new()
 		window_light.name = "InhabitedWindowGlow"
-		window_light.position = sockets["entrance"].position + Vector3(0.0, 1.25, -0.35)
-		window_light.light_color = Color("#FFB347")
-		window_light.light_energy = 1.05 if building_type != "TOWN_HALL" else 1.35
-		window_light.omni_range = 5.5 if building_type != "TOWN_HALL" else 6.5
+		window_light.position = sockets["entrance"].position + Vector3(0.0, 1.05, -0.28)
+		window_light.light_color = Color("#F2B56B")
+		window_light.light_energy = 0.42 if building_type != "TOWN_HALL" else 0.58
+		window_light.omni_range = 3.4 if building_type != "TOWN_HALL" else 4.2
 		window_light.shadow_enabled = false
+		window_light.distance_fade_enabled = true
+		window_light.distance_fade_begin = 8.0
+		window_light.distance_fade_length = 5.0
 		add_child(window_light)
 		window_emission = MeshInstance3D.new()
 		window_emission.name = "WarmWindowEmission"
-		var glow_mesh := BoxMesh.new()
-		glow_mesh.size = Vector3(0.72, 0.68, 0.08)
-		window_emission.mesh = glow_mesh
-		window_emission.position = sockets["entrance"].position + Vector3(0.0, 1.20, -0.12)
-		var glow_material := _material(Color("#ffc06a"), 0.0)
+		var pane := BoxMesh.new()
+		pane.size = Vector3(0.22, 0.28, 0.04)
+		window_emission.mesh = pane
+		window_emission.position = sockets["entrance"].position + Vector3(0.0, 1.15, -0.06)
+		var glow_material := _material(Color("#F2B56B"), 0.0)
 		glow_material.emission_enabled = true
-		glow_material.emission = Color("#FFB347")
-		glow_material.emission_energy_multiplier = 2.1
+		glow_material.emission = Color("#F2B56B")
+		glow_material.emission_energy_multiplier = 1.55
 		window_emission.material_override = glow_material
 		add_child(window_emission)
 	window_light.visible = night and inhabited
 	if window_emission != null:
 		window_emission.visible = night and inhabited
-	
-	if not night and inhabited and building_type not in ["TOWN_HALL", "STOREHOUSE"]:
-		if window_emission != null:
-			window_emission.visible = true
-			var daytime_material := _material(Color("#9fc6a5"), 0.0)
-			daytime_material.emission_enabled = true
-			daytime_material.emission = Color("#7da88a")
-			daytime_material.emission_energy_multiplier = 0.8
-			window_emission.material_override = daytime_material
 
 
 func _update_activity_presentation(active: bool, night: bool) -> void:
@@ -790,10 +788,13 @@ func _update_activity_presentation(active: bool, night: bool) -> void:
 		if lantern_light == null:
 			lantern_light = OmniLight3D.new()
 			lantern_light.name = "WatchtowerLantern"
-			lantern_light.light_color = Color("#FFC36B")
-			lantern_light.light_energy = 0.85
-			lantern_light.omni_range = 6.0
+			lantern_light.light_color = Color("#F2B56B")
+			lantern_light.light_energy = 0.38
+			lantern_light.omni_range = 3.2
 			lantern_light.shadow_enabled = false
+			lantern_light.distance_fade_enabled = true
+			lantern_light.distance_fade_begin = 8.0
+			lantern_light.distance_fade_length = 4.0
 			lantern_light.position = sockets["vfx"].position + Vector3(0.0, 0.4, 0.0)
 			add_child(lantern_light)
 		lantern_light.visible = night
