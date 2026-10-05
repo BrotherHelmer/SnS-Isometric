@@ -476,6 +476,12 @@ func _rebuild_terrain() -> void:
 	material.shader = preload("res://src/GodotClient3D/Shaders/settlement_ground.gdshader")
 	material.set_shader_parameter("light_tint", Vector3(_ground_tint.r, _ground_tint.g, _ground_tint.b))
 	material.set_shader_parameter("tint_floor", 0.0)
+	# The Director: GFX-03 two-scale terrain defaults (8–20 m macro, 0.8–2 m detail).
+	material.set_shader_parameter("macro_metres", 14.0)
+	material.set_shader_parameter("detail_metres", 1.2)
+	material.set_shader_parameter("macro_amount", 0.078)
+	material.set_shader_parameter("detail_amount", 0.048)
+	material.set_shader_parameter("dirt_amount", 0.36)
 	terrain_mesh_instance.material_override = material
 	terrain_root.add_child(terrain_mesh_instance)
 	terrain_body = StaticBody3D.new()
