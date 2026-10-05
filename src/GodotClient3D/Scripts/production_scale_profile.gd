@@ -66,6 +66,15 @@ const WORLD_PROP_SCALE := {
 	"work_axe": 0.90,
 	"weaponrack": 0.95,
 	"training_target": 1.05,
+	"log": 0.90,
+	"stump": 0.62,
+	"sack": 0.95,
+	"chopping_block": 0.78,
+	"rocks": 0.85,
+	"wheat_crop": 1.15,
+	"lantern": 1.00,
+	"fence": 1.00,
+	"cart": 0.75,
 }
 
 # Only the three largest canopy models are reduced. Mature trees remain larger

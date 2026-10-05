@@ -116,6 +116,12 @@ func end_pointer_pan() -> void:
 	dragging = false
 
 
+func view_direction() -> Vector3:
+	if camera == null:
+		return Vector3(sin(rotation.y), -0.707, -cos(rotation.y)).normalized()
+	return -camera.global_transform.basis.z.normalized()
+
+
 func compose_view(world_position: Vector3, orthographic_size: float) -> void:
 	target_position = Vector3(world_position.x, 0.0, world_position.z)
 	target_zoom = clampf(orthographic_size, CLOSE_ZOOM, STRATEGIC_ZOOM)

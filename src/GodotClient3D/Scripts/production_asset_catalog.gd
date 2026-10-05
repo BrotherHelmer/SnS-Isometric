@@ -93,7 +93,31 @@ const WORKYARD_PROPS := {
 
 const TREES := [ROOT + "/opening_style/fir.tscn", ROOT + "/opening_style/broadleaf.tscn"]
 
+const EDGE_TREES := [ROOT + "/opening_style/fir.tscn"]
+
 const ROCKS := [ROOT + "/opening_style/rocks.tscn"]
+
+const HALO_PROPS := {
+	"log": ROOT + "/resources/Wood_Log_A.gltf",
+	"stump": ROOT + "/resources/Wood_Log_B.gltf",
+	"cart": ROOT + "/opening_style/cart.tscn",
+	"wood_stack": ROOT + "/resources/Wood_Log_Stack.gltf",
+	"plank_stack": ROOT + "/resources/Wood_Planks_Stack_Small.gltf",
+	"stone_stack": ROOT + "/resources/Stone_Bricks_Stack_Small.gltf",
+	"rocks": ROOT + "/opening_style/rocks.tscn",
+	"barrel": ROOT + "/buildings/barrel.gltf",
+	"crate": ROOT + "/buildings/crate_A_small.gltf",
+	"long_crate": ROOT + "/buildings/crate_long_A.gltf",
+	"sack": ROOT + "/buildings/crate_A_small.gltf",
+	"chopping_block": ROOT + "/resources/Wood_Log_A.gltf",
+	"fence": ROOT + "/opening_style/fence.tscn",
+	"lantern": ROOT + "/opening_style/lantern.tscn",
+	"wheat_crop": ROOT + "/opening_style/wheat.tscn",
+	"wheelbarrow": ROOT + "/farm/wheelbarrow.gltf",
+	"work_axe": ROOT + "/tools/axe.gltf",
+	"weaponrack": ROOT + "/buildings/weaponrack.gltf",
+	"training_target": ROOT + "/buildings/target.gltf",
+}
 
 const UNDERSTORY := [ROOT + "/opening_style/bush.tscn", ROOT + "/opening_style/grass.tscn"]
 
@@ -110,11 +134,11 @@ static func character_path(worker_type: String) -> String:
 
 static func all_runtime_paths() -> Array[String]:
 	var paths: Array[String] = []
-	for group in [CHARACTERS, ANIMATION_LIBRARIES, BUILDINGS, TOOLS, CARGO, WORKYARD_PROPS]:
+	for group in [CHARACTERS, ANIMATION_LIBRARIES, BUILDINGS, TOOLS, CARGO, WORKYARD_PROPS, HALO_PROPS]:
 		for path_value in group.values():
 			if not paths.has(String(path_value)):
 				paths.append(String(path_value))
-	for path_value in TREES + ROCKS + UNDERSTORY + GRASS:
+	for path_value in TREES + EDGE_TREES + ROCKS + UNDERSTORY + GRASS:
 		if not paths.has(String(path_value)):
 			paths.append(String(path_value))
 	return paths

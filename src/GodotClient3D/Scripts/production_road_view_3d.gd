@@ -5,6 +5,7 @@ const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_p
 
 static var _materials: Dictionary = {}
 static var _light_tint := Color.WHITE
+static var _value_lift := 0.06
 
 var tile := Vector2i.ZERO
 var building_id := 0
@@ -32,7 +33,7 @@ func _rebuild() -> void:
 		remove_child(child)
 		child.queue_free()
 	var edge_color := Color(0.32, 0.22, 0.12, 0.42) if planned else Color(0.22, 0.14, 0.08, 0.55)
-	var road_color := Color(0.58, 0.40, 0.22, 0.78) if planned else Color("#8c7351")
+	var road_color := Color(0.58, 0.40, 0.22, 0.78) if planned else Color("#a8885c")
 	if faction == "rival":
 		edge_color = Color(0.28, 0.17, 0.18, 0.72)
 		road_color = Color("#805d58")
@@ -59,7 +60,8 @@ func _add_path_mesh(width: float, height: float, material: Material, node_name: 
 		Vector3(-junction, height, -junction),
 		Vector3(junction, height, -junction),
 		Vector3(junction, height, junction),
-		Vector3(-junction, height, junction)
+		Vector3(-junction, height, junction),
+		Vector2(0.0, 0.0), Vector2(1.0, 0.0), Vector2(1.0, 1.0), Vector2(0.0, 1.0)
 	)
 	var directions := [Vector2(0.0, -1.0), Vector2(1.0, 0.0), Vector2(0.0, 1.0), Vector2(-1.0, 0.0)]
 	for index in directions.size():
@@ -74,7 +76,8 @@ func _add_path_mesh(width: float, height: float, material: Material, node_name: 
 			Vector3(start.x - perpendicular.x * half_width, height, start.y - perpendicular.y * half_width),
 			Vector3(start.x + perpendicular.x * half_width, height, start.y + perpendicular.y * half_width),
 			Vector3(finish.x + perpendicular.x * half_width, height, finish.y + perpendicular.y * half_width),
-			Vector3(finish.x - perpendicular.x * half_width, height, finish.y - perpendicular.y * half_width)
+			Vector3(finish.x - perpendicular.x * half_width, height, finish.y - perpendicular.y * half_width),
+			Vector2(0.0, 0.0), Vector2(1.0, 0.0), Vector2(1.0, 1.0), Vector2(0.0, 1.0)
 		)
 	var instance := MeshInstance3D.new()
 	instance.name = node_name
@@ -107,15 +110,18 @@ func _add_ruts(road_width: float) -> void:
 			add_child(rut)
 
 
-func _add_triangle(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3) -> void:
-	for vertex in [a, b, c]:
+func _add_triangle(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, ua: Vector2, ub: Vector2, uc: Vector2) -> void:
+	var verts := [a, b, c]
+	var uvs := [ua, ub, uc]
+	for index in 3:
 		surface.set_normal(Vector3.UP)
-		surface.add_vertex(vertex)
+		surface.set_uv(uvs[index])
+		surface.add_vertex(verts[index])
 
 
-func _add_quad(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3) -> void:
-	_add_triangle(surface, a, b, c)
-	_add_triangle(surface, a, c, d)
+func _add_quad(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, ua := Vector2(0, 0), ub := Vector2(1, 0), uc := Vector2(1, 1), ud := Vector2(0, 1)) -> void:
+	_add_triangle(surface, a, b, c, ua, ub, uc)
+	_add_triangle(surface, a, c, d, ua, uc, ud)
 
 
 func _road_material(color: Color) -> ShaderMaterial:
@@ -125,12 +131,17 @@ func _road_material(color: Color) -> ShaderMaterial:
 		material.shader = preload("res://src/GodotClient3D/Shaders/settlement_road.gdshader")
 		material.set_shader_parameter("road_color", color)
 		material.set_shader_parameter("light_tint", _light_tint)
+		material.set_shader_parameter("value_lift", _value_lift)
 		material.render_priority = -1 if color.a < 1.0 else 0
 		_materials[key] = material
 	return _materials[key]
 
-static func set_lighting(tint: Color) -> void:
-	if _light_tint.is_equal_approx(tint): return
+
+static func set_lighting(tint: Color, value_lift := 0.06) -> void:
+	if _light_tint.is_equal_approx(tint) and is_equal_approx(_value_lift, value_lift):
+		return
 	_light_tint = tint
+	_value_lift = value_lift
 	for material in _materials.values():
 		material.set_shader_parameter("light_tint", tint)
+		material.set_shader_parameter("value_lift", value_lift)

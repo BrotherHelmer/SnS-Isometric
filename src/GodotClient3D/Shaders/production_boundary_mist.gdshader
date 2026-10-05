@@ -24,5 +24,5 @@ void fragment() {
 	if (raw_uv.x >= 0.0 && raw_uv.y >= 0.0 && raw_uv.x <= 1.0 && raw_uv.y <= 1.0) { discard; }
 	vec2 uv = clamp(raw_uv, vec2(0), vec2(1));
 	float mist = value_noise(uv * 8.0 + vec2(-TIME * 0.004, TIME * 0.005));
-	ALBEDO = mix(vec3(0.012, 0.025, 0.029), vec3(0.021, 0.038, 0.043), mist * 0.34);
+	ALBEDO = mix(vec3(0.06, 0.12, 0.11), vec3(0.09, 0.16, 0.14), mist * 0.34);
 }
