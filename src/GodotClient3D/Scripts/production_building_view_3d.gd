@@ -146,6 +146,7 @@ func _rebuild() -> void:
 	else:
 		_create_completed_model()
 		_create_workyard()
+		_create_workyard_grounding()
 		_create_building_identity_markers()
 	_create_ownership_banner()
 	_create_contact_ao()
@@ -577,9 +578,13 @@ func _create_semantic_identity_geometry() -> void:
 			var oven_glow := OmniLight3D.new()
 			oven_glow.name = "OvenGlow"
 			oven_glow.position = Vector3(1.7, 0.85, 1.7)
-			oven_glow.light_color = Color("#ff9a52")
-			oven_glow.light_energy = 1.0
-			oven_glow.omni_range = 4.0
+			oven_glow.light_color = Color("#F2B56B")
+			oven_glow.light_energy = 0.32
+			oven_glow.omni_range = 2.8
+			oven_glow.shadow_enabled = false
+			oven_glow.distance_fade_enabled = true
+			oven_glow.distance_fade_begin = 7.0
+			oven_glow.distance_fade_length = 4.0
 			workyard_root.add_child(oven_glow)
 		"STOREHOUSE":
 			_add_prop("long_crate", Vector3(-2.3, 0.0, -0.8), Vector3.ONE * 2.0, "StorehouseSupplies")
@@ -609,6 +614,16 @@ func _create_semantic_identity_geometry() -> void:
 				flag.position = Vector3(side * 2.38, 2.05, -2.7)
 				flag.material_override = _material(Color("#6e2430") if faction == "rival" else Color("#355e6c"), 0.0)
 				workyard_root.add_child(flag)
+
+
+func _create_workyard_grounding() -> void:
+	# The Director: GFX-10 story-zone dirt so the yard occupies the grass.
+	if workyard_root == null or building_type in ["ROAD", "WALL"]:
+		return
+	var world_size := ScaleProfile.footprint_world_size(footprint)
+	var disc := ContactAO.make_instance("WorkyardDirt", Vector2(world_size.x + 2.4, world_size.y + 2.4), 0.16)
+	disc.position = Vector3(0.0, 0.012, 0.15)
+	workyard_root.add_child(disc)
 
 
 func _create_town_hall_civic_mass() -> void:
