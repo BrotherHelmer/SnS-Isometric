@@ -64,6 +64,21 @@ func _run() -> void:
 	game._sync_presentation()
 	await _capture(game, "gfx_dusk.png")
 	print("GFX dusk sun/camera angle=%.1f energy=%.2f" % [game.sun_camera_angle_degrees(), game.sun_light.light_energy])
+	await _sample_perf(game, "dusk")
+	sim.is_night = false
+	sim.phase_time = 80.0
+	game._update_day_night_lighting()
+	game._sync_presentation()
+	await _sample_perf(game, "day")
+	sim.is_night = true
+	sim.phase_time = 20.0
+	game._update_day_night_lighting()
+	game._sync_presentation()
+	await _sample_perf(game, "night")
+	game._show_start_menu()
+	game._author_title_composition()
+	game._update_day_night_lighting()
+	await _sample_perf(game, "first-view")
 	game.queue_free()
 	await process_frame
 	print("GFX_GATE_SHOTS PASS dir=%s" % dest_root)
@@ -83,3 +98,15 @@ func _capture(game, filename: String) -> void:
 		image.save_png(dest)
 		game.write_gfx_tile_mask_json(dest.get_basename() + ".roads.json")
 		print("GFX_GATE_SHOT wrote %s" % dest)
+
+
+func _sample_perf(game, label: String) -> void:
+	for _warm in 8:
+		await process_frame
+	var acc := 0.0
+	var frames := 45
+	for _i in frames:
+		await process_frame
+		acc += float(Performance.get_monitor(Performance.TIME_PROCESS))
+	var ms := (acc / float(frames)) * 1000.0
+	print("GFX_PERF %s frame_ms=%.3f frames=%d" % [label, ms, frames])

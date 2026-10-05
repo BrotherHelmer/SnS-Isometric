@@ -1,6 +1,6 @@
 extends SceneTree
 
-## GFX-1: lighting angle, preset interpolation, low-profile switches, halo tiles.
+## GFX-02: AgX grade, period LUTs, sun angle, low-profile switches, halo tiles.
 
 const Scene = preload("res://src/GodotClient3D/Scenes/production_3d.tscn")
 const Identity = preload("res://src/GodotClient3D/Scripts/production_identity.gd")
@@ -55,7 +55,16 @@ func _run() -> void:
 	sim.phase_time = 20.0
 	game._update_day_night_lighting()
 	_check(absf(game.sun_light.light_energy - float(night_p["sun_energy"])) < 0.03, "night preset applies authored moon energy")
-	_check(game.environment_resource.tonemap_mode == Environment.TONE_MAPPER_ACES, "tonemap stays ACES")
+	_check(game.environment_resource.tonemap_mode == Environment.TONE_MAPPER_AGX, "tonemap is AgX")
+	_check(float(day_p["saturation"]) >= 0.92 and float(day_p["saturation"]) <= 0.96, "day sat is 0.92–0.96")
+	_check(float(dusk_p["saturation"]) >= 0.92 and float(dusk_p["saturation"]) <= 0.96, "dusk sat is 0.92–0.96")
+	_check(float(night_p["saturation"]) >= 0.92 and float(night_p["saturation"]) <= 0.96, "night sat is 0.92–0.96")
+	_check(float(day_p["contrast"]) <= 1.16 and float(dusk_p["contrast"]) <= 1.16 and float(day_p["contrast"]) < 1.40, "contrast is not crushed through B/C/S")
+	_check(float(night_p["road_lift"]) <= 0.16, "night roads are not lifted into white")
+	_check(Identity.grade_lut_for("day") is Texture and Identity.grade_lut3d_for("dusk") is Texture3D and Identity.grade_lut3d_for("night") is Texture3D, "day/dusk/night expose 1D and 3D grade LUTs")
+	var dusk_fill: Color = dusk_p["fill_color"]
+	var dusk_sun: Color = dusk_p["sun_color"]
+	_check(dusk_fill.b > dusk_fill.r and dusk_sun.r > dusk_sun.b, "dusk has a warm key against a cool fill")
 
 	game.apply_quality_profile("recommended")
 	_check(not game.environment_resource.ssil_enabled and not game.environment_resource.glow_enabled, "recommended profile keeps SSIL and glow off")
