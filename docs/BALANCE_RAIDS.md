@@ -28,8 +28,9 @@ Night 2 Raider; a Watchtower bolt deals 4.
 
 Raiders siege loot (Storehouse, bakery, camps) after manned towers and gates,
 then soldiers. Each storage hit steals available (not reserved) stock, bread
-first. A building destroyed during an active raid loses its local inventory
-instead of dumping it back into the hall.
+first. Wyrd is never stolen — it is Lumen fuel, not cargo. A building
+destroyed during an active raid loses its local inventory instead of dumping
+it back into the hall.
 
 ## Time-to-kill
 

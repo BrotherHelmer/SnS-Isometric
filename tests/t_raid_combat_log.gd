@@ -72,12 +72,13 @@ func _test_troop_hits_and_kills() -> void:
 	var guard: Dictionary = sim._create_patrol_worker(0, "log_guard")
 	guard["position"] = sim.town_hall_position + Vector2i(2, 0)
 	sim.workers.append(guard)
-	sim._spawn_enemy(guard["position"] + Vector2i(1, 0), 6, 1, 0.0, 0, sim.ENEMY_RAIDER, 0)
+	# One published soldier strike (same cadence as playtest.31) so the Log
+	# sees both the hit and the kill without depending on pathing.
+	sim._spawn_enemy(guard["position"] + Vector2i(1, 0), Simulation.GUARD_DAMAGE, 1, 0.0, 0, sim.ENEMY_RAIDER, 0)
 	sim._begin_raid(1)
-	var elapsed := 0.0
-	while sim.living_hostile_count() > 0 and elapsed < 8.0:
-		sim.advance_tick()
-		elapsed += Simulation.TICK_SECONDS
+	sim._update_patrol_combat(1.6)
+	sim._update_patrol_combat(0.5)
+	sim._update_enemies(Simulation.TICK_SECONDS)
 	sim._flush_combat_log(true)
 	sim._maybe_finish_raid()
 	var troop_line := _first_notice_containing(sim, "Soldiers hit")

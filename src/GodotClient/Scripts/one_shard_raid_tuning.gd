@@ -62,8 +62,7 @@ const STEAL_RESOURCE_ORDER := [
 	Defs.RESOURCE_WOOD,
 	Defs.RESOURCE_WHEAT,
 	Defs.RESOURCE_PLANKS,
-	Defs.RESOURCE_STONE,
-	Defs.RESOURCE_WYRD
+	Defs.RESOURCE_STONE
 ]
 
 ## Headless scenario bounds used by tests/t_raid_combat.gd.
