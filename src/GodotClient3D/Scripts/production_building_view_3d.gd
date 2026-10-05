@@ -3,6 +3,7 @@ extends Node3D
 
 const Catalog = preload("res://src/GodotClient3D/Scripts/production_asset_catalog.gd")
 const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_profile.gd")
+const ContactAO = preload("res://src/GodotClient3D/Scripts/production_contact_ao.gd")
 
 var entity_id := 0
 var building_type := ""
@@ -143,6 +144,7 @@ func _rebuild() -> void:
 		_create_workyard()
 		_create_building_identity_markers()
 	_create_ownership_banner()
+	_create_contact_ao()
 
 
 func _create_completed_model() -> void:
@@ -793,6 +795,10 @@ func _add_prop(prop_key: String, local_position: Vector3, prop_scale: Vector3, n
 	if resource_type != "":
 		prop.set_meta("inventory_resource", resource_type)
 		inventory_indicators.append(prop)
+	var prop_span := maxf(absf(prop.scale.x), absf(prop.scale.z)) * 0.95
+	var prop_ao := ContactAO.make_instance("ContactAO", Vector2(prop_span, prop_span), 0.28)
+	prop_ao.position = Vector3(local_position.x, 0.016, local_position.z)
+	workyard_root.add_child(prop_ao)
 
 
 func _update_inventory_indicators(inventory: Dictionary) -> void:
@@ -904,6 +910,19 @@ func _create_military_banner(position: Vector3) -> void:
 	flag_mat.emission_energy_multiplier = 0.5
 	flag.material_override = flag_mat
 	add_child(flag)
+
+
+func _create_contact_ao() -> void:
+	if building_type == "ROAD":
+		return
+	var world_size := ScaleProfile.footprint_world_size(footprint)
+	var visual := _visual_size()
+	var width := maxf(world_size.x, visual.x) * 1.08
+	var depth := maxf(world_size.y, visual.z) * 1.08
+	var intensity := 0.28 if building_type == "WALL" else 0.42
+	var disc := ContactAO.make_instance("ContactAO", Vector2(width, depth), intensity)
+	disc.position = Vector3(0.0, 0.018, _model_offset_z())
+	add_child(disc)
 
 
 func _visual_size() -> Vector3:
