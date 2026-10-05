@@ -4,6 +4,7 @@ extends Node3D
 const Catalog = preload("res://src/GodotClient3D/Scripts/production_asset_catalog.gd")
 const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_profile.gd")
 const ContactAO = preload("res://src/GodotClient3D/Scripts/production_contact_ao.gd")
+const BuildingMaterials = preload("res://src/GodotClient3D/Scripts/production_building_materials.gd")
 
 var entity_id := 0
 var building_type := ""
@@ -162,6 +163,8 @@ func _create_completed_model() -> void:
 	model_root.scale = Vector3.ONE * ScaleProfile.building_scale(building_type)
 	model_root.position.z = _model_offset_z()
 	add_child(model_root)
+	# The Director: GFX-07 roughness + fresnel bevel after the mesh is live.
+	BuildingMaterials.apply(model_root, entity_id)
 
 
 func _create_wall_model() -> void:
@@ -839,7 +842,7 @@ func _update_inventory_indicators(inventory: Dictionary) -> void:
 func _material(color: Color, transparency: float) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
 	material.albedo_color = color
-	material.roughness = 0.92
+	material.roughness = BuildingMaterials.roughness_for(BuildingMaterials.classify(color))
 	if transparency > 0.0 or color.a < 1.0:
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	return material
