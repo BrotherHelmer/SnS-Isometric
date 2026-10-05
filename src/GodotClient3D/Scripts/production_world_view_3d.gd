@@ -693,6 +693,8 @@ func _sync_grass(force: bool) -> void:
 
 
 func _rebuild_grass_multimeshes() -> void:
+	if grass_root == null or simulation == null:
+		return
 	for child in grass_root.get_children():
 		grass_root.remove_child(child)
 		child.free()
@@ -1788,6 +1790,8 @@ func _same_type_neighbors(tile: Vector2i, tile_type: String) -> int:
 
 func apply_quality_profile(quality: Dictionary) -> void:
 	foliage_density = clampf(float(quality.get("foliage_density", foliage_density)), 0.25, 1.0)
+	if simulation == null:
+		return
 	_rebuild_edge_forest(true)
 	_rebuild_grass_multimeshes()
 
