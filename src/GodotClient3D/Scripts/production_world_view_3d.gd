@@ -59,6 +59,7 @@ var building_views: Dictionary = {}
 var character_views: Dictionary = {}
 var road_views: Dictionary = {}
 var road_signatures: Dictionary = {}
+var road_stamp_signature := ""
 var rival_road_views: Dictionary = {}
 var rival_road_signatures: Dictionary = {}
 var rivalry_structure_views: Dictionary = {}
@@ -155,6 +156,7 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 		character_views.clear()
 		road_views.clear()
 		road_signatures.clear()
+		road_stamp_signature = ""
 		rival_road_views.clear()
 		rival_road_signatures.clear()
 		rivalry_structure_views.clear()
@@ -1282,6 +1284,15 @@ func _sync_roads(road_snapshots: Array) -> void:
 func _rebuild_road_stamps(desired: Dictionary) -> void:
 	if road_stamp_root == null:
 		return
+	var keys := desired.keys()
+	keys.sort()
+	var signature := ""
+	for key_value in keys:
+		var snapshot: Dictionary = desired[key_value]
+		signature += "%s:%d;" % [String(key_value), int(bool(snapshot.get("construction", false)))]
+	if signature == road_stamp_signature and road_stamp_root.get_child_count() > 0:
+		return
+	road_stamp_signature = signature
 	for child in road_stamp_root.get_children():
 		road_stamp_root.remove_child(child)
 		child.free()
@@ -1306,14 +1317,15 @@ func _rebuild_road_stamps(desired: Dictionary) -> void:
 				continue
 			connections += 1
 			var direction: Vector2 = dirs[index]
-			var mid := world + Vector3(direction.x * 0.62, 0.032, direction.y * 0.62)
 			var yaw := atan2(direction.x, direction.y)
-			tracks.append(Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3(0.18, 1.0, 0.72)), mid))
-			if _tile_hash(tile, 7 + index) % 3 == 0:
+			if index == 0 or (mask & (1 << 0) == 0 and index == 1):
+				var mid := world + Vector3(direction.x * 0.55, 0.032, direction.y * 0.55)
+				tracks.append(Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3(0.16, 1.0, 0.62)), mid))
+			if _tile_hash(tile, 7 + index) % 5 == 0:
 				var perp := Vector2(-direction.y, direction.x)
 				var side := 1.0 if _tile_hash(tile, 11 + index) % 2 == 0 else -1.0
 				var br := world + Vector3(direction.x * 0.38 + perp.x * 0.52 * side, 0.028, direction.y * 0.38 + perp.y * 0.52 * side)
-				breaks.append(Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3(0.36, 1.0, 0.20)), br))
+				breaks.append(Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3(0.30, 1.0, 0.16)), br))
 		if connections >= 3:
 			muds.append(Transform3D(Basis().scaled(Vector3(0.58, 1.0, 0.58)), world + Vector3(0.0, 0.026, 0.0)))
 	_spawn_road_stamp_multimesh("RoadTracks", tracks, Color(0.43, 0.33, 0.25, 0.50))
