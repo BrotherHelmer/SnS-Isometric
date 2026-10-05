@@ -36,6 +36,8 @@ const ACTIVITY_BY_BAND := {
 	BAND_CRITICAL: "Extreme"
 }
 
+const RaidTuning = preload("one_shard_raid_tuning.gd")
+
 const ENEMY_RAIDER := "raider"
 const ENEMY_MARAUDER := "skitterer"
 const ENEMY_BRUTE := "brute"
@@ -125,10 +127,12 @@ static func night_baseline(day_count: int, is_first_night: bool) -> float:
 static func wave_plan(pressure_value: float, day_count: int, is_first_night: bool, reckoning: bool) -> Dictionary:
 	if is_first_night and not reckoning:
 		return {
-			"size": 2,
+			"size": RaidTuning.NIGHT1_SIZE,
 			"roster": [ENEMY_RAIDER],
-			"hp": 16,
-			"damage": 2,
+			"hp": RaidTuning.NIGHT1_HP,
+			"damage": RaidTuning.NIGHT1_DAMAGE,
+			"armor": RaidTuning.NIGHT1_ARMOR,
+			"steal": RaidTuning.NIGHT1_STEAL,
 			"band": BAND_QUIET,
 			"baseline": 0.0,
 			"effective": snappedf(pressure_value, 0.1)
@@ -140,10 +144,12 @@ static func wave_plan(pressure_value: float, day_count: int, is_first_night: boo
 	var roster: Array[String] = [ENEMY_RAIDER]
 	if day_count == 2 and not reckoning:
 		return {
-			"size": 5,
+			"size": RaidTuning.NIGHT2_SIZE,
 			"roster": [ENEMY_RAIDER, ENEMY_MARAUDER, ENEMY_RAIDER, ENEMY_MARAUDER, ENEMY_RAIDER],
-			"hp": 30,
-			"damage": 7,
+			"hp": RaidTuning.NIGHT2_HP,
+			"damage": RaidTuning.NIGHT2_DAMAGE,
+			"armor": RaidTuning.NIGHT2_ARMOR,
+			"steal": RaidTuning.NIGHT2_STEAL,
 			"band": band,
 			"baseline": snappedf(baseline, 0.1),
 			"effective": snappedf(effective, 0.1)
@@ -168,19 +174,13 @@ static func wave_plan(pressure_value: float, day_count: int, is_first_night: boo
 		size = maxi(size, 8)
 		if not roster.has(ENEMY_BRUTE):
 			roster.append(ENEMY_BRUTE)
-	var hp := 28 + maxi(0, day_count - 2) * 2
-	if band == BAND_SEVERE:
-		hp += 2
-	elif band == BAND_CRITICAL or reckoning:
-		hp += 4
-	var damage := 7 + int(maxi(0, day_count - 1) / 3) * 2
-	if reckoning:
-		damage += 1
 	return {
 		"size": size,
 		"roster": roster,
-		"hp": hp,
-		"damage": damage,
+		"hp": RaidTuning.later_hp(day_count, band, reckoning),
+		"damage": RaidTuning.later_damage(day_count, reckoning),
+		"armor": RaidTuning.later_armor(band, reckoning),
+		"steal": RaidTuning.steal_for_night(day_count, false),
 		"band": band,
 		"baseline": snappedf(baseline, 0.1),
 		"effective": snappedf(effective, 0.1)

@@ -118,7 +118,7 @@ func _test_night_two_damages_yard(failures: Array[String]) -> void:
 func _test_night_one_teaching(failures: Array[String]) -> void:
 	var plan := Wyrdfall.wave_plan(0.0, 1, true, false)
 	check(int(plan.get("size", 0)) == 2, "Night 1 remains a teaching wave of 2", failures)
-	check(int(plan.get("damage", 0)) == 2, "Night 1 raider damage stays tutorial-low", failures)
+	check(int(plan.get("damage", 0)) == Simulation.RaidTuning.NIGHT1_DAMAGE, "Night 1 raider damage stays the tutorial constant", failures)
 	var sim: Simulation = Simulation.new(70, 70, 260821, false, true)
 	sim.day_count = 1
 	sim._start_night()

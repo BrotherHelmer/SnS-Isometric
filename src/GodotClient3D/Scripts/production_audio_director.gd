@@ -65,6 +65,7 @@ var work_index := 0
 var camera: Camera3D
 var last_listen_log: Array[String] = []
 var scream_cooldown := 4.0
+var screams_played := 0
 var paused := false
 var audio_clock := 0.0
 var last_cheer_clock := -1000.0
@@ -483,12 +484,9 @@ func _on_state_entered(next_state: String, previous: String, simulation) -> void
 		"raid":
 			if previous != "raid":
 				play_cue("enemy")
-				scream_cooldown = 1.6
 		"night":
 			if previous == "raid" and _living_hostiles(simulation) == 0:
 				play_cue("combat_win")
-			if previous in ["dusk", "day"]:
-				scream_cooldown = 3.2
 		"reckoning":
 			play_cue("reckoning")
 		"victory":
@@ -540,7 +538,9 @@ func _update_stem_targets(simulation, menu_visible: bool) -> void:
 			stem_targets["wyrd"] = -20.0
 			stem_targets["lumen"] = -26.0
 		"night":
-			stem_targets["dusk"] = -22.0
+			# Dusk tension stays a dusk-only riser. Leaving it under the night
+			# bed (was -22 dB) stacked a second periodic pulse on the night
+			# percussion hits. Scary night colour is the night stem + wyrd.
 			stem_targets["night"] = -9.0
 			stem_targets["ambience"] = -28.0
 			stem_targets["wyrd"] = -16.0
@@ -577,13 +577,20 @@ func _update_stem_targets(simulation, menu_visible: bool) -> void:
 
 
 func _tick_night_screams(delta: float) -> void:
+	# Director: night_scream.wav is a 1.45 s falling 820→460 Hz sweep. The old
+	# loop replayed it every 10 s (night) / 5.5 s (raid), which playtest heard
+	# as a periodic 'sound wave' passing the camp. Do not retrigger it.
+	# One scare on first nightfall is enough; the night bed keeps the mood.
 	if current_state not in ["night", "raid", "reckoning"]:
+		return
+	if scream_cooldown < 0.0:
 		return
 	scream_cooldown -= delta
 	if scream_cooldown > 0.0:
 		return
 	play_cue("scream")
-	scream_cooldown = 5.5 if current_state == "raid" or current_state == "reckoning" else 10.0
+	screams_played += 1
+	scream_cooldown = -1.0
 
 
 func _ensure_buses() -> void:
