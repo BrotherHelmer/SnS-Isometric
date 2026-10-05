@@ -695,12 +695,16 @@ func _create_lighting() -> void:
 	environment.tonemap_exposure = 1.0
 	environment.tonemap_white = 8.0
 	environment.ssao_enabled = bool(quality_profile.get("ssao", quality_profile.get("shadows", true)))
-	environment.ssao_radius = 1.1
-	environment.ssao_intensity = 1.6
-	environment.ssao_power = 1.35
-	environment.ssao_detail = 0.55
-	environment.ssao_horizon = 0.05
-	environment.ssao_sharpness = 0.97
+	# The Director: GFX-04 Forward+ SSAO at ~1 m, low direct-light dirt.
+	# Half-res is the project default (rendering/environment/ssao/half_size).
+	environment.ssao_radius = 0.95
+	environment.ssao_intensity = 1.15
+	environment.ssao_power = 1.25
+	environment.ssao_detail = 0.50
+	environment.ssao_horizon = 0.06
+	environment.ssao_sharpness = 0.90
+	environment.ssao_light_affect = 0.10
+	environment.ssao_ao_channel_affect = 0.55
 	environment.ssil_enabled = bool(quality_profile.get("ssil", false))
 	environment.ssil_radius = 3.0
 	environment.ssil_intensity = 0.75
@@ -3745,6 +3749,9 @@ func _apply_quality_features() -> void:
 	if environment_resource == null:
 		return
 	environment_resource.ssao_enabled = bool(quality_profile.get("ssao", quality_profile.get("shadows", true)))
+	environment_resource.ssao_radius = 0.95
+	environment_resource.ssao_intensity = 1.15
+	environment_resource.ssao_light_affect = 0.10
 	environment_resource.ssil_enabled = bool(quality_profile.get("ssil", false))
 	environment_resource.glow_enabled = bool(quality_profile.get("glow", false))
 	environment_resource.volumetric_fog_enabled = bool(quality_profile.get("volumetric_fog", false))

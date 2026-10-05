@@ -99,3 +99,5 @@ textures/canvas_textures/default_texture_filter=0
 renderer/rendering_method="forward_plus"
 renderer/rendering_method.mobile="forward_plus"
 environment/defaults/default_clear_color=Color(0.14, 0.11, 0.09, 1)
+environment/ssao/quality=1
+environment/ssao/half_size=true

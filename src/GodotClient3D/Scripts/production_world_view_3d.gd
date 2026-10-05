@@ -12,6 +12,7 @@ const ProjectileView = preload("res://src/GodotClient3D/Scripts/production_proje
 const FogShader = preload("res://src/GodotClient3D/Shaders/production_fog_of_war.gdshader")
 const FogScreenShader = preload("res://src/GodotClient3D/Shaders/production_fog_screen.gdshader")
 const BoundaryMistShader = preload("res://src/GodotClient3D/Shaders/production_boundary_mist.gdshader")
+const ContactAO = preload("res://src/GodotClient3D/Scripts/production_contact_ao.gd")
 const FOG_MASK_DIVISOR := 1
 const FOG_VOLUME_PAD_METRES := 110.0
 const FOG_VOLUME_HEIGHT_METRES := 56.0
@@ -762,6 +763,14 @@ func _yard_tiles(radius: int) -> Dictionary:
 				if simulation.is_inside_map(tile):
 					yard[_tile_key(tile)] = true
 	return yard
+
+
+func _spawn_nature_contact_ao(host: Node3D, transforms_by_path: Dictionary, intensity := 0.30) -> void:
+	var contacts: Array = []
+	for path_value in transforms_by_path:
+		for xf_value in transforms_by_path[path_value]:
+			contacts.append(ContactAO.flatten_transform(xf_value, 1.4))
+	ContactAO.spawn_multimesh(host, contacts, intensity)
 
 
 func _spawn_nature_multimeshes(host: Node3D, transforms_by_path: Dictionary) -> void:

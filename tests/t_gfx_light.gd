@@ -73,6 +73,14 @@ func _run() -> void:
 		_check(detail_m >= 0.8 and detail_m <= 2.0, "terrain detail layer is 0.8–2 m")
 	else:
 		_check(false, "terrain uses the settlement ground shader")
+	_check(game.environment_resource.ssao_enabled, "recommended profile keeps Forward+ SSAO on")
+	_check(game.environment_resource.ssao_radius >= 0.70 and game.environment_resource.ssao_radius <= 1.20, "SSAO radius is 0.7–1.2 m")
+	_check(game.environment_resource.ssao_light_affect <= 0.20, "SSAO direct-light influence stays low")
+	var contact_count := 0
+	for view in game.world_view.building_views.values():
+		if view.find_child("ContactAO", true, false) != null:
+			contact_count += 1
+	_check(contact_count > 0, "buildings carry a contact-AO disc")
 
 	game.apply_quality_profile("recommended")
 	_check(not game.environment_resource.ssil_enabled and not game.environment_resource.glow_enabled, "recommended profile keeps SSIL and glow off")
