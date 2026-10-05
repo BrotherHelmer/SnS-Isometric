@@ -16,7 +16,10 @@ void vertex() { world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; }
 void fragment() {
 	float broad = noise2(world_pos.xz * 0.11);
 	float fine = noise2(world_pos.xz * 1.8);
-	ALBEDO = COLOR.rgb * light_tint * mix(0.94, 1.05, broad) * mix(0.98, 1.02, fine);
+	// Period tint is patched, not a flat wash: dusk gold hits the brighter
+	// noise patches (warm-share) and leaves the rest green.
+	float wash = smoothstep(0.70, 0.94, broad);
+	ALBEDO = COLOR.rgb * mix(vec3(1.0), light_tint, wash) * mix(0.94, 1.05, broad) * mix(0.98, 1.02, fine);
 	// World up in view space, same contract as the road lanes.
 	NORMAL = normalize((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
 	ROUGHNESS = 0.97;

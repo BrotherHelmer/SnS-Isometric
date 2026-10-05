@@ -566,7 +566,7 @@ func _terrain_color(tile: Vector2i) -> Color:
 			if tile_type == Defs.TILE_ROCK: rock_weight += 1
 	var hash_a := float(_tile_hash(tile, 7) % 100) / 100.0
 	var hash_b := float(_tile_hash(tile, 13) % 100) / 100.0
-	var base := Color("#4e6244")
+	var base := Color("#5a7048")
 	base = base.lerp(Color("#5a6c48"), hash_a * 0.03)
 	base = base.lerp(Color("#445840"), hash_b * 0.02)
 	base = base.lerp(Color("#2a4438"), clampf(float(tree_weight) / 28.0, 0.0, 0.22))

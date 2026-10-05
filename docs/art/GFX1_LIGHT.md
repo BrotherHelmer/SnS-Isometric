@@ -13,10 +13,10 @@ day / dusk-60s / night / dawn-40s cycle.
 | --- | --- | --- | --- |
 | Sun / moon elevation | 25° | 11° | 48° |
 | Orbit from camera | 120° | 120° | 300° |
-| Colour | `#FFC888` 1.45 | `#FFC078` 1.18 | `#91B8FF` 0.52 |
-| Ambient | `#718FA3` 0.54 | `#C88850` 0.92 | `#3A5580` 0.70 |
-| Exposure / brightness | 0.98 / 1.02 | 1.34 / 1.22 | 1.10 / 1.04 |
-| Saturation / contrast | 0.78 / 1.32 | 0.74 / 1.10 | 0.70 / 1.06 |
+| Colour | `#FFC888` 1.45 | `#FFC080` 1.10 | `#91B8FF` 0.52 |
+| Ambient | `#718FA3` 0.58 | `#A87848` 0.80 | `#3A5580` 0.70 |
+| Exposure / brightness | 1.06 / 1.08 | 1.22 / 1.14 | 1.14 / 1.10 |
+| Saturation / contrast | 0.52 / 1.52 | 0.48 / 1.12 | 0.45 / 1.06 |
 
 Orbit 120° keeps the sun off the camera's left shoulder (shadows
 lower-right) and the 3D sun/camera angle ≥ 90°. Night uses 300°.
