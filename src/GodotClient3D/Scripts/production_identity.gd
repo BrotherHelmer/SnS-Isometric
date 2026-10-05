@@ -33,9 +33,9 @@ const SIZE_WARNING := 16
 const AUDIO_SETTINGS_PATH := "user://one_shard_audio.json"
 
 # The Director: GFX-1 direction B. Sun orbit is degrees around from the camera
-# view direction: 110 keeps day/dusk light entering upper-left (shadows
-# lower-right). Night uses 290 so the moon sits on the opposite side without
-# lerping through the camera's back during dawn (110 <-> 290 never crosses 0).
+# view direction: 120 keeps day/dusk light entering upper-left (shadows
+# lower-right) and the 3D sun/camera angle ≥ 90°. Night uses 300 so the moon
+# sits on the opposite side without lerping through the camera during dawn.
 const LIGHTING := {
 	"day": {
 		"ambient": 0.62,
@@ -53,8 +53,8 @@ const LIGHTING := {
 		"tonemap_white": 6.5,
 		"sun_energy": 1.25,
 		"sun_color": Color("#FFD09A"),
-		"sun_pitch": -28.0,
-		"sun_orbit": 110.0,
+		"sun_pitch": -25.0,
+		"sun_orbit": 120.0,
 		"fill_energy": 0.18,
 		"fill_color": Color("#7A93A6"),
 		"sky_top": Color("#3E5A68"),
@@ -83,7 +83,7 @@ const LIGHTING := {
 		"sun_energy": 0.85,
 		"sun_color": Color("#FF9A61"),
 		"sun_pitch": -10.0,
-		"sun_orbit": 110.0,
+		"sun_orbit": 120.0,
 		"fill_energy": 0.16,
 		"fill_color": Color("#5A6E88"),
 		"sky_top": Color("#2A3D62"),
@@ -112,7 +112,7 @@ const LIGHTING := {
 		"sun_energy": 0.33,
 		"sun_color": Color("#91B8FF"),
 		"sun_pitch": -48.0,
-		"sun_orbit": 290.0,
+		"sun_orbit": 300.0,
 		"fill_energy": 0.22,
 		"fill_color": Color("#3A5478"),
 		"sky_top": Color("#07101F"),
@@ -141,7 +141,7 @@ const LIGHTING := {
 		"sun_energy": 0.22,
 		"sun_color": Color("#7A9AD0"),
 		"sun_pitch": -42.0,
-		"sun_orbit": 290.0,
+		"sun_orbit": 300.0,
 		"fill_energy": 0.20,
 		"fill_color": Color("#4A5A98"),
 		"sky_top": Color("#0A1028"),

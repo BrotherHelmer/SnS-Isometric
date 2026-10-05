@@ -3791,8 +3791,8 @@ func _apply_lighting_palette(palette: Dictionary) -> void:
 	sun_light.light_energy = float(palette.get("sun_energy", 1.1))
 	sun_light.light_color = palette.get("sun_color", Color("#FFD09A"))
 	var camera_yaw := rad_to_deg(camera_rig.rotation.y) if camera_rig != null else -35.5
-	var orbit := float(palette.get("sun_orbit", 110.0))
-	sun_light.rotation_degrees = Vector3(float(palette.get("sun_pitch", -28.0)), camera_yaw - orbit, 0.0)
+	var orbit := float(palette.get("sun_orbit", 120.0))
+	sun_light.rotation_degrees = Vector3(float(palette.get("sun_pitch", -25.0)), camera_yaw - orbit, 0.0)
 	if fill_light != null:
 		fill_light.light_energy = float(palette.get("fill_energy", 0.18))
 		fill_light.light_color = palette.get("fill_color", Color("#7A93A6"))

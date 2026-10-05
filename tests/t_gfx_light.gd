@@ -40,13 +40,13 @@ func _run() -> void:
 	sim.is_night = false
 	sim.phase_time = 80.0
 	game._update_day_night_lighting()
-	var day_angle := game.sun_camera_angle_degrees()
+	var day_angle: float = game.sun_camera_angle_degrees()
 	print("GFX day sun/camera angle=%.1f energy=%.2f" % [day_angle, game.sun_light.light_energy])
 	_check(day_angle >= 90.0, "day sun is at least 90° from the camera view")
 
 	sim.phase_time = float(sim.DAY_LENGTH_SECONDS) - 10.0
 	game._update_day_night_lighting()
-	var dusk_angle := game.sun_camera_angle_degrees()
+	var dusk_angle: float = game.sun_camera_angle_degrees()
 	print("GFX dusk sun/camera angle=%.1f energy=%.2f" % [dusk_angle, game.sun_light.light_energy])
 	_check(dusk_angle >= 90.0, "dusk sun is at least 90° from the camera view")
 	_check(game.sun_light.light_energy < float(day_p["sun_energy"]) and game.sun_light.light_energy > float(night_p["sun_energy"]) - 0.05, "dusk sits between day and night energy")

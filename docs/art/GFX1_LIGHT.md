@@ -11,15 +11,16 @@ day / dusk-60s / night / dawn-40s cycle.
 
 | | Day | Dusk | Night |
 | --- | --- | --- | --- |
-| Sun / moon elevation | 28° | 10° | 48° |
-| Orbit from camera | 110° | 110° | 290° |
+| Sun / moon elevation | 25° | 10° | 48° |
+| Orbit from camera | 120° | 120° | 300° |
 | Colour | `#FFD09A` 1.25 | `#FF9A61` 0.85 | `#91B8FF` 0.33 |
 | Ambient | `#718FA3` 0.62 | `#435A78` 0.48 | `#182A45` 0.36 |
 | Exposure | 0.95 | 0.90 | 0.86 |
 
-Orbit 110° puts the sun off the camera's left shoulder so light enters
-upper-left and shadows fall lower-right. Night uses 290° (opposite side)
-so dawn does not lerp the light *through* the camera.
+Orbit 120° puts the sun off the camera's left shoulder so light enters
+upper-left and shadows fall lower-right, and the 3D sun/camera angle stays
+≥ 90°. Night uses 300° (opposite side) so dawn does not lerp the light
+*through* the camera.
 
 ACES, white 6.5, contrast 1.10, mild S-curve LUT (0→0, 0.18→0.12,
 0.45→0.50, 0.72→0.82, 1→0.96) with teal shadows and warm highlights.
