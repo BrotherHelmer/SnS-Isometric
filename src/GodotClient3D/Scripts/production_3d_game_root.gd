@@ -690,10 +690,10 @@ func _create_lighting() -> void:
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.ambient_light_color = Color("#718FA3")
 	environment.ambient_light_energy = 0.62
-	# The Director: ACES + authored LUT. Side-lit golden hour, never front-lit.
-	environment.tonemap_mode = Environment.TONE_MAPPER_ACES
-	environment.tonemap_exposure = 0.95
-	environment.tonemap_white = 6.5
+	# The Director: AgX carries contrast. B/C/S stay near 1.0; period 3D LUTs lift shadows.
+	environment.tonemap_mode = Environment.TONE_MAPPER_AGX
+	environment.tonemap_exposure = 1.0
+	environment.tonemap_white = 8.0
 	environment.ssao_enabled = bool(quality_profile.get("ssao", quality_profile.get("shadows", true)))
 	environment.ssao_radius = 1.1
 	environment.ssao_intensity = 1.6
@@ -718,9 +718,10 @@ func _create_lighting() -> void:
 	environment.set("glow_levels/6", 0.0)
 	environment.set("glow_levels/7", 0.0)
 	environment.adjustment_enabled = true
-	environment.adjustment_saturation = 1.02
-	environment.adjustment_contrast = 1.10
-	environment.adjustment_color_correction = Identity.build_grade_lut()
+	environment.adjustment_saturation = 0.94
+	environment.adjustment_contrast = 1.0
+	environment.adjustment_brightness = 1.0
+	environment.adjustment_color_correction = Identity.grade_lut_for("day")
 	environment.fog_enabled = true
 	environment.fog_mode = Environment.FOG_MODE_DEPTH
 	environment.fog_light_color = Color("#607681")
@@ -3784,11 +3785,12 @@ func _apply_lighting_palette(palette: Dictionary) -> void:
 	environment_resource.fog_depth_end = float(palette.get("fog_end", 65.0))
 	environment_resource.fog_height = 0.0
 	environment_resource.fog_height_density = 0.0
-	environment_resource.adjustment_saturation = float(palette.get("saturation", 1.0))
-	environment_resource.adjustment_contrast = float(palette.get("contrast", 1.10))
+	environment_resource.adjustment_saturation = float(palette.get("saturation", 0.94))
+	environment_resource.adjustment_contrast = float(palette.get("contrast", 1.0))
 	environment_resource.adjustment_brightness = float(palette.get("brightness", 1.0))
-	environment_resource.tonemap_exposure = float(palette.get("exposure", 0.95))
-	environment_resource.tonemap_white = float(palette.get("tonemap_white", 6.5))
+	environment_resource.tonemap_exposure = float(palette.get("exposure", 1.0))
+	environment_resource.tonemap_white = float(palette.get("tonemap_white", 8.0))
+	environment_resource.adjustment_color_correction = Identity.grade_lut_for(String(palette.get("grade", "day")))
 	_apply_quality_features()
 	sun_light.light_energy = float(palette.get("sun_energy", 1.1))
 	sun_light.light_color = palette.get("sun_color", Color("#FFD09A"))

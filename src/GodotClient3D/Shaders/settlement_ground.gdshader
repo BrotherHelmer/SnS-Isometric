@@ -4,7 +4,11 @@ render_mode diffuse_burley, specular_disabled;
 // The Director: soft grain only. The old 0.83–1.12 swing read as a
 // checkerboard around buildings. light_tint is the period grade so dusk
 // grass goes gold instead of staying a dark green that never hits warm-share.
+// tint_floor lets dusk carry a mild warm wash without an orange carpet.
 uniform vec3 light_tint : source_color = vec3(1.0);
+uniform float tint_floor = 0.0;
+uniform float tint_wash_lo = 0.70;
+uniform float tint_wash_hi = 0.94;
 varying vec3 world_pos;
 
 float hash21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -18,8 +22,8 @@ void fragment() {
 	float fine = noise2(world_pos.xz * 1.8);
 	// Period tint is patched, not a flat wash: dusk gold hits the brighter
 	// noise patches (warm-share) and leaves the rest green.
-	float wash = smoothstep(0.70, 0.94, broad);
-	ALBEDO = COLOR.rgb * mix(vec3(1.0), light_tint, wash) * mix(0.94, 1.05, broad) * mix(0.98, 1.02, fine);
+	float wash = smoothstep(tint_wash_lo, max(tint_wash_lo + 0.02, tint_wash_hi), broad);
+	ALBEDO = COLOR.rgb * mix(vec3(1.0), light_tint, mix(tint_floor, 1.0, wash)) * mix(0.90, 1.10, broad) * mix(0.97, 1.03, fine);
 	// World up in view space, same contract as the road lanes.
 	NORMAL = normalize((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
 	ROUGHNESS = 0.97;

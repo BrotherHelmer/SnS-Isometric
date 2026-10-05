@@ -475,6 +475,7 @@ func _rebuild_terrain() -> void:
 	var material := ShaderMaterial.new()
 	material.shader = preload("res://src/GodotClient3D/Shaders/settlement_ground.gdshader")
 	material.set_shader_parameter("light_tint", Vector3(_ground_tint.r, _ground_tint.g, _ground_tint.b))
+	material.set_shader_parameter("tint_floor", 0.0)
 	terrain_mesh_instance.material_override = material
 	terrain_root.add_child(terrain_mesh_instance)
 	terrain_body = StaticBody3D.new()
@@ -1814,6 +1815,9 @@ func apply_light_palette(palette: Dictionary) -> void:
 	if terrain_mesh_instance != null and terrain_mesh_instance.material_override is ShaderMaterial:
 		var ground_mat := terrain_mesh_instance.material_override as ShaderMaterial
 		ground_mat.set_shader_parameter("light_tint", Vector3(_ground_tint.r, _ground_tint.g, _ground_tint.b))
+		ground_mat.set_shader_parameter("tint_floor", float(palette.get("ground_tint_floor", 0.0)))
+		ground_mat.set_shader_parameter("tint_wash_lo", float(palette.get("ground_wash_lo", 0.70)))
+		ground_mat.set_shader_parameter("tint_wash_hi", float(palette.get("ground_wash_hi", 0.94)))
 	if edge_forest_root != null:
 		for child in edge_forest_root.get_children():
 			if child is MultiMeshInstance3D:

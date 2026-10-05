@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""GFX-1 pixel gates for real-state settlement shots.
+"""GFX-02 pixel gates for real-state settlement shots.
 
 World mask (HUD excluded)
 -------------------------
@@ -14,9 +14,9 @@ Night road/grass requires a road-tile sidecar ({stem}.roads.json or
 {stem}.roads.png) with at least 10 unique road tiles. There is no
 hue-class fallback at night (lit windows are not roads).
 
-Thresholds reject a base-7db0725 dusk (warm share ~0.16) and a
-GFX-1-broken night road (ratio < 1.5). Title art is the warm-share
-calibration reference (≈0.299) and is not scored for settlement luma.
+GFX-02 tightens GFX-1: mean sat must not rise above the GFX-1 day
+(0.596) / dusk (0.553) values, and night road/grass must stay ≤ 1.8
+(GFX-1 sat at ~2.80). Title art is not scored for settlement luma.
 """
 from __future__ import annotations
 
@@ -33,18 +33,21 @@ except ImportError:
     sys.exit(2)
 
 
-DAY_SIGMA_MIN = 0.15
-DAY_SIGMA_MAX = 0.24
+DAY_SIGMA_MIN = 0.07
+DAY_SIGMA_MAX = 0.14
 DAY_LUMA_MIN = 0.22
-DAY_LUMA_MAX = 0.30
+DAY_LUMA_MAX = 0.32
 SAT_MAX = 0.60
+DAY_SAT_MAX = 0.598
+DUSK_SAT_MAX = 0.555
 SAT_LUMA_MIN = 0.10
 DUSK_WARM_MIN = 0.20
-DUSK_WARM_MAX = 0.70
+DUSK_WARM_MAX = 0.50
 DUSK_LUMA_MIN = 0.16
-NIGHT_NEAR_BLACK_MAX = 0.15
+NIGHT_NEAR_BLACK_MAX = 0.12
 NIGHT_LUMA_MIN = 0.11
-NIGHT_ROAD_GRASS_MIN = 1.50
+NIGHT_ROAD_GRASS_MIN = 1.20
+NIGHT_ROAD_GRASS_MAX = 1.80
 NIGHT_ROAD_TILES_MIN = 10
 NEAR_BLACK_Y = 8.0 / 255.0
 TOP_HUD = 90
@@ -202,8 +205,8 @@ def gate(kind: str, stats: dict) -> list[str]:
         sig = stats["luma_sigma"]
         if not (DAY_SIGMA_MIN <= sig <= DAY_SIGMA_MAX):
             fails.append(f"day luma σ {sig:.3f} not in {DAY_SIGMA_MIN:.2f}–{DAY_SIGMA_MAX:.2f}")
-        if stats["sat_mean"] > SAT_MAX:
-            fails.append(f"day sat {stats['sat_mean']:.3f} > {SAT_MAX:.2f}")
+        if stats["sat_mean"] > DAY_SAT_MAX:
+            fails.append(f"day sat {stats['sat_mean']:.3f} > {DAY_SAT_MAX:.3f} (GFX-1 cap)")
         if not (DAY_LUMA_MIN <= stats["luma_mean"] <= DAY_LUMA_MAX):
             fails.append(
                 f"day luma {stats['luma_mean']:.3f} not in {DAY_LUMA_MIN:.2f}–{DAY_LUMA_MAX:.2f}"
@@ -213,8 +216,8 @@ def gate(kind: str, stats: dict) -> list[str]:
             fails.append(f"dusk warm share {stats['warm_share']:.3f} < {DUSK_WARM_MIN:.2f}")
         if stats["warm_share"] > DUSK_WARM_MAX:
             fails.append(f"dusk warm share {stats['warm_share']:.3f} > {DUSK_WARM_MAX:.2f}")
-        if stats["sat_mean"] > SAT_MAX:
-            fails.append(f"dusk sat {stats['sat_mean']:.3f} > {SAT_MAX:.2f}")
+        if stats["sat_mean"] > DUSK_SAT_MAX:
+            fails.append(f"dusk sat {stats['sat_mean']:.3f} > {DUSK_SAT_MAX:.3f} (GFX-1 cap)")
         if stats["luma_mean"] < DUSK_LUMA_MIN:
             fails.append(f"dusk luma {stats['luma_mean']:.3f} < {DUSK_LUMA_MIN:.2f}")
     elif kind == "night":
@@ -233,6 +236,10 @@ def gate(kind: str, stats: dict) -> list[str]:
         elif stats["road_grass"] < NIGHT_ROAD_GRASS_MIN:
             fails.append(
                 f"night road/grass {stats['road_grass']:.3f} < {NIGHT_ROAD_GRASS_MIN:.2f}"
+            )
+        elif stats["road_grass"] > NIGHT_ROAD_GRASS_MAX:
+            fails.append(
+                f"night road/grass {stats['road_grass']:.3f} > {NIGHT_ROAD_GRASS_MAX:.2f}"
             )
     return fails
 

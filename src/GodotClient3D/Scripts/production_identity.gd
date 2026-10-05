@@ -32,137 +32,165 @@ const SIZE_WARNING := 16
 
 const AUDIO_SETTINGS_PATH := "user://one_shard_audio.json"
 
-# The Director: GFX-1 direction B. Sun orbit is degrees around from the camera
-# view direction: 120 keeps day/dusk light entering upper-left (shadows
-# lower-right) and the 3D sun/camera angle ≥ 90°. Night uses 300 so the moon
-# sits on the opposite side without lerping through the camera during dawn.
+# The Director: GFX-02 AgX grade. Contrast lives in AgX + lifted 3D LUTs,
+# not crushed B/C/S. Gold/orange stays scarce. Sun orbit is degrees around
+# the camera view: 120 keeps day/dusk light upper-left (shadows lower-right)
+# and the 3D sun/camera angle ≥ 90°. Night uses 300 so the moon sits opposite
+# without lerping through the camera at dawn.
+const PALETTE_NAVY := Color("#101A22")
+const PALETTE_NIGHT_TERRAIN := Color("#24383A")
+const PALETTE_FOREST := Color("#26372C")
+const PALETTE_MOSS := Color("#586746")
+const PALETTE_SUNLIT_GRASS := Color("#78815A")
+const PALETTE_ROAD_CLAY := Color("#A88962")
+const PALETTE_DRY_EARTH := Color("#806347")
+const PALETTE_PLASTER := Color("#D6C6A4")
+const PALETTE_TIMBER := Color("#50382D")
+const PALETTE_RUST := Color("#99513B")
+const PALETTE_TEAL := Color("#365B59")
+const PALETTE_GOLD := Color("#D2A64C")
+const PALETTE_WINDOW := Color("#F2B56B")
+const PALETTE_MOON := Color("#7892AC")
+
 const LIGHTING := {
 	"day": {
-		"ambient": 0.58,
-		"ambient_color": Color("#718FA3"),
-		"fog_density": 0.0004,
-		"fog_color": Color("#607681"),
-		"fog_energy": 0.55,
+		"ambient": 0.42,
+		"ambient_color": PALETTE_MOON,
+		"fog_density": 0.00035,
+		"fog_color": Color("#6A7A78"),
+		"fog_energy": 0.48,
 		"fog_begin": 28.0,
 		"fog_end": 65.0,
-		"fog_aerial": 0.55,
-		"fog_sun_scatter": 0.25,
-		"saturation": 0.52,
-		"contrast": 1.52,
-		"exposure": 1.06,
-		"brightness": 1.16,
-		"tonemap_white": 6.5,
-		"sun_energy": 1.45,
-		"sun_color": Color("#FFC888"),
+		"fog_aerial": 0.50,
+		"fog_sun_scatter": 0.18,
+		"saturation": 0.94,
+		"contrast": 1.12,
+		"exposure": 1.02,
+		"brightness": 1.0,
+		"tonemap_white": 7.2,
+		"sun_energy": 1.50,
+		"sun_color": Color("#F2C888"),
 		"sun_pitch": -25.0,
 		"sun_orbit": 120.0,
-		"fill_energy": 0.18,
-		"fill_color": Color("#7A93A6"),
+		"fill_energy": 0.16,
+		"fill_color": PALETTE_MOON,
 		"sky_top": Color("#3E5A68"),
-		"sky_horizon": Color("#C4A882"),
-		"ground_bottom": Color("#14241E"),
-		"ground_horizon": Color("#2E4036"),
-		"ground_tint": Color(1.02, 1.04, 0.98),
-		"window_color": Color("#FFB347"),
-		"torch_color": Color("#FFB347"),
+		"sky_horizon": Color("#C4B090"),
+		"ground_bottom": PALETTE_FOREST,
+		"ground_horizon": Color("#3A4A38"),
+		"ground_tint": Color(1.04, 1.03, 0.96),
+		"ground_tint_floor": 0.06,
+		"ground_wash_lo": 0.70,
+		"ground_wash_hi": 0.94,
+		"window_color": PALETTE_WINDOW,
+		"torch_color": PALETTE_WINDOW,
 		"torch_range": 5.5,
-		"road_lift": 0.04,
+		"road_lift": 0.03,
 		"atmosphere_scale": 1.0
 	},
 	"dusk": {
-		"ambient": 0.80,
-		"ambient_color": Color("#A87848"),
-		"fog_density": 0.00045,
-		"fog_color": Color("#C89058"),
-		"fog_energy": 0.64,
+		"ambient": 0.58,
+		"ambient_color": Color("#7A8890"),
+		"fog_density": 0.0004,
+		"fog_color": Color("#9A8870"),
+		"fog_energy": 0.50,
 		"fog_begin": 24.0,
 		"fog_end": 58.0,
-		"fog_aerial": 0.48,
-		"fog_sun_scatter": 0.38,
-		"saturation": 0.48,
-		"contrast": 1.12,
-		"exposure": 1.22,
-		"brightness": 1.14,
-		"tonemap_white": 6.2,
-		"sun_energy": 1.10,
-		"sun_color": Color("#FFC080"),
+		"fog_aerial": 0.42,
+		"fog_sun_scatter": 0.26,
+		"saturation": 0.93,
+		"contrast": 1.06,
+		"exposure": 1.06,
+		"brightness": 1.0,
+		"tonemap_white": 7.0,
+		"sun_energy": 1.16,
+		"sun_color": Color("#F0A868"),
 		"sun_pitch": -11.0,
 		"sun_orbit": 120.0,
-		"fill_energy": 0.28,
-		"fill_color": Color("#B88850"),
-		"sky_top": Color("#3A3A62"),
-		"sky_horizon": Color("#E09058"),
-		"ground_bottom": Color("#2A1810"),
-		"ground_horizon": Color("#6A4830"),
-		"ground_tint": Color(1.22, 0.92, 0.60),
-		"window_color": Color("#FFB347"),
-		"torch_color": Color("#FFB347"),
+		"fill_energy": 0.30,
+		"fill_color": Color("#6A88A0"),
+		"sky_top": Color("#2E3A58"),
+		"sky_horizon": Color("#D09060"),
+		"ground_bottom": PALETTE_FOREST,
+		"ground_horizon": Color("#5A4030"),
+		"ground_tint": Color(1.26, 0.88, 0.52),
+		"ground_tint_floor": 0.0,
+		"ground_wash_lo": 0.42,
+		"ground_wash_hi": 0.78,
+		"window_color": PALETTE_WINDOW,
+		"torch_color": PALETTE_WINDOW,
 		"torch_range": 5.8,
-		"road_lift": 0.05,
+		"road_lift": 0.04,
 		"atmosphere_scale": 0.55
 	},
 	"night": {
-		"ambient": 0.70,
-		"ambient_color": Color("#3A5580"),
-		"fog_density": 0.0007,
-		"fog_color": Color("#2A4060"),
-		"fog_energy": 0.42,
+		"ambient": 0.66,
+		"ambient_color": PALETTE_NIGHT_TERRAIN,
+		"fog_density": 0.0006,
+		"fog_color": Color("#1C3034"),
+		"fog_energy": 0.38,
 		"fog_begin": 20.0,
 		"fog_end": 52.0,
-		"fog_aerial": 0.36,
-		"fog_sun_scatter": 0.10,
-		"saturation": 0.45,
-		"contrast": 1.06,
-		"exposure": 1.14,
-		"brightness": 1.10,
-		"tonemap_white": 5.8,
-		"sun_energy": 0.52,
-		"sun_color": Color("#91B8FF"),
+		"fog_aerial": 0.32,
+		"fog_sun_scatter": 0.08,
+		"saturation": 0.92,
+		"contrast": 1.0,
+		"exposure": 1.0,
+		"brightness": 1.0,
+		"tonemap_white": 7.0,
+		"sun_energy": 0.48,
+		"sun_color": PALETTE_MOON,
 		"sun_pitch": -48.0,
 		"sun_orbit": 300.0,
-		"fill_energy": 0.28,
-		"fill_color": Color("#4A6588"),
-		"sky_top": Color("#07101F"),
-		"sky_horizon": Color("#1F3044"),
-		"ground_bottom": Color("#050910"),
-		"ground_horizon": Color("#162333"),
-		"ground_tint": Color(0.88, 0.94, 1.10),
-		"window_color": Color("#FFB347"),
-		"torch_color": Color("#FFC36B"),
+		"fill_energy": 0.24,
+		"fill_color": Color("#3A5058"),
+		"sky_top": PALETTE_NAVY,
+		"sky_horizon": PALETTE_NIGHT_TERRAIN,
+		"ground_bottom": PALETTE_NAVY,
+		"ground_horizon": PALETTE_NIGHT_TERRAIN,
+		"ground_tint": Color(0.90, 0.96, 1.02),
+		"ground_tint_floor": 0.10,
+		"ground_wash_lo": 0.70,
+		"ground_wash_hi": 0.94,
+		"window_color": PALETTE_WINDOW,
+		"torch_color": PALETTE_WINDOW,
 		"torch_range": 6.2,
-		"road_lift": 0.38,
+		"road_lift": 0.12,
 		"atmosphere_scale": 0.35
 	},
 	"reckoning": {
-		"ambient": 0.42,
-		"ambient_color": Color("#1A2040"),
-		"fog_density": 0.0012,
+		"ambient": 0.44,
+		"ambient_color": Color("#1A2438"),
+		"fog_density": 0.0010,
 		"fog_color": Color("#243458"),
-		"fog_energy": 0.52,
+		"fog_energy": 0.48,
 		"fog_begin": 16.0,
 		"fog_end": 46.0,
-		"fog_aerial": 0.36,
-		"fog_sun_scatter": 0.10,
-		"saturation": 0.56,
-		"contrast": 1.14,
-		"exposure": 0.90,
+		"fog_aerial": 0.32,
+		"fog_sun_scatter": 0.08,
+		"saturation": 0.92,
+		"contrast": 1.0,
+		"exposure": 0.92,
 		"brightness": 1.0,
-		"tonemap_white": 5.4,
+		"tonemap_white": 6.8,
 		"sun_energy": 0.28,
 		"sun_color": Color("#7A9AD0"),
 		"sun_pitch": -42.0,
 		"sun_orbit": 300.0,
 		"fill_energy": 0.20,
 		"fill_color": Color("#4A5A98"),
-		"sky_top": Color("#0A1028"),
+		"sky_top": PALETTE_NAVY,
 		"sky_horizon": Color("#3A4A78"),
-		"ground_bottom": Color("#080C14"),
+		"ground_bottom": PALETTE_NAVY,
 		"ground_horizon": Color("#1A2838"),
-		"ground_tint": Color(0.70, 0.78, 1.05),
-		"window_color": Color("#FFB347"),
-		"torch_color": Color("#FFC36B"),
+		"ground_tint": Color(0.78, 0.84, 1.02),
+		"ground_tint_floor": 0.08,
+		"ground_wash_lo": 0.70,
+		"ground_wash_hi": 0.94,
+		"window_color": PALETTE_WINDOW,
+		"torch_color": PALETTE_WINDOW,
 		"torch_range": 6.5,
-		"road_lift": 0.32,
+		"road_lift": 0.10,
 		"atmosphere_scale": 0.28
 	}
 }
@@ -261,7 +289,9 @@ static func apply_label(label: Label, role: String) -> void:
 
 
 static func lighting_palette(state: String) -> Dictionary:
-	return Dictionary(LIGHTING.get(state, LIGHTING["day"])).duplicate(true)
+	var palette := Dictionary(LIGHTING.get(state, LIGHTING["day"])).duplicate(true)
+	palette["grade"] = state
+	return palette
 
 
 static func mix_lighting(from_state: String, to_state: String, weight: float) -> Dictionary:
@@ -273,6 +303,8 @@ static func mix_lighting(from_state: String, to_state: String, weight: float) ->
 		var to_value = to_palette[key]
 		if typeof(from_value) == TYPE_COLOR:
 			mixed[key] = (from_value as Color).lerp(to_value as Color, weight)
+		elif typeof(from_value) == TYPE_STRING:
+			mixed[key] = String(to_value) if weight >= 0.5 else String(from_value)
 		else:
 			mixed[key] = lerpf(float(from_value), float(to_value), weight)
 	return mixed
@@ -311,39 +343,121 @@ static func cycle_period_name(simulation, menu_visible := false) -> String:
 	return "day"
 
 
-# Mild S-curve plus teal shadows / warm highlights. 256x1 RGB LUT.
-static func build_grade_lut() -> ImageTexture:
+# The Director: per-period 17³ LUTs. Shadows are lifted (no 0.18→0.11 crush).
+# Chroma is held so AgX + sat 0.92–0.96 cannot overshoot the GFX-1 pixel-sat caps.
+const LUT_SIZE := 17
+static var _lut_cache: Dictionary = {}
+
+const GRADE := {
+	"day": {
+		"knots": [Vector2(0.0, 0.04), Vector2(0.18, 0.14), Vector2(0.45, 0.47), Vector2(0.72, 0.86), Vector2(1.0, 0.97)],
+		"shadow": Color("#2A3A38"),
+		"highlight": Color("#F2D8B0"),
+		"shadow_w": 0.10,
+		"highlight_w": 0.08,
+		"chroma": 0.92
+	},
+	"dusk": {
+		"knots": [Vector2(0.0, 0.05), Vector2(0.18, 0.16), Vector2(0.45, 0.48), Vector2(0.72, 0.82), Vector2(1.0, 0.96)],
+		"shadow": Color("#3A4A58"),
+		"highlight": Color("#F2C090"),
+		"shadow_w": 0.12,
+		"highlight_w": 0.10,
+		"chroma": 0.90
+	},
+	"night": {
+		"knots": [Vector2(0.0, 0.05), Vector2(0.18, 0.16), Vector2(0.45, 0.46), Vector2(0.72, 0.74), Vector2(1.0, 0.90)],
+		"shadow": PALETTE_NIGHT_TERRAIN,
+		"highlight": PALETTE_MOON,
+		"shadow_w": 0.12,
+		"highlight_w": 0.05,
+		"chroma": 0.78
+	},
+	"reckoning": {
+		"knots": [Vector2(0.0, 0.05), Vector2(0.18, 0.18), Vector2(0.45, 0.44), Vector2(0.72, 0.70), Vector2(1.0, 0.88)],
+		"shadow": Color("#1A2438"),
+		"highlight": Color("#7A9AD0"),
+		"shadow_w": 0.12,
+		"highlight_w": 0.06,
+		"chroma": 0.68
+	}
+}
+
+
+static func grade_lut_for(period: String) -> Texture:
+	var key := "1d:%s" % (period if GRADE.has(period) else "day")
+	if _lut_cache.has(key):
+		return _lut_cache[key]
+	var tex := _build_grade_lut1d(key.substr(3))
+	_lut_cache[key] = tex
+	return tex
+
+
+static func grade_lut3d_for(period: String) -> Texture3D:
+	var key := "3d:%s" % (period if GRADE.has(period) else "day")
+	if _lut_cache.has(key):
+		return _lut_cache[key]
+	var tex := _build_grade_lut3d(key.substr(3))
+	_lut_cache[key] = tex
+	return tex
+
+
+static func build_grade_lut() -> Texture:
+	return grade_lut_for("day")
+
+
+static func _build_grade_lut1d(period: String) -> ImageTexture:
 	var image := Image.create(256, 1, false, Image.FORMAT_RGB8)
 	for index in 256:
 		var t := float(index) / 255.0
-		var y := _grade_curve(t)
-		var color := Color(y, y, y)
-		if t < 0.38:
-			var shadow_w := (0.38 - t) / 0.38 * 0.14
-			color = color.lerp(Color(0.10, 0.18, 0.24), shadow_w)
-		elif t > 0.62:
-			var highlight_w := (t - 0.62) / 0.38 * 0.12
-			color = color.lerp(Color(1.0, 0.90, 0.76), highlight_w)
-		image.set_pixel(index, 0, color)
+		image.set_pixel(index, 0, _grade_sample(Color(t, t, t), period))
 	return ImageTexture.create_from_image(image)
 
 
-static func _grade_curve(t: float) -> float:
-	# Authored: 0→0, 0.18→0.11, 0.45→0.48, 0.72→0.86, 1→0.96
-	var knots := [
-		Vector2(0.0, 0.0),
-		Vector2(0.18, 0.11),
-		Vector2(0.45, 0.48),
-		Vector2(0.72, 0.86),
-		Vector2(1.0, 0.96)
-	]
+static func _build_grade_lut3d(period: String) -> ImageTexture3D:
+	var size := LUT_SIZE
+	var images: Array[Image] = []
+	for z in size:
+		var image := Image.create(size, size, false, Image.FORMAT_RGB8)
+		for y in size:
+			for x in size:
+				var sample := Color(float(x) / float(size - 1), float(y) / float(size - 1), float(z) / float(size - 1))
+				image.set_pixel(x, y, _grade_sample(sample, period))
+		images.append(image)
+	var tex := ImageTexture3D.new()
+	tex.create(Image.FORMAT_RGB8, size, size, size, false, images)
+	return tex
+
+
+static func _grade_sample(color: Color, period: String) -> Color:
+	var spec: Dictionary = GRADE.get(period, GRADE["day"])
+	var luma := color.r * 0.2126 + color.g * 0.7152 + color.b * 0.0722
+	var lifted := _grade_curve(luma, spec["knots"])
+	var graded := Color(lifted, lifted, lifted)
+	if luma > 0.0008:
+		var gain := lifted / luma
+		graded = Color(color.r * gain, color.g * gain, color.b * gain)
+	var chroma := float(spec.get("chroma", 0.78))
+	graded = Color(lifted, lifted, lifted).lerp(graded, chroma)
+	if lifted < 0.38:
+		var shadow_w := (0.38 - lifted) / 0.38 * float(spec.get("shadow_w", 0.10))
+		graded = graded.lerp(spec["shadow"], shadow_w)
+	elif lifted > 0.62:
+		var highlight_w := (lifted - 0.62) / 0.38 * float(spec.get("highlight_w", 0.07))
+		graded = graded.lerp(spec["highlight"], highlight_w)
+	if period == "dusk":
+		graded = graded.lerp(Color("#E8B070"), 0.02)
+	return Color(clampf(graded.r, 0.0, 1.0), clampf(graded.g, 0.0, 1.0), clampf(graded.b, 0.0, 1.0))
+
+
+static func _grade_curve(t: float, knots: Array) -> float:
 	for index in range(1, knots.size()):
 		var a: Vector2 = knots[index - 1]
 		var b: Vector2 = knots[index]
 		if t <= b.x:
 			var w := 0.0 if is_equal_approx(b.x, a.x) else (t - a.x) / (b.x - a.x)
 			return lerpf(a.y, b.y, w)
-	return 0.96
+	return (knots[knots.size() - 1] as Vector2).y
 
 
 static func load_audio_settings() -> Dictionary:
