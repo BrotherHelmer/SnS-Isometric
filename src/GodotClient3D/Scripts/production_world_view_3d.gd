@@ -7,6 +7,7 @@ const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_p
 const BuildingView = preload("res://src/GodotClient3D/Scripts/production_building_view_3d.gd")
 const CharacterView = preload("res://src/GodotClient3D/Scripts/production_character_view_3d.gd")
 const RoadView = preload("res://src/GodotClient3D/Scripts/production_road_view_3d.gd")
+const HaloCatalog = preload("res://src/GodotClient3D/Scripts/production_building_halo.gd")
 const ProjectileView = preload("res://src/GodotClient3D/Scripts/production_projectile_view_3d.gd")
 const FogShader = preload("res://src/GodotClient3D/Shaders/production_fog_of_war.gdshader")
 const FogScreenShader = preload("res://src/GodotClient3D/Shaders/production_fog_screen.gdshader")
@@ -16,6 +17,8 @@ const FOG_VOLUME_PAD_METRES := 110.0
 const FOG_VOLUME_HEIGHT_METRES := 56.0
 const FOG_VOLUME_CENTER_Y := 18.0
 const FOG_DISPLAY_UPSAMPLE := 8
+const FOG_UNKNOWN_BASE := Vector3(0.07, 0.13, 0.12)
+const FOG_MIST_BASE := Vector3(0.10, 0.18, 0.16)
 
 var simulation
 var map_size := Vector2i.ZERO
@@ -30,6 +33,8 @@ var buildings_root: Node3D
 var characters_root: Node3D
 var resource_visuals_root: Node3D
 var grass_root: Node3D
+var edge_forest_root: Node3D
+var halo_root: Node3D
 var environment_root: Node3D
 var vfx_root: Node3D
 var navigation_presentation_root: Node3D
@@ -67,6 +72,9 @@ var nature_mesh_cache: Dictionary = {}
 var nature_layout_signature := 0
 var grass_layout_signature := 0
 var grass_revealed_count := -1
+var edge_forest_signature := ""
+var halo_signature := ""
+var halo_placements: Array = []
 var selected_building_id := 0
 var selected_worker_id := 0
 var terrain_height_signature := 0
@@ -81,6 +89,7 @@ var fog_mask_bytes := PackedByteArray()
 var fog_mask_size := Vector2i.ZERO
 var fog_material: ShaderMaterial
 var fog_plane: MeshInstance3D
+var boundary_mist_material: ShaderMaterial
 var fog_screen: MeshInstance3D
 var fog_screen_material: ShaderMaterial
 var fog_overlay_camera: Camera3D
@@ -93,6 +102,9 @@ var tower_overlay_radius := 0.0
 var hostile_count := 0
 var rival_activity_count := 0
 var presentation_paused := false
+var _terrain_yard_cache: Dictionary = {}
+var _atmosphere_scale := 1.0
+var _ground_tint := Color(1.0, 1.0, 1.0)
 
 
 func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {}) -> void:
@@ -108,6 +120,8 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 		characters_root = null
 		resource_visuals_root = null
 		grass_root = null
+		edge_forest_root = null
+		halo_root = null
 		environment_root = null
 		vfx_root = null
 		navigation_presentation_root = null
@@ -151,6 +165,9 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 		nature_layout_signature = 0
 		grass_layout_signature = 0
 		grass_revealed_count = -1
+		edge_forest_signature = ""
+		halo_signature = ""
+		halo_placements.clear()
 		last_revealed_count = -1
 		claim_overlay_signature = ""
 	simulation = simulation_value
@@ -163,6 +180,8 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 	_sync_nature(true)
 	_sync_grass(true)
 	_sync_fog(true)
+	_rebuild_edge_forest(true)
+	_rebuild_building_halos(true)
 	_create_shard_marker()
 
 
@@ -179,6 +198,7 @@ func sync_frame(frame_snapshot: Dictionary) -> void:
 	_sync_grass(false)
 	_sync_roads(frame_snapshot.get("roads", []))
 	_sync_buildings(frame_snapshot.get("buildings", []))
+	_rebuild_building_halos(false)
 	_sync_characters(frame_snapshot.get("workers", []))
 	_sync_gates(frame_snapshot.get("roads", []))
 	_sync_rival_roads(frame_snapshot.get("rival_roads", []))
@@ -192,6 +212,7 @@ func sync_frame(frame_snapshot: Dictionary) -> void:
 	var revealed_count := int(frame_snapshot.get("revealed_count", simulation.revealed_tiles.size()))
 	if revealed_count != last_revealed_count:
 		_sync_fog(false)
+		_rebuild_edge_forest(false)
 
 
 func tile_to_world(tile_position: Vector2) -> Vector3:
@@ -414,6 +435,8 @@ func _create_roots() -> void:
 	characters_root = _named_root("Characters")
 	resource_visuals_root = _named_root("ResourceVisuals")
 	grass_root = _named_root("GrassCover")
+	edge_forest_root = _named_root("EdgeForest")
+	halo_root = _named_root("BuildingHalos")
 	environment_root = _named_root("Environment")
 	vfx_root = _named_root("VFX")
 	navigation_presentation_root = _named_root("NavigationPresentation")
@@ -439,6 +462,7 @@ func _rebuild_terrain() -> void:
 		terrain_mesh_instance.queue_free()
 	if terrain_body != null:
 		terrain_body.queue_free()
+	_terrain_yard_cache = _yard_tiles(3)
 	var surface := SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for y in range(map_size.y):
@@ -450,6 +474,7 @@ func _rebuild_terrain() -> void:
 	terrain_mesh_instance.mesh = mesh
 	var material := ShaderMaterial.new()
 	material.shader = preload("res://src/GodotClient3D/Shaders/settlement_ground.gdshader")
+	material.set_shader_parameter("light_tint", Vector3(_ground_tint.r, _ground_tint.g, _ground_tint.b))
 	terrain_mesh_instance.material_override = material
 	terrain_root.add_child(terrain_mesh_instance)
 	terrain_body = StaticBody3D.new()
@@ -473,11 +498,12 @@ func _rebuild_terrain() -> void:
 	# Raise exterior mist above the exposed slab edges in the isometric view.
 	# The shader discards the playable interior, preserving its low terrain.
 	boundary_floor.position.y = 2.0
-	var boundary_material := ShaderMaterial.new()
-	boundary_material.shader = BoundaryMistShader
-	boundary_material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
-	boundary_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
-	boundary_floor.material_override = boundary_material
+	boundary_mist_material = ShaderMaterial.new()
+	boundary_mist_material.shader = BoundaryMistShader
+	boundary_mist_material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
+	boundary_mist_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
+	boundary_mist_material.set_shader_parameter("color_scale", 1.0)
+	boundary_floor.material_override = boundary_mist_material
 	terrain_root.add_child(boundary_floor)
 	terrain_height_signature = _calculate_height_signature()
 
@@ -540,11 +566,18 @@ func _terrain_color(tile: Vector2i) -> Color:
 			if tile_type == Defs.TILE_ROCK: rock_weight += 1
 	var hash_a := float(_tile_hash(tile, 7) % 100) / 100.0
 	var hash_b := float(_tile_hash(tile, 13) % 100) / 100.0
-	var base := Color("#586d4b")
-	base = base.lerp(Color("#67774f"), hash_a * 0.12)
-	base = base.lerp(Color("#506548"), hash_b * 0.08)
-	base = base.lerp(Color("#465941"), clampf(float(tree_weight) / 24.0, 0.0, 0.38))
-	base = base.lerp(Color("#55574d"), clampf(float(rock_weight) / 22.0, 0.0, 0.46))
+	var base := Color("#5a7048")
+	base = base.lerp(Color("#5a6c48"), hash_a * 0.03)
+	base = base.lerp(Color("#445840"), hash_b * 0.02)
+	base = base.lerp(Color("#2a4438"), clampf(float(tree_weight) / 28.0, 0.0, 0.22))
+	base = base.lerp(Color("#55574d"), clampf(float(rock_weight) / 32.0, 0.0, 0.18))
+	var edge := mini(mini(tile.x, tile.y), mini(map_size.x - 1 - tile.x, map_size.y - 1 - tile.y))
+	if edge <= 1:
+		base = base.lerp(Color("#1a3330"), 0.18)
+	elif edge <= 3:
+		base = base.lerp(Color("#243c34"), 0.08)
+	if _terrain_yard_cache.has(_tile_key(tile)):
+		base = base.lerp(Color("#7a6a40"), 0.08)
 	if String(simulation.get_tile(tile)) == Defs.TILE_SHARD:
 		base = Color("#465963")
 	var impact := 0.0
@@ -660,6 +693,8 @@ func _sync_grass(force: bool) -> void:
 
 
 func _rebuild_grass_multimeshes() -> void:
+	if grass_root == null or simulation == null:
+		return
 	for child in grass_root.get_children():
 		grass_root.remove_child(child)
 		child.free()
@@ -1553,8 +1588,8 @@ func _sync_fog(force: bool) -> void:
 		fog_material = ShaderMaterial.new()
 		fog_material.shader = FogShader
 		fog_material.set_shader_parameter("visibility_texture", fog_visibility_texture)
-		fog_material.set_shader_parameter("unknown_color", Vector3(0.012, 0.025, 0.029))
-		fog_material.set_shader_parameter("mist_color", Vector3(0.021, 0.038, 0.043))
+		fog_material.set_shader_parameter("unknown_color", FOG_UNKNOWN_BASE)
+		fog_material.set_shader_parameter("mist_color", FOG_MIST_BASE)
 		fog_material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
 		fog_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
 		fog_material.render_priority = 20
@@ -1598,7 +1633,7 @@ func _ensure_fog_skirts() -> void:
 			fog_skirts.append(skirt)
 	var skirt_material := StandardMaterial3D.new()
 	skirt_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	skirt_material.albedo_color = Color("#0c1614")
+	skirt_material.albedo_color = Color("#1a3330")
 	skirt_material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	var min_xz := _fog_world_min_xz()
 	var size_xz := _fog_world_size_xz()
@@ -1751,6 +1786,160 @@ func _same_type_neighbors(tile: Vector2i, tile_type: String) -> int:
 			if simulation.is_inside_map(sample) and String(simulation.get_tile(sample)) == tile_type:
 				count += 1
 	return count
+
+
+func apply_quality_profile(quality: Dictionary) -> void:
+	foliage_density = clampf(float(quality.get("foliage_density", foliage_density)), 0.25, 1.0)
+	if simulation == null:
+		return
+	_rebuild_edge_forest(true)
+	_rebuild_grass_multimeshes()
+
+
+func apply_light_palette(palette: Dictionary) -> void:
+	var window_color: Color = palette.get("window_color", Color("#FFB347"))
+	var torch_color: Color = palette.get("torch_color", Color("#FFC36B"))
+	var torch_range := float(palette.get("torch_range", 5.5))
+	var atmosphere := clampf(float(palette.get("atmosphere_scale", 1.0)), 0.15, 1.0)
+	_atmosphere_scale = atmosphere
+	if fog_material != null:
+		fog_material.set_shader_parameter("unknown_color", FOG_UNKNOWN_BASE * atmosphere)
+		fog_material.set_shader_parameter("mist_color", FOG_MIST_BASE * atmosphere)
+	if fog_screen_material != null:
+		fog_screen_material.set_shader_parameter("unknown_color", FOG_UNKNOWN_BASE * atmosphere)
+		fog_screen_material.set_shader_parameter("mist_color", FOG_MIST_BASE * atmosphere)
+	if boundary_mist_material != null:
+		boundary_mist_material.set_shader_parameter("color_scale", atmosphere)
+	_ground_tint = palette.get("ground_tint", Color(1.0, 1.0, 1.0))
+	if terrain_mesh_instance != null and terrain_mesh_instance.material_override is ShaderMaterial:
+		var ground_mat := terrain_mesh_instance.material_override as ShaderMaterial
+		ground_mat.set_shader_parameter("light_tint", Vector3(_ground_tint.r, _ground_tint.g, _ground_tint.b))
+	if edge_forest_root != null:
+		for child in edge_forest_root.get_children():
+			if child is MultiMeshInstance3D:
+				var mat := (child as MultiMeshInstance3D).material_override as StandardMaterial3D
+				if mat != null:
+					# Palette scale: day 1.0, dusk 0.55, night 0.35. Lit, not a cut-out.
+					mat.albedo_color = Color("#1c332c") * atmosphere
+	for view in building_views.values():
+		if view.has_method("apply_light_palette"):
+			view.apply_light_palette(window_color, torch_color, torch_range)
+	for view in rivalry_structure_views.values():
+		if view.has_method("apply_light_palette"):
+			view.apply_light_palette(window_color, torch_color, torch_range)
+
+
+# The Director: a dark teal conifer mass outside the playable map only.
+# Never spawn on unrevealed interior tiles — those pop when revealed.
+func _rebuild_edge_forest(force: bool) -> void:
+	if simulation == null or edge_forest_root == null:
+		return
+	var signature := "%d:%d:%.2f" % [int(simulation.revealed_tiles.size()), map_size.x * map_size.y, foliage_density]
+	if not force and signature == edge_forest_signature:
+		return
+	edge_forest_signature = signature
+	for child in edge_forest_root.get_children():
+		edge_forest_root.remove_child(child)
+		child.free()
+	var fir_path := String(Catalog.EDGE_TREES[0])
+	var transforms_by_path: Dictionary = {}
+	var step := 1 if foliage_density >= 0.75 else 2
+	for ring in range(1, 4):
+		for x in range(-ring, map_size.x + ring, step):
+			_append_edge_tree(transforms_by_path, fir_path, Vector2(float(x), float(-ring)), ring)
+			_append_edge_tree(transforms_by_path, fir_path, Vector2(float(x), float(map_size.y - 1 + ring)), ring)
+		for y in range(-ring + 1, map_size.y + ring - 1, step):
+			_append_edge_tree(transforms_by_path, fir_path, Vector2(float(-ring), float(y)), ring)
+			_append_edge_tree(transforms_by_path, fir_path, Vector2(float(map_size.x - 1 + ring), float(y)), ring)
+	_spawn_nature_multimeshes(edge_forest_root, transforms_by_path)
+	for child in edge_forest_root.get_children():
+		if child is MultiMeshInstance3D:
+			var instance := child as MultiMeshInstance3D
+			instance.material_override = _edge_forest_material()
+			instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
+func _append_edge_tree(groups: Dictionary, path_value: String, logical: Vector2, ring: int, index := 0) -> void:
+	if not groups.has(path_value):
+		groups[path_value] = []
+	var key_tile := Vector2i(roundi(logical.x), roundi(logical.y))
+	var clamped := Vector2(clampf(logical.x, 0.0, float(maxi(0, map_size.x - 1))), clampf(logical.y, 0.0, float(maxi(0, map_size.y - 1))))
+	var world_position := ScaleProfile.tile_to_flat_world(logical, map_size)
+	world_position.y = height_at_logical(clamped)
+	var jitter := _deterministic_offset(key_tile, 80 + ring + index, 0.55)
+	world_position += Vector3(jitter.x, 0.0, jitter.y)
+	# Scale so canopies clear the y=2.0 boundary-mist plane.
+	var scale_value := (2.05 + float(_tile_hash(key_tile, 90 + ring + index) % 55) / 100.0 + float(ring) * 0.18) * ScaleProfile.nature_model_scale(path_value)
+	var yaw := float(_tile_hash(key_tile, 110 + ring + index) % 628) / 100.0
+	var basis := Basis(Vector3.UP, yaw).scaled(Vector3.ONE * scale_value)
+	(groups[path_value] as Array).append(Transform3D(basis, world_position))
+
+
+func _unrevealed_touches_revealed(tile: Vector2i) -> bool:
+	for oy in range(-1, 2):
+		for ox in range(-1, 2):
+			if ox == 0 and oy == 0:
+				continue
+			var sample := tile + Vector2i(ox, oy)
+			if simulation.is_inside_map(sample) and simulation.is_revealed(sample):
+				return true
+	return false
+
+
+func _edge_forest_material() -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+	# The Director: firs take scene light and the period scale (1.0 / 0.55 / 0.35).
+	material.albedo_color = Color("#1c332c") * _atmosphere_scale
+	material.roughness = 0.94
+	material.metallic = 0.0
+	material.emission_enabled = false
+	return material
+
+
+func _rebuild_building_halos(force: bool) -> void:
+	if simulation == null or halo_root == null:
+		return
+	var signature := "r%d" % int(simulation.connected_roads.size())
+	for building_value in simulation.get_buildings():
+		var building: Dictionary = building_value
+		signature += ":%d:%s:%d:%d" % [
+			int(building.get("id", 0)),
+			String(building.get("type", "")),
+			int(bool(building.get("construction", false))),
+			int(building.get("rotation", 0))
+		]
+	if not force and signature == halo_signature:
+		return
+	halo_signature = signature
+	var next := HaloCatalog.resolve_world(simulation)
+	halo_placements = next
+	for child in halo_root.get_children():
+		halo_root.remove_child(child)
+		child.free()
+	var transforms_by_path: Dictionary = {}
+	for placement_value in halo_placements:
+		var placement: Dictionary = placement_value
+		var path_value := HaloCatalog.prop_path(String(placement.get("prop", "")))
+		if path_value == "":
+			continue
+		if not transforms_by_path.has(path_value):
+			transforms_by_path[path_value] = []
+		var tile: Vector2i = placement.get("tile", Vector2i.ZERO)
+		var world_position := tile_to_world(Vector2(tile))
+		var nudge: Vector2 = placement.get("nudge", Vector2.ZERO)
+		world_position += Vector3(nudge.x, 0.0, nudge.y)
+		var scale_value := float(placement.get("scale", 1.0)) * ScaleProfile.world_prop_scale(String(placement.get("prop", "")))
+		var basis := Basis(Vector3.UP, deg_to_rad(float(placement.get("yaw", 0.0)))).scaled(Vector3.ONE * scale_value)
+		(transforms_by_path[path_value] as Array).append(Transform3D(basis, world_position))
+	_spawn_nature_multimeshes(halo_root, transforms_by_path)
+
+
+func halo_tiles() -> Array[Vector2i]:
+	var tiles: Array[Vector2i] = []
+	for placement_value in halo_placements:
+		tiles.append(Vector2i(Dictionary(placement_value).get("tile", Vector2i.ZERO)))
+	return tiles
 
 
 func _deterministic_offset(tile: Vector2i, index: int, radius: float) -> Vector2:

@@ -5,6 +5,7 @@ const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_p
 
 static var _materials: Dictionary = {}
 static var _light_tint := Color.WHITE
+static var _value_lift := 0.06
 
 var tile := Vector2i.ZERO
 var building_id := 0
@@ -31,8 +32,8 @@ func _rebuild() -> void:
 	for child in get_children():
 		remove_child(child)
 		child.queue_free()
-	var edge_color := Color(0.32, 0.22, 0.12, 0.42) if planned else Color(0.22, 0.14, 0.08, 0.55)
-	var road_color := Color(0.58, 0.40, 0.22, 0.78) if planned else Color("#8c7351")
+	var edge_color := Color(0.32, 0.28, 0.22, 0.42) if planned else Color(0.30, 0.28, 0.24, 0.50)
+	var road_color := Color(0.62, 0.58, 0.50, 0.78) if planned else Color("#a09888")
 	if faction == "rival":
 		edge_color = Color(0.28, 0.17, 0.18, 0.72)
 		road_color = Color("#805d58")
@@ -55,12 +56,14 @@ func _add_path_mesh(width: float, height: float, material: Material, node_name: 
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var half_cell := ScaleProfile.LOGICAL_CELL_METRES * 0.53
 	var junction := width * 0.52
-	_add_quad(surface,
-		Vector3(-junction, height, -junction),
-		Vector3(junction, height, -junction),
-		Vector3(junction, height, junction),
-		Vector3(-junction, height, junction)
-	)
+	# Shared a,d,c,b vertex order. Lighting uses a world-up normal in the
+	# shader, so winding no longer decides which way the lane faces.
+	var ja := Vector3(-junction, height, -junction)
+	var jb := Vector3(junction, height, -junction)
+	var jc := Vector3(junction, height, junction)
+	var jd := Vector3(-junction, height, junction)
+	var flat := Vector2(0.5, 0.5)
+	_add_quad(surface, ja, jd, jc, jb, flat, flat, flat, flat)
 	var directions := [Vector2(0.0, -1.0), Vector2(1.0, 0.0), Vector2(0.0, 1.0), Vector2(-1.0, 0.0)]
 	for index in directions.size():
 		if connection_mask & (1 << index) == 0:
@@ -70,12 +73,11 @@ func _add_path_mesh(width: float, height: float, material: Material, node_name: 
 		var half_width := width * 0.5
 		var start := direction * junction * 0.38
 		var finish := direction * half_cell
-		_add_quad(surface,
-			Vector3(start.x - perpendicular.x * half_width, height, start.y - perpendicular.y * half_width),
-			Vector3(start.x + perpendicular.x * half_width, height, start.y + perpendicular.y * half_width),
-			Vector3(finish.x + perpendicular.x * half_width, height, finish.y + perpendicular.y * half_width),
-			Vector3(finish.x - perpendicular.x * half_width, height, finish.y - perpendicular.y * half_width)
-		)
+		var a := Vector3(start.x - perpendicular.x * half_width, height, start.y - perpendicular.y * half_width)
+		var b := Vector3(start.x + perpendicular.x * half_width, height, start.y + perpendicular.y * half_width)
+		var c := Vector3(finish.x + perpendicular.x * half_width, height, finish.y + perpendicular.y * half_width)
+		var d := Vector3(finish.x - perpendicular.x * half_width, height, finish.y - perpendicular.y * half_width)
+		_add_quad(surface, a, d, c, b, Vector2(0.0, 0.0), Vector2(0.0, 1.0), Vector2(1.0, 1.0), Vector2(1.0, 0.0))
 	var instance := MeshInstance3D.new()
 	instance.name = node_name
 	instance.mesh = surface.commit()
@@ -107,15 +109,18 @@ func _add_ruts(road_width: float) -> void:
 			add_child(rut)
 
 
-func _add_triangle(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3) -> void:
-	for vertex in [a, b, c]:
+func _add_triangle(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, ua: Vector2, ub: Vector2, uc: Vector2) -> void:
+	var verts := [a, b, c]
+	var uvs := [ua, ub, uc]
+	for index in 3:
 		surface.set_normal(Vector3.UP)
-		surface.add_vertex(vertex)
+		surface.set_uv(uvs[index])
+		surface.add_vertex(verts[index])
 
 
-func _add_quad(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3) -> void:
-	_add_triangle(surface, a, b, c)
-	_add_triangle(surface, a, c, d)
+func _add_quad(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, ua := Vector2(0, 0), ub := Vector2(1, 0), uc := Vector2(1, 1), ud := Vector2(0, 1)) -> void:
+	_add_triangle(surface, a, b, c, ua, ub, uc)
+	_add_triangle(surface, a, c, d, ua, uc, ud)
 
 
 func _road_material(color: Color) -> ShaderMaterial:
@@ -125,12 +130,17 @@ func _road_material(color: Color) -> ShaderMaterial:
 		material.shader = preload("res://src/GodotClient3D/Shaders/settlement_road.gdshader")
 		material.set_shader_parameter("road_color", color)
 		material.set_shader_parameter("light_tint", _light_tint)
+		material.set_shader_parameter("value_lift", _value_lift)
 		material.render_priority = -1 if color.a < 1.0 else 0
 		_materials[key] = material
 	return _materials[key]
 
-static func set_lighting(tint: Color) -> void:
-	if _light_tint.is_equal_approx(tint): return
+
+static func set_lighting(tint: Color, value_lift := 0.06) -> void:
+	if _light_tint.is_equal_approx(tint) and is_equal_approx(_value_lift, value_lift):
+		return
 	_light_tint = tint
+	_value_lift = value_lift
 	for material in _materials.values():
 		material.set_shader_parameter("light_tint", tint)
+		material.set_shader_parameter("value_lift", value_lift)

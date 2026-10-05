@@ -6,6 +6,7 @@ const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
 const Adapter = preload("res://src/GodotClient3D/Scripts/production_presentation_adapter.gd")
 const Fixture = preload("res://src/GodotClient3D/Scripts/production_demo_fixture.gd")
 const RivalryTuning = preload("res://src/GodotClient/Scripts/one_shard_rivalry_tuning.gd")
+const Identity = preload("res://src/GodotClient3D/Scripts/production_identity.gd")
 
 const SAVE_PATH := "res://artifacts/phase3_2/persistence/resource_visual_round_trip.json"
 
@@ -180,7 +181,9 @@ func _check_world_mood(failures: Array[String], game) -> void:
 	simulation.is_night = true
 	simulation.phase_time = 30.0
 	game._update_day_night_lighting()
-	_check(failures, day_energy >= 1.0 and game.sun_light.light_energy <= 0.12 and game.environment_resource.adjustment_saturation < day_saturation and game.environment_resource.fog_density >= 0.011, "day is warm and bright while night is cool, dark, misty, and desaturated")
+	var night_energy: float = game.sun_light.light_energy
+	var night_threshold: float = float(Identity.LIGHTING["night"]["sun_energy"]) + 0.04
+	_check(failures, day_energy >= 1.0 and night_energy <= night_threshold and night_energy < day_energy and game.environment_resource.adjustment_saturation < day_saturation, "day is warm and bright while night is cool, dark, and desaturated")
 	var town_hall: Dictionary = simulation._find_town_hall()
 	var town_view = game.world_view.building_views.get(int(town_hall.get("id", 0)))
 	_check(failures, town_view != null and town_view.find_child("CivicMeetingPlaza", true, false) != null and town_view.find_child("CivicTimberWing", true, false) == null, "Town Hall keeps the castle silhouette without placeholder timber wings")

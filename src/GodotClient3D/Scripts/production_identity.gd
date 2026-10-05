@@ -32,74 +32,138 @@ const SIZE_WARNING := 16
 
 const AUDIO_SETTINGS_PATH := "user://one_shard_audio.json"
 
+# The Director: GFX-1 direction B. Sun orbit is degrees around from the camera
+# view direction: 120 keeps day/dusk light entering upper-left (shadows
+# lower-right) and the 3D sun/camera angle ≥ 90°. Night uses 300 so the moon
+# sits on the opposite side without lerping through the camera during dawn.
 const LIGHTING := {
 	"day": {
-		"ambient": 0.42,
-		"fog_density": 0.0024,
-		"fog_color": Color("#1e322c"),
-		"fog_energy": 0.38,
-		"saturation": 0.93,
-		"contrast": 1.07,
-		"sun_energy": 1.12,
-		"sun_color": Color("#ffe0ac"),
-		"sun_pitch": -42.0,
-		"fill_energy": 0.20,
-		"fill_color": Color("#849aaf"),
-		"sky_top": Color("#3a5460"),
-		"sky_horizon": Color("#1e322c"),
-		"ground_bottom": Color("#0c1614"),
-		"ground_horizon": Color("#14221c")
+		"ambient": 0.58,
+		"ambient_color": Color("#718FA3"),
+		"fog_density": 0.0004,
+		"fog_color": Color("#607681"),
+		"fog_energy": 0.55,
+		"fog_begin": 28.0,
+		"fog_end": 65.0,
+		"fog_aerial": 0.55,
+		"fog_sun_scatter": 0.25,
+		"saturation": 0.52,
+		"contrast": 1.52,
+		"exposure": 1.06,
+		"brightness": 1.16,
+		"tonemap_white": 6.5,
+		"sun_energy": 1.45,
+		"sun_color": Color("#FFC888"),
+		"sun_pitch": -25.0,
+		"sun_orbit": 120.0,
+		"fill_energy": 0.18,
+		"fill_color": Color("#7A93A6"),
+		"sky_top": Color("#3E5A68"),
+		"sky_horizon": Color("#C4A882"),
+		"ground_bottom": Color("#14241E"),
+		"ground_horizon": Color("#2E4036"),
+		"ground_tint": Color(1.02, 1.04, 0.98),
+		"window_color": Color("#FFB347"),
+		"torch_color": Color("#FFB347"),
+		"torch_range": 5.5,
+		"road_lift": 0.04,
+		"atmosphere_scale": 1.0
 	},
 	"dusk": {
-		"ambient": 0.28,
-		"fog_density": 0.0028,
-		"fog_color": Color("#536477"),
-		"fog_energy": 0.48,
-		"saturation": 0.96,
-		"contrast": 1.10,
-		"sun_energy": 0.55,
-		"sun_color": Color("#ff9a62"),
-		"sun_pitch": -12.0,
-		"fill_energy": 0.22,
-		"fill_color": Color("#6a7fa0"),
-		"sky_top": Color("#2a3d62"),
-		"sky_horizon": Color("#e09a62"),
-		"ground_bottom": Color("#1a1c22"),
-		"ground_horizon": Color("#5a4a3a")
+		"ambient": 0.80,
+		"ambient_color": Color("#A87848"),
+		"fog_density": 0.00045,
+		"fog_color": Color("#C89058"),
+		"fog_energy": 0.64,
+		"fog_begin": 24.0,
+		"fog_end": 58.0,
+		"fog_aerial": 0.48,
+		"fog_sun_scatter": 0.38,
+		"saturation": 0.48,
+		"contrast": 1.12,
+		"exposure": 1.22,
+		"brightness": 1.14,
+		"tonemap_white": 6.2,
+		"sun_energy": 1.10,
+		"sun_color": Color("#FFC080"),
+		"sun_pitch": -11.0,
+		"sun_orbit": 120.0,
+		"fill_energy": 0.28,
+		"fill_color": Color("#B88850"),
+		"sky_top": Color("#3A3A62"),
+		"sky_horizon": Color("#E09058"),
+		"ground_bottom": Color("#2A1810"),
+		"ground_horizon": Color("#6A4830"),
+		"ground_tint": Color(1.22, 0.92, 0.60),
+		"window_color": Color("#FFB347"),
+		"torch_color": Color("#FFB347"),
+		"torch_range": 5.8,
+		"road_lift": 0.05,
+		"atmosphere_scale": 0.55
 	},
 	"night": {
-		"ambient": 0.50,
-		"fog_density": 0.0060,
-		"fog_color": Color("#1c2c40"),
-		"fog_energy": 0.28,
-		"saturation": 0.66,
-		"contrast": 1.05,
-		"sun_energy": 0.35,
-		"sun_color": Color("#7891b2"),
-		"sun_pitch": -34.0,
-		"fill_energy": 0.32,
-		"fill_color": Color("#4a6480"),
-		"sky_top": Color("#07101f"),
-		"sky_horizon": Color("#1f3044"),
+		"ambient": 0.70,
+		"ambient_color": Color("#3A5580"),
+		"fog_density": 0.0007,
+		"fog_color": Color("#2A4060"),
+		"fog_energy": 0.42,
+		"fog_begin": 20.0,
+		"fog_end": 52.0,
+		"fog_aerial": 0.36,
+		"fog_sun_scatter": 0.10,
+		"saturation": 0.45,
+		"contrast": 1.06,
+		"exposure": 1.14,
+		"brightness": 1.10,
+		"tonemap_white": 5.8,
+		"sun_energy": 0.52,
+		"sun_color": Color("#91B8FF"),
+		"sun_pitch": -48.0,
+		"sun_orbit": 300.0,
+		"fill_energy": 0.28,
+		"fill_color": Color("#4A6588"),
+		"sky_top": Color("#07101F"),
+		"sky_horizon": Color("#1F3044"),
 		"ground_bottom": Color("#050910"),
-		"ground_horizon": Color("#162333")
+		"ground_horizon": Color("#162333"),
+		"ground_tint": Color(0.88, 0.94, 1.10),
+		"window_color": Color("#FFB347"),
+		"torch_color": Color("#FFC36B"),
+		"torch_range": 6.2,
+		"road_lift": 0.38,
+		"atmosphere_scale": 0.35
 	},
 	"reckoning": {
-		"ambient": 0.14,
-		"fog_density": 0.0110,
-		"fog_color": Color("#2a3d58"),
-		"fog_energy": 0.38,
-		"saturation": 0.78,
-		"contrast": 1.20,
-		"sun_energy": 0.10,
-		"sun_color": Color("#6a88b0"),
-		"sun_pitch": -8.0,
-		"fill_energy": 0.22,
-		"fill_color": Color("#5a6aa8"),
-		"sky_top": Color("#0a1028"),
-		"sky_horizon": Color("#3a4a78"),
-		"ground_bottom": Color("#080c14"),
-		"ground_horizon": Color("#1a2838")
+		"ambient": 0.42,
+		"ambient_color": Color("#1A2040"),
+		"fog_density": 0.0012,
+		"fog_color": Color("#243458"),
+		"fog_energy": 0.52,
+		"fog_begin": 16.0,
+		"fog_end": 46.0,
+		"fog_aerial": 0.36,
+		"fog_sun_scatter": 0.10,
+		"saturation": 0.56,
+		"contrast": 1.14,
+		"exposure": 0.90,
+		"brightness": 1.0,
+		"tonemap_white": 5.4,
+		"sun_energy": 0.28,
+		"sun_color": Color("#7A9AD0"),
+		"sun_pitch": -42.0,
+		"sun_orbit": 300.0,
+		"fill_energy": 0.20,
+		"fill_color": Color("#4A5A98"),
+		"sky_top": Color("#0A1028"),
+		"sky_horizon": Color("#3A4A78"),
+		"ground_bottom": Color("#080C14"),
+		"ground_horizon": Color("#1A2838"),
+		"ground_tint": Color(0.70, 0.78, 1.05),
+		"window_color": Color("#FFB347"),
+		"torch_color": Color("#FFC36B"),
+		"torch_range": 6.5,
+		"road_lift": 0.32,
+		"atmosphere_scale": 0.28
 	}
 }
 
@@ -212,6 +276,74 @@ static func mix_lighting(from_state: String, to_state: String, weight: float) ->
 		else:
 			mixed[key] = lerpf(float(from_value), float(to_value), weight)
 	return mixed
+
+
+# Same blend the production root uses so tests and the game stay aligned.
+static func palette_for_cycle(simulation, menu_visible := false) -> Dictionary:
+	if menu_visible:
+		return lighting_palette("dusk")
+	if simulation == null:
+		return lighting_palette("day")
+	if bool(simulation.reckoning_active):
+		return mix_lighting("night", "reckoning", 0.85)
+	if simulation.is_night:
+		return lighting_palette("night")
+	var remaining: float = float(simulation.DAY_LENGTH_SECONDS) - float(simulation.phase_time)
+	if remaining < 60.0:
+		return mix_lighting("day", "dusk", 1.0 - pow(clampf(remaining / 60.0, 0.0, 1.0), 1.35))
+	if simulation.day_count > 1 and simulation.phase_time < 40.0:
+		return mix_lighting("night", "day", pow(clampf(simulation.phase_time / 40.0, 0.0, 1.0), 1.2))
+	return lighting_palette("day")
+
+
+static func cycle_period_name(simulation, menu_visible := false) -> String:
+	if menu_visible:
+		return "dusk"
+	if simulation == null:
+		return "day"
+	if bool(simulation.reckoning_active):
+		return "reckoning"
+	if simulation.is_night:
+		return "night"
+	var remaining: float = float(simulation.DAY_LENGTH_SECONDS) - float(simulation.phase_time)
+	if remaining < 60.0:
+		return "dusk" if remaining < 20.0 else "day"
+	return "day"
+
+
+# Mild S-curve plus teal shadows / warm highlights. 256x1 RGB LUT.
+static func build_grade_lut() -> ImageTexture:
+	var image := Image.create(256, 1, false, Image.FORMAT_RGB8)
+	for index in 256:
+		var t := float(index) / 255.0
+		var y := _grade_curve(t)
+		var color := Color(y, y, y)
+		if t < 0.38:
+			var shadow_w := (0.38 - t) / 0.38 * 0.14
+			color = color.lerp(Color(0.10, 0.18, 0.24), shadow_w)
+		elif t > 0.62:
+			var highlight_w := (t - 0.62) / 0.38 * 0.12
+			color = color.lerp(Color(1.0, 0.90, 0.76), highlight_w)
+		image.set_pixel(index, 0, color)
+	return ImageTexture.create_from_image(image)
+
+
+static func _grade_curve(t: float) -> float:
+	# Authored: 0→0, 0.18→0.11, 0.45→0.48, 0.72→0.86, 1→0.96
+	var knots := [
+		Vector2(0.0, 0.0),
+		Vector2(0.18, 0.11),
+		Vector2(0.45, 0.48),
+		Vector2(0.72, 0.86),
+		Vector2(1.0, 0.96)
+	]
+	for index in range(1, knots.size()):
+		var a: Vector2 = knots[index - 1]
+		var b: Vector2 = knots[index]
+		if t <= b.x:
+			var w := 0.0 if is_equal_approx(b.x, a.x) else (t - a.x) / (b.x - a.x)
+			return lerpf(a.y, b.y, w)
+	return 0.96
 
 
 static func load_audio_settings() -> Dictionary:

@@ -681,46 +681,78 @@ func _create_lighting() -> void:
 	var sky := Sky.new()
 	var sky_material_value := ProceduralSkyMaterial.new()
 	sky_material = sky_material_value
-	sky_material_value.sky_top_color = Color("#1a2428")
-	sky_material_value.sky_horizon_color = Color("#243830")
-	sky_material_value.ground_bottom_color = Color("#0c1614")
-	sky_material_value.ground_horizon_color = Color("#14221c")
+	sky_material_value.sky_top_color = Color("#3E5A68")
+	sky_material_value.sky_horizon_color = Color("#C4A882")
+	sky_material_value.ground_bottom_color = Color("#14241E")
+	sky_material_value.ground_horizon_color = Color("#2E4036")
 	sky.sky_material = sky_material_value
 	environment.sky = sky
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_energy = 0.56
-	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	environment.ssao_enabled = bool(quality_profile.get("shadows", true))
-	environment.ssao_radius = 1.5
-	environment.ssao_intensity = 1.3
+	environment.ambient_light_color = Color("#718FA3")
+	environment.ambient_light_energy = 0.62
+	# The Director: ACES + authored LUT. Side-lit golden hour, never front-lit.
+	environment.tonemap_mode = Environment.TONE_MAPPER_ACES
+	environment.tonemap_exposure = 0.95
+	environment.tonemap_white = 6.5
+	environment.ssao_enabled = bool(quality_profile.get("ssao", quality_profile.get("shadows", true)))
+	environment.ssao_radius = 1.1
+	environment.ssao_intensity = 1.6
+	environment.ssao_power = 1.35
+	environment.ssao_detail = 0.55
+	environment.ssao_horizon = 0.05
+	environment.ssao_sharpness = 0.97
+	environment.ssil_enabled = bool(quality_profile.get("ssil", false))
+	environment.ssil_radius = 3.0
+	environment.ssil_intensity = 0.75
+	environment.ssil_sharpness = 0.96
+	environment.glow_enabled = bool(quality_profile.get("glow", false))
+	environment.glow_normalized = true
+	environment.glow_intensity = 0.22
+	environment.glow_strength = 0.85
+	environment.glow_bloom = 0.08
+	environment.set("glow_levels/1", 0.0)
+	environment.set("glow_levels/2", 1.0)
+	environment.set("glow_levels/3", 0.75)
+	environment.set("glow_levels/4", 0.45)
+	environment.set("glow_levels/5", 0.0)
+	environment.set("glow_levels/6", 0.0)
+	environment.set("glow_levels/7", 0.0)
 	environment.adjustment_enabled = true
-	environment.adjustment_saturation = 1.04
-	environment.adjustment_contrast = 1.05
+	environment.adjustment_saturation = 1.02
+	environment.adjustment_contrast = 1.10
+	environment.adjustment_color_correction = Identity.build_grade_lut()
 	environment.fog_enabled = true
-	environment.fog_light_color = Color("#1e322c")
-	environment.fog_light_energy = 0.38
-	environment.fog_density = 0.0035
-	environment.fog_height = 4.0
-	environment.fog_height_density = 0.045
+	environment.fog_mode = Environment.FOG_MODE_DEPTH
+	environment.fog_light_color = Color("#607681")
+	environment.fog_light_energy = 0.55
+	environment.fog_density = 0.0
+	environment.fog_height = 0.0
+	environment.fog_height_density = 0.0
+	environment.fog_aerial_perspective = 0.55
+	environment.fog_sun_scatter = 0.25
+	environment.fog_depth_begin = 28.0
+	environment.fog_depth_end = 65.0
+	environment.volumetric_fog_enabled = bool(quality_profile.get("volumetric_fog", false))
 	environment_node.environment = environment
 	lighting_rig.add_child(environment_node)
 	var sun := DirectionalLight3D.new()
 	sun_light = sun
 	sun.name = "Sun"
-	sun.rotation_degrees = Vector3(-54.0, -34.0, 0.0)
-	sun.light_color = Color("#f2ecc4")
-	sun.light_energy = 1.12
+	sun.light_color = Color("#FFD09A")
+	sun.light_energy = 1.25
+	sun.light_angular_distance = 0.5
 	sun.shadow_enabled = bool(quality_profile.get("shadows", true))
-	sun.directional_shadow_max_distance = float(quality_profile.get("shadow_distance", 170.0))
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+	sun.directional_shadow_max_distance = float(quality_profile.get("shadow_distance", 62.0))
 	lighting_rig.add_child(sun)
 	var fill := DirectionalLight3D.new()
 	fill_light = fill
 	fill.name = "CoolFill"
-	fill.rotation_degrees = Vector3(-36.0, 145.0, 0.0)
-	fill.light_color = Color("#8aa9bd")
-	fill.light_energy = 0.30
+	fill.light_color = Color("#7A93A6")
+	fill.light_energy = 0.18
 	fill.shadow_enabled = false
 	lighting_rig.add_child(fill)
+	_apply_lighting_palette(Identity.lighting_palette("day"))
 
 
 func _create_ui() -> void:
@@ -3571,13 +3603,18 @@ func _start_review_seed() -> void:
 func _apply_menu_quality() -> void:
 	if quality_select == null:
 		return
-	var profile_name := String(quality_select.get_selected_metadata())
+	apply_quality_profile(String(quality_select.get_selected_metadata()))
+
+
+func apply_quality_profile(profile_name: String) -> void:
 	quality_profile = QualityProfile.get_profile(profile_name)
 	get_viewport().msaa_3d = Viewport.MSAA_2X if bool(quality_profile.get("shadows", true)) else Viewport.MSAA_DISABLED
 	if sun_light != null:
 		sun_light.shadow_enabled = bool(quality_profile.get("shadows", true))
-	if environment_resource != null:
-		environment_resource.ssao_enabled = bool(quality_profile.get("shadows", true))
+		sun_light.directional_shadow_max_distance = float(quality_profile.get("shadow_distance", 62.0))
+	_apply_quality_features()
+	if world_view != null:
+		world_view.apply_quality_profile(quality_profile)
 
 
 func _show_start_menu() -> void:
@@ -3697,51 +3734,78 @@ func _tick_audio(delta: float) -> void:
 
 
 func _update_day_night_lighting() -> void:
-	if simulation_host.simulation == null or environment_resource == null or sun_light == null:
+	if environment_resource == null or sun_light == null:
 		return
-	var simulation = simulation_host.simulation
-	var palette: Dictionary
 	var menu_visible := startup_overlay != null and startup_overlay.visible
-	if menu_visible:
-		palette = Identity.lighting_palette("dusk")
-	elif bool(simulation.reckoning_active):
-		palette = Identity.mix_lighting("night", "reckoning", 0.85)
-	elif simulation.is_night:
-		palette = Identity.lighting_palette("night")
-	else:
-		var remaining: float = float(simulation.DAY_LENGTH_SECONDS) - float(simulation.phase_time)
-		if remaining < 60.0:
-			palette = Identity.mix_lighting("day", "dusk", 1.0 - pow(clampf(remaining / 60.0, 0.0, 1.0), 1.35))
-		elif simulation.day_count > 1 and simulation.phase_time < 40.0:
-			palette = Identity.mix_lighting("night", "day", pow(clampf(simulation.phase_time / 40.0, 0.0, 1.0), 1.2))
-		else:
-			palette = Identity.lighting_palette("day")
-	_apply_lighting_palette(palette)
+	_apply_lighting_palette(Identity.palette_for_cycle(simulation_host.simulation if simulation_host != null else null, menu_visible))
+
+
+func _apply_quality_features() -> void:
+	if environment_resource == null:
+		return
+	environment_resource.ssao_enabled = bool(quality_profile.get("ssao", quality_profile.get("shadows", true)))
+	environment_resource.ssil_enabled = bool(quality_profile.get("ssil", false))
+	environment_resource.glow_enabled = bool(quality_profile.get("glow", false))
+	environment_resource.volumetric_fog_enabled = bool(quality_profile.get("volumetric_fog", false))
+
+
+func sun_light_direction() -> Vector3:
+	if sun_light == null:
+		return Vector3.DOWN
+	return -sun_light.global_transform.basis.z.normalized()
+
+
+func camera_view_direction() -> Vector3:
+	if camera_rig == null:
+		return Vector3(0.0, -0.707, -0.707)
+	return camera_rig.view_direction()
+
+
+func sun_camera_angle_degrees() -> float:
+	return rad_to_deg(acos(clampf(sun_light_direction().dot(camera_view_direction()), -1.0, 1.0)))
 
 
 func _apply_lighting_palette(palette: Dictionary) -> void:
-	var road_brightness := clampf(float(palette.get("sun_energy", 1.1)) * 0.68 + float(palette.get("ambient", 0.5)) * 0.6, 0.22, 1.0)
-	var road_tint := Color.WHITE.lerp(palette.get("sun_color", Color.WHITE), 0.25) * road_brightness
+	if environment_resource == null or sun_light == null:
+		return
+	# Keep lane tint near-neutral so dusk cannot paint an orange carpet.
+	var sun_color: Color = palette.get("sun_color", Color.WHITE)
+	var road_tint := Color(0.94, 0.94, 0.93).lerp(sun_color.lerp(Color.WHITE, 0.72), 0.16)
 	road_tint.a = 1.0
-	ProductionRoadView3D.set_lighting(road_tint)
+	ProductionRoadView3D.set_lighting(road_tint, float(palette.get("road_lift", 0.06)))
 	environment_resource.ambient_light_energy = float(palette.get("ambient", 0.5))
-	environment_resource.ambient_light_color = palette.get("fill_color", Color("#849aaf"))
-	environment_resource.fog_density = float(palette.get("fog_density", 0.003))
-	environment_resource.fog_light_color = palette.get("fog_color", Color("#c8c2a5"))
-	environment_resource.fog_light_energy = float(palette.get("fog_energy", 0.7))
+	environment_resource.ambient_light_color = palette.get("ambient_color", palette.get("fill_color", Color("#718FA3")))
+	environment_resource.fog_density = float(palette.get("fog_density", 0.0))
+	environment_resource.fog_light_color = palette.get("fog_color", Color("#607681"))
+	environment_resource.fog_light_energy = float(palette.get("fog_energy", 0.55))
+	environment_resource.fog_aerial_perspective = float(palette.get("fog_aerial", 0.55))
+	environment_resource.fog_sun_scatter = float(palette.get("fog_sun_scatter", 0.25))
+	environment_resource.fog_depth_begin = float(palette.get("fog_begin", 28.0))
+	environment_resource.fog_depth_end = float(palette.get("fog_end", 65.0))
+	environment_resource.fog_height = 0.0
+	environment_resource.fog_height_density = 0.0
 	environment_resource.adjustment_saturation = float(palette.get("saturation", 1.0))
-	environment_resource.adjustment_contrast = float(palette.get("contrast", 1.04))
+	environment_resource.adjustment_contrast = float(palette.get("contrast", 1.10))
+	environment_resource.adjustment_brightness = float(palette.get("brightness", 1.0))
+	environment_resource.tonemap_exposure = float(palette.get("exposure", 0.95))
+	environment_resource.tonemap_white = float(palette.get("tonemap_white", 6.5))
+	_apply_quality_features()
 	sun_light.light_energy = float(palette.get("sun_energy", 1.1))
-	sun_light.light_color = palette.get("sun_color", Color("#ffe0a8"))
-	sun_light.rotation_degrees.x = float(palette.get("sun_pitch", -52.0))
+	sun_light.light_color = palette.get("sun_color", Color("#FFD09A"))
+	var camera_yaw := rad_to_deg(camera_rig.rotation.y) if camera_rig != null else -35.5
+	var orbit := float(palette.get("sun_orbit", 120.0))
+	sun_light.rotation_degrees = Vector3(float(palette.get("sun_pitch", -25.0)), camera_yaw - orbit, 0.0)
 	if fill_light != null:
-		fill_light.light_energy = float(palette.get("fill_energy", 0.28))
-		fill_light.light_color = palette.get("fill_color", Color("#9bb4c4"))
+		fill_light.light_energy = float(palette.get("fill_energy", 0.18))
+		fill_light.light_color = palette.get("fill_color", Color("#7A93A6"))
+		fill_light.rotation_degrees = Vector3(-36.0, camera_yaw - orbit + 180.0, 0.0)
 	if sky_material != null:
-		sky_material.sky_top_color = palette.get("sky_top", Color("#5a88a8"))
-		sky_material.sky_horizon_color = palette.get("sky_horizon", Color("#d6c9a0"))
-		sky_material.ground_bottom_color = palette.get("ground_bottom", Color("#303326"))
-		sky_material.ground_horizon_color = palette.get("ground_horizon", Color("#8a8668"))
+		sky_material.sky_top_color = palette.get("sky_top", Color("#3E5A68"))
+		sky_material.sky_horizon_color = palette.get("sky_horizon", Color("#C4A882"))
+		sky_material.ground_bottom_color = palette.get("ground_bottom", Color("#14241E"))
+		sky_material.ground_horizon_color = palette.get("ground_horizon", Color("#2E4036"))
+	if world_view != null:
+		world_view.apply_light_palette(palette)
 
 
 func _show_command_result(result: Dictionary) -> void:
@@ -5242,6 +5306,62 @@ func _evidence_hover_point(point: Vector2) -> void:
 	Input.flush_buffered_events()
 
 
+func write_gfx_tile_mask_json(path: String) -> void:
+	# Sidecar for tools/gfx_pixel_gates.py: every on-screen road tile vs grass two tiles away.
+	if world_view == null or camera_rig == null or camera_rig.camera == null or simulation_host == null:
+		return
+	var sim = simulation_host.simulation
+	if sim == null:
+		return
+	var cam: Camera3D = camera_rig.camera
+	var road_set := {}
+	for key in sim.connected_roads.keys():
+		var parts := String(key).split(",")
+		if parts.size() != 2:
+			continue
+		road_set[Vector2i(int(parts[0]), int(parts[1]))] = true
+	for building_value in sim.get_buildings():
+		var building: Dictionary = building_value
+		if String(building.get("type", "")) != Defs.BUILDING_ROAD:
+			continue
+		road_set[Vector2i(building.get("position", Vector2i.ZERO))] = true
+	var viewport_size := get_viewport().get_visible_rect().size
+	var y0 := 90.0
+	var y1 := viewport_size.y - 184.0
+	var roads: Array = []
+	var grass: Array = []
+	for tile in road_set.keys():
+		var screen := _gfx_tile_screen(cam, Vector2i(tile))
+		if screen.y < y0 or screen.y >= y1 or screen.x < 0.0 or screen.x >= viewport_size.x:
+			continue
+		roads.append([snappedf(screen.x, 0.1), snappedf(screen.y, 0.1)])
+	for y in world_view.map_size.y:
+		for x in world_view.map_size.x:
+			var tile := Vector2i(x, y)
+			if road_set.has(tile):
+				continue
+			if not sim.is_revealed(tile) or String(sim.get_tile(tile)) != Defs.TILE_GRASS:
+				continue
+			var min_d := 999
+			for road_tile in road_set.keys():
+				min_d = mini(min_d, maxi(absi(tile.x - road_tile.x), absi(tile.y - road_tile.y)))
+			if min_d != 2:
+				continue
+			var screen := _gfx_tile_screen(cam, tile)
+			if screen.y < y0 or screen.y >= y1 or screen.x < 0.0 or screen.x >= viewport_size.x:
+				continue
+			grass.append([snappedf(screen.x, 0.1), snappedf(screen.y, 0.1)])
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	if file == null:
+		return
+	file.store_string(JSON.stringify({"roads": roads, "grass": grass, "road_tiles": roads.size(), "grass_tiles": grass.size()}))
+
+
+func _gfx_tile_screen(cam: Camera3D, tile: Vector2i) -> Vector2:
+	var world := world_view.tile_to_world(Vector2(tile))
+	return cam.unproject_position(world)
+
+
 func _evidence_shot(shot_name: String, description: String) -> void:
 	_update_ui()
 	_refresh_resource_chip_flash()
@@ -5251,6 +5371,7 @@ func _evidence_shot(shot_name: String, description: String) -> void:
 	var err := ERR_UNAVAILABLE
 	if image != null and not image.is_empty():
 		err = image.save_png(path)
+		write_gfx_tile_mask_json(evidence_capture_dir.path_join(shot_name + ".roads.json"))
 	var planks_color := ""
 	if resource_chips.has("planks"):
 		planks_color = (resource_chips["planks"] as Label).get_theme_color("font_color").to_html(false)
