@@ -41,7 +41,8 @@ func _capture(game, sim, _label: String, is_night: bool, phase: float, filename:
 	for _i in 6:
 		await process_frame
 	await RenderingServer.frame_post_draw
-	var image := game.get_viewport().get_texture().get_image()
+	var viewport_texture: ViewportTexture = game.get_viewport().get_texture()
+	var image: Image = viewport_texture.get_image() if viewport_texture != null else null
 	var dest := out_dir.path_join(filename)
 	if dest.begins_with("res://"):
 		dest = ProjectSettings.globalize_path(dest)

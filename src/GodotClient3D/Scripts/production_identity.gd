@@ -47,7 +47,7 @@ const LIGHTING := {
 		"fog_end": 65.0,
 		"fog_aerial": 0.55,
 		"fog_sun_scatter": 0.25,
-		"saturation": 1.02,
+		"saturation": 0.94,
 		"contrast": 1.10,
 		"exposure": 0.95,
 		"tonemap_white": 6.5,
