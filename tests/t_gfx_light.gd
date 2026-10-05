@@ -41,6 +41,7 @@ func _run() -> void:
 	sim.is_night = false
 	sim.phase_time = 80.0
 	game._update_day_night_lighting()
+	_check(game.environment_resource.ssao_enabled, "recommended profile keeps Forward+ SSAO on by day")
 	var day_angle: float = game.sun_camera_angle_degrees()
 	print("GFX day sun/camera angle=%.1f energy=%.2f" % [day_angle, game.sun_light.light_energy])
 	_check(day_angle >= 90.0, "day sun is at least 90° from the camera view")
@@ -103,7 +104,7 @@ func _run() -> void:
 			shadow_suns += 1
 	_check(shadow_suns == 1, "only the key sun casts directional shadows")
 	_check(game.fill_light != null and not game.fill_light.shadow_enabled, "cool fill stays shadowless")
-	_check(game.environment_resource.ssao_enabled, "recommended profile keeps Forward+ SSAO on")
+	_check(not game.environment_resource.ssao_enabled, "night cheap-path turns SSAO off")
 	_check(game.environment_resource.ssao_radius >= 0.70 and game.environment_resource.ssao_radius <= 1.20, "SSAO radius is 0.7–1.2 m")
 	_check(game.environment_resource.ssao_light_affect <= 0.20, "SSAO direct-light influence stays low")
 	var contact_count := 0
