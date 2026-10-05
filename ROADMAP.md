@@ -1,7 +1,7 @@
 # Shard & Sovereign — Development Roadmap
 
-**Last updated:** 2026-09-28  
-**Current version:** 0.2.0-playtest.27 (shipped) / 0.2.0-playtest.28 (merged, not built)  
+**Last updated:** 2026-10-05  
+**Current version:** 0.2.0-playtest.32  
 **Target:** Closed Steam Playtest → Public Demo
 
 This roadmap tracks progress toward a releasable Windows settlement survival game: build an economy with autonomous workers, defend against night raids, race a rival realm to Bind the central Shard. Owner-confirmed route: **closed Steam Playtest first, then public demo** after validation gates pass.
@@ -14,11 +14,50 @@ This roadmap tracks progress toward a releasable Windows settlement survival gam
 
 Prepare a validated Windows package for supervised external testing. The game must demonstrate a complete playable loop (founding → economy → defense → Shard race → victory/defeat) with comprehensible onboarding, reliable saves, and no progression blockers.
 
-**Status:** Playtest.27 is the current playable package (shipped to Spawn Downloads, full verification PASS, castle+audio packed, SHA zip DDDE0DF6… / HEAD c3601749). Playtest.28 merged to GitHub (`82d587b50ccd888d385d5e2c2f5dbb68449747ca`) with ReadToEndAsync fix for verify_release + test_release_package but **not built/shipped** (Spawn offline overnight). 60-min soak of playtest.25: PARTIAL pass (in-game RELEASE_PACKAGE_PROBE PASS 3601s / 0 errors; strict runner FAIL ExitCode=null, fixed in .28 source). Core gameplay loop implemented; automated checks pass. External human validation gates remain open. Steam closed beta: **NO-GO** (remaining gates: Steamworks, pilots, full matches, low-end GPU, clean PC, WASAPI reconnect).
+**Status:** Playtest.32 on `codex/closed-playtest-candidate` is the current closed-playtest candidate. It contains three squash-merges: PR #32 playtest.31 fixes (`07f0ef4`), PR #33 T-SNS-UI leftovers (`d65a6b8`), and PR #34 Look lift (`820e5bc`). Owner 5/10-2026 playtest: sound is very good; graphics need a major upgrade. Next milestone is a graphics-upgrade proposal due Wed 7/10. Steam closed beta remains **NO-GO** until there is a Steamworks App ID (remaining gates also: pilots, full matches, low-end GPU, clean PC, WASAPI reconnect). Playtest.27 is still the last Spawn-shipped package (full verification PASS, castle+audio packed, SHA zip DDDE0DF6… / HEAD c3601749). 60-min soak of playtest.25: PARTIAL (in-game RELEASE_PACKAGE_PROBE PASS 3601s / 0 errors; runner ExitCode=null, fixed in .28 source).
 
 ---
 
 ## Completed Work (Recent)
+
+### Playtest.32 (2026-10-05) — Closed-playtest candidate (T-SNS-UI stack)
+- Assembled on `codex/closed-playtest-candidate` as three squash-merges, then this version/ROADMAP bump:
+  - **PR #32** playtest.31 fixes (`07f0ef4`): real-engagement night combat music, monster-kill cheer, CoS UI majors (T-SNS-009)
+  - **PR #33** T-SNS-UI leftovers (`d65a6b8`): stone-and-gold RoN HUD, idle-worker notice + button, Linux CI
+  - **PR #34** Look lift (`820e5bc`): Cinzel / Source Sans 3 OFL fonts, navy and gold frames, capsule top bar, building thumbnails, RAID banner
+- Owner GO to squash-merge #32 → #33 → #34 (Helmer, 5/10-2026). Owner playtest after the stack: sound is very good; graphics need a major upgrade
+- Version bumped to 0.2.0-playtest.32 in both `project.godot` and `tools/build_release.ps1`
+
+### Look lift / PR #34 (2026-10-05) — Cinzel, navy/gold, thumbnails, RAID banner
+- **Typography:** Cinzel (display) and Source Sans 3 (UI), SIL Open Font License 1.1, embedded unmodified. Type floor 11 px. Ledgered in `docs/art/ASSET_LEDGER.md` and `docs/THIRD_PARTY_NOTICES.txt`
+- **Frames:** navy panels with a gold double hairline replace the stone set; capsule and alert frames; navy buttons and new icons (self-made CC0 via `tools/generate_ui_art.py`)
+- **Capsule top bar:** resources with rate under each value; population + idle sub-label; Day/Night countdown; pressure chip only when not QUIET / at night / raid; Build, icon speed controls, menu
+- **Building thumbnails:** 16 offline-rendered portraits for the 7×2 grid and selection panel (`tools/render_building_thumbnails.gd`)
+- **RAID banner** top-right (no centre pop-ups): live "N raiders · from the west · ETA"; dismiss per raid; other notices stay on the left feed
+- Release verification 22/22; extras `t_sns_ui_leftovers` 18/18 and `t_sns_ui_look` 24/24 on the tested head `7076fae`
+
+### T-SNS-UI / PR #33 (2026-10-05) — RoN HUD + leftovers
+- Shared stone-and-gold Theme: 9-slice frames, stone buttons, 48 px icons (`tools/generate_ui_art.py`, CC0)
+- Top bar with resource icons, +/− per minute, population/soldiers, clock, pressure badge, BUILD / Pause / speed / MENU
+- Objective and threat plates, left notification feed, bottom console (7×2 build grid, framed map, selection / realm overview)
+- Leftovers: RAID-red pressure badge, idle-worker feed notice + "N idle" button, toast/feed aging on frame time
+- Linux CI: `tools/linux_ci.sh` + `docs/LINUX_CI.md` (local only; no GitHub Actions)
+- UI-scale setting skipped (115%/130% push BUILD/Pause/MENU off a 1280 px bar)
+
+### Playtest.31 / PR #32 (2026-10-05) — Combat music, cheer, CoS UI majors (T-SNS-009)
+- Night combat music only on real engagement (hit/shot in the last 6 s); night bed off during combat; victory sting on last kill
+- WAV stems loop over the full sample; hard limiter (−1.5 dB) on SFX and Master
+- Monster-kill cheer (CC0 OpenGameArt "Cheers", Nocturnal_Vanguard), throttled 0.8 s
+- CoS majors: one hint panel at a time; minimap above the strip; cost on buttons; RAID/NIGHT badge at night; unaffordable click cancels stale placement
+- Own Town Hall hover message; wrapping INVALID hint clear of the minimap
+- Version was 0.2.0-playtest.31 in `project.godot` and `tools/build_release.ps1` (now superseded by .32)
+
+### Playtest.29 (2026-09-28) — Quick Wins from Helmer Feedback (T-SNS-008)
+- **Toast/placement panel positioning fixed**: Placement hints and validation messages no longer overlap the bottom C&C build bar. Panel repositioned from offset_top=-74 to offset_top=-150 (62px above build strip) with 12px safe margin
+- **Building affordance improved**: Clicking unaffordable buildings in C&C bar now shows clear visual+audio feedback with toast explaining missing resources instead of no response
+- **Combat audio hooks added**: Soldiers cheering when night raid cleared (raid→night transition), dramatic sting when soldier dies, existing delivery cheer verified working
+- **Worker SFX verified**: Saw/chop work loops confirmed playing at sawmills/lumber camps via existing `play_work_at` calls; delivery.wav already wired
+- Version bumped to 0.2.0-playtest.29 in both `project.godot` and `tools/build_release.ps1`
 
 ### Playtest.28 (2026-09-27) — PowerShell 5.1 Compatibility & ExitCode Reliability Fix
 - **Critical PS 5.1 abort resolved**: Fixed `tools/verify_release.ps1` to work on both PowerShell 5.1 and PowerShell 7 without host abort
@@ -232,16 +271,24 @@ Prepare a validated Windows package for supervised external testing. The game mu
 
 ## Current Work
 
-**Playtest.29 (2026-09-28) — Quick Wins from Helmer Feedback (T-SNS-008)**
-- **Toast/placement panel positioning fixed**: Placement hints and validation messages no longer overlap the bottom C&C build bar. Panel repositioned from offset_top=-74 to offset_top=-150 (62px above build strip) with 12px safe margin
-- **Building affordance improved**: Clicking unaffordable buildings in C&C bar now shows clear visual+audio feedback with toast explaining missing resources instead of no response
-- **Combat audio hooks added**: Soldiers cheering when night raid cleared (raid→night transition), dramatic sting when soldier dies, existing delivery cheer verified working
-- **Worker SFX verified**: Saw/chop work loops confirmed playing at sawmills/lumber camps via existing `play_work_at` calls; delivery.wav already wired
-- Version bumped to 0.2.0-playtest.29 in both `project.godot` and `tools/build_release.ps1`
+**Next milestone — graphics-upgrade proposal (due Wed 7/10)**
+- Owner 5/10-2026 playtest of the #32/#33/#34 stack: the sound is very good; the graphics need a major upgrade
+- A graphics-upgrade proposal is due Wednesday 7/10. That is the next milestone, not more HUD leftovers
+
+**Still open — need a separate owner GO (not in playtest.32)**
+- Floating layout
+- BUILD side panel with tabs
+- Raider route
+- Minimap
+- UI scale / responsive top bar
+- Crest / title plate
+
+**Pending**
+- Playtest.30 music work is still pending (never landed; not part of this candidate)
 
 **First-Ten-Minutes Validation**
-- Execute remaining P0 validation gates (60-min soak with .27 or .28 once shipped, pilot, full matches, lower-GPU, clean machine)
-- Owner: initiate Steamworks setup in parallel
+- Execute remaining P0 validation gates (60-min soak of a current package, pilot, full matches, lower-GPU, clean machine)
+- Owner: Steamworks stays blocked until there is a real App ID
 - Closed playtest cohort → feedback → fixes → public demo
 
 **Overnight Work (playtest.23–.28) Summary:**
@@ -253,6 +300,10 @@ Prepare a validated Windows package for supervised external testing. The game mu
 - Playtest.28: ReadToEndAsync pattern for PS 5.1/7 compatibility + ExitCode reliability (merged GitHub, **not built/shipped** due to Spawn offline)
 
 **Next Steps**
+1. Graphics-upgrade proposal by Wed 7/10
+2. Separate owner GO before floating layout / BUILD tabs / raider route / minimap / UI scale / crest
+3. Playtest.30 music work when scheduled
+4. Steamworks only after an App ID exists
 
 ---
 
@@ -448,12 +499,13 @@ Prepare a validated Windows package for supervised external testing. The game mu
 
 ## Summary
 
-**Current Status:** Playtest.27 shipped to Spawn Downloads (full verification PASS, castle+audio packed). Playtest.28 merged to GitHub with ReadToEndAsync fix for PowerShell 5.1/7 compatibility + ExitCode reliability but **not built/shipped** (Spawn offline overnight). Playtest.25 60-min soak: PARTIAL (in-game PASS 3601s / 0 errors; runner ExitCode=null fixed in .28 source). Overnight work (.23–.28) resolved export packing silent omissions (castle.tscn, audio), night verification threshold mismatch, and verify_release/test_release_package ExitCode/deadlock saga. Core gameplay loop implemented, 20/20 automated checks pass, saves validated. **Steam closed beta: NO-GO** (remaining gates: Steamworks, pilots, full matches, low-end GPU, clean PC, WASAPI reconnect).
+**Current Status:** Playtest.32 on `codex/closed-playtest-candidate` is the closed-playtest candidate: squash-merges #32 (`07f0ef4`), #33 (`d65a6b8`), #34 (`820e5bc`), plus this version/ROADMAP bump. Owner 5/10 playtest: sound very good; graphics need a major upgrade. Playtest.27 remains the last Spawn-shipped package (full verification PASS). Playtest.25 60-min soak: PARTIAL (in-game PASS 3601s / 0 errors; runner ExitCode=null fixed in .28 source). Core gameplay loop implemented; automated checks pass. **Steam closed beta: NO-GO** until a Steamworks App ID exists (also remaining: pilots, full matches, low-end GPU, clean PC, WASAPI reconnect).
 
-**Next Critical Path:** 
-1. Wait for Spawn to come online, build+ship playtest.28, complete 60-min soak with audible WASAPI reconnect validation
-2. Execute remaining P0 validation gates (pilot, full matches, lower-GPU, clean machine)
-3. Owner: initiate Steamworks setup in parallel
-4. Closed playtest cohort → feedback → fixes → public demo
+**Next Critical Path:**
+1. Graphics-upgrade proposal due Wed 7/10
+2. Separate owner GO for floating layout, BUILD side panel with tabs, raider route, minimap, UI scale, crest/title plate
+3. Playtest.30 music work (still pending)
+4. Remaining P0 validation gates (soak, pilot, full matches, lower-GPU, clean machine)
+5. Steamworks only after an App ID exists; then closed playtest cohort → feedback → fixes → public demo
 
 **Scope Discipline:** No new buildings, multiplayer, hero combat, or engine changes until One Shard loop validated with real players. Focus on shipping a complete, comprehensible, reliable experience within existing scope.
