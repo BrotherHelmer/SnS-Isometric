@@ -8,6 +8,7 @@ const HaloCatalog = preload("res://src/GodotClient3D/Scripts/production_building
 const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
 const QualityProfile = preload("res://src/GodotClient3D/Scripts/production_quality_profile.gd")
 const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_profile.gd")
+const BuildingMaterials = preload("res://src/GodotClient3D/Scripts/production_building_materials.gd")
 
 var failures: Array[String] = []
 
@@ -112,6 +113,10 @@ func _run() -> void:
 		if view.find_child("ContactAO", true, false) != null:
 			contact_count += 1
 	_check(contact_count > 0, "buildings carry a contact-AO disc")
+	_check(is_equal_approx(BuildingMaterials.roughness_for("plaster"), 0.80), "plaster roughness is 0.80")
+	_check(is_equal_approx(BuildingMaterials.roughness_for("timber"), 0.70), "timber roughness is 0.70")
+	_check(is_equal_approx(BuildingMaterials.roughness_for("roof"), 0.72), "roof roughness is 0.72")
+	_check(is_equal_approx(BuildingMaterials.roughness_for("stone"), 0.85), "stone roughness is 0.85")
 
 	game.apply_quality_profile("recommended")
 	_check(not game.environment_resource.ssil_enabled and not game.environment_resource.glow_enabled, "recommended profile keeps SSIL and glow off")
