@@ -4,6 +4,7 @@ const Defs = preload("one_shard_defs.gd")
 const RivalryRules = preload("one_shard_rivalry.gd")
 const RivalryTuning = preload("one_shard_rivalry_tuning.gd")
 const Wyrdfall = preload("one_shard_wyrdfall.gd")
+const RaidTuning = preload("res://src/GodotClient/Scripts/one_shard_raid_tuning.gd")
 const SaveStore = preload("one_shard_save_store.gd")
 
 const SAVE_PATH := "user://one_shard_save.json"
@@ -47,7 +48,7 @@ const GUARD_ATTACK_STRIKE_REMAINING := 0.24
 const GUARD_DAMAGE := 4
 const TOWN_HALL_OVERFLOW := 20
 const AUTO_SPUR_MAX_STEPS := 2
-const NOTICE_LOG_LIMIT := 40
+const NOTICE_LOG_LIMIT := 80
 const BARRACKS_TRAIN_SECONDS := 18.0
 const BARRACKS_SOLDIER_CAPACITY := 4
 const SOLDIER_BREAD_COST := 2
@@ -166,6 +167,17 @@ var night_casualties := 0
 var night_buildings_damaged := 0
 var night_enemies_spawned := 0
 var night_enemies_defeated_at_dusk := 0
+## Director: live raid bookkeeping for the Log panel. Reset each wave / dawn.
+var raid_active := false
+var raid_started_elapsed := 0.0
+var raid_steal_per_hit := 0
+var raid_enemies_killed := 0
+var raid_our_losses := 0
+var raid_buildings_damaged_ids: Dictionary = {}
+var raid_buildings_destroyed: Array[String] = []
+var raid_resources_lost: Dictionary = {}
+var raid_last_summary: Dictionary = {}
+var _combat_log_buckets: Dictionary = {}
 var shard_contacted := false
 var onboarding_shown: Dictionary = {}
 var priority_clear_tiles: Dictionary = {}
@@ -329,6 +341,7 @@ func start_new_run(width: int = MAP_WIDTH, height: int = MAP_HEIGHT, seed_value:
 	night_buildings_damaged = 0
 	night_enemies_spawned = 0
 	night_enemies_defeated_at_dusk = 0
+	_reset_raid_bookkeeping()
 	shard_contacted = false
 	onboarding_shown = Wyrdfall.load_onboarding()
 	pending_onboarding = {}
@@ -650,6 +663,8 @@ func advance_tick() -> void:
 	stamp = _profile_stamp()
 	_update_projectiles(TICK_SECONDS)
 	_profile_finish("projectiles", stamp)
+	_flush_combat_log(false)
+	_maybe_finish_raid()
 	stamp = _profile_stamp()
 	_update_objectives()
 	_profile_finish("objective_updates", stamp)
@@ -5457,6 +5472,7 @@ func _start_night() -> void:
 
 
 func _end_night() -> void:
+	_finish_raid("dawn")
 	is_night = false
 	phase_time = 0.0
 	night_warning_sent = false
@@ -5493,8 +5509,9 @@ func _spawn_wave() -> void:
 	var pressure := get_wyrd_pressure()
 	var plan := Wyrdfall.wave_plan(float(pressure.get("value", 0.0)), day_count, day_count <= 1, reckoning_active)
 	var wave_size := int(plan.get("size", 0))
-	var hp := int(plan.get("hp", 16))
-	var damage := int(plan.get("damage", 9))
+	var hp := int(plan.get("hp", RaidTuning.NIGHT1_HP))
+	var damage := int(plan.get("damage", RaidTuning.NIGHT1_DAMAGE))
+	var armor := int(plan.get("armor", RaidTuning.NIGHT1_ARMOR))
 	var roster: Array = plan.get("roster", [ENEMY_RAIDER])
 	if wave_size <= 0:
 		_add_log("The first night remains quiet. No raiders emerge.")
@@ -5505,8 +5522,9 @@ func _spawn_wave() -> void:
 		var origin: Vector2i = shard_position if spawn_origins.is_empty() else spawn_origins[i % spawn_origins.size()]
 		if is_tile_protected(origin) and not spawn_origins.is_empty():
 			origin = spawn_origins[i % spawn_origins.size()]
-		_spawn_enemy(origin, hp, damage, -0.08 * float(i), 0, String(roster[i % roster.size()]))
+		_spawn_enemy(origin, hp, damage, -0.08 * float(i), 0, String(roster[i % roster.size()]), armor)
 	night_enemies_spawned += wave_size
+	_begin_raid(int(plan.get("steal", RaidTuning.steal_for_night(day_count, day_count <= 1))))
 	if reckoning_active:
 		reckoning_waves_spawned += 1
 	var bearing := "the wilds"
@@ -5593,11 +5611,13 @@ func _spawn_enemy(
 	damage: int,
 	movement_delay: float = 0.0,
 	camp_id: int = 0,
-	enemy_type: String = ENEMY_RAIDER
+	enemy_type: String = ENEMY_RAIDER,
+	armor: int = 0
 ) -> void:
 	var tuning := _enemy_archetype(enemy_type)
 	var tuned_hp := maxi(1, roundi(float(hp) * float(tuning.get("hp", 1.0))))
 	var tuned_damage := maxi(1, roundi(float(damage) * float(tuning.get("damage", 1.0))))
+	var tuned_armor := maxi(0, armor + int(tuning.get("armor", 0)))
 	enemies.append({
 		"id": next_enemy_id,
 		"enemy_type": enemy_type,
@@ -5605,6 +5625,7 @@ func _spawn_enemy(
 		"hp": tuned_hp,
 		"max_hp": tuned_hp,
 		"damage": tuned_damage,
+		"armor": tuned_armor,
 		"speed_multiplier": float(tuning.get("speed", 1.0)),
 		"attack_range": int(tuning.get("range", 1)),
 		"attack_interval": float(tuning.get("interval", ENEMY_ATTACK_INTERVAL_SECONDS)),
@@ -5628,18 +5649,19 @@ func _spawn_enemy(
 
 func _enemy_archetype(enemy_type: String) -> Dictionary:
 	if enemy_type == ENEMY_SKITTERER:
-		return {"hp": 0.58, "damage": 0.70, "speed": 0.52, "range": 1, "interval": 1.25}
+		return {"hp": 0.58, "damage": 0.70, "speed": 0.52, "range": 1, "interval": 1.25, "armor": 0}
 	if enemy_type == ENEMY_BRUTE:
-		return {"hp": 2.35, "damage": 1.75, "speed": 1.48, "range": 1, "interval": 2.25}
+		return {"hp": 2.35, "damage": 1.75, "speed": 1.48, "range": 1, "interval": 2.25, "armor": 1}
 	if enemy_type == ENEMY_HEXER:
-		return {"hp": 0.82, "damage": 0.75, "speed": 1.08, "range": 4, "interval": 3.2}
-	return {"hp": 1.0, "damage": 1.0, "speed": 1.0, "range": 1, "interval": ENEMY_ATTACK_INTERVAL_SECONDS}
+		return {"hp": 0.82, "damage": 0.75, "speed": 1.08, "range": 4, "interval": 3.2, "armor": 0}
+	return {"hp": 1.0, "damage": 1.0, "speed": 1.0, "range": 1, "interval": ENEMY_ATTACK_INTERVAL_SECONDS, "armor": 0}
 
 
 func _update_enemies(delta: float) -> void:
 	for i in range(enemies.size() - 1, -1, -1):
 		var enemy: Dictionary = enemies[i]
 		if int(enemy["hp"]) <= 0:
+			_note_raid_enemy_killed(enemy)
 			enemies.remove_at(i)
 			stats["enemies_defeated"] = int(stats.get("enemies_defeated", 0)) + 1
 			continue
@@ -5650,7 +5672,7 @@ func _update_enemies(delta: float) -> void:
 
 
 func _update_enemy(enemy: Dictionary, delta: float) -> void:
-	if day_count <= 1 and is_night and phase_time >= 72.0 and not bool(enemy.get("retreating", false)):
+	if day_count <= 1 and is_night and phase_time >= RaidTuning.NIGHT1_RETREAT_SECONDS and not bool(enemy.get("retreating", false)):
 		enemy["retreating"] = true
 		enemy["path"] = []
 	if bool(enemy.get("retreating", false)):
@@ -5859,6 +5881,20 @@ func _find_enemy_target_unprofiled(enemy: Dictionary) -> Dictionary:
 			soldiers.append(worker)
 		else:
 			settlers.append(worker)
+	# Director: raiders siege stock and yards first. Fighting soldiers first
+	# melted the defence and never touched storage. Skitterers still hunt
+	# workers (handled above); raiders loot, then fight whoever is left.
+	var loot_buildings: Array = []
+	for building in buildings:
+		var loot_type := String(building["type"])
+		if bool(building.get("construction", false)):
+			continue
+		if loot_type in RaidTuning.LOOT_BUILDING_TYPES or loot_type in RaidTuning.STORAGE_BUILDING_TYPES:
+			if loot_type != Defs.BUILDING_TOWN_HALL:
+				loot_buildings.append(building)
+	result = _best_enemy_target(enemy, loot_buildings, "building", false)
+	if not result.is_empty():
+		return result
 	result = _best_enemy_target(enemy, soldiers, "worker", true)
 	if not result.is_empty():
 		return result
@@ -5954,6 +5990,7 @@ func _damage_worker(worker_id: int, amount: int, attacker_position: Vector2i = V
 			"damage": amount,
 			"hp": int(worker["hp"])
 		})
+		_combat_log_hit("raiders", _worker_log_name(worker), amount, "unit")
 		if int(worker["hp"]) > 0:
 			last_message = "%s is under attack." % String(worker.get("type", "Settler")).capitalize()
 			return
@@ -5984,6 +6021,7 @@ func _damage_worker(worker_id: int, amount: int, attacker_position: Vector2i = V
 		_add_log("A %s was lost outside shelter." % worker_type)
 		_record_event("worker_lost", "An exposed worker was lost.", {"worker_id": worker_id, "worker_type": worker_type})
 		night_casualties += 1
+		_note_raid_our_loss(worker_type)
 		_check_population_defeat()
 		return
 
@@ -5998,10 +6036,15 @@ func _damage_building(building: Dictionary, amount: int) -> void:
 		"damage": amount,
 		"hp": int(building["hp"])
 	})
+	_combat_log_hit("raiders", _display_building_name(building), amount, "building")
+	_note_raid_building_hit(building)
+	if String(building.get("type", "")) in RaidTuning.STORAGE_BUILDING_TYPES:
+		_raid_steal_stock(raid_steal_per_hit if raid_steal_per_hit > 0 else RaidTuning.steal_for_night(day_count, day_count <= 1))
 	if int(building["hp"]) > 0:
 		if is_night:
 			night_buildings_damaged += 1
 		return
+	_note_raid_building_destroyed(building)
 	_destroy_building_by_id(int(building["id"]), "destroyed", true)
 
 
@@ -6081,7 +6124,13 @@ func _cancel_building_logistics(building: Dictionary) -> void:
 		var local_inventory: Dictionary = building.get("local_inventory", {})
 		for resource_type in Defs.RESOURCE_TYPES:
 			var stored := int(local_inventory.get(resource_type, 0))
-			if stored > 0:
+			if stored <= 0:
+				continue
+			# Director: a raid that razes a building destroys the stock inside.
+			# Daytime teardown still returns cargo to the hall.
+			if raid_active:
+				_record_raid_resource_loss(String(resource_type), stored)
+			else:
 				central_inventory[resource_type] = int(central_inventory.get(resource_type, 0)) + stored
 
 
@@ -6158,16 +6207,17 @@ func _update_patrol_combat(delta: float) -> void:
 					_record_event("outpost_assault_hit", "A soldier struck the rival Outpost.", {"soldier_id": guard.id, "structure_id": target_outpost.id, "damage": GUARD_DAMAGE})
 				var target_enemy := _find_enemy_by_id(int(guard.get("combat_target_id", 0)))
 				if not target_enemy.is_empty() and _manhattan(guard["position"], target_enemy["position"]) <= 2:
-					target_enemy["hp"] = int(target_enemy.get("hp", 0)) - GUARD_DAMAGE
+					var dealt := _apply_enemy_incoming_damage(target_enemy, GUARD_DAMAGE)
 					target_enemy["hit_until"] = elapsed_seconds + 0.26
 					target_enemy["hit_direction"] = _vector_to_data(guard["position"])
 					_note_combat()
 					_credit_player_kill(target_enemy, "soldier", int(guard.get("id", 0)))
 					_emit_audio("attack")
+					_combat_log_hit("soldiers", Wyrdfall.enemy_role_name(String(target_enemy.get("enemy_type", ENEMY_RAIDER))), dealt, "enemy")
 					_record_event("patrol_attack", "A patrol soldier engaged a raider.", {
 						"soldier_id": int(guard.get("id", 0)),
 						"enemy_id": int(target_enemy.get("id", 0)),
-						"damage": GUARD_DAMAGE
+						"damage": dealt
 					})
 			continue
 		if float(guard["attack_timer"]) > 0.0:
@@ -6234,11 +6284,13 @@ func _update_projectiles(delta: float) -> void:
 			if not bool(projectiles[i].get("damage_applied", true)):
 				var target := _find_enemy_by_id(int(projectiles[i].get("target_enemy_id", 0)))
 				if not target.is_empty():
-					target["hp"] = int(target.get("hp", 0)) - int(projectiles[i].get("damage", 0))
+					var bolt := int(projectiles[i].get("damage", 0))
+					var dealt := _apply_enemy_incoming_damage(target, bolt)
 					target["hit_until"] = elapsed_seconds + 0.26
 					target["hit_direction"] = projectiles[i].get("from", _vector_to_data(Vector2i.ZERO))
 					_note_combat()
 					_credit_player_kill(target, "tower", 0)
+					_combat_log_hit("watchtower", Wyrdfall.enemy_role_name(String(target.get("enemy_type", ENEMY_RAIDER))), dealt, "enemy")
 				projectiles[i]["damage_applied"] = true
 			projectiles.remove_at(i)
 
@@ -6352,6 +6404,212 @@ func _add_log(message: String) -> void:
 	while log_entries.size() > 60:
 		log_entries.pop_front()
 	_record_event("realm_log", message)
+
+
+func _apply_enemy_incoming_damage(enemy: Dictionary, raw_damage: int) -> int:
+	var dealt := RaidTuning.apply_armor(raw_damage, int(enemy.get("armor", 0)))
+	enemy["hp"] = int(enemy.get("hp", 0)) - dealt
+	if int(enemy["hp"]) <= 0:
+		_note_raid_enemy_killed(enemy)
+	return dealt
+
+
+func _begin_raid(steal_per_hit: int) -> void:
+	if raid_active:
+		raid_steal_per_hit = steal_per_hit
+		return
+	raid_active = true
+	raid_started_elapsed = elapsed_seconds
+	raid_steal_per_hit = steal_per_hit
+	raid_enemies_killed = 0
+	raid_our_losses = 0
+	raid_buildings_damaged_ids.clear()
+	raid_buildings_destroyed.clear()
+	raid_resources_lost.clear()
+	raid_last_summary.clear()
+	_combat_log_buckets.clear()
+
+
+func _reset_raid_bookkeeping() -> void:
+	raid_active = false
+	raid_started_elapsed = 0.0
+	raid_steal_per_hit = 0
+	raid_enemies_killed = 0
+	raid_our_losses = 0
+	raid_buildings_damaged_ids.clear()
+	raid_buildings_destroyed.clear()
+	raid_resources_lost.clear()
+	raid_last_summary.clear()
+	_combat_log_buckets.clear()
+
+
+func _maybe_finish_raid() -> void:
+	if not raid_active:
+		return
+	if living_hostile_count() > 0:
+		return
+	_finish_raid("cleared")
+
+
+func _finish_raid(reason: String) -> void:
+	if not raid_active:
+		return
+	_flush_combat_log(true)
+	var duration := maxf(0.0, elapsed_seconds - raid_started_elapsed)
+	var lost_bits: Array[String] = []
+	for resource_type in RaidTuning.STEAL_RESOURCE_ORDER:
+		var taken := int(raid_resources_lost.get(resource_type, 0))
+		if taken > 0:
+			lost_bits.append("%d %s" % [taken, Defs.resource_name(resource_type)])
+	var resources_line := ", ".join(lost_bits) if not lost_bits.is_empty() else "none"
+	var destroyed_line := ", ".join(raid_buildings_destroyed) if not raid_buildings_destroyed.is_empty() else "none"
+	var body := "RAID OVER — %ds, %d enemies killed, %d lost, %d buildings damaged, %d destroyed (%s), resources lost: %s." % [
+		int(round(duration)),
+		raid_enemies_killed,
+		raid_our_losses,
+		raid_buildings_damaged_ids.size(),
+		raid_buildings_destroyed.size(),
+		destroyed_line,
+		resources_line
+	]
+	if reason == "dawn":
+		body = "RAID OVER at dawn — %ds, %d enemies killed, %d lost, %d buildings damaged, %d destroyed (%s), resources lost: %s." % [
+			int(round(duration)),
+			raid_enemies_killed,
+			raid_our_losses,
+			raid_buildings_damaged_ids.size(),
+			raid_buildings_destroyed.size(),
+			destroyed_line,
+			resources_line
+		]
+	raid_last_summary = {
+		"reason": reason,
+		"duration": snappedf(duration, 0.1),
+		"enemies_killed": raid_enemies_killed,
+		"our_losses": raid_our_losses,
+		"buildings_damaged": raid_buildings_damaged_ids.size(),
+		"buildings_destroyed": raid_buildings_destroyed.duplicate(),
+		"resources_lost": raid_resources_lost.duplicate(true),
+		"body": body
+	}
+	push_notice("danger", "RAID OVER", body, "warning")
+	_add_log(body)
+	_record_event("raid_summary", body, raid_last_summary.duplicate(true))
+	raid_active = false
+
+
+func _combat_log_hit(side: String, target_name: String, damage: int, kind: String) -> void:
+	if damage <= 0:
+		return
+	_begin_raid(raid_steal_per_hit if raid_steal_per_hit > 0 else RaidTuning.steal_for_night(day_count, day_count <= 1))
+	var key := "%s|%s|%s" % [side, kind, target_name]
+	var bucket: Dictionary = _combat_log_buckets.get(key, {})
+	if bucket.is_empty():
+		bucket = {
+			"side": side,
+			"kind": kind,
+			"target": target_name,
+			"damage": damage,
+			"hits": 1,
+			"started": elapsed_seconds
+		}
+	else:
+		bucket["damage"] = int(bucket.get("damage", 0)) + damage
+		bucket["hits"] = int(bucket.get("hits", 0)) + 1
+	_combat_log_buckets[key] = bucket
+	_flush_combat_log(false)
+
+
+func _flush_combat_log(force: bool) -> void:
+	var done: Array[String] = []
+	for key in _combat_log_buckets.keys():
+		var bucket: Dictionary = _combat_log_buckets[key]
+		if not force and elapsed_seconds - float(bucket.get("started", 0.0)) < RaidTuning.COMBAT_LOG_WINDOW_SECONDS:
+			continue
+		var side := String(bucket.get("side", "raiders"))
+		var target := String(bucket.get("target", "the camp"))
+		var damage := int(bucket.get("damage", 0))
+		var kind := String(bucket.get("kind", "building"))
+		var body := ""
+		if side == "raiders" and kind == "building":
+			body = "Raiders hit %s (-%d HP)" % [target, damage]
+		elif side == "raiders":
+			body = "Raiders hit %s (-%d HP)" % [target, damage]
+		elif side == "watchtower":
+			body = "Watchtower hit a %s (-%d HP)" % [target, damage]
+		else:
+			body = "Soldiers hit a %s (-%d HP)" % [target, damage]
+		push_notice("danger", "COMBAT", body, "warning")
+		_record_event("combat_log", body, bucket.duplicate(true))
+		done.append(String(key))
+	for key in done:
+		_combat_log_buckets.erase(key)
+
+
+func _note_raid_enemy_killed(enemy: Dictionary) -> void:
+	if bool(enemy.get("raid_kill_noted", false)):
+		return
+	enemy["raid_kill_noted"] = true
+	if raid_active or is_night:
+		_begin_raid(raid_steal_per_hit if raid_steal_per_hit > 0 else RaidTuning.steal_for_night(day_count, day_count <= 1))
+		raid_enemies_killed += 1
+	var role := Wyrdfall.enemy_role_name(String(enemy.get("enemy_type", ENEMY_RAIDER)))
+	push_notice("danger", "COMBAT", "A %s was slain." % role, "info")
+	_record_event("raid_enemy_killed", "A %s was slain." % role, {"enemy_id": int(enemy.get("id", 0))})
+
+
+func _note_raid_our_loss(worker_type: String) -> void:
+	if raid_active or is_night:
+		_begin_raid(raid_steal_per_hit if raid_steal_per_hit > 0 else RaidTuning.steal_for_night(day_count, day_count <= 1))
+		raid_our_losses += 1
+	var label := "soldier" if worker_type == "guard" else worker_type
+	push_notice("danger", "COMBAT", "A %s was lost." % label, "critical")
+
+
+func _note_raid_building_hit(building: Dictionary) -> void:
+	if not raid_active and not is_night:
+		return
+	raid_buildings_damaged_ids[int(building.get("id", 0))] = _display_building_name(building)
+
+
+func _note_raid_building_destroyed(building: Dictionary) -> void:
+	var name := _display_building_name(building)
+	_note_raid_building_hit(building)
+	raid_buildings_destroyed.append(name)
+	push_notice("danger", "COMBAT", "%s was destroyed." % name, "critical")
+
+
+func _raid_steal_stock(amount: int) -> void:
+	if amount <= 0:
+		return
+	var remaining := amount
+	for resource_type in RaidTuning.STEAL_RESOURCE_ORDER:
+		if remaining <= 0:
+			break
+		var available := get_available_resource(resource_type)
+		if available <= 0:
+			continue
+		var taken: int = mini(remaining, available)
+		central_inventory[resource_type] = int(central_inventory.get(resource_type, 0)) - taken
+		_record_raid_resource_loss(resource_type, taken)
+		remaining -= taken
+
+
+func _record_raid_resource_loss(resource_type: String, amount: int) -> void:
+	if amount <= 0:
+		return
+	raid_resources_lost[resource_type] = int(raid_resources_lost.get(resource_type, 0)) + amount
+
+
+func _worker_log_name(worker: Dictionary) -> String:
+	var worker_type := String(worker.get("type", "settler"))
+	if worker_type == "guard":
+		return "a Soldier"
+	return "a %s" % worker_type.capitalize()
+
+
+func get_raid_summary() -> Dictionary:
+	return raid_last_summary.duplicate(true)
 
 
 func _update_diagnostic_snapshot(delta: float) -> void:
@@ -7739,6 +7997,7 @@ func _restore_enemies(saved: Array) -> Array:
 		enemy["target_kind"] = String(enemy.get("target_kind", "building"))
 		enemy["target_position"] = enemy.get("target_position", _vector_to_data(shard_position))
 		enemy["attack_damage_applied"] = bool(enemy.get("attack_damage_applied", true))
+		enemy["armor"] = int(enemy.get("armor", 0))
 		enemy["hit_until"] = float(enemy.get("hit_until", 0.0))
 		enemy["hit_direction"] = enemy.get("hit_direction", _vector_to_data(Vector2i.ZERO))
 		var path := []
