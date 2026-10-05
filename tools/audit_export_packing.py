@@ -177,9 +177,14 @@ def preload_targets(export_files):
     for script in export_files:
         if not script.endswith(".gd") or not file_exists(script):
             continue
+        script_dir = os.path.dirname(script.replace("res://", ""))
         with open(script.replace("res://", ""), "r") as f:
-            for target in re.findall(r'preload\(\s*"(res://[^"]+)"\s*\)', f.read()):
-                targets.add(target)
+            for target in re.findall(r'preload\(\s*"([^"]+)"\s*\)', f.read()):
+                if target.startswith("res://"):
+                    targets.add(target)
+                elif target.endswith((".gd", ".tscn", ".png", ".wav", ".ogg")):
+                    resolved = os.path.normpath(os.path.join(script_dir, target)).replace("\\", "/")
+                    targets.add("res://" + resolved)
     return sorted(targets)
 
 

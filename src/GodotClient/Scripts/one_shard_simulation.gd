@@ -4,7 +4,7 @@ const Defs = preload("one_shard_defs.gd")
 const RivalryRules = preload("one_shard_rivalry.gd")
 const RivalryTuning = preload("one_shard_rivalry_tuning.gd")
 const Wyrdfall = preload("one_shard_wyrdfall.gd")
-const RaidTuning = preload("one_shard_raid_tuning.gd")
+const RaidTuning = preload("res://src/GodotClient/Scripts/one_shard_raid_tuning.gd")
 const SaveStore = preload("one_shard_save_store.gd")
 
 const SAVE_PATH := "user://one_shard_save.json"

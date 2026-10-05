@@ -36,7 +36,7 @@ const ACTIVITY_BY_BAND := {
 	BAND_CRITICAL: "Extreme"
 }
 
-const RaidTuning = preload("one_shard_raid_tuning.gd")
+const RaidTuning = preload("res://src/GodotClient/Scripts/one_shard_raid_tuning.gd")
 
 const ENEMY_RAIDER := "raider"
 const ENEMY_MARAUDER := "skitterer"
