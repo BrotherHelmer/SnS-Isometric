@@ -109,3 +109,8 @@ The core settlement sound effects in `assets/settlement/audio/` are **procedural
 **License**: CC0 Public Domain Dedication. These are original procedurally generated audio created for this project via `tools/generate_settlement_sfx.py`. No external samples, commercial assets, or copyrighted audio were used. Attribution optional.
 
 **Retained**: `ambience.wav`, `music.wav`, `destroyed.wav`, and `soldier.wav` from earlier phases remain unchanged pending further audio direction.
+## HUD interface art (T-SNS-UI, 2026-09-29)
+
+Path: `assets/settlement3d/runtime/interface/ui/` (20 PNGs): 9-slice frames (`frame_panel`, `frame_console`, `frame_bar`, `frame_slot`, `frame_toast`), stone buttons (`btn_normal`, `btn_hover`, `btn_pressed`, `btn_disabled`, `btn_tab_active`) and 48 px icons (wood, planks, stone, wheat, bread, wyrd, pop, sun, moon, soldier).
+
+**License**: CC0 Public Domain Dedication. Original, self-made art generated deterministically by `tools/generate_ui_art.py` (Python/Pillow, no external images, fonts or paid assets). Palette taken from the project's own `title_settlement_v1` stone-castle title art. Attribution optional.
