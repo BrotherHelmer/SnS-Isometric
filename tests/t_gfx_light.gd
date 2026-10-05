@@ -153,6 +153,8 @@ func _run() -> void:
 	print("GFX halo placements=%d overlap=%d" % [live.size(), overlap])
 	_check(overlap == 0, "halos never overlap footprints or road tiles")
 	_check(HaloCatalog.authored_for("HOUSE").size() >= 4 and HaloCatalog.authored_for("HOUSE").size() <= 12, "house halo table has 4–12 authored slots")
+	_check(HaloCatalog.prop_path("dirt_plot").contains("dirt_plot"), "story zones can place a dirt plot")
+	_check(HaloCatalog.authored_for("FARM").size() >= 6, "farm story zone is authored")
 	_check(HaloCatalog.authored_for("SAWMILL").size() >= 4, "sawmill halo table is authored")
 	_check(HaloCatalog.authored_for("BAKERY").size() >= 4, "bakery halo table is authored")
 	_check(HaloCatalog.authored_for("QUARRY").size() >= 4, "quarry halo table is authored")
