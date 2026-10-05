@@ -1298,7 +1298,6 @@ func _rebuild_road_stamps(desired: Dictionary) -> void:
 		child.free()
 	var tracks: Array = []
 	var muds: Array = []
-	var breaks: Array = []
 	var dirs := [Vector2(0.0, -1.0), Vector2(1.0, 0.0), Vector2(0.0, 1.0), Vector2(-1.0, 0.0)]
 	for key_value in desired:
 		var snapshot: Dictionary = desired[key_value]
@@ -1321,16 +1320,12 @@ func _rebuild_road_stamps(desired: Dictionary) -> void:
 			if index == 0 or (mask & (1 << 0) == 0 and index == 1):
 				var mid := world + Vector3(direction.x * 0.55, 0.032, direction.y * 0.55)
 				tracks.append(Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3(0.16, 1.0, 0.62)), mid))
-			if _tile_hash(tile, 7 + index) % 5 == 0:
-				var perp := Vector2(-direction.y, direction.x)
-				var side := 1.0 if _tile_hash(tile, 11 + index) % 2 == 0 else -1.0
-				var br := world + Vector3(direction.x * 0.38 + perp.x * 0.52 * side, 0.028, direction.y * 0.38 + perp.y * 0.52 * side)
-				breaks.append(Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3(0.30, 1.0, 0.16)), br))
 		if connections >= 3:
 			muds.append(Transform3D(Basis().scaled(Vector3(0.58, 1.0, 0.58)), world + Vector3(0.0, 0.026, 0.0)))
+	# The Director: two stamp batches only. Edge-breaks were a third
+	# MultiMesh for almost no camera-readable gain on lavapipe.
 	_spawn_road_stamp_multimesh("RoadTracks", tracks, Color(0.43, 0.33, 0.25, 0.50))
 	_spawn_road_stamp_multimesh("RoadMud", muds, Color(0.502, 0.388, 0.278, 0.42))
-	_spawn_road_stamp_multimesh("RoadEdgeBreaks", breaks, Color(0.36, 0.26, 0.20, 0.38))
 
 
 func _spawn_road_stamp_multimesh(node_name: String, transforms: Array, color: Color) -> void:
@@ -1915,6 +1910,11 @@ func apply_light_palette(palette: Dictionary) -> void:
 		ground_mat.set_shader_parameter("tint_floor", float(palette.get("ground_tint_floor", 0.0)))
 		ground_mat.set_shader_parameter("tint_wash_lo", float(palette.get("ground_wash_lo", 0.70)))
 		ground_mat.set_shader_parameter("tint_wash_hi", float(palette.get("ground_wash_hi", 0.94)))
+		ground_mat.set_shader_parameter("lod_cheap", float(palette.get("terrain_lod_cheap", 0.0)))
+	# Night/reckoning: hide road stamps. Clay reads as terrain at night
+	# and the extra MultiMeshes are wasted fill-rate on lavapipe.
+	if road_stamp_root != null:
+		road_stamp_root.visible = float(palette.get("terrain_lod_cheap", 0.0)) < 0.5
 	if edge_forest_root != null:
 		for child in edge_forest_root.get_children():
 			if child is MultiMeshInstance3D:

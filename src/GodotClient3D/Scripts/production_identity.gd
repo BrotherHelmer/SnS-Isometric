@@ -86,7 +86,8 @@ const LIGHTING := {
 		"torch_color": PALETTE_WINDOW,
 		"torch_range": 5.5,
 		"road_lift": 0.03,
-		"atmosphere_scale": 1.0
+		"atmosphere_scale": 1.0,
+		"terrain_lod_cheap": 0.0
 	},
 	"dusk": {
 		"ambient": 0.58,
@@ -121,7 +122,8 @@ const LIGHTING := {
 		"torch_color": PALETTE_WINDOW,
 		"torch_range": 5.8,
 		"road_lift": 0.04,
-		"atmosphere_scale": 0.55
+		"atmosphere_scale": 0.55,
+		"terrain_lod_cheap": 0.0
 	},
 	"night": {
 		"ambient": 0.66,
@@ -156,7 +158,8 @@ const LIGHTING := {
 		"torch_color": PALETTE_WINDOW,
 		"torch_range": 6.2,
 		"road_lift": 0.12,
-		"atmosphere_scale": 0.35
+		"atmosphere_scale": 0.35,
+		"terrain_lod_cheap": 1.0
 	},
 	"reckoning": {
 		"ambient": 0.44,
@@ -191,7 +194,8 @@ const LIGHTING := {
 		"torch_color": PALETTE_WINDOW,
 		"torch_range": 6.5,
 		"road_lift": 0.10,
-		"atmosphere_scale": 0.28
+		"atmosphere_scale": 0.28,
+		"terrain_lod_cheap": 1.0
 	}
 }
 

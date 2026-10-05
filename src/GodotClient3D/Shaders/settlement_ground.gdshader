@@ -17,6 +17,8 @@ uniform float detail_metres = 1.2;
 uniform float macro_amount = 0.078;
 uniform float detail_amount = 0.048;
 uniform float dirt_amount = 0.36;
+// 1 at night / distant LOD: one-octave noise, no 4-tap detail normals.
+uniform float lod_cheap = 0.0;
 
 varying vec3 world_pos;
 
@@ -40,9 +42,11 @@ void vertex() {
 }
 
 void fragment() {
-	float macro = fbm(world_pos.xz / max(macro_metres, 1.0));
-	float detail = fbm(world_pos.xz / max(detail_metres, 0.4) + vec2(8.2, 3.7));
-	float dirt_noise = fbm(world_pos.xz / (macro_metres * 1.35) + vec2(4.8, 21.0));
+	vec2 macro_uv = world_pos.xz / max(macro_metres, 1.0);
+	vec2 detail_uv = world_pos.xz / max(detail_metres, 0.4) + vec2(8.2, 3.7);
+	float macro = lod_cheap > 0.5 ? noise2(macro_uv) : fbm(macro_uv);
+	float detail = lod_cheap > 0.5 ? noise2(detail_uv) : fbm(detail_uv);
+	float dirt_noise = lod_cheap > 0.5 ? macro : fbm(world_pos.xz / (macro_metres * 1.35) + vec2(4.8, 21.0));
 	float dirt_mask = smoothstep(0.52, 0.84, dirt_noise);
 	vec3 grass = mix(grass_moss, grass_sunlit, clamp(macro * 0.7 + detail * 0.3, 0.0, 1.0));
 	// Vertex colour used to dominate (0.38), so the two-scale layer read as a
@@ -55,14 +59,17 @@ void fragment() {
 	float wash = smoothstep(tint_wash_lo, max(tint_wash_lo + 0.02, tint_wash_hi), macro);
 	vec3 albedo = ground * mix(vec3(1.0), light_tint, mix(tint_floor, 1.0, wash)) * macro_var * detail_var;
 	ALBEDO = albedo;
-	// Cheap detail normal from world-space height of the 0.8–2 m layer.
-	float d = 0.18;
-	float n_l = fbm((world_pos.xz + vec2(-d, 0.0)) / max(detail_metres, 0.4));
-	float n_r = fbm((world_pos.xz + vec2(d, 0.0)) / max(detail_metres, 0.4));
-	float n_d = fbm((world_pos.xz + vec2(0.0, -d)) / max(detail_metres, 0.4));
-	float n_u = fbm((world_pos.xz + vec2(0.0, d)) / max(detail_metres, 0.4));
-	vec3 bump = normalize(vec3((n_l - n_r) * 0.35, 1.0, (n_d - n_u) * 0.35));
 	vec3 world_up_view = normalize((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
-	NORMAL = normalize(mix(world_up_view, (VIEW_MATRIX * vec4(bump, 0.0)).xyz, 0.22));
+	// Strategy camera barely reads a 4-tap fbm bump. Skip it at night LOD
+	// (8 extra noise2) so lavapipe night stays inside the +15% guard.
+	if (lod_cheap > 0.5) {
+		NORMAL = world_up_view;
+	} else {
+		float d = 0.18;
+		float n_l = noise2((world_pos.xz + vec2(-d, 0.0)) / max(detail_metres, 0.4));
+		float n_r = noise2((world_pos.xz + vec2(d, 0.0)) / max(detail_metres, 0.4));
+		vec3 bump = normalize(vec3((n_l - n_r) * 0.35, 1.0, 0.0));
+		NORMAL = normalize(mix(world_up_view, (VIEW_MATRIX * vec4(bump, 0.0)).xyz, 0.18));
+	}
 	ROUGHNESS = mix(0.96, 0.88, dirt_mask);
 }
