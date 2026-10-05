@@ -33,7 +33,7 @@ func _ready() -> void:
 	title.text = "PROVINCE"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	Identity.apply_label(title, "caption")
-	title.add_theme_font_size_override("font_size", 10)
+	title.add_theme_font_size_override("font_size", 11)  # Look lift type floor: nothing under 11 px
 	title.add_theme_color_override("font_color", Identity.COLOR_LUMEN)
 	box.add_child(title)
 	map_image = TextureRect.new()

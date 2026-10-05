@@ -114,3 +114,26 @@ The core settlement sound effects in `assets/settlement/audio/` are **procedural
 Path: `assets/settlement3d/runtime/interface/ui/` (20 PNGs): 9-slice frames (`frame_panel`, `frame_console`, `frame_bar`, `frame_slot`, `frame_toast`), stone buttons (`btn_normal`, `btn_hover`, `btn_pressed`, `btn_disabled`, `btn_tab_active`) and 48 px icons (wood, planks, stone, wheat, bread, wyrd, pop, sun, moon, soldier).
 
 **License**: CC0 Public Domain Dedication. Original, self-made art generated deterministically by `tools/generate_ui_art.py` (Python/Pillow, no external images, fonts or paid assets). Palette taken from the project's own `title_settlement_v1` stone-castle title art. Attribution optional.
+
+## Look lift (T-SNS-UI, 2026-09-30)
+
+### Fonts — SIL Open Font License 1.1 (not CC0)
+
+Allowed by the owner's GO of 2026-09-30 ("inkl. SIL-OFL-fonte"). Both fonts are embedded unmodified; the OFL permits bundling, embedding and selling them with software. The licence text ships beside each font, and `docs/THIRD_PARTY_NOTICES.txt` carries the notices.
+
+| File (in `assets/settlement3d/runtime/interface/fonts/`) | Font / designer | Copyright | Source (downloaded 2026-09-30) | Bytes | SHA-256 | Licence text |
+| --- | --- | --- | --- | ---: | --- | --- |
+| `Cinzel-VF.ttf` | Cinzel (variable, wght 400–900), Natanael Gama | Copyright 2020 The Cinzel Project Authors (https://github.com/NDISCOVER/Cinzel) | `https://raw.githubusercontent.com/google/fonts/main/ofl/cinzel/Cinzel[wght].ttf` | 125,468 | `f4d83d34d1f6c741193e4acf4b3dff9531e5a67b6aa65228d00a7db72a4e0f34` | `OFL-Cinzel.txt` |
+| `SourceSans3-VF.ttf` | Source Sans 3 (variable, wght 200–900), Paul D. Hunt / Adobe | Copyright 2010-2020 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source' | `https://raw.githubusercontent.com/google/fonts/main/ofl/sourcesans3/SourceSans3[wght].ttf` | 646,340 | `042fe2cc0b933e328410d7acbd0aa6a1873dca5aef81875f4bc214b08825c7b9` | `OFL-SourceSans3.txt` |
+
+The files were renamed only, not modified, so the Reserved Font Name "Source" is used as permitted. `cinzel_bold.tres` is a Godot `FontVariation` resource (weight 700) that points at `Cinzel-VF.ttf`; it contains no font data. The google/fonts commit could not be pinned because the GitHub API was rate-limited when the files were fetched, so the URL, date and SHA-256 are the provenance.
+
+### HUD art additions — CC0 (self-made)
+
+`tools/generate_ui_art.py` now makes navy panels with a gold double hairline instead of the stone set (same file names), plus `frame_capsule`, `frame_alert` and 13 icons: pause, play, fast, menu, hammer, hourglass, swords, quest, house, worker, hunger, shield and road. Made the same way as the set above: original, deterministic Pillow art with no external inputs. CC0.
+
+### Building thumbnails — rendered from the game's own building models
+
+`assets/settlement3d/runtime/interface/thumbs/` has 16 PNGs at 160×120 with transparent backgrounds: the 14 build plans, Town Hall and Castle. Used in the 7×2 build grid and the selection portrait. `tools/render_building_thumbnails.gd` renders them offline under Xvfb, never at runtime. `thumbs/MANIFEST.txt` records the engine version, the camera and a SHA-256 per file.
+
+**Provenance correction:** the thumbnails are **not** renders of KayKit building models. They come from the game's own building views (`ProductionBuildingView3D`). Those use the project-authored `opening_style` meshes described under "Opening-style playable geometry" above; where the view adds them, KayKit CC0 props appear too (crates, tools, the bridge wall). The Clear Area thumbnail combines the project's `fir.tscn` and `rocks.tscn` with the KayKit CC0 `axe.gltf`. The Road thumbnail uses the game's road view. Rights therefore follow those source models: the project-authored geometry, which was adapted from pre-generated OpenAI image references, plus KayKit CC0.

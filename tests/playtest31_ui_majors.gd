@@ -101,9 +101,19 @@ func _run() -> void:
 	sim.central_inventory[Defs.RESOURCE_PLANKS] = 0
 	sim.central_inventory[Defs.RESOURCE_WOOD] = 0
 	game.begin_placement(Defs.BUILDING_BARRACKS)
-	print("PT31_UI unafford placement='%s' panel=%s toast=%s body='%s'" % [game.placement_type, str(game.placement_panel.visible), str(game.alert_panel.visible), game.toast_body.text])
+	# T-SNS-UI Look lift: no centre pop-ups during play. The warning now lands
+	# as one entry at the top of the left notice feed (critical notices alone
+	# use the top-right banner), so the check reads the feed instead of the toast.
+	var feed_text := ""
+	if not game.notice_feed_entries.is_empty():
+		for label in (game.notice_feed_entries[0]["node"] as Node).find_children("*", "Label", true, false):
+			feed_text += (label as Label).text + " "
+	print("PT31_UI unafford placement='%s' panel=%s banner=%s feed='%s'" % [game.placement_type, str(game.placement_panel.visible), str(game.alert_panel.visible), feed_text])
 	_check(not game.placement_panel.visible, "stale INVALID/placement hint hidden on unaffordable click")
-	_check(game.alert_panel.visible and game.toast_body.text.contains("Barracks"), "single toast names the building and missing resource")
+	_check(not game.alert_panel.visible and feed_text.contains("Insufficient Resources") and feed_text.contains("Barracks"), "one feed notice (no centre toast) names the building and missing resource")
+	var feed_count: int = game.notice_feed_entries.size()
+	game.begin_placement(Defs.BUILDING_BARRACKS)
+	_check(game.notice_feed_entries.size() == feed_count, "repeat clicks refresh the feed notice instead of stacking copies")
 	_check(game.resource_chip_flash_until.size() > 0, "missing resource chip flashes in the top bar")
 	game._update_ui()
 	var tip_back := false
