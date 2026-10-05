@@ -14,6 +14,7 @@ const FogScreenShader = preload("res://src/GodotClient3D/Shaders/production_fog_
 const BoundaryMistShader = preload("res://src/GodotClient3D/Shaders/production_boundary_mist.gdshader")
 const ContactAO = preload("res://src/GodotClient3D/Scripts/production_contact_ao.gd")
 const RoadStampShader = preload("res://src/GodotClient3D/Shaders/settlement_road_stamp.gdshader")
+const FoliageShader = preload("res://src/GodotClient3D/Shaders/settlement_foliage.gdshader")
 const FOG_MASK_DIVISOR := 1
 const FOG_VOLUME_PAD_METRES := 110.0
 const FOG_VOLUME_HEIGHT_METRES := 56.0
@@ -794,6 +795,7 @@ func _spawn_nature_multimeshes(host: Node3D, transforms_by_path: Dictionary) -> 
 		var instance := MultiMeshInstance3D.new()
 		instance.name = "Composed_%s" % String(path_value).get_file().get_basename()
 		instance.multimesh = multimesh
+		instance.material_override = _foliage_material(mesh, path_value)
 		host.add_child(instance)
 
 
@@ -1918,10 +1920,12 @@ func apply_light_palette(palette: Dictionary) -> void:
 	if edge_forest_root != null:
 		for child in edge_forest_root.get_children():
 			if child is MultiMeshInstance3D:
-				var mat := (child as MultiMeshInstance3D).material_override as StandardMaterial3D
-				if mat != null:
+				var mat := (child as MultiMeshInstance3D).material_override
+				if mat is ShaderMaterial:
+					(mat as ShaderMaterial).set_shader_parameter("atmosphere", atmosphere)
+				elif mat is StandardMaterial3D:
 					# Palette scale: day 1.0, dusk 0.55, night 0.35. Lit, not a cut-out.
-					mat.albedo_color = Color("#1c332c") * atmosphere
+					(mat as StandardMaterial3D).albedo_color = Color("#1c332c") * atmosphere
 	for view in building_views.values():
 		if view.has_method("apply_light_palette"):
 			view.apply_light_palette(window_color, torch_color, torch_range)
@@ -1942,22 +1946,28 @@ func _rebuild_edge_forest(force: bool) -> void:
 	for child in edge_forest_root.get_children():
 		edge_forest_root.remove_child(child)
 		child.free()
-	var fir_path := String(Catalog.EDGE_TREES[0])
 	var transforms_by_path: Dictionary = {}
+	var floors: Array = []
 	var step := 1 if foliage_density >= 0.75 else 2
 	for ring in range(1, 4):
 		for x in range(-ring, map_size.x + ring, step):
-			_append_edge_tree(transforms_by_path, fir_path, Vector2(float(x), float(-ring)), ring)
-			_append_edge_tree(transforms_by_path, fir_path, Vector2(float(x), float(map_size.y - 1 + ring)), ring)
+			_append_edge_tree(transforms_by_path, _edge_tree_path(x, -ring, ring), Vector2(float(x), float(-ring)), ring)
+			_append_edge_tree(transforms_by_path, _edge_tree_path(x, map_size.y - 1 + ring, ring), Vector2(float(x), float(map_size.y - 1 + ring)), ring)
 		for y in range(-ring + 1, map_size.y + ring - 1, step):
-			_append_edge_tree(transforms_by_path, fir_path, Vector2(float(-ring), float(y)), ring)
-			_append_edge_tree(transforms_by_path, fir_path, Vector2(float(map_size.x - 1 + ring), float(y)), ring)
+			_append_edge_tree(transforms_by_path, _edge_tree_path(-ring, y, ring), Vector2(float(-ring), float(y)), ring)
+			_append_edge_tree(transforms_by_path, _edge_tree_path(map_size.x - 1 + ring, y, ring), Vector2(float(map_size.x - 1 + ring), float(y)), ring)
 	_spawn_nature_multimeshes(edge_forest_root, transforms_by_path)
 	for child in edge_forest_root.get_children():
 		if child is MultiMeshInstance3D:
-			var instance := child as MultiMeshInstance3D
-			instance.material_override = _edge_forest_material()
-			instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			(child as MultiMeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# Darker forest floor under every fourth canopy. One MultiMesh, not Decals.
+	for path_value in transforms_by_path:
+		var batch: Array = transforms_by_path[path_value]
+		for index in batch.size():
+			if index % 4 != 0:
+				continue
+			floors.append(ContactAO.flatten_transform(batch[index], 2.1))
+	ContactAO.spawn_multimesh(edge_forest_root, floors, 0.20)
 
 
 func _append_edge_tree(groups: Dictionary, path_value: String, logical: Vector2, ring: int, index := 0) -> void:
@@ -1985,6 +1995,34 @@ func _unrevealed_touches_revealed(tile: Vector2i) -> bool:
 			if simulation.is_inside_map(sample) and simulation.is_revealed(sample):
 				return true
 	return false
+
+
+func _edge_tree_path(x: int, y: int, ring: int) -> String:
+	var n := Catalog.EDGE_TREES.size()
+	if n <= 0:
+		return String(Catalog.TREES[0])
+	return String(Catalog.EDGE_TREES[_tile_hash(Vector2i(x, y), 17 + ring) % n])
+
+
+func _foliage_material(mesh: Mesh, path_value: String) -> ShaderMaterial:
+	var material := ShaderMaterial.new()
+	material.shader = FoliageShader
+	var tint := Color("#2A3C30")
+	if String(path_value).contains("broadleaf") or String(path_value).contains("Tree_3"):
+		tint = Color("#3A4A28")
+	elif String(path_value).contains("Tree_4"):
+		tint = Color("#2E3824")
+	elif String(path_value).contains("Tree_2"):
+		tint = Color("#243830")
+	material.set_shader_parameter("albedo_color", Vector3(tint.r, tint.g, tint.b))
+	material.set_shader_parameter("atmosphere", _atmosphere_scale)
+	material.set_shader_parameter("wind", 0.07)
+	if mesh != null and mesh.get_surface_count() > 0:
+		var source := mesh.surface_get_material(0)
+		if source is StandardMaterial3D and (source as StandardMaterial3D).albedo_texture != null:
+			material.set_shader_parameter("has_texture", 1.0)
+			material.set_shader_parameter("albedo_tex", (source as StandardMaterial3D).albedo_texture)
+	return material
 
 
 func _edge_forest_material() -> StandardMaterial3D:

@@ -91,9 +91,24 @@ const WORKYARD_PROPS := {
 	"training_target": ROOT + "/buildings/target.gltf",
 }
 
-const TREES := [ROOT + "/opening_style/fir.tscn", ROOT + "/opening_style/broadleaf.tscn"]
+# The Director: GFX-08 — 6 tree silhouettes so the forest edge is not one cone.
+const TREES := [
+	ROOT + "/opening_style/fir.tscn",
+	ROOT + "/opening_style/broadleaf.tscn",
+	ROOT + "/nature/Tree_1_A_Color1.gltf",
+	ROOT + "/nature/Tree_2_A_Color1.gltf",
+	ROOT + "/nature/Tree_3_A_Color1.gltf",
+	ROOT + "/nature/Tree_4_A_Color1.gltf",
+]
 
-const EDGE_TREES := [ROOT + "/opening_style/fir.tscn"]
+const EDGE_TREES := [
+	ROOT + "/opening_style/fir.tscn",
+	ROOT + "/nature/Tree_1_A_Color1.gltf",
+	ROOT + "/nature/Tree_2_A_Color1.gltf",
+	ROOT + "/nature/Tree_3_A_Color1.gltf",
+	ROOT + "/opening_style/broadleaf.tscn",
+	ROOT + "/nature/Tree_4_A_Color1.gltf",
+]
 
 const ROCKS := [ROOT + "/opening_style/rocks.tscn"]
 

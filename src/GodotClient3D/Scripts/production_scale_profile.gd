@@ -81,9 +81,13 @@ const WORLD_PROP_SCALE := {
 # Only the three largest canopy models are reduced. Mature trees remain larger
 # than houses while no longer routinely diminishing the civic silhouette.
 const NATURE_MODEL_SCALE := {
+	"Tree_1_A_Color1": 0.88,
 	"Tree_1_C_Color1": 0.85,
+	"Tree_2_A_Color1": 0.90,
 	"Tree_2_B_Color1": 0.92,
 	"Tree_2_C_Color1": 0.88,
+	"Tree_3_A_Color1": 0.86,
+	"Tree_4_A_Color1": 0.84,
 }
 
 
