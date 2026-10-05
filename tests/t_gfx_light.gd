@@ -58,12 +58,13 @@ func _run() -> void:
 	_check(game.environment_resource.tonemap_mode == Environment.TONE_MAPPER_ACES, "tonemap stays ACES")
 
 	game.apply_quality_profile("recommended")
-	_check(game.environment_resource.ssil_enabled and game.environment_resource.glow_enabled, "recommended profile keeps SSIL and glow")
+	_check(not game.environment_resource.ssil_enabled and not game.environment_resource.glow_enabled, "recommended profile keeps SSIL and glow off")
 	game.apply_quality_profile("scalable_low")
 	_check(not game.environment_resource.ssil_enabled, "low profile disables SSIL")
 	_check(not game.environment_resource.glow_enabled, "low profile disables glow")
 	_check(not game.environment_resource.volumetric_fog_enabled, "low profile disables volumetrics")
 	game.apply_quality_profile("recommended")
+	_check(bool(QualityProfile.get_profile("recommended").get("ssil", true)) == false, "recommended table turns SSIL off")
 	_check(bool(QualityProfile.get_profile("scalable_low").get("ssil", true)) == false, "low profile table turns SSIL off")
 
 	var blocked := {}
@@ -89,6 +90,13 @@ func _run() -> void:
 	_check(HaloCatalog.authored_for("SAWMILL").size() >= 4, "sawmill halo table is authored")
 	_check(HaloCatalog.authored_for("BAKERY").size() >= 4, "bakery halo table is authored")
 	_check(HaloCatalog.authored_for("QUARRY").size() >= 4, "quarry halo table is authored")
+	_check(not HaloCatalog.prop_path("sack").contains("crate"), "sack does not reuse the crate model")
+	var illegal_ground := 0
+	for placement_value in live:
+		var tile: Vector2i = Dictionary(placement_value).get("tile", Vector2i.ZERO)
+		if not sim.is_inside_map(tile) or String(sim.get_tile(tile)) != Defs.TILE_GRASS:
+			illegal_ground += 1
+	_check(illegal_ground == 0, "halos only sit on revealed grass tiles")
 
 	_finish(game)
 

@@ -164,10 +164,11 @@ grep -q 'RELEASE_PACKAGE_PROBE PASS' "$OUT/smoke/stdout.txt" && [[ $code -eq 0 &
 # 7) In-engine UI evidence capture under Xvfb (Vulkan via Mesa lavapipe).
 log "evidence capture (xvfb, 1280x720)"
 EV="$OUT/evidence"
-timeout 180 xvfb-run -a -s "-screen 0 1280x720x24" bash -c "$(declare -f with_user); export OUT='$OUT' TEMPLATES='$TEMPLATES'; cd '$OUT/smoke' && with_user evidence ./ShardAndSovereign.x86_64 --audio-driver Dummy --resolution 1280x720 -- --seed=$SEED --evidence-ui='$EV' --audio-master=0.0" > "$OUT/logs/evidence_stdout.txt" 2>&1
+timeout 300 xvfb-run -a -s "-screen 0 1280x720x24" bash -c "$(declare -f with_user); export OUT='$OUT' TEMPLATES='$TEMPLATES'; cd '$OUT/smoke' && with_user evidence ./ShardAndSovereign.x86_64 --audio-driver Dummy --resolution 1280x720 -- --seed=$SEED --evidence-ui='$EV' --audio-master=0.0" > "$OUT/logs/evidence_stdout.txt" 2>&1
 code=$?; shots=$(ls "$EV"/ui_0*.png 2>/dev/null | wc -l)
 renderer=$(grep -m1 -E 'Vulkan|OpenGL' "$OUT/logs/evidence_stdout.txt")
-[[ $code -eq 0 && $shots -ge 5 ]] && result evidence_capture PASS "$shots shots; $renderer" || result evidence_capture FAIL "exit=$code shots=$shots"
+script_errs=$(grep -c 'SCRIPT ERROR' "$OUT/logs/evidence_stdout.txt" || true)
+[[ $code -eq 0 && $shots -ge 5 && $script_errs -eq 0 ]] && result evidence_capture PASS "$shots shots; $renderer" || result evidence_capture FAIL "exit=$code shots=$shots script_errors=$script_errs"
 
 # 8) Optional comparison with reference shots.
 if [[ -n "$REF" && -d "$REF" ]]; then

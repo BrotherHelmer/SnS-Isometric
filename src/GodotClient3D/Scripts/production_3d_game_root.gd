@@ -701,11 +701,11 @@ func _create_lighting() -> void:
 	environment.ssao_detail = 0.55
 	environment.ssao_horizon = 0.05
 	environment.ssao_sharpness = 0.97
-	environment.ssil_enabled = bool(quality_profile.get("ssil", true))
+	environment.ssil_enabled = bool(quality_profile.get("ssil", false))
 	environment.ssil_radius = 3.0
 	environment.ssil_intensity = 0.75
 	environment.ssil_sharpness = 0.96
-	environment.glow_enabled = bool(quality_profile.get("glow", true))
+	environment.glow_enabled = bool(quality_profile.get("glow", false))
 	environment.glow_normalized = true
 	environment.glow_intensity = 0.22
 	environment.glow_strength = 0.85
@@ -3744,8 +3744,8 @@ func _apply_quality_features() -> void:
 	if environment_resource == null:
 		return
 	environment_resource.ssao_enabled = bool(quality_profile.get("ssao", quality_profile.get("shadows", true)))
-	environment_resource.ssil_enabled = bool(quality_profile.get("ssil", true))
-	environment_resource.glow_enabled = bool(quality_profile.get("glow", true))
+	environment_resource.ssil_enabled = bool(quality_profile.get("ssil", false))
+	environment_resource.glow_enabled = bool(quality_profile.get("glow", false))
 	environment_resource.volumetric_fog_enabled = bool(quality_profile.get("volumetric_fog", false))
 
 
@@ -5304,6 +5304,54 @@ func _evidence_hover_point(point: Vector2) -> void:
 	Input.flush_buffered_events()
 
 
+func write_gfx_tile_mask_json(path: String) -> void:
+	# Sidecar for tools/gfx_pixel_gates.py: road tile centres vs grass two tiles away.
+	if world_view == null or camera_rig == null or camera_rig.camera == null or simulation_host == null:
+		return
+	var sim = simulation_host.simulation
+	if sim == null:
+		return
+	var cam: Camera3D = camera_rig.camera
+	var road_tiles: Array[Vector2i] = []
+	var road_set := {}
+	for key in sim.connected_roads.keys():
+		var parts := String(key).split(",")
+		if parts.size() != 2:
+			continue
+		var tile := Vector2i(int(parts[0]), int(parts[1]))
+		road_set[tile] = true
+		road_tiles.append(tile)
+	var roads: Array = []
+	var grass: Array = []
+	for tile in road_tiles:
+		var world := world_view.tile_to_world(Vector2(tile))
+		if cam.is_position_behind(world):
+			continue
+		var screen := cam.unproject_position(world)
+		roads.append([snappedf(screen.x, 0.1), snappedf(screen.y, 0.1)])
+	for y in world_view.map_size.y:
+		for x in world_view.map_size.x:
+			var tile := Vector2i(x, y)
+			if road_set.has(tile):
+				continue
+			if not sim.is_revealed(tile) or String(sim.get_tile(tile)) != Defs.TILE_GRASS:
+				continue
+			var min_d := 999
+			for road_tile in road_tiles:
+				min_d = mini(min_d, maxi(absi(tile.x - road_tile.x), absi(tile.y - road_tile.y)))
+			if min_d != 2:
+				continue
+			var world := world_view.tile_to_world(Vector2(tile))
+			if cam.is_position_behind(world):
+				continue
+			var screen := cam.unproject_position(world)
+			grass.append([snappedf(screen.x, 0.1), snappedf(screen.y, 0.1)])
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	if file == null:
+		return
+	file.store_string(JSON.stringify({"roads": roads, "grass": grass}))
+
+
 func _evidence_shot(shot_name: String, description: String) -> void:
 	_update_ui()
 	_refresh_resource_chip_flash()
@@ -5313,6 +5361,7 @@ func _evidence_shot(shot_name: String, description: String) -> void:
 	var err := ERR_UNAVAILABLE
 	if image != null and not image.is_empty():
 		err = image.save_png(path)
+		write_gfx_tile_mask_json(evidence_capture_dir.path_join(shot_name + ".roads.json"))
 	var planks_color := ""
 	if resource_chips.has("planks"):
 		planks_color = (resource_chips["planks"] as Label).get_theme_color("font_color").to_html(false)

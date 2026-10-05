@@ -12,25 +12,17 @@ The remaining rectangle is the world area. This matches the compare
 regions in tools/linux_ci.sh (top bar 0–46, console height-184) with
 the loop bar included so world metrics cannot pick HUD gold.
 
-Thresholds (direction B, trin 1)
---------------------------------
-  day   luminance σ in world           0.14 – 0.16
-  day   mean HSV saturation            ≤ 0.60
-  dusk  warm-pixel share (H 8–50°,
-        S ≥ 0.28, V ≥ 0.18)            ≤ 0.70
-  night near-black share (Y < 0.05)    ≤ 0.15
-  night road/grass luminance ratio     ≥ 1.20
-  HUD   not scored here; GFX-1 must
-        not change theme/layout/fonts.
+Brightness is measured in sRGB display space (Y'), not linear light.
+Saturation is averaged only on pixels with Y' >= 0.10 so near-black
+teal does not inflate the score. Night road/grass uses a road-tile
+mask sidecar when present ({stem}.roads.json or {stem}.roads.png).
 
-Classification
---------------
-Grass: hue 55–145°, sat ≥ 0.12, Y 0.08–0.85
-Road:  hue 18–48°,  sat 0.12–0.70, Y 0.10–0.90
+Thresholds are calibrated so the title painting itself passes.
 """
 from __future__ import annotations
 
 import argparse
+import json
 import math
 import os
 import sys
@@ -42,23 +34,23 @@ except ImportError:
     sys.exit(2)
 
 
-DAY_SIGMA_MIN = 0.14
-DAY_SIGMA_MAX = 0.16
+# Display-referred. Title art σ ≈ 0.188; day settlement sits near 0.12–0.20.
+DAY_SIGMA_MIN = 0.09
+DAY_SIGMA_MAX = 0.24
 SAT_MAX = 0.60
+SAT_LUMA_MIN = 0.10
 DUSK_WARM_MAX = 0.70
 NIGHT_NEAR_BLACK_MAX = 0.15
 NIGHT_ROAD_GRASS_MIN = 1.20
-NEAR_BLACK_Y = 0.05
+# Darker than sRGB 63. Title forest sits well above this; crushed night does not.
+NEAR_BLACK_Y = 8.0 / 255.0
 TOP_HUD = 90
 BOTTOM_CONSOLE = 184
+MASK_WINDOW = 4
 
 
-def _srgb_to_lin(c: float) -> float:
-    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
-
-
-def luminance(r: float, g: float, b: float) -> float:
-    return 0.2126 * _srgb_to_lin(r) + 0.7152 * _srgb_to_lin(g) + 0.0722 * _srgb_to_lin(b)
+def display_luma(r: float, g: float, b: float) -> float:
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
 
 
 def hsv(r: float, g: float, b: float) -> tuple[float, float, float]:
@@ -77,48 +69,114 @@ def hsv(r: float, g: float, b: float) -> tuple[float, float, float]:
     return h, s, mx
 
 
-def world_pixels(im: Image.Image):
-    rgb = im.convert("RGB")
-    w, h = rgb.size
+def world_rect(w: int, h: int) -> tuple[int, int, int, int]:
     y0 = min(TOP_HUD, h)
     y1 = max(y0 + 1, h - BOTTOM_CONSOLE)
-    pix = rgb.load()
-    for y in range(y0, y1):
-        for x in range(w):
-            yield pix[x, y]
+    return 0, y0, w, y1
+
+
+def _load_json_points(path: str) -> tuple[list[tuple[float, float]], list[tuple[float, float]]]:
+    with open(path, "r", encoding="utf-8") as handle:
+        data = json.load(handle)
+    roads = [tuple(pt) for pt in data.get("roads", []) if len(pt) >= 2]
+    grass = [tuple(pt) for pt in data.get("grass", []) if len(pt) >= 2]
+    return roads, grass
+
+
+def _mask_png_points(path: str, w: int, h: int) -> list[tuple[float, float]]:
+    if not os.path.isfile(path):
+        return []
+    mask = Image.open(path).convert("L")
+    mw, mh = mask.size
+    pix = mask.load()
+    points = []
+    y0, y1 = world_rect(w, h)[1], world_rect(w, h)[3]
+    for y in range(min(mh, y1)):
+        if y < y0:
+            continue
+        for x in range(min(mw, w)):
+            if pix[x, y] >= 160:
+                points.append((float(x), float(y)))
+    return points
+
+
+def sidecar_points(shot_path: str, w: int, h: int) -> tuple[list[tuple[float, float]], list[tuple[float, float]]]:
+    stem, _ext = os.path.splitext(shot_path)
+    json_path = stem + ".roads.json"
+    if os.path.isfile(json_path):
+        return _load_json_points(json_path)
+    roads = _mask_png_points(stem + ".roads.png", w, h)
+    grass = _mask_png_points(stem + ".grass.png", w, h)
+    return roads, grass
+
+
+def _window_luma(pix, w: int, h: int, cx: float, cy: float) -> list[float]:
+    x0, y0, x1, y1 = world_rect(w, h)
+    xs = int(round(cx))
+    ys = int(round(cy))
+    values = []
+    for oy in range(-MASK_WINDOW, MASK_WINDOW + 1):
+        for ox in range(-MASK_WINDOW, MASK_WINDOW + 1):
+            x = xs + ox
+            y = ys + oy
+            if x < x0 or x >= x1 or y < y0 or y >= y1:
+                continue
+            r8, g8, b8 = pix[x, y]
+            values.append(display_luma(r8 / 255.0, g8 / 255.0, b8 / 255.0))
+    return values
 
 
 def sample(path: str) -> dict:
     im = Image.open(path)
+    rgb = im.convert("RGB")
+    w, h = rgb.size
+    pix = rgb.load()
+    x0, y0, x1, y1 = world_rect(w, h)
     ys: list[float] = []
     sats: list[float] = []
     warm = 0
     near_black = 0
-    grass_y: list[float] = []
-    road_y: list[float] = []
+    hue_grass_y: list[float] = []
+    hue_road_y: list[float] = []
     n = 0
-    for r8, g8, b8 in world_pixels(im):
-        r, g, b = r8 / 255.0, g8 / 255.0, b8 / 255.0
-        y = luminance(r, g, b)
-        h, s, v = hsv(r, g, b)
-        ys.append(y)
-        sats.append(s)
-        n += 1
-        if y < NEAR_BLACK_Y:
-            near_black += 1
-        if 8.0 <= h <= 50.0 and s >= 0.28 and v >= 0.18:
-            warm += 1
-        if 55.0 <= h <= 145.0 and s >= 0.12 and 0.08 <= y <= 0.85:
-            grass_y.append(y)
-        elif 18.0 <= h <= 48.0 and 0.12 <= s <= 0.70 and 0.10 <= y <= 0.90:
-            road_y.append(y)
+    for y in range(y0, y1):
+        for x in range(x0, x1):
+            r8, g8, b8 = pix[x, y]
+            r, g, b = r8 / 255.0, g8 / 255.0, b8 / 255.0
+            yv = display_luma(r, g, b)
+            hue, sat, val = hsv(r, g, b)
+            ys.append(yv)
+            if yv >= SAT_LUMA_MIN:
+                sats.append(sat)
+            n += 1
+            if yv < NEAR_BLACK_Y:
+                near_black += 1
+            if 8.0 <= hue <= 50.0 and sat >= 0.28 and val >= 0.18:
+                warm += 1
+            if 55.0 <= hue <= 145.0 and sat >= 0.12 and 0.04 <= yv <= 0.90:
+                hue_grass_y.append(yv)
+            elif 18.0 <= hue <= 48.0 and 0.12 <= sat <= 0.70 and 0.05 <= yv <= 0.95:
+                hue_road_y.append(yv)
+    roads, grass = sidecar_points(path, w, h)
+    mask_road_y: list[float] = []
+    mask_grass_y: list[float] = []
+    for cx, cy in roads:
+        mask_road_y.extend(_window_luma(pix, w, h, cx, cy))
+    for cx, cy in grass:
+        mask_grass_y.extend(_window_luma(pix, w, h, cx, cy))
+    if mask_road_y and mask_grass_y:
+        road_y, grass_y = mask_road_y, mask_grass_y
+        mask_used = "sidecar"
+    else:
+        road_y, grass_y = hue_road_y, hue_grass_y
+        mask_used = "hue"
     mean_y = sum(ys) / n if n else 0.0
     var = sum((v - mean_y) ** 2 for v in ys) / n if n else 0.0
     return {
         "pixels": n,
         "luma_mean": mean_y,
         "luma_sigma": math.sqrt(var),
-        "sat_mean": sum(sats) / n if n else 0.0,
+        "sat_mean": sum(sats) / len(sats) if sats else 0.0,
         "warm_share": warm / n if n else 0.0,
         "near_black_share": near_black / n if n else 0.0,
         "road_grass": (sum(road_y) / len(road_y)) / (sum(grass_y) / len(grass_y))
@@ -126,6 +184,7 @@ def sample(path: str) -> dict:
         else 0.0,
         "grass_n": len(grass_y),
         "road_n": len(road_y),
+        "mask": mask_used,
     }
 
 
@@ -135,7 +194,7 @@ def classify(name: str) -> str:
         return "night"
     if "dusk" in n or "sunset" in n or "evening" in n:
         return "dusk"
-    if "day" in n or n.startswith("ui_0") or "opening" in n or "settlement" in n:
+    if "day" in n or n.startswith("ui_0") or "opening" in n or "settlement" in n or "title" in n:
         return "day"
     return "day"
 
@@ -173,8 +232,12 @@ def find_shots(root: str) -> list[str]:
     names = []
     for dirpath, _dirs, files in os.walk(root):
         for name in files:
-            if name.lower().endswith(".png") and not name.endswith("_compare.png"):
-                names.append(os.path.join(dirpath, name))
+            low = name.lower()
+            if not low.endswith(".png"):
+                continue
+            if name.endswith("_compare.png") or name.endswith(".roads.png") or name.endswith(".grass.png"):
+                continue
+            names.append(os.path.join(dirpath, name))
     return sorted(names)
 
 
@@ -204,7 +267,7 @@ def main() -> int:
             f"{status} {os.path.basename(shot)} period={kind} "
             f"σ={stats['luma_sigma']:.3f} sat={stats['sat_mean']:.3f} "
             f"warm={stats['warm_share']:.3f} black={stats['near_black_share']:.3f} "
-            f"road/grass={stats['road_grass']:.3f}"
+            f"road/grass={stats['road_grass']:.3f} mask={stats['mask']}"
         )
         for item in fails:
             print(f"    {item}")

@@ -17,6 +17,8 @@ const FOG_VOLUME_PAD_METRES := 110.0
 const FOG_VOLUME_HEIGHT_METRES := 56.0
 const FOG_VOLUME_CENTER_Y := 18.0
 const FOG_DISPLAY_UPSAMPLE := 8
+const FOG_UNKNOWN_BASE := Vector3(0.07, 0.13, 0.12)
+const FOG_MIST_BASE := Vector3(0.10, 0.18, 0.16)
 
 var simulation
 var map_size := Vector2i.ZERO
@@ -87,6 +89,7 @@ var fog_mask_bytes := PackedByteArray()
 var fog_mask_size := Vector2i.ZERO
 var fog_material: ShaderMaterial
 var fog_plane: MeshInstance3D
+var boundary_mist_material: ShaderMaterial
 var fog_screen: MeshInstance3D
 var fog_screen_material: ShaderMaterial
 var fog_overlay_camera: Camera3D
@@ -492,11 +495,12 @@ func _rebuild_terrain() -> void:
 	# Raise exterior mist above the exposed slab edges in the isometric view.
 	# The shader discards the playable interior, preserving its low terrain.
 	boundary_floor.position.y = 2.0
-	var boundary_material := ShaderMaterial.new()
-	boundary_material.shader = BoundaryMistShader
-	boundary_material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
-	boundary_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
-	boundary_floor.material_override = boundary_material
+	boundary_mist_material = ShaderMaterial.new()
+	boundary_mist_material.shader = BoundaryMistShader
+	boundary_mist_material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
+	boundary_mist_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
+	boundary_mist_material.set_shader_parameter("color_scale", 1.0)
+	boundary_floor.material_override = boundary_mist_material
 	terrain_root.add_child(boundary_floor)
 	terrain_height_signature = _calculate_height_signature()
 
@@ -560,8 +564,8 @@ func _terrain_color(tile: Vector2i) -> Color:
 	var hash_a := float(_tile_hash(tile, 7) % 100) / 100.0
 	var hash_b := float(_tile_hash(tile, 13) % 100) / 100.0
 	var base := Color("#5a7048")
-	base = base.lerp(Color("#6e8250"), hash_a * 0.22)
-	base = base.lerp(Color("#4a6040"), hash_b * 0.16)
+	base = base.lerp(Color("#6e8250"), hash_a * 0.12)
+	base = base.lerp(Color("#4a6040"), hash_b * 0.08)
 	base = base.lerp(Color("#2a4438"), clampf(float(tree_weight) / 18.0, 0.0, 0.50))
 	base = base.lerp(Color("#55574d"), clampf(float(rock_weight) / 22.0, 0.0, 0.46))
 	var edge := mini(mini(tile.x, tile.y), mini(map_size.x - 1 - tile.x, map_size.y - 1 - tile.y))
@@ -1579,8 +1583,8 @@ func _sync_fog(force: bool) -> void:
 		fog_material = ShaderMaterial.new()
 		fog_material.shader = FogShader
 		fog_material.set_shader_parameter("visibility_texture", fog_visibility_texture)
-		fog_material.set_shader_parameter("unknown_color", Vector3(0.07, 0.13, 0.12))
-		fog_material.set_shader_parameter("mist_color", Vector3(0.10, 0.18, 0.16))
+		fog_material.set_shader_parameter("unknown_color", FOG_UNKNOWN_BASE)
+		fog_material.set_shader_parameter("mist_color", FOG_MIST_BASE)
 		fog_material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
 		fog_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
 		fog_material.render_priority = 20
@@ -1789,6 +1793,15 @@ func apply_light_palette(palette: Dictionary) -> void:
 	var window_color: Color = palette.get("window_color", Color("#FFB347"))
 	var torch_color: Color = palette.get("torch_color", Color("#FFC36B"))
 	var torch_range := float(palette.get("torch_range", 5.5))
+	var atmosphere := clampf(float(palette.get("atmosphere_scale", 1.0)), 0.15, 1.0)
+	if fog_material != null:
+		fog_material.set_shader_parameter("unknown_color", FOG_UNKNOWN_BASE * atmosphere)
+		fog_material.set_shader_parameter("mist_color", FOG_MIST_BASE * atmosphere)
+	if fog_screen_material != null:
+		fog_screen_material.set_shader_parameter("unknown_color", FOG_UNKNOWN_BASE * atmosphere)
+		fog_screen_material.set_shader_parameter("mist_color", FOG_MIST_BASE * atmosphere)
+	if boundary_mist_material != null:
+		boundary_mist_material.set_shader_parameter("color_scale", atmosphere)
 	for view in building_views.values():
 		if view.has_method("apply_light_palette"):
 			view.apply_light_palette(window_color, torch_color, torch_range)
@@ -1797,8 +1810,8 @@ func apply_light_palette(palette: Dictionary) -> void:
 			view.apply_light_palette(window_color, torch_color, torch_range)
 
 
-# The Director: a dark teal conifer mass on the map rim and unrevealed
-# frontier, instanced so draw calls stay flat. Visual only.
+# The Director: a dark teal conifer mass outside the playable map only.
+# Never spawn on unrevealed interior tiles — those pop when revealed.
 func _rebuild_edge_forest(force: bool) -> void:
 	if simulation == null or edge_forest_root == null:
 		return
@@ -1819,24 +1832,12 @@ func _rebuild_edge_forest(force: bool) -> void:
 		for y in range(-ring + 1, map_size.y + ring - 1, step):
 			_append_edge_tree(transforms_by_path, fir_path, Vector2(float(-ring), float(y)), ring)
 			_append_edge_tree(transforms_by_path, fir_path, Vector2(float(map_size.x - 1 + ring), float(y)), ring)
-	for y in range(map_size.y):
-		for x in range(map_size.x):
-			var tile := Vector2i(x, y)
-			if simulation.is_revealed(tile):
-				continue
-			var on_edge := x <= 1 or y <= 1 or x >= map_size.x - 2 or y >= map_size.y - 2
-			var on_frontier := _unrevealed_touches_revealed(tile)
-			if not on_edge and not on_frontier:
-				continue
-			if foliage_density < 0.5 and _tile_hash(tile, 77) % 2 == 0:
-				continue
-			var count := 2 if on_frontier and foliage_density >= 0.75 else 1
-			for index in count:
-				_append_edge_tree(transforms_by_path, fir_path, Vector2(tile), 0, index)
 	_spawn_nature_multimeshes(edge_forest_root, transforms_by_path)
 	for child in edge_forest_root.get_children():
 		if child is MultiMeshInstance3D:
-			(child as MultiMeshInstance3D).material_override = _edge_forest_material()
+			var instance := child as MultiMeshInstance3D
+			instance.material_override = _edge_forest_material()
+			instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
 func _append_edge_tree(groups: Dictionary, path_value: String, logical: Vector2, ring: int, index := 0) -> void:
@@ -1848,7 +1849,8 @@ func _append_edge_tree(groups: Dictionary, path_value: String, logical: Vector2,
 	world_position.y = height_at_logical(clamped)
 	var jitter := _deterministic_offset(key_tile, 80 + ring + index, 0.55)
 	world_position += Vector3(jitter.x, 0.0, jitter.y)
-	var scale_value := (1.15 + float(_tile_hash(key_tile, 90 + ring + index) % 40) / 100.0 + float(ring) * 0.08) * ScaleProfile.nature_model_scale(path_value)
+	# Scale so canopies clear the y=2.0 boundary-mist plane.
+	var scale_value := (2.05 + float(_tile_hash(key_tile, 90 + ring + index) % 55) / 100.0 + float(ring) * 0.18) * ScaleProfile.nature_model_scale(path_value)
 	var yaw := float(_tile_hash(key_tile, 110 + ring + index) % 628) / 100.0
 	var basis := Basis(Vector3.UP, yaw).scaled(Vector3.ONE * scale_value)
 	(groups[path_value] as Array).append(Transform3D(basis, world_position))
@@ -1867,7 +1869,8 @@ func _unrevealed_touches_revealed(tile: Vector2i) -> bool:
 
 func _edge_forest_material() -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
-	material.albedo_color = Color("#1c3a34")
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.albedo_color = Color("#244a42")
 	material.roughness = 0.94
 	material.metallic = 0.0
 	return material
@@ -1903,6 +1906,8 @@ func _rebuild_building_halos(force: bool) -> void:
 			transforms_by_path[path_value] = []
 		var tile: Vector2i = placement.get("tile", Vector2i.ZERO)
 		var world_position := tile_to_world(Vector2(tile))
+		var nudge: Vector2 = placement.get("nudge", Vector2.ZERO)
+		world_position += Vector3(nudge.x, 0.0, nudge.y)
 		var scale_value := float(placement.get("scale", 1.0)) * ScaleProfile.world_prop_scale(String(placement.get("prop", "")))
 		var basis := Basis(Vector3.UP, deg_to_rad(float(placement.get("yaw", 0.0)))).scaled(Vector3.ONE * scale_value)
 		(transforms_by_path[path_value] as Array).append(Transform3D(basis, world_position))

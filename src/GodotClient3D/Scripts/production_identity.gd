@@ -38,7 +38,7 @@ const AUDIO_SETTINGS_PATH := "user://one_shard_audio.json"
 # sits on the opposite side without lerping through the camera during dawn.
 const LIGHTING := {
 	"day": {
-		"ambient": 0.62,
+		"ambient": 0.55,
 		"ambient_color": Color("#718FA3"),
 		"fog_density": 0.0004,
 		"fog_color": Color("#607681"),
@@ -51,8 +51,8 @@ const LIGHTING := {
 		"contrast": 1.10,
 		"exposure": 0.95,
 		"tonemap_white": 6.5,
-		"sun_energy": 1.25,
-		"sun_color": Color("#FFD09A"),
+		"sun_energy": 1.45,
+		"sun_color": Color("#FFC888"),
 		"sun_pitch": -25.0,
 		"sun_orbit": 120.0,
 		"fill_energy": 0.18,
@@ -64,10 +64,11 @@ const LIGHTING := {
 		"window_color": Color("#FFB347"),
 		"torch_color": Color("#FFB347"),
 		"torch_range": 5.5,
-		"road_lift": 0.06
+		"road_lift": 0.06,
+		"atmosphere_scale": 1.0
 	},
 	"dusk": {
-		"ambient": 0.48,
+		"ambient": 0.58,
 		"ambient_color": Color("#435A78"),
 		"fog_density": 0.0006,
 		"fog_color": Color("#4B6172"),
@@ -78,11 +79,11 @@ const LIGHTING := {
 		"fog_sun_scatter": 0.32,
 		"saturation": 1.00,
 		"contrast": 1.08,
-		"exposure": 0.90,
+		"exposure": 1.0,
 		"tonemap_white": 6.2,
 		"sun_energy": 0.85,
 		"sun_color": Color("#FF9A61"),
-		"sun_pitch": -10.0,
+		"sun_pitch": -16.0,
 		"sun_orbit": 120.0,
 		"fill_energy": 0.16,
 		"fill_color": Color("#5A6E88"),
@@ -93,11 +94,12 @@ const LIGHTING := {
 		"window_color": Color("#FFB347"),
 		"torch_color": Color("#FFB347"),
 		"torch_range": 5.8,
-		"road_lift": 0.12
+		"road_lift": 0.18,
+		"atmosphere_scale": 0.55
 	},
 	"night": {
-		"ambient": 0.36,
-		"ambient_color": Color("#182A45"),
+		"ambient": 0.55,
+		"ambient_color": Color("#2A4466"),
 		"fog_density": 0.0008,
 		"fog_color": Color("#203652"),
 		"fog_energy": 0.46,
@@ -107,9 +109,9 @@ const LIGHTING := {
 		"fog_sun_scatter": 0.12,
 		"saturation": 0.88,
 		"contrast": 1.06,
-		"exposure": 0.86,
+		"exposure": 1.0,
 		"tonemap_white": 5.8,
-		"sun_energy": 0.33,
+		"sun_energy": 0.45,
 		"sun_color": Color("#91B8FF"),
 		"sun_pitch": -48.0,
 		"sun_orbit": 300.0,
@@ -122,10 +124,11 @@ const LIGHTING := {
 		"window_color": Color("#FFB347"),
 		"torch_color": Color("#FFC36B"),
 		"torch_range": 6.2,
-		"road_lift": 0.30
+		"road_lift": 0.42,
+		"atmosphere_scale": 0.35
 	},
 	"reckoning": {
-		"ambient": 0.30,
+		"ambient": 0.42,
 		"ambient_color": Color("#1A2040"),
 		"fog_density": 0.0012,
 		"fog_color": Color("#243458"),
@@ -136,9 +139,9 @@ const LIGHTING := {
 		"fog_sun_scatter": 0.10,
 		"saturation": 0.84,
 		"contrast": 1.14,
-		"exposure": 0.82,
+		"exposure": 0.90,
 		"tonemap_white": 5.4,
-		"sun_energy": 0.22,
+		"sun_energy": 0.28,
 		"sun_color": Color("#7A9AD0"),
 		"sun_pitch": -42.0,
 		"sun_orbit": 300.0,
@@ -151,7 +154,8 @@ const LIGHTING := {
 		"window_color": Color("#FFB347"),
 		"torch_color": Color("#FFC36B"),
 		"torch_range": 6.5,
-		"road_lift": 0.26
+		"road_lift": 0.32,
+		"atmosphere_scale": 0.28
 	}
 }
 
@@ -317,10 +321,10 @@ static func build_grade_lut() -> ImageTexture:
 
 
 static func _grade_curve(t: float) -> float:
-	# Authored: 0→0, 0.18→0.12, 0.45→0.50, 0.72→0.82, 1→0.96
+	# Authored: 0→0, 0.18→0.145, 0.45→0.50, 0.72→0.82, 1→0.96
 	var knots := [
 		Vector2(0.0, 0.0),
-		Vector2(0.18, 0.12),
+		Vector2(0.18, 0.145),
 		Vector2(0.45, 0.50),
 		Vector2(0.72, 0.82),
 		Vector2(1.0, 0.96)

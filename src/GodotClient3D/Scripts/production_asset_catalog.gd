@@ -108,7 +108,7 @@ const HALO_PROPS := {
 	"barrel": ROOT + "/buildings/barrel.gltf",
 	"crate": ROOT + "/buildings/crate_A_small.gltf",
 	"long_crate": ROOT + "/buildings/crate_long_A.gltf",
-	"sack": ROOT + "/buildings/crate_A_small.gltf",
+	"sack": ROOT + "/opening_style/wheat.tscn",
 	"chopping_block": ROOT + "/resources/Wood_Log_A.gltf",
 	"fence": ROOT + "/opening_style/fence.tscn",
 	"lantern": ROOT + "/opening_style/lantern.tscn",

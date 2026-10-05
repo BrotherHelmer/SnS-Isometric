@@ -54,9 +54,11 @@ const TABLE := {
 		{"prop": "wheelbarrow", "dx": 2, "dy": -1, "yaw": 18.0, "scale": 0.75},
 	],
 	"FARM": [
-		{"prop": "wheat_field", "dx": -2, "dy": 0, "yaw": 0.0, "scale": 1.15, "span": Vector2i(2, 2)},
+		{"prop": "wheat_field", "dx": -2, "dy": 0, "yaw": 0.0, "scale": 1.20, "span": Vector2i(2, 2), "density": 4},
 		{"prop": "wheat_crop", "dx": 4, "dy": 0, "yaw": 8.0, "scale": 1.20},
-		{"prop": "wheat_crop", "dx": 4, "dy": 1, "yaw": -6.0, "scale": 1.10},
+		{"prop": "wheat_crop", "dx": 4, "dy": 1, "yaw": -6.0, "scale": 1.15},
+		{"prop": "wheat_crop", "dx": 5, "dy": 0, "yaw": 14.0, "scale": 1.10},
+		{"prop": "wheat_crop", "dx": 5, "dy": 1, "yaw": -10.0, "scale": 1.05},
 		{"prop": "fence", "dx": -1, "dy": -1, "yaw": 0.0, "scale": 1.0},
 		{"prop": "fence", "dx": 0, "dy": -1, "yaw": 0.0, "scale": 1.0},
 		{"prop": "barrel", "dx": 4, "dy": 2, "yaw": 14.0, "scale": 1.00},
@@ -68,7 +70,7 @@ const TABLE := {
 		{"prop": "barrel", "dx": 4, "dy": 2, "yaw": 16.0, "scale": 1.05},
 		{"prop": "crate", "dx": -1, "dy": 1, "yaw": 8.0, "scale": 1.00},
 		{"prop": "lantern", "dx": 1, "dy": -1, "yaw": 0.0, "scale": 1.00},
-		{"prop": "fence", "dx": 2, "dy": -1, "yaw": 0.0, "scale": 1.00},
+		{"prop": "crate", "dx": 2, "dy": -1, "yaw": 4.0, "scale": 0.95},
 	],
 	"CASTLE": [
 		{"prop": "weaponrack", "dx": -1, "dy": 1, "yaw": 90.0, "scale": 0.95},
@@ -103,7 +105,7 @@ const TABLE := {
 		{"prop": "lantern", "dx": 2, "dy": 0, "yaw": 0.0, "scale": 1.00},
 		{"prop": "barrel", "dx": -1, "dy": 0, "yaw": 10.0, "scale": 0.95},
 		{"prop": "crate", "dx": 0, "dy": -1, "yaw": 6.0, "scale": 0.90},
-		{"prop": "fence", "dx": -1, "dy": 1, "yaw": 90.0, "scale": 1.00},
+		{"prop": "barrel", "dx": -1, "dy": 1, "yaw": 8.0, "scale": 0.90},
 	],
 }
 
@@ -143,16 +145,19 @@ static func resolve(building: Dictionary, blocked: Dictionary) -> Array:
 			continue
 		_mark_span(reserved, world_tile, world_span)
 		if String(slot.get("prop", "")) == "wheat_field":
+			var density := maxi(1, int(slot.get("density", 1)))
 			for oy in world_span.y:
 				for ox in world_span.x:
-					placements.append({
-						"prop": "wheat_crop",
-						"tile": world_tile + Vector2i(ox, oy),
-						"yaw": float(slot.get("yaw", 0.0)) + float((ox * 17 + oy * 11) % 24) - 12.0,
-						"scale": float(slot.get("scale", 1.0)),
-						"building_id": int(building.get("id", 0)),
-						"building_type": type_name,
-					})
+					for copy in density:
+						placements.append({
+							"prop": "wheat_crop",
+							"tile": world_tile + Vector2i(ox, oy),
+							"yaw": float(slot.get("yaw", 0.0)) + float((ox * 17 + oy * 11 + copy * 29) % 36) - 18.0,
+							"scale": float(slot.get("scale", 1.0)) * (0.88 + float(copy) * 0.06),
+							"nudge": Vector2(float(copy % 2) * 0.55 - 0.28, float(copy / 2) * 0.55 - 0.18),
+							"building_id": int(building.get("id", 0)),
+							"building_type": type_name,
+						})
 			continue
 		placements.append({
 			"prop": String(slot.get("prop", "")),
@@ -183,7 +188,47 @@ static func resolve_world(simulation) -> Array:
 	var placements: Array = []
 	for building_value in simulation.get_buildings():
 		placements.append_array(resolve(building_value, blocked))
-	return placements
+	var kept: Array = []
+	for placement_value in placements:
+		var tile: Vector2i = Dictionary(placement_value).get("tile", Vector2i.ZERO)
+		if not _tile_accepts_prop(simulation, tile):
+			continue
+		kept.append(placement_value)
+	return _drop_orphan_fences(kept)
+
+
+static func _tile_accepts_prop(simulation, tile: Vector2i) -> bool:
+	if simulation == null or not simulation.is_inside_map(tile):
+		return false
+	if simulation.has_method("is_revealed") and not bool(simulation.is_revealed(tile)):
+		return false
+	return String(simulation.get_tile(tile)) == Defs.TILE_GRASS
+
+
+static func _drop_orphan_fences(placements: Array) -> Array:
+	var fence_tiles := {}
+	for placement_value in placements:
+		var placement: Dictionary = placement_value
+		if String(placement.get("prop", "")) != "fence":
+			continue
+		fence_tiles[_tile_key(Vector2i(placement.get("tile", Vector2i.ZERO)))] = true
+	var kept: Array = []
+	for placement_value in placements:
+		var placement: Dictionary = placement_value
+		if String(placement.get("prop", "")) != "fence":
+			kept.append(placement)
+			continue
+		var tile: Vector2i = placement.get("tile", Vector2i.ZERO)
+		var has_neighbour := false
+		for oy in range(-1, 2):
+			for ox in range(-1, 2):
+				if ox == 0 and oy == 0:
+					continue
+				if fence_tiles.has(_tile_key(tile + Vector2i(ox, oy))):
+					has_neighbour = true
+		if has_neighbour:
+			kept.append(placement)
+	return kept
 
 
 static func _footprint(building: Dictionary, type_name: String) -> Vector2i:

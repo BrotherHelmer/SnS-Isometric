@@ -47,7 +47,11 @@ void fragment() {
 		}
 	}
 	ALBEDO = albedo;
+	// Forced up-normal so mixed segment/junction winding cannot invert Lambert.
+	NORMAL = vec3(0.0, 1.0, 0.0);
 	ROUGHNESS = mix(0.94, 0.80, shoulder);
 	ALPHA = alpha;
 	SPECULAR = 0.0;
+	// The Director: a small value lift so night lanes stay readable on grass.
+	EMISSION = albedo * value_lift * 0.25;
 }

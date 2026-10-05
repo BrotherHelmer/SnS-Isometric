@@ -56,13 +56,14 @@ func _add_path_mesh(width: float, height: float, material: Material, node_name: 
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var half_cell := ScaleProfile.LOGICAL_CELL_METRES * 0.53
 	var junction := width * 0.52
-	_add_quad(surface,
-		Vector3(-junction, height, -junction),
-		Vector3(junction, height, -junction),
-		Vector3(junction, height, junction),
-		Vector3(-junction, height, junction),
-		Vector2(0.0, 0.0), Vector2(1.0, 0.0), Vector2(1.0, 1.0), Vector2(0.0, 1.0)
-	)
+	# Junction + segments share a,d,c,b winding (CCW from +Y) so the lit
+	# double-sided shader cannot stripe one as a downward face.
+	var ja := Vector3(-junction, height, -junction)
+	var jb := Vector3(junction, height, -junction)
+	var jc := Vector3(junction, height, junction)
+	var jd := Vector3(-junction, height, junction)
+	var flat := Vector2(0.5, 0.5)
+	_add_quad(surface, ja, jd, jc, jb, flat, flat, flat, flat)
 	var directions := [Vector2(0.0, -1.0), Vector2(1.0, 0.0), Vector2(0.0, 1.0), Vector2(-1.0, 0.0)]
 	for index in directions.size():
 		if connection_mask & (1 << index) == 0:
@@ -72,13 +73,11 @@ func _add_path_mesh(width: float, height: float, material: Material, node_name: 
 		var half_width := width * 0.5
 		var start := direction * junction * 0.38
 		var finish := direction * half_cell
-		_add_quad(surface,
-			Vector3(start.x - perpendicular.x * half_width, height, start.y - perpendicular.y * half_width),
-			Vector3(start.x + perpendicular.x * half_width, height, start.y + perpendicular.y * half_width),
-			Vector3(finish.x + perpendicular.x * half_width, height, finish.y + perpendicular.y * half_width),
-			Vector3(finish.x - perpendicular.x * half_width, height, finish.y - perpendicular.y * half_width),
-			Vector2(0.0, 0.0), Vector2(1.0, 0.0), Vector2(1.0, 1.0), Vector2(0.0, 1.0)
-		)
+		var a := Vector3(start.x - perpendicular.x * half_width, height, start.y - perpendicular.y * half_width)
+		var b := Vector3(start.x + perpendicular.x * half_width, height, start.y + perpendicular.y * half_width)
+		var c := Vector3(finish.x + perpendicular.x * half_width, height, finish.y + perpendicular.y * half_width)
+		var d := Vector3(finish.x - perpendicular.x * half_width, height, finish.y - perpendicular.y * half_width)
+		_add_quad(surface, a, d, c, b, Vector2(0.0, 0.0), Vector2(0.0, 1.0), Vector2(1.0, 1.0), Vector2(1.0, 0.0))
 	var instance := MeshInstance3D.new()
 	instance.name = node_name
 	instance.mesh = surface.commit()
