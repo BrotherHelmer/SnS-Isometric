@@ -50,7 +50,7 @@ const LIGHTING := {
 		"saturation": 0.52,
 		"contrast": 1.52,
 		"exposure": 1.06,
-		"brightness": 1.08,
+		"brightness": 1.16,
 		"tonemap_white": 6.5,
 		"sun_energy": 1.45,
 		"sun_color": Color("#FFC888"),

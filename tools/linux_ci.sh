@@ -43,6 +43,10 @@ while [[ $# -gt 0 ]]; do
     *) echo "unknown arg $1"; exit 2;;
   esac
 done
+# Mesa lavapipe so Xvfb gate/evidence shots stay on Vulkan Forward+.
+# An empty VK_ICD_FILENAMES lets Godot fall back to OpenGL Compatibility,
+# which scores a black-green settlement and fails every GFX-1 gate.
+export VK_ICD_FILENAMES="${VK_ICD_FILENAMES:-/usr/share/vulkan/icd.d/lvp_icd.json}"
 mkdir -p "$OUT"/{logs,users,export/linux,export/windows,evidence,smoke}
 SUMMARY="$OUT/summary.txt"
 : > "$SUMMARY"
@@ -65,7 +69,7 @@ with_user() { local label="$1"; shift
 # Same error filter as the Windows scripts.
 error_lines() { grep -E '^(SCRIPT ERROR:|ERROR:|FAIL[: ]|.*_FAIL)' "$@" 2>/dev/null | grep -v '^ERROR: Failed to read the root certificate store\.' || true; }
 
-log "repo=$REPO rev=$(git -C "$REPO" rev-parse HEAD) dirty=$(git -C "$REPO" status --porcelain | wc -l) out=$OUT"
+log "repo=$REPO rev=$(git -C "$REPO" rev-parse HEAD) dirty=$(git -C "$REPO" status --porcelain | wc -l) out=$OUT vk_icd=$VK_ICD_FILENAMES"
 ENGINE_VERSION="$("$GODOT" --headless --version 2>/dev/null | tail -1)"
 [[ "$ENGINE_VERSION" == "$EXPECTED_ENGINE" ]] && result engine PASS "$ENGINE_VERSION" || result engine FAIL "got '$ENGINE_VERSION' want $EXPECTED_ENGINE"
 
@@ -126,11 +130,16 @@ mkdir -p "$GATES"
 if [[ ! -f "$REPO/artifacts/phase3_2/persistence/eighteen_step_playthrough.json" ]]; then
   result gfx_pixel_gates FAIL "missing eighteen_step_playthrough.json"
 else
-  timeout 90 xvfb-run -a -s "-screen 0 1280x720x24" bash -c "$(declare -f with_user); export OUT='$OUT' TEMPLATES='$TEMPLATES' GFX_GATE_OUT='$GATES' VK_ICD_FILENAMES='${VK_ICD_FILENAMES:-}'; with_user gfx_gates '$GODOT' --path '$REPO' --audio-driver Dummy --resolution 1280x720 --script res://tests/t_gfx_gate_shots.gd" > "$OUT/logs/gfx_gates_stdout.txt" 2>&1
+  timeout 180 xvfb-run -a -s "-screen 0 1280x720x24" bash -c "$(declare -f with_user); export OUT='$OUT' TEMPLATES='$TEMPLATES' GFX_GATE_OUT='$GATES'; with_user gfx_gates '$GODOT' --path '$REPO' --audio-driver Dummy --resolution 1280x720 --script res://tests/t_gfx_gate_shots.gd" > "$OUT/logs/gfx_gates_stdout.txt" 2>&1
   code=$?
-  python3 "$REPO/tools/gfx_pixel_gates.py" "$GATES/gfx_day.png" "$GATES/gfx_dusk.png" "$GATES/gfx_night.png" | tee "$OUT/logs/gfx_gates.txt"
-  gate_code=${PIPESTATUS[0]}
-  [[ $code -eq 0 && $gate_code -eq 0 ]] && result gfx_pixel_gates PASS "$(grep GFX_PIXEL_GATES "$OUT/logs/gfx_gates.txt")" || result gfx_pixel_gates FAIL "capture=$code gates=$gate_code"
+  renderer=$(grep -m1 -E 'Vulkan|OpenGL|Forward\+|GFX_GATE_RENDERER' "$OUT/logs/gfx_gates_stdout.txt" || true)
+  if grep -qE 'switching to OpenGL|OpenGL API|Compatibility' "$OUT/logs/gfx_gates_stdout.txt"; then
+    result gfx_pixel_gates FAIL "not Forward+/Vulkan: $renderer"
+  else
+    python3 "$REPO/tools/gfx_pixel_gates.py" "$GATES/gfx_day.png" "$GATES/gfx_dusk.png" "$GATES/gfx_night.png" | tee "$OUT/logs/gfx_gates.txt"
+    gate_code=${PIPESTATUS[0]}
+    [[ $code -eq 0 && $gate_code -eq 0 ]] && result gfx_pixel_gates PASS "$(grep GFX_PIXEL_GATES "$OUT/logs/gfx_gates.txt") renderer=$renderer" || result gfx_pixel_gates FAIL "capture=$code gates=$gate_code renderer=$renderer"
+  fi
 fi
 
 else result parse_check SKIP "--quick"; result release_verification SKIP "--quick"; FAILED=1; fi  # --quick never passes

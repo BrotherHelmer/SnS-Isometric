@@ -26,6 +26,12 @@ func _run() -> void:
 	root.add_child(game)
 	await process_frame
 	await process_frame
+	var method := RenderingServer.get_current_rendering_method()
+	print("GFX_GATE_RENDERER method=%s" % method)
+	if method != "forward_plus":
+		push_error("GFX_GATE_SHOTS requires Forward+/Vulkan (got %s)" % method)
+		quit(1)
+		return
 	if not game.simulation_host.load_from_path(SAVE_PATH):
 		push_error("GFX_GATE_SHOTS failed to load %s" % SAVE_PATH)
 		quit(1)
