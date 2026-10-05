@@ -3757,10 +3757,23 @@ func _update_day_night_lighting() -> void:
 func _apply_quality_features() -> void:
 	if environment_resource == null:
 		return
-	environment_resource.ssao_enabled = bool(quality_profile.get("ssao", quality_profile.get("shadows", true)))
+	var night := simulation_host != null and simulation_host.simulation != null and bool(simulation_host.simulation.is_night)
+	var want_ssao := bool(quality_profile.get("ssao", quality_profile.get("shadows", true)))
+	# The Director: night drops SSAO. Very-Low still left lavapipe 1 ms
+	# over the +15% GFX-1 guard; windows/moon carry night form instead.
+	environment_resource.ssao_enabled = want_ssao and not night
 	environment_resource.ssao_radius = 0.95
 	environment_resource.ssao_intensity = 1.15
+	environment_resource.ssao_detail = 0.50
 	environment_resource.ssao_light_affect = 0.10
+	RenderingServer.environment_set_ssao_quality(
+		RenderingServer.ENV_SSAO_QUALITY_LOW,
+		true,
+		0.5,
+		2,
+		50.0,
+		300.0
+	)
 	environment_resource.ssil_enabled = bool(quality_profile.get("ssil", false))
 	environment_resource.glow_enabled = bool(quality_profile.get("glow", false))
 	environment_resource.volumetric_fog_enabled = bool(quality_profile.get("volumetric_fog", false))
