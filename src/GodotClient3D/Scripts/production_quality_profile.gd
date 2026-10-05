@@ -6,7 +6,7 @@ const PROFILES := {
 		"name": "recommended",
 		"foliage_density": 1.0,
 		"shadows": true,
-		"shadow_distance": 62.0,
+		"shadow_distance": 48.0,
 		"water_detail": 1.0,
 		"vfx_density": 1.0,
 		"animation_lod": 1.0,

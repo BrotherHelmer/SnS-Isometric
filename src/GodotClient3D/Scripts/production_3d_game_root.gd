@@ -745,10 +745,15 @@ func _create_lighting() -> void:
 	sun.name = "Sun"
 	sun.light_color = Color("#FFD09A")
 	sun.light_energy = 1.25
-	sun.light_angular_distance = 0.5
+	# The Director: GFX-05 one key sun, PSSM 2-split, no PCSS softness.
+	sun.light_angular_distance = 0.0
 	sun.shadow_enabled = bool(quality_profile.get("shadows", true))
-	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
-	sun.directional_shadow_max_distance = float(quality_profile.get("shadow_distance", 62.0))
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+	sun.directional_shadow_blend_splits = true
+	sun.directional_shadow_split_1 = 0.38
+	sun.directional_shadow_max_distance = float(quality_profile.get("shadow_distance", 48.0))
+	sun.shadow_bias = 0.03
+	sun.shadow_normal_bias = 0.8
 	lighting_rig.add_child(sun)
 	var fill := DirectionalLight3D.new()
 	fill_light = fill
@@ -3616,7 +3621,11 @@ func apply_quality_profile(profile_name: String) -> void:
 	get_viewport().msaa_3d = Viewport.MSAA_2X if bool(quality_profile.get("shadows", true)) else Viewport.MSAA_DISABLED
 	if sun_light != null:
 		sun_light.shadow_enabled = bool(quality_profile.get("shadows", true))
-		sun_light.directional_shadow_max_distance = float(quality_profile.get("shadow_distance", 62.0))
+		sun_light.light_angular_distance = 0.0
+		sun_light.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+		sun_light.directional_shadow_max_distance = float(quality_profile.get("shadow_distance", 48.0))
+		sun_light.shadow_bias = 0.03
+		sun_light.shadow_normal_bias = 0.8
 	_apply_quality_features()
 	if world_view != null:
 		world_view.apply_quality_profile(quality_profile)
