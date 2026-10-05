@@ -54,7 +54,7 @@ const TABLE := {
 		{"prop": "wheelbarrow", "dx": 2, "dy": -1, "yaw": 18.0, "scale": 0.75},
 	],
 	"FARM": [
-		{"prop": "wheat_field", "dx": -2, "dy": 0, "yaw": 0.0, "scale": 1.05, "span": Vector2i(2, 2), "density": 9},
+		{"prop": "wheat_field", "dx": -2, "dy": 0, "yaw": 0.0, "scale": 1.42, "span": Vector2i(2, 2), "density": 16},
 		{"prop": "fence", "dx": -1, "dy": -1, "yaw": 0.0, "scale": 1.0},
 		{"prop": "fence", "dx": 0, "dy": -1, "yaw": 0.0, "scale": 1.0},
 		{"prop": "barrel", "dx": 4, "dy": 2, "yaw": 14.0, "scale": 1.00},
@@ -142,17 +142,19 @@ static func resolve(building: Dictionary, blocked: Dictionary) -> Array:
 		_mark_span(reserved, world_tile, world_span)
 		if String(slot.get("prop", "")) == "wheat_field":
 			var density := maxi(1, int(slot.get("density", 1)))
+			var grid := maxi(2, int(ceil(sqrt(float(density)))))
+			var spacing := 2.15 / float(grid)
 			for oy in world_span.y:
 				for ox in world_span.x:
 					for copy in density:
-						var col := copy % 3
-						var row := int(copy / 3)
+						var col := copy % grid
+						var row := int(copy / grid)
 						placements.append({
 							"prop": "wheat_crop",
 							"tile": world_tile + Vector2i(ox, oy),
 							"yaw": float(slot.get("yaw", 0.0)) + float((ox * 17 + oy * 11 + copy * 29) % 36) - 18.0,
 							"scale": float(slot.get("scale", 1.0)),
-							"nudge": Vector2((float(col) - 1.0) * 0.40, (float(row) - 1.0) * 0.40),
+							"nudge": Vector2((float(col) - float(grid - 1) * 0.5) * spacing, (float(row) - float(grid - 1) * 0.5) * spacing),
 							"building_id": int(building.get("id", 0)),
 							"building_type": type_name,
 						})

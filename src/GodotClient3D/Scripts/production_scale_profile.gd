@@ -71,7 +71,7 @@ const WORLD_PROP_SCALE := {
 	"sack": 0.95,
 	"chopping_block": 0.78,
 	"rocks": 0.85,
-	"wheat_crop": 1.15,
+	"wheat_crop": 1.38,
 	"lantern": 1.00,
 	"fence": 1.00,
 	"cart": 0.75,

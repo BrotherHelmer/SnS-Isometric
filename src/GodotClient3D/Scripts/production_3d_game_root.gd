@@ -3786,6 +3786,7 @@ func _apply_lighting_palette(palette: Dictionary) -> void:
 	environment_resource.fog_height_density = 0.0
 	environment_resource.adjustment_saturation = float(palette.get("saturation", 1.0))
 	environment_resource.adjustment_contrast = float(palette.get("contrast", 1.10))
+	environment_resource.adjustment_brightness = float(palette.get("brightness", 1.0))
 	environment_resource.tonemap_exposure = float(palette.get("exposure", 0.95))
 	environment_resource.tonemap_white = float(palette.get("tonemap_white", 6.5))
 	_apply_quality_features()

@@ -103,6 +103,8 @@ var hostile_count := 0
 var rival_activity_count := 0
 var presentation_paused := false
 var _terrain_yard_cache: Dictionary = {}
+var _atmosphere_scale := 1.0
+var _ground_tint := Color(1.0, 1.0, 1.0)
 
 
 func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {}) -> void:
@@ -472,6 +474,7 @@ func _rebuild_terrain() -> void:
 	terrain_mesh_instance.mesh = mesh
 	var material := ShaderMaterial.new()
 	material.shader = preload("res://src/GodotClient3D/Shaders/settlement_ground.gdshader")
+	material.set_shader_parameter("light_tint", Vector3(_ground_tint.r, _ground_tint.g, _ground_tint.b))
 	terrain_mesh_instance.material_override = material
 	terrain_root.add_child(terrain_mesh_instance)
 	terrain_body = StaticBody3D.new()
@@ -563,18 +566,18 @@ func _terrain_color(tile: Vector2i) -> Color:
 			if tile_type == Defs.TILE_ROCK: rock_weight += 1
 	var hash_a := float(_tile_hash(tile, 7) % 100) / 100.0
 	var hash_b := float(_tile_hash(tile, 13) % 100) / 100.0
-	var base := Color("#5a7048")
-	base = base.lerp(Color("#6e8250"), hash_a * 0.04)
-	base = base.lerp(Color("#4a6040"), hash_b * 0.03)
-	base = base.lerp(Color("#2a4438"), clampf(float(tree_weight) / 28.0, 0.0, 0.28))
-	base = base.lerp(Color("#55574d"), clampf(float(rock_weight) / 32.0, 0.0, 0.22))
+	var base := Color("#4e6244")
+	base = base.lerp(Color("#5a6c48"), hash_a * 0.03)
+	base = base.lerp(Color("#445840"), hash_b * 0.02)
+	base = base.lerp(Color("#2a4438"), clampf(float(tree_weight) / 28.0, 0.0, 0.22))
+	base = base.lerp(Color("#55574d"), clampf(float(rock_weight) / 32.0, 0.0, 0.18))
 	var edge := mini(mini(tile.x, tile.y), mini(map_size.x - 1 - tile.x, map_size.y - 1 - tile.y))
 	if edge <= 1:
-		base = base.lerp(Color("#1a3330"), 0.28)
+		base = base.lerp(Color("#1a3330"), 0.18)
 	elif edge <= 3:
-		base = base.lerp(Color("#243c34"), 0.12)
+		base = base.lerp(Color("#243c34"), 0.08)
 	if _terrain_yard_cache.has(_tile_key(tile)):
-		base = base.lerp(Color("#7a6a40"), 0.10)
+		base = base.lerp(Color("#7a6a40"), 0.08)
 	if String(simulation.get_tile(tile)) == Defs.TILE_SHARD:
 		base = Color("#465963")
 	var impact := 0.0
@@ -1794,6 +1797,7 @@ func apply_light_palette(palette: Dictionary) -> void:
 	var torch_color: Color = palette.get("torch_color", Color("#FFC36B"))
 	var torch_range := float(palette.get("torch_range", 5.5))
 	var atmosphere := clampf(float(palette.get("atmosphere_scale", 1.0)), 0.15, 1.0)
+	_atmosphere_scale = atmosphere
 	if fog_material != null:
 		fog_material.set_shader_parameter("unknown_color", FOG_UNKNOWN_BASE * atmosphere)
 		fog_material.set_shader_parameter("mist_color", FOG_MIST_BASE * atmosphere)
@@ -1802,12 +1806,17 @@ func apply_light_palette(palette: Dictionary) -> void:
 		fog_screen_material.set_shader_parameter("mist_color", FOG_MIST_BASE * atmosphere)
 	if boundary_mist_material != null:
 		boundary_mist_material.set_shader_parameter("color_scale", atmosphere)
+	_ground_tint = palette.get("ground_tint", Color(1.0, 1.0, 1.0))
+	if terrain_mesh_instance != null and terrain_mesh_instance.material_override is ShaderMaterial:
+		var ground_mat := terrain_mesh_instance.material_override as ShaderMaterial
+		ground_mat.set_shader_parameter("light_tint", Vector3(_ground_tint.r, _ground_tint.g, _ground_tint.b))
 	if edge_forest_root != null:
 		for child in edge_forest_root.get_children():
 			if child is MultiMeshInstance3D:
 				var mat := (child as MultiMeshInstance3D).material_override as StandardMaterial3D
 				if mat != null:
-					mat.albedo_color = Color("#1c332c") * (0.55 + 0.45 * atmosphere)
+					# Palette scale: day 1.0, dusk 0.55, night 0.35. Lit, not a cut-out.
+					mat.albedo_color = Color("#1c332c") * atmosphere
 	for view in building_views.values():
 		if view.has_method("apply_light_palette"):
 			view.apply_light_palette(window_color, torch_color, torch_range)
@@ -1876,9 +1885,11 @@ func _unrevealed_touches_revealed(tile: Vector2i) -> bool:
 func _edge_forest_material() -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
-	material.albedo_color = Color("#1c332c")
+	# The Director: firs take scene light and the period scale (1.0 / 0.55 / 0.35).
+	material.albedo_color = Color("#1c332c") * _atmosphere_scale
 	material.roughness = 0.94
 	material.metallic = 0.0
+	material.emission_enabled = false
 	return material
 
 

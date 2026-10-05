@@ -13,21 +13,23 @@ day / dusk-60s / night / dawn-40s cycle.
 | --- | --- | --- | --- |
 | Sun / moon elevation | 25° | 11° | 48° |
 | Orbit from camera | 120° | 120° | 300° |
-| Colour | `#FFC888` 1.45 | `#FFB068` 1.00 | `#91B8FF` 0.52 |
-| Ambient | `#718FA3` 0.52 | `#7A5848` 0.70 | `#3A5580` 0.68 |
-| Exposure | 0.95 | 1.12 | 1.08 |
+| Colour | `#FFC888` 1.45 | `#FFC078` 1.18 | `#91B8FF` 0.52 |
+| Ambient | `#718FA3` 0.54 | `#C88850` 0.92 | `#3A5580` 0.70 |
+| Exposure / brightness | 0.98 / 1.02 | 1.34 / 1.22 | 1.10 / 1.04 |
+| Saturation / contrast | 0.78 / 1.32 | 0.74 / 1.10 | 0.70 / 1.06 |
 
 Orbit 120° keeps the sun off the camera's left shoulder (shadows
 lower-right) and the 3D sun/camera angle ≥ 90°. Night uses 300°.
 
-ACES, white 6.5, contrast 1.18, S-curve LUT (0→0, 0.18→0.11,
-0.45→0.48, 0.72→0.86, 1→0.96). Depth fog only. SSIL and glow stay
-off in both profiles. Fog-of-war / boundary-mist scale day 1.0,
-dusk 0.55, night 0.35. Edge firs are lit (not unshaded cut-outs).
+ACES, white 6.5, S-curve LUT (0→0, 0.18→0.11, 0.45→0.48,
+0.72→0.86, 1→0.96). Depth fog only. SSIL and glow stay off.
+Fog-of-war / boundary-mist / rim-fir scale day 1.0, dusk 0.55,
+night 0.35. Ground shader takes a period `light_tint` so dusk
+grass reads gold, not dark brown. Edge firs are lit.
 
-Roads are pale stone. The shader uses a **world-up** normal
-(`normalize((VIEW_MATRIX * vec4(0,1,0,0)).xyz)`) and a moonlit
-emission, not an orange carpet.
+Roads are muted pale stone (`#a09888`). World-up normal
+(`normalize((VIEW_MATRIX * vec4(0,1,0,0)).xyz)`) plus a moonlit
+emission, never an orange carpet.
 
 ## Pixel gates
 
@@ -62,5 +64,5 @@ about **630** calls in both builds. SSIL and glow stay off.
 ## Halos
 
 `production_building_halo.gd`: 4–12 authored slots, revealed grass
-only, no orphan fences. Farm wheat is a dense 3×3 sheaf block per
+only, no orphan fences. Farm wheat is a dense 4×4 sheaf block per
 field tile. `sack` uses the wheat sheaf, not the crate mesh.

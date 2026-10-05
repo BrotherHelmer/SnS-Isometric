@@ -465,10 +465,10 @@ func _create_workyard() -> void:
 			_add_prop("wheelbarrow", Vector3(-3.10, 0.0, 0.35), Vector3.ONE * 0.8, "DecorativeWheelbarrow")
 		"FARM":
 			# Issue #3 fix: Farm must look like a farm - add crops, paddock, and sheep
-			for x in range(-1, 2):
-				for z in range(2):
-					_add_prop("dirt_plot", Vector3(float(x) * 1.85, 0.0, -1.25 - float(z) * 1.45), Vector3.ONE * 0.82, "DecorativeFarmPlot")
-					_add_prop("wheat_crop", Vector3(float(x) * 1.85, 0.08, -1.25 - float(z) * 1.45), Vector3.ONE * 1.5, "WheatCrop")
+			for x in range(-1, 3):
+				for z in range(3):
+					_add_prop("dirt_plot", Vector3(float(x) * 1.15, 0.0, -0.85 - float(z) * 0.95), Vector3.ONE * 0.72, "DecorativeFarmPlot")
+					_add_prop("wheat_crop", Vector3(float(x) * 1.15, 0.08, -0.85 - float(z) * 0.95), Vector3.ONE * 1.72, "WheatCrop")
 			_add_prop("wheelbarrow", Vector3(3.15, 0.0, -1.20), Vector3.ONE * 0.76, "InventoryIndicatorWheat", "wheat")
 			# Add sheep paddock with fence
 			var paddock := MeshInstance3D.new()

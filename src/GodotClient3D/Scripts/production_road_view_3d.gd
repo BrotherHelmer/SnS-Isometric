@@ -33,7 +33,7 @@ func _rebuild() -> void:
 		remove_child(child)
 		child.queue_free()
 	var edge_color := Color(0.32, 0.28, 0.22, 0.42) if planned else Color(0.30, 0.28, 0.24, 0.50)
-	var road_color := Color(0.62, 0.58, 0.50, 0.78) if planned else Color("#b8b2a6")
+	var road_color := Color(0.62, 0.58, 0.50, 0.78) if planned else Color("#a09888")
 	if faction == "rival":
 		edge_color = Color(0.28, 0.17, 0.18, 0.72)
 		road_color = Color("#805d58")
