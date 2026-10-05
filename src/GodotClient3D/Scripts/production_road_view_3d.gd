@@ -32,8 +32,8 @@ func _rebuild() -> void:
 	for child in get_children():
 		remove_child(child)
 		child.queue_free()
-	var edge_color := Color(0.32, 0.22, 0.12, 0.42) if planned else Color(0.22, 0.14, 0.08, 0.55)
-	var road_color := Color(0.58, 0.40, 0.22, 0.78) if planned else Color("#a8885c")
+	var edge_color := Color(0.32, 0.28, 0.22, 0.42) if planned else Color(0.30, 0.28, 0.24, 0.50)
+	var road_color := Color(0.62, 0.58, 0.50, 0.78) if planned else Color("#b8b2a6")
 	if faction == "rival":
 		edge_color = Color(0.28, 0.17, 0.18, 0.72)
 		road_color = Color("#805d58")
@@ -56,8 +56,8 @@ func _add_path_mesh(width: float, height: float, material: Material, node_name: 
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var half_cell := ScaleProfile.LOGICAL_CELL_METRES * 0.53
 	var junction := width * 0.52
-	# Junction + segments share a,d,c,b winding (CCW from +Y) so the lit
-	# double-sided shader cannot stripe one as a downward face.
+	# Shared a,d,c,b vertex order. Lighting uses a world-up normal in the
+	# shader, so winding no longer decides which way the lane faces.
 	var ja := Vector3(-junction, height, -junction)
 	var jb := Vector3(junction, height, -junction)
 	var jc := Vector3(junction, height, junction)

@@ -11,69 +11,56 @@ day / dusk-60s / night / dawn-40s cycle.
 
 | | Day | Dusk | Night |
 | --- | --- | --- | --- |
-| Sun / moon elevation | 25° | 16° | 48° |
+| Sun / moon elevation | 25° | 11° | 48° |
 | Orbit from camera | 120° | 120° | 300° |
-| Colour | `#FFC888` 1.45 | `#FF9A61` 0.85 | `#91B8FF` 0.45 |
-| Ambient | `#718FA3` 0.55 | `#435A78` 0.58 | `#2A4466` 0.55 |
-| Exposure | 0.95 | 1.00 | 1.00 |
+| Colour | `#FFC888` 1.45 | `#FFB068` 1.00 | `#91B8FF` 0.52 |
+| Ambient | `#718FA3` 0.52 | `#7A5848` 0.70 | `#3A5580` 0.68 |
+| Exposure | 0.95 | 1.12 | 1.08 |
 
-Orbit 120° puts the sun off the camera's left shoulder so light enters
-upper-left and shadows fall lower-right, and the 3D sun/camera angle stays
-≥ 90°. Night uses 300° (opposite side) so dawn does not lerp the light
-*through* the camera.
+Orbit 120° keeps the sun off the camera's left shoulder (shadows
+lower-right) and the 3D sun/camera angle ≥ 90°. Night uses 300°.
 
-ACES, white 6.5, contrast 1.10, mild S-curve LUT (0→0, 0.18→0.145,
-0.45→0.50, 0.72→0.82, 1→0.96) with teal shadows and warm highlights.
-Depth fog only (28–65 m day). No foreground haze. Volumetric fog stays
-off in both profiles. Fog-of-war and boundary-mist colours scale with
-the palette (day 1.0, dusk 0.55, night 0.35).
+ACES, white 6.5, contrast 1.18, S-curve LUT (0→0, 0.18→0.11,
+0.45→0.48, 0.72→0.86, 1→0.96). Depth fog only. SSIL and glow stay
+off in both profiles. Fog-of-war / boundary-mist scale day 1.0,
+dusk 0.55, night 0.35. Edge firs are lit (not unshaded cut-outs).
 
-Recommended and `scalable_low` both keep SSIL and glow off. Glow stays
-off rather than cheap: the software-render proxy already sat at the
-+15% frame-time budget once SSIL+glow were disabled.
+Roads are pale stone. The shader uses a **world-up** normal
+(`normalize((VIEW_MATRIX * vec4(0,1,0,0)).xyz)`) and a moonlit
+emission, not an orange carpet.
 
 ## Pixel gates
 
-`tools/gfx_pixel_gates.py` scores **world pixels only** on evidence shots
-(1280×720), in **sRGB display space**:
+`tools/gfx_pixel_gates.py` scores world pixels on the **18-step**
+Day 3 / dusk / Night 2 shots (`tests/t_gfx_gate_shots.gd`, run by
+`linux_ci.sh`):
 
-* exclude y < 90 (top bar + loop bar)
-* exclude y ≥ height − 184 (console / minimap)
-* saturation ignores pixels with Y' < 0.10
-* night road/grass prefers `{stem}.roads.json` (tile-centre mask)
+* exclude y < 90 and y ≥ height − 184
+* sRGB display Y'
+* night road/grass needs `{stem}.roads.json` with ≥ 10 road tiles
+* no hue fallback at night
 
 | Gate | Threshold |
 | --- | --- |
-| Day world luminance σ | 0.09–0.24 |
+| Day world luminance σ | 0.15–0.24 |
+| Day mean luma | 0.22–0.30 |
 | Mean saturation (Y' ≥ 0.10) | ≤ 0.60 |
-| Dusk warm-pixel share (H 8–50°, S≥0.28, V≥0.18) | ≤ 0.70 |
+| Dusk warm-pixel share | 0.20–0.70 |
+| Dusk mean luma | ≥ 0.16 |
+| Night mean luma | ≥ 0.11 |
 | Night near-black (Y' < 8/255) | ≤ 0.15 |
-| Night road / grass luminance | ≥ 1.20 |
+| Night road / grass | ≥ 1.50 |
 
-The title painting itself is the calibration reference and must pass.
-HUD pixels are not part of the score. GFX-1 must not change HUD theme,
-layout or fonts.
+A base-7db0725 dusk (warm ≈ 0.16) fails the warm-share floor.
+Title art (warm ≈ 0.299) is the warm-share reference.
 
 ## Perf note
 
-Budget: at most +15% frame time on the owner's Windows box. A Day 3
-settlement draws about **630** calls in both the base build and GFX-1
-(the older 340–380 figure was a first-view / zoomed-in capture, not
-this scene).
-
-* Edge forest and building halos are MultiMesh (a handful of extra
-  instances, not per-tree / per-prop nodes). Edge firs do not cast
-  shadows and spawn only outside the playable map.
-* Recommended: 4-split PSSM, shadow distance 62 m, SSAO on, SSIL off,
-  glow off. Volumetrics off.
-* Low profile: shadows / SSAO / SSIL / glow / volumetrics off, thinner
-  foliage.
+Budget: at most +15% frame time vs base. Day 3 settlement draws
+about **630** calls in both builds. SSIL and glow stay off.
 
 ## Halos
 
-`production_building_halo.gd` is a data table (4–12 authored slots per
-building). Placement is deterministic, outside the footprint, and
-skipped when a slot would land on a road, door, rock, tree or
-unrevealed tile. Isolated fence pieces are dropped. Visual only.
-The farm gets a dense gold wheat-field block when the neighbouring
-grass tiles are free. `sack` uses the wheat sheaf, not the crate mesh.
+`production_building_halo.gd`: 4–12 authored slots, revealed grass
+only, no orphan fences. Farm wheat is a dense 3×3 sheaf block per
+field tile. `sack` uses the wheat sheaf, not the crate mesh.

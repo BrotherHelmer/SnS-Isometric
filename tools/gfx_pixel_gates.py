@@ -1,23 +1,22 @@
 #!/usr/bin/env python3
-"""GFX-1 pixel gates for evidence / capture shots.
+"""GFX-1 pixel gates for real-state settlement shots.
 
 World mask (HUD excluded)
 -------------------------
-Evidence shots are 1280x720. HUD chrome is never scored:
+Shots are 1280x720. HUD chrome is never scored:
 
   * top bar + loop bar: y < 90
   * bottom console (minimap / chronicle): y >= height - 184
 
-The remaining rectangle is the world area. This matches the compare
-regions in tools/linux_ci.sh (top bar 0–46, console height-184) with
-the loop bar included so world metrics cannot pick HUD gold.
+Brightness is sRGB display Y'. Saturation ignores Y' < 0.10.
 
-Brightness is measured in sRGB display space (Y'), not linear light.
-Saturation is averaged only on pixels with Y' >= 0.10 so near-black
-teal does not inflate the score. Night road/grass uses a road-tile
-mask sidecar when present ({stem}.roads.json or {stem}.roads.png).
+Night road/grass requires a road-tile sidecar ({stem}.roads.json or
+{stem}.roads.png) with at least 10 unique road tiles. There is no
+hue-class fallback at night (lit windows are not roads).
 
-Thresholds are calibrated so the title painting itself passes.
+Thresholds reject a base-7db0725 dusk (warm share ~0.16) and a
+GFX-1-broken night road (ratio < 1.5). Title art is the warm-share
+calibration reference (≈0.299) and is not scored for settlement luma.
 """
 from __future__ import annotations
 
@@ -34,15 +33,19 @@ except ImportError:
     sys.exit(2)
 
 
-# Display-referred. Title art σ ≈ 0.188; day settlement sits near 0.12–0.20.
-DAY_SIGMA_MIN = 0.09
+DAY_SIGMA_MIN = 0.15
 DAY_SIGMA_MAX = 0.24
+DAY_LUMA_MIN = 0.22
+DAY_LUMA_MAX = 0.30
 SAT_MAX = 0.60
 SAT_LUMA_MIN = 0.10
+DUSK_WARM_MIN = 0.20
 DUSK_WARM_MAX = 0.70
+DUSK_LUMA_MIN = 0.16
 NIGHT_NEAR_BLACK_MAX = 0.15
-NIGHT_ROAD_GRASS_MIN = 1.20
-# Darker than sRGB 63. Title forest sits well above this; crushed night does not.
+NIGHT_LUMA_MIN = 0.11
+NIGHT_ROAD_GRASS_MIN = 1.50
+NIGHT_ROAD_TILES_MIN = 10
 NEAR_BLACK_Y = 8.0 / 255.0
 TOP_HUD = 90
 BOTTOM_CONSOLE = 184
@@ -90,7 +93,7 @@ def _mask_png_points(path: str, w: int, h: int) -> list[tuple[float, float]]:
     mw, mh = mask.size
     pix = mask.load()
     points = []
-    y0, y1 = world_rect(w, h)[1], world_rect(w, h)[3]
+    _x0, y0, _x1, y1 = world_rect(w, h)
     for y in range(min(mh, y1)):
         if y < y0:
             continue
@@ -105,9 +108,7 @@ def sidecar_points(shot_path: str, w: int, h: int) -> tuple[list[tuple[float, fl
     json_path = stem + ".roads.json"
     if os.path.isfile(json_path):
         return _load_json_points(json_path)
-    roads = _mask_png_points(stem + ".roads.png", w, h)
-    grass = _mask_png_points(stem + ".grass.png", w, h)
-    return roads, grass
+    return _mask_png_points(stem + ".roads.png", w, h), _mask_png_points(stem + ".grass.png", w, h)
 
 
 def _window_luma(pix, w: int, h: int, cx: float, cy: float) -> list[float]:
@@ -136,8 +137,6 @@ def sample(path: str) -> dict:
     sats: list[float] = []
     warm = 0
     near_black = 0
-    hue_grass_y: list[float] = []
-    hue_road_y: list[float] = []
     n = 0
     for y in range(y0, y1):
         for x in range(x0, x1):
@@ -153,10 +152,6 @@ def sample(path: str) -> dict:
                 near_black += 1
             if 8.0 <= hue <= 50.0 and sat >= 0.28 and val >= 0.18:
                 warm += 1
-            if 55.0 <= hue <= 145.0 and sat >= 0.12 and 0.04 <= yv <= 0.90:
-                hue_grass_y.append(yv)
-            elif 18.0 <= hue <= 48.0 and 0.12 <= sat <= 0.70 and 0.05 <= yv <= 0.95:
-                hue_road_y.append(yv)
     roads, grass = sidecar_points(path, w, h)
     mask_road_y: list[float] = []
     mask_grass_y: list[float] = []
@@ -164,12 +159,6 @@ def sample(path: str) -> dict:
         mask_road_y.extend(_window_luma(pix, w, h, cx, cy))
     for cx, cy in grass:
         mask_grass_y.extend(_window_luma(pix, w, h, cx, cy))
-    if mask_road_y and mask_grass_y:
-        road_y, grass_y = mask_road_y, mask_grass_y
-        mask_used = "sidecar"
-    else:
-        road_y, grass_y = hue_road_y, hue_grass_y
-        mask_used = "hue"
     mean_y = sum(ys) / n if n else 0.0
     var = sum((v - mean_y) ** 2 for v in ys) / n if n else 0.0
     return {
@@ -179,47 +168,67 @@ def sample(path: str) -> dict:
         "sat_mean": sum(sats) / len(sats) if sats else 0.0,
         "warm_share": warm / n if n else 0.0,
         "near_black_share": near_black / n if n else 0.0,
-        "road_grass": (sum(road_y) / len(road_y)) / (sum(grass_y) / len(grass_y))
-        if grass_y and road_y
+        "road_grass": (sum(mask_road_y) / len(mask_road_y)) / (sum(mask_grass_y) / len(mask_grass_y))
+        if mask_grass_y and mask_road_y
         else 0.0,
-        "grass_n": len(grass_y),
-        "road_n": len(road_y),
-        "mask": mask_used,
+        "grass_n": len(mask_grass_y),
+        "road_n": len(mask_road_y),
+        "road_tiles": len(roads),
+        "grass_tiles": len(grass),
+        "mask": "sidecar" if roads else "none",
     }
 
 
 def classify(name: str) -> str:
     n = name.lower()
+    if "title" in n:
+        return "title"
     if "night" in n or "raid" in n:
         return "night"
     if "dusk" in n or "sunset" in n or "evening" in n:
         return "dusk"
-    if "day" in n or n.startswith("ui_0") or "opening" in n or "settlement" in n or "title" in n:
-        return "day"
     return "day"
 
 
 def gate(kind: str, stats: dict) -> list[str]:
     fails = []
+    if kind == "title":
+        if not (0.09 <= stats["luma_sigma"] <= DAY_SIGMA_MAX):
+            fails.append(f"title luma σ {stats['luma_sigma']:.3f} not in 0.09–{DAY_SIGMA_MAX:.2f}")
+        if stats["sat_mean"] > SAT_MAX:
+            fails.append(f"title sat {stats['sat_mean']:.3f} > {SAT_MAX:.2f}")
+        return fails
     if kind == "day":
         sig = stats["luma_sigma"]
         if not (DAY_SIGMA_MIN <= sig <= DAY_SIGMA_MAX):
             fails.append(f"day luma σ {sig:.3f} not in {DAY_SIGMA_MIN:.2f}–{DAY_SIGMA_MAX:.2f}")
         if stats["sat_mean"] > SAT_MAX:
             fails.append(f"day sat {stats['sat_mean']:.3f} > {SAT_MAX:.2f}")
+        if not (DAY_LUMA_MIN <= stats["luma_mean"] <= DAY_LUMA_MAX):
+            fails.append(
+                f"day luma {stats['luma_mean']:.3f} not in {DAY_LUMA_MIN:.2f}–{DAY_LUMA_MAX:.2f}"
+            )
     elif kind == "dusk":
+        if stats["warm_share"] < DUSK_WARM_MIN:
+            fails.append(f"dusk warm share {stats['warm_share']:.3f} < {DUSK_WARM_MIN:.2f}")
         if stats["warm_share"] > DUSK_WARM_MAX:
             fails.append(f"dusk warm share {stats['warm_share']:.3f} > {DUSK_WARM_MAX:.2f}")
         if stats["sat_mean"] > SAT_MAX:
             fails.append(f"dusk sat {stats['sat_mean']:.3f} > {SAT_MAX:.2f}")
+        if stats["luma_mean"] < DUSK_LUMA_MIN:
+            fails.append(f"dusk luma {stats['luma_mean']:.3f} < {DUSK_LUMA_MIN:.2f}")
     elif kind == "night":
+        if stats["luma_mean"] < NIGHT_LUMA_MIN:
+            fails.append(f"night luma {stats['luma_mean']:.3f} < {NIGHT_LUMA_MIN:.2f}")
+        if stats["sat_mean"] > SAT_MAX:
+            fails.append(f"night sat {stats['sat_mean']:.3f} > {SAT_MAX:.2f}")
         if stats["near_black_share"] > NIGHT_NEAR_BLACK_MAX:
             fails.append(
                 f"night near-black {stats['near_black_share']:.3f} > {NIGHT_NEAR_BLACK_MAX:.2f}"
             )
-        if stats["road_n"] < 40 or stats["grass_n"] < 40:
+        if stats["mask"] != "sidecar" or stats["road_tiles"] < NIGHT_ROAD_TILES_MIN:
             fails.append(
-                f"night road/grass samples too small (road={stats['road_n']} grass={stats['grass_n']})"
+                f"night road mask too small (tiles={stats['road_tiles']} mask={stats['mask']})"
             )
         elif stats["road_grass"] < NIGHT_ROAD_GRASS_MIN:
             fails.append(
@@ -244,7 +253,7 @@ def find_shots(root: str) -> list[str]:
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("paths", nargs="+", help="shot files or folders")
-    p.add_argument("--period", choices=["day", "dusk", "night", "auto"], default="auto")
+    p.add_argument("--period", choices=["day", "dusk", "night", "title", "auto"], default="auto")
     args = p.parse_args()
     shots: list[str] = []
     for path in args.paths:
@@ -265,9 +274,9 @@ def main() -> int:
             failed += 1
         print(
             f"{status} {os.path.basename(shot)} period={kind} "
-            f"σ={stats['luma_sigma']:.3f} sat={stats['sat_mean']:.3f} "
+            f"Y={stats['luma_mean']:.3f} σ={stats['luma_sigma']:.3f} sat={stats['sat_mean']:.3f} "
             f"warm={stats['warm_share']:.3f} black={stats['near_black_share']:.3f} "
-            f"road/grass={stats['road_grass']:.3f} mask={stats['mask']}"
+            f"road/grass={stats['road_grass']:.3f} tiles={stats['road_tiles']} mask={stats['mask']}"
         )
         for item in fails:
             print(f"    {item}")

@@ -564,17 +564,17 @@ func _terrain_color(tile: Vector2i) -> Color:
 	var hash_a := float(_tile_hash(tile, 7) % 100) / 100.0
 	var hash_b := float(_tile_hash(tile, 13) % 100) / 100.0
 	var base := Color("#5a7048")
-	base = base.lerp(Color("#6e8250"), hash_a * 0.12)
-	base = base.lerp(Color("#4a6040"), hash_b * 0.08)
-	base = base.lerp(Color("#2a4438"), clampf(float(tree_weight) / 18.0, 0.0, 0.50))
-	base = base.lerp(Color("#55574d"), clampf(float(rock_weight) / 22.0, 0.0, 0.46))
+	base = base.lerp(Color("#6e8250"), hash_a * 0.04)
+	base = base.lerp(Color("#4a6040"), hash_b * 0.03)
+	base = base.lerp(Color("#2a4438"), clampf(float(tree_weight) / 28.0, 0.0, 0.28))
+	base = base.lerp(Color("#55574d"), clampf(float(rock_weight) / 32.0, 0.0, 0.22))
 	var edge := mini(mini(tile.x, tile.y), mini(map_size.x - 1 - tile.x, map_size.y - 1 - tile.y))
 	if edge <= 1:
-		base = base.lerp(Color("#1a3330"), 0.72)
+		base = base.lerp(Color("#1a3330"), 0.28)
 	elif edge <= 3:
-		base = base.lerp(Color("#243c34"), 0.42)
+		base = base.lerp(Color("#243c34"), 0.12)
 	if _terrain_yard_cache.has(_tile_key(tile)):
-		base = base.lerp(Color("#7a6a40"), 0.28)
+		base = base.lerp(Color("#7a6a40"), 0.10)
 	if String(simulation.get_tile(tile)) == Defs.TILE_SHARD:
 		base = Color("#465963")
 	var impact := 0.0
@@ -1802,6 +1802,12 @@ func apply_light_palette(palette: Dictionary) -> void:
 		fog_screen_material.set_shader_parameter("mist_color", FOG_MIST_BASE * atmosphere)
 	if boundary_mist_material != null:
 		boundary_mist_material.set_shader_parameter("color_scale", atmosphere)
+	if edge_forest_root != null:
+		for child in edge_forest_root.get_children():
+			if child is MultiMeshInstance3D:
+				var mat := (child as MultiMeshInstance3D).material_override as StandardMaterial3D
+				if mat != null:
+					mat.albedo_color = Color("#1c332c") * (0.55 + 0.45 * atmosphere)
 	for view in building_views.values():
 		if view.has_method("apply_light_palette"):
 			view.apply_light_palette(window_color, torch_color, torch_range)
@@ -1869,8 +1875,8 @@ func _unrevealed_touches_revealed(tile: Vector2i) -> bool:
 
 func _edge_forest_material() -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.albedo_color = Color("#244a42")
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+	material.albedo_color = Color("#1c332c")
 	material.roughness = 0.94
 	material.metallic = 0.0
 	return material

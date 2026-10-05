@@ -3768,8 +3768,9 @@ func sun_camera_angle_degrees() -> float:
 func _apply_lighting_palette(palette: Dictionary) -> void:
 	if environment_resource == null or sun_light == null:
 		return
-	var road_brightness := clampf(float(palette.get("sun_energy", 1.1)) * 0.55 + float(palette.get("ambient", 0.5)) * 0.55, 0.28, 1.0)
-	var road_tint := Color.WHITE.lerp(palette.get("sun_color", Color.WHITE), 0.18) * road_brightness
+	# Keep lane tint near-neutral so dusk cannot paint an orange carpet.
+	var sun_color: Color = palette.get("sun_color", Color.WHITE)
+	var road_tint := Color(0.94, 0.94, 0.93).lerp(sun_color.lerp(Color.WHITE, 0.72), 0.16)
 	road_tint.a = 1.0
 	ProductionRoadView3D.set_lighting(road_tint, float(palette.get("road_lift", 0.06)))
 	environment_resource.ambient_light_energy = float(palette.get("ambient", 0.5))
@@ -5305,29 +5306,33 @@ func _evidence_hover_point(point: Vector2) -> void:
 
 
 func write_gfx_tile_mask_json(path: String) -> void:
-	# Sidecar for tools/gfx_pixel_gates.py: road tile centres vs grass two tiles away.
+	# Sidecar for tools/gfx_pixel_gates.py: every on-screen road tile vs grass two tiles away.
 	if world_view == null or camera_rig == null or camera_rig.camera == null or simulation_host == null:
 		return
 	var sim = simulation_host.simulation
 	if sim == null:
 		return
 	var cam: Camera3D = camera_rig.camera
-	var road_tiles: Array[Vector2i] = []
 	var road_set := {}
 	for key in sim.connected_roads.keys():
 		var parts := String(key).split(",")
 		if parts.size() != 2:
 			continue
-		var tile := Vector2i(int(parts[0]), int(parts[1]))
-		road_set[tile] = true
-		road_tiles.append(tile)
+		road_set[Vector2i(int(parts[0]), int(parts[1]))] = true
+	for building_value in sim.get_buildings():
+		var building: Dictionary = building_value
+		if String(building.get("type", "")) != Defs.BUILDING_ROAD:
+			continue
+		road_set[Vector2i(building.get("position", Vector2i.ZERO))] = true
+	var viewport_size := get_viewport().get_visible_rect().size
+	var y0 := 90.0
+	var y1 := viewport_size.y - 184.0
 	var roads: Array = []
 	var grass: Array = []
-	for tile in road_tiles:
-		var world := world_view.tile_to_world(Vector2(tile))
-		if cam.is_position_behind(world):
+	for tile in road_set.keys():
+		var screen := _gfx_tile_screen(cam, Vector2i(tile))
+		if screen.y < y0 or screen.y >= y1 or screen.x < 0.0 or screen.x >= viewport_size.x:
 			continue
-		var screen := cam.unproject_position(world)
 		roads.append([snappedf(screen.x, 0.1), snappedf(screen.y, 0.1)])
 	for y in world_view.map_size.y:
 		for x in world_view.map_size.x:
@@ -5337,19 +5342,23 @@ func write_gfx_tile_mask_json(path: String) -> void:
 			if not sim.is_revealed(tile) or String(sim.get_tile(tile)) != Defs.TILE_GRASS:
 				continue
 			var min_d := 999
-			for road_tile in road_tiles:
+			for road_tile in road_set.keys():
 				min_d = mini(min_d, maxi(absi(tile.x - road_tile.x), absi(tile.y - road_tile.y)))
 			if min_d != 2:
 				continue
-			var world := world_view.tile_to_world(Vector2(tile))
-			if cam.is_position_behind(world):
+			var screen := _gfx_tile_screen(cam, tile)
+			if screen.y < y0 or screen.y >= y1 or screen.x < 0.0 or screen.x >= viewport_size.x:
 				continue
-			var screen := cam.unproject_position(world)
 			grass.append([snappedf(screen.x, 0.1), snappedf(screen.y, 0.1)])
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
 		return
-	file.store_string(JSON.stringify({"roads": roads, "grass": grass}))
+	file.store_string(JSON.stringify({"roads": roads, "grass": grass, "road_tiles": roads.size(), "grass_tiles": grass.size()}))
+
+
+func _gfx_tile_screen(cam: Camera3D, tile: Vector2i) -> Vector2:
+	var world := world_view.tile_to_world(Vector2(tile))
+	return cam.unproject_position(world)
 
 
 func _evidence_shot(shot_name: String, description: String) -> void:

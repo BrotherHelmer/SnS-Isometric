@@ -119,6 +119,20 @@ for t in "${EXTRA_TESTS[@]}"; do
   else result "extra:$t" FAIL "exit=$code fail=$nfail errors=$errs"; error_lines "$o" | head -5 | sed 's/^/    /' | tee -a "$SUMMARY"; fi
 done
 
+# 4c) Real-state GFX-1 gates from the 18-step save (written by phase3_2_real_playthrough).
+log "gfx pixel gates (18-step Day 3 / dusk / Night 2)"
+GATES="$OUT/gfx_gates"
+mkdir -p "$GATES"
+if [[ ! -f "$REPO/artifacts/phase3_2/persistence/eighteen_step_playthrough.json" ]]; then
+  result gfx_pixel_gates FAIL "missing eighteen_step_playthrough.json"
+else
+  timeout 90 xvfb-run -a -s "-screen 0 1280x720x24" bash -c "$(declare -f with_user); export OUT='$OUT' TEMPLATES='$TEMPLATES' GFX_GATE_OUT='$GATES' VK_ICD_FILENAMES='${VK_ICD_FILENAMES:-}'; with_user gfx_gates '$GODOT' --path '$REPO' --audio-driver Dummy --resolution 1280x720 --script res://tests/t_gfx_gate_shots.gd" > "$OUT/logs/gfx_gates_stdout.txt" 2>&1
+  code=$?
+  python3 "$REPO/tools/gfx_pixel_gates.py" "$GATES/gfx_day.png" "$GATES/gfx_dusk.png" "$GATES/gfx_night.png" | tee "$OUT/logs/gfx_gates.txt"
+  gate_code=${PIPESTATUS[0]}
+  [[ $code -eq 0 && $gate_code -eq 0 ]] && result gfx_pixel_gates PASS "$(grep GFX_PIXEL_GATES "$OUT/logs/gfx_gates.txt")" || result gfx_pixel_gates FAIL "capture=$code gates=$gate_code"
+fi
+
 else result parse_check SKIP "--quick"; result release_verification SKIP "--quick"; FAILED=1; fi  # --quick never passes
 
 # 5) Export. Done in a scratch copy so the working tree (export_presets.cfg) is never modified.

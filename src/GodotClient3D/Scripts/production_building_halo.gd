@@ -54,11 +54,7 @@ const TABLE := {
 		{"prop": "wheelbarrow", "dx": 2, "dy": -1, "yaw": 18.0, "scale": 0.75},
 	],
 	"FARM": [
-		{"prop": "wheat_field", "dx": -2, "dy": 0, "yaw": 0.0, "scale": 1.20, "span": Vector2i(2, 2), "density": 4},
-		{"prop": "wheat_crop", "dx": 4, "dy": 0, "yaw": 8.0, "scale": 1.20},
-		{"prop": "wheat_crop", "dx": 4, "dy": 1, "yaw": -6.0, "scale": 1.15},
-		{"prop": "wheat_crop", "dx": 5, "dy": 0, "yaw": 14.0, "scale": 1.10},
-		{"prop": "wheat_crop", "dx": 5, "dy": 1, "yaw": -10.0, "scale": 1.05},
+		{"prop": "wheat_field", "dx": -2, "dy": 0, "yaw": 0.0, "scale": 1.05, "span": Vector2i(2, 2), "density": 9},
 		{"prop": "fence", "dx": -1, "dy": -1, "yaw": 0.0, "scale": 1.0},
 		{"prop": "fence", "dx": 0, "dy": -1, "yaw": 0.0, "scale": 1.0},
 		{"prop": "barrel", "dx": 4, "dy": 2, "yaw": 14.0, "scale": 1.00},
@@ -149,12 +145,14 @@ static func resolve(building: Dictionary, blocked: Dictionary) -> Array:
 			for oy in world_span.y:
 				for ox in world_span.x:
 					for copy in density:
+						var col := copy % 3
+						var row := int(copy / 3)
 						placements.append({
 							"prop": "wheat_crop",
 							"tile": world_tile + Vector2i(ox, oy),
 							"yaw": float(slot.get("yaw", 0.0)) + float((ox * 17 + oy * 11 + copy * 29) % 36) - 18.0,
-							"scale": float(slot.get("scale", 1.0)) * (0.88 + float(copy) * 0.06),
-							"nudge": Vector2(float(copy % 2) * 0.55 - 0.28, float(copy / 2) * 0.55 - 0.18),
+							"scale": float(slot.get("scale", 1.0)),
+							"nudge": Vector2((float(col) - 1.0) * 0.40, (float(row) - 1.0) * 0.40),
 							"building_id": int(building.get("id", 0)),
 							"building_type": type_name,
 						})

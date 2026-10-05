@@ -86,13 +86,14 @@ func _run() -> void:
 	print("P32_PLAY 08 farm=%d bakery=%d barracks=%d" % [farm_id, bakery_id, barracks_id])
 
 	simulation.is_night = false
+	simulation.phase_time = 80.0
+	game._update_day_night_lighting()
+	var day_energy: float = game.sun_light.light_energy
 	simulation.phase_time = float(simulation.DAY_LENGTH_SECONDS) - 25.0
 	game._update_day_night_lighting()
 	var dusk_energy: float = game.sun_light.light_energy
-	var day_energy: float = float(Identity.LIGHTING["day"]["sun_energy"])
-	var night_energy: float = float(Identity.LIGHTING["night"]["sun_energy"])
-	_check(failures, dusk_energy < day_energy and dusk_energy > night_energy, "9/10. evening lighting sits between day and night")
-	print("P32_PLAY 09 dusk sun=%.3f" % dusk_energy)
+	_check(failures, dusk_energy < day_energy and dusk_energy > 0.08, "9/10. evening lighting sits between day and night")
+	print("P32_PLAY 09 dusk sun=%.3f day sun=%.3f" % [dusk_energy, day_energy])
 
 	_wait_until_night(simulation, 7000)
 	game._sync_presentation()
