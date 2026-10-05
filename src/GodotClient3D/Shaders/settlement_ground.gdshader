@@ -14,9 +14,9 @@ uniform vec3 grass_moss : source_color = vec3(0.345, 0.404, 0.275); // #586746
 uniform vec3 dirt_color : source_color = vec3(0.502, 0.388, 0.278); // #806347
 uniform float macro_metres = 14.0;
 uniform float detail_metres = 1.2;
-uniform float macro_amount = 0.065;
-uniform float detail_amount = 0.035;
-uniform float dirt_amount = 0.42;
+uniform float macro_amount = 0.078;
+uniform float detail_amount = 0.048;
+uniform float dirt_amount = 0.36;
 
 varying vec3 world_pos;
 
@@ -43,9 +43,12 @@ void fragment() {
 	float macro = fbm(world_pos.xz / max(macro_metres, 1.0));
 	float detail = fbm(world_pos.xz / max(detail_metres, 0.4) + vec2(8.2, 3.7));
 	float dirt_noise = fbm(world_pos.xz / (macro_metres * 1.35) + vec2(4.8, 21.0));
-	float dirt_mask = smoothstep(0.46, 0.78, dirt_noise);
+	float dirt_mask = smoothstep(0.52, 0.84, dirt_noise);
 	vec3 grass = mix(grass_moss, grass_sunlit, clamp(macro * 0.7 + detail * 0.3, 0.0, 1.0));
-	vec3 ground = mix(COLOR.rgb, grass, 0.38);
+	// Vertex colour used to dominate (0.38), so the two-scale layer read as a
+	// flat board from the strategy camera. Prefer authored grass; keep dirt
+	// scarce so dusk gold cannot push warm-share over 0.50.
+	vec3 ground = mix(COLOR.rgb, grass, 0.48);
 	ground = mix(ground, dirt_color, dirt_mask * dirt_amount);
 	float macro_var = mix(1.0 - macro_amount, 1.0 + macro_amount, macro);
 	float detail_var = mix(1.0 - detail_amount, 1.0 + detail_amount, detail);

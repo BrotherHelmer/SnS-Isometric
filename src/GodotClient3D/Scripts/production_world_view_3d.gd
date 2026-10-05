@@ -479,9 +479,9 @@ func _rebuild_terrain() -> void:
 	# The Director: GFX-03 two-scale terrain defaults (8–20 m macro, 0.8–2 m detail).
 	material.set_shader_parameter("macro_metres", 14.0)
 	material.set_shader_parameter("detail_metres", 1.2)
-	material.set_shader_parameter("macro_amount", 0.065)
-	material.set_shader_parameter("detail_amount", 0.035)
-	material.set_shader_parameter("dirt_amount", 0.42)
+	material.set_shader_parameter("macro_amount", 0.078)
+	material.set_shader_parameter("detail_amount", 0.048)
+	material.set_shader_parameter("dirt_amount", 0.36)
 	terrain_mesh_instance.material_override = material
 	terrain_root.add_child(terrain_mesh_instance)
 	terrain_body = StaticBody3D.new()
