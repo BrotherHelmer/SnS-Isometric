@@ -65,6 +65,14 @@ func _run() -> void:
 	var dusk_fill: Color = dusk_p["fill_color"]
 	var dusk_sun: Color = dusk_p["sun_color"]
 	_check(dusk_fill.b > dusk_fill.r and dusk_sun.r > dusk_sun.b, "dusk has a warm key against a cool fill")
+	if game.world_view.terrain_mesh_instance != null and game.world_view.terrain_mesh_instance.material_override is ShaderMaterial:
+		var ground := game.world_view.terrain_mesh_instance.material_override as ShaderMaterial
+		var macro_m := float(ground.get_shader_parameter("macro_metres"))
+		var detail_m := float(ground.get_shader_parameter("detail_metres"))
+		_check(macro_m >= 8.0 and macro_m <= 20.0, "terrain macro noise is 8–20 m")
+		_check(detail_m >= 0.8 and detail_m <= 2.0, "terrain detail layer is 0.8–2 m")
+	else:
+		_check(false, "terrain uses the settlement ground shader")
 
 	game.apply_quality_profile("recommended")
 	_check(not game.environment_resource.ssil_enabled and not game.environment_resource.glow_enabled, "recommended profile keeps SSIL and glow off")
