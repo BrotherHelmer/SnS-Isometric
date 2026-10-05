@@ -686,7 +686,6 @@ func _rebuild_nature_multimeshes() -> void:
 	# Off-map decorative trees used to poke under the old FOW sheet. The fog
 	# volume now owns the exterior, so extra silhouettes are not needed.
 	_spawn_nature_multimeshes(resource_visuals_root, transforms_by_path)
-	_spawn_nature_contact_ao(resource_visuals_root, transforms_by_path)
 
 
 func _sync_grass(force: bool) -> void:
@@ -1872,9 +1871,8 @@ func _rebuild_edge_forest(force: bool) -> void:
 			_append_edge_tree(transforms_by_path, fir_path, Vector2(float(-ring), float(y)), ring)
 			_append_edge_tree(transforms_by_path, fir_path, Vector2(float(map_size.x - 1 + ring), float(y)), ring)
 	_spawn_nature_multimeshes(edge_forest_root, transforms_by_path)
-	_spawn_nature_contact_ao(edge_forest_root, transforms_by_path, 0.22)
 	for child in edge_forest_root.get_children():
-		if child is MultiMeshInstance3D and child.name != "ContactAOBatch":
+		if child is MultiMeshInstance3D:
 			var instance := child as MultiMeshInstance3D
 			instance.material_override = _edge_forest_material()
 			instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF

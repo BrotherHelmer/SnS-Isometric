@@ -81,10 +81,6 @@ func _run() -> void:
 		if view.find_child("ContactAO", true, false) != null:
 			contact_count += 1
 	_check(contact_count > 0, "buildings carry a contact-AO disc")
-	var nature_ao: Node = null
-	if game.world_view.resource_visuals_root != null:
-		nature_ao = game.world_view.resource_visuals_root.find_child("ContactAOBatch", true, false)
-	_check(nature_ao is MultiMeshInstance3D, "trees and rocks share a batched contact-AO MultiMesh")
 
 	game.apply_quality_profile("recommended")
 	_check(not game.environment_resource.ssil_enabled and not game.environment_resource.glow_enabled, "recommended profile keeps SSIL and glow off")

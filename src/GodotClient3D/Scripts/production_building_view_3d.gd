@@ -795,10 +795,6 @@ func _add_prop(prop_key: String, local_position: Vector3, prop_scale: Vector3, n
 	if resource_type != "":
 		prop.set_meta("inventory_resource", resource_type)
 		inventory_indicators.append(prop)
-	var prop_span := maxf(absf(prop.scale.x), absf(prop.scale.z)) * 0.95
-	var prop_ao := ContactAO.make_instance("ContactAO", Vector2(prop_span, prop_span), 0.28)
-	prop_ao.position = Vector3(local_position.x, 0.016, local_position.z)
-	workyard_root.add_child(prop_ao)
 
 
 func _update_inventory_indicators(inventory: Dictionary) -> void:
