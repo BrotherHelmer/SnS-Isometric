@@ -3557,7 +3557,7 @@ func _show_main_menu_card() -> void:
 	settings_card.visible = false
 	if load_card != null:
 		load_card.visible = false
-	var has_save := simulation_host.simulation != null and simulation_host.simulation.has_save_file()
+	var has_save: bool = simulation_host.simulation != null and simulation_host.simulation.has_save_file()
 	if continue_button != null:
 		continue_button.visible = has_save and not play_has_begun
 		continue_button.disabled = not has_save

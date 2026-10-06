@@ -20,17 +20,36 @@ var last_save_used := ""
 static func requested_from(launch: Dictionary) -> bool:
 	if bool(launch.get("benchmark", false)):
 		return true
-	return OS.get_environment("SNS_BENCHMARK") == "1"
+	if OS.get_environment("SNS_BENCHMARK") == "1":
+		return true
+	# The Director: exported Windows builds pass --benchmark on the raw argv,
+	# not only after Godot's `--` user-arg separator.
+	return _has_launch_flag("--benchmark")
 
 
 static func frame_override() -> int:
-	for argument in OS.get_cmdline_user_args():
+	for argument in _all_launch_args():
 		if argument.begins_with("--benchmark-frames="):
 			return maxi(1, int(argument.trim_prefix("--benchmark-frames=")))
 	var env := OS.get_environment("SNS_BENCHMARK_FRAMES")
 	if env.is_valid_int():
 		return maxi(1, int(env))
 	return 0
+
+
+static func _has_launch_flag(flag: String) -> bool:
+	var equals_prefix := flag + "="
+	for argument in _all_launch_args():
+		if argument == flag or argument.begins_with(equals_prefix):
+			return true
+	return false
+
+
+static func _all_launch_args() -> PackedStringArray:
+	var args := PackedStringArray()
+	args.append_array(OS.get_cmdline_args())
+	args.append_array(OS.get_cmdline_user_args())
+	return args
 
 
 static func resolve_save_path() -> String:
@@ -167,7 +186,7 @@ func _write_csv() -> String:
 		return ""
 	var size := DisplayServer.window_get_size()
 	var adapter := RenderingServer.get_video_adapter_name()
-	var driver := "%s/%s" % [OS.get_current_rendering_method(), OS.get_current_rendering_driver_name()]
+	var driver := _driver_label()
 	var mode := "windowed"
 	match DisplayServer.window_get_mode():
 		DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN:
@@ -187,6 +206,26 @@ func _write_csv() -> String:
 		])
 	file.close()
 	return path
+
+
+func _driver_label() -> String:
+	var method := RenderingServer.get_current_rendering_method()
+	if method.is_empty():
+		method = String(ProjectSettings.get_setting("rendering/renderer/rendering_method", "unknown"))
+	var driver_name := ""
+	if OS.has_method("get_current_rendering_driver_name"):
+		driver_name = str(OS.call("get_current_rendering_driver_name"))
+	if driver_name.is_empty():
+		var key := "rendering/rendering_device/driver"
+		match OS.get_name():
+			"Windows":
+				key = "rendering/rendering_device/driver.windows"
+			"macOS":
+				key = "rendering/rendering_device/driver.macos"
+			"Linux", "FreeBSD", "NetBSD", "OpenBSD", "BSD":
+				key = "rendering/rendering_device/driver.linuxbsd"
+		driver_name = String(ProjectSettings.get_setting(key, ProjectSettings.get_setting("rendering/rendering_device/driver", "unknown")))
+	return "%s/%s" % [method, driver_name]
 
 
 func _avg(values: Array[float]) -> float:

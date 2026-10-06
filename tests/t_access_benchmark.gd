@@ -15,6 +15,10 @@ func _init() -> void:
 func _run() -> void:
 	root.size = Vector2i(1280, 720)
 	OS.set_environment("SNS_BENCHMARK_FRAMES", "2")
+	_check(AccessBenchmark.requested_from({"benchmark": true}), "launch --benchmark requests the runner")
+	OS.set_environment("SNS_BENCHMARK", "1")
+	_check(AccessBenchmark.requested_from({}), "SNS_BENCHMARK=1 requests the runner")
+	OS.set_environment("SNS_BENCHMARK", "")
 	var game := Scene.instantiate()
 	root.add_child(game)
 	await process_frame
@@ -29,6 +33,9 @@ func _run() -> void:
 		_check(text.contains("gpu_avg_ms"), "CSV records GPU measure columns")
 		_check(text.contains("low,day,") and text.contains("medium,dusk,") and text.contains("high,night,"), "CSV samples Low/Medium/High across day/dusk/night")
 		print("ACCESS_BENCHMARK_TEST csv=\n%s" % text)
+	var packed := AccessBenchmark.resolve_save_path()
+	if packed != "":
+		_check(runner.last_save_used == packed, "uses the packed 18-step save when present")
 	game.queue_free()
 	await process_frame
 	_finish()

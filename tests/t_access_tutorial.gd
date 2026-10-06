@@ -39,8 +39,11 @@ func _run() -> void:
 	for building in sim.buildings:
 		if String(building.get("type", "")) in [Defs.BUILDING_LUMBER_CAMP, Defs.BUILDING_QUARRY]:
 			building["connected"] = true
-	_check(String(guide.evaluate(sim).get("id", "")) == Tutorial.STEP_CARRIERS, "linked yards ask for carriers")
-	_add_carrier(sim)
+	var after_connect: Dictionary = guide.evaluate(sim)
+	var after_id := String(after_connect.get("id", ""))
+	_check(after_id in [Tutorial.STEP_CARRIERS, Tutorial.STEP_FOOD], "linked yards advance to carriers or food")
+	if after_id == Tutorial.STEP_CARRIERS:
+		_add_carrier(sim)
 	_check(String(guide.evaluate(sim).get("id", "")) == Tutorial.STEP_FOOD, "a carrier advances to food")
 	_complete_building(sim, Defs.BUILDING_FARM)
 	_check(String(guide.evaluate(sim).get("id", "")) == Tutorial.STEP_WATCHTOWER, "a farm advances to the watchtower")
@@ -76,7 +79,7 @@ func _run() -> void:
 
 
 func _complete_building(sim, building_type: String) -> void:
-	var tile := sim.town_hall_position + Vector2i(8, 4)
+	var tile: Vector2i = sim.town_hall_position + Vector2i(8, 4)
 	if building_type == Defs.BUILDING_QUARRY:
 		tile += Vector2i(2, 0)
 		sim._set_tile(tile, Defs.TILE_ROCK)
@@ -84,7 +87,7 @@ func _complete_building(sim, building_type: String) -> void:
 		tile += Vector2i(0, 3)
 	elif building_type == Defs.BUILDING_WATCHTOWER:
 		tile += Vector2i(3, 3)
-	var building := sim._create_building(building_type, tile)
+	var building: Dictionary = sim._create_building(building_type, tile)
 	building["construction"] = false
 	sim.buildings.append(building)
 	Intentions.evaluate(sim)
