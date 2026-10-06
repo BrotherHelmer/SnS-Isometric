@@ -48,6 +48,7 @@ func _run() -> void:
 	near_store["construction"] = false
 	near_store["completed"] = true
 	sim.buildings.append(near_store)
+	sim.day_count = 2
 	var enemy := {
 		"id": 7,
 		"enemy_type": Simulation.ENEMY_RAIDER,

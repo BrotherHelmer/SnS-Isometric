@@ -60,6 +60,7 @@ func _run() -> void:
 func _economy_skips_town_hall() -> bool:
 	var sim: Simulation = Simulation.new(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 779, false)
 	sim.start_new_run(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 779, true)
+	sim.day_count = 2
 	var hall := sim._find_town_hall()
 	var quarry := sim._create_building(Defs.BUILDING_QUARRY, hall["position"] + Vector2i(8, 0))
 	quarry["construction"] = false

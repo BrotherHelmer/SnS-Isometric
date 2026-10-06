@@ -6086,6 +6086,8 @@ func _prepare_raid_plan() -> Dictionary:
 			target = yards[0]
 	if target.is_empty():
 		target = _find_town_hall()
+	if dusk_forecast.is_empty() or String(dusk_forecast.get("threat", "")) == "":
+		dusk_forecast = Wyrdfall.night_forecast(float(get_wyrd_pressure().get("value", 0.0)), day_count <= 1)
 	raid_plan = {
 		"intent": intent,
 		"bearing": _bearing_from_town(bearing_tile),
@@ -6384,21 +6386,24 @@ func _find_enemy_target_unprofiled(enemy: Dictionary) -> Dictionary:
 		var exposed_target := _best_enemy_target(enemy, exposed_workers, "worker", false)
 		if not exposed_target.is_empty():
 			return exposed_target
-	var raid_intent := String(enemy.get("raid_intent", raid_plan.get("intent", "")))
-	if raid_intent == RaidIntents.INTENT_ECONOMY:
-		var economy := _raid_economy_candidates()
-		var economy_hit := _best_enemy_target(enemy, economy, "building", false)
-		if not economy_hit.is_empty():
-			return economy_hit
-	elif raid_intent == RaidIntents.INTENT_CENTER:
-		var hall := _find_town_hall()
-		if not hall.is_empty():
-			return {"kind": "building", "entity": hall}
-	elif raid_intent == RaidIntents.INTENT_PROBE:
-		var probe := _raid_economy_candidates()
-		var probe_hit := _best_enemy_target(enemy, probe, "building", false)
-		if not probe_hit.is_empty():
-			return probe_hit
+	# Night 1 keeps classic siege targeting so the teaching raid still
+	# walks the yard and the Watchtower can fire. Variety starts Night 2:
+	# economy raids peel to yards; centre raids keep the defended route.
+	if day_count > 1:
+		var raid_intent := String(enemy.get("raid_intent", raid_plan.get("intent", "")))
+		if raid_intent == RaidIntents.INTENT_ECONOMY:
+			var economy := _raid_economy_candidates()
+			var economy_hit := _best_enemy_target(enemy, economy, "building", false)
+			if not economy_hit.is_empty():
+				return economy_hit
+		elif raid_intent == RaidIntents.INTENT_PROBE:
+			var exposed_probe: Array = []
+			for yard in _raid_economy_candidates():
+				if Frontier.is_exposed(self, yard):
+					exposed_probe.append(yard)
+			var probe_hit := _best_enemy_target(enemy, exposed_probe, "building", false)
+			if not probe_hit.is_empty():
+				return probe_hit
 	var is_brute := String(enemy.get("enemy_type", ENEMY_RAIDER)) == ENEMY_BRUTE
 	if is_brute:
 		var structure_targets: Array = []
