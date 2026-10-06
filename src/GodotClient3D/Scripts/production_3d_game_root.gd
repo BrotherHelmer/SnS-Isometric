@@ -1745,7 +1745,15 @@ func _update_placement_ghost(force := false) -> void:
 	if ghost_clearing_label != null:
 		ghost_clearing_label.visible = needs_clearing
 		ghost_clearing_label.position.y = ghost_height + 2.15
-	placement_label.text = "%s · %s" % ["CLEARING REQUIRED" if needs_clearing else ("VALID" if valid else "INVALID"), String(placement_validation.get("message", ""))]
+	var quality: Dictionary = placement_validation.get("placement_quality", {})
+	if quality.is_empty() and simulation_host.simulation.has_method("evaluate_placement_quality"):
+		quality = simulation_host.simulation.evaluate_placement_quality(placement_type, placement_tile, placement_rotation)
+	var quality_text := String(quality.get("label", ""))
+	var prefix := "CLEARING REQUIRED" if needs_clearing else ("VALID" if valid else "INVALID")
+	if quality_text != "":
+		placement_label.text = "%s · %s" % [prefix, quality_text]
+	else:
+		placement_label.text = "%s · %s" % [prefix, String(placement_validation.get("message", ""))]
 
 
 func _commit_placement() -> void:
@@ -2448,6 +2456,9 @@ func _update_inspector_core() -> void:
 						lines.append("Last delivery  %d sec ago" % int(round(last_ago)))
 					else:
 						lines.append("Last delivery  none yet")
+				var band := String(building.get("placement_band", ""))
+				if band != "" and int(building.get("placement_percent", 0)) > 0 and String(building.get("type", "")) in [Defs.BUILDING_LUMBER_CAMP, Defs.BUILDING_QUARRY, Defs.BUILDING_FARM]:
+					lines.append("Site  %d%% %s" % [int(building.get("placement_percent", 0)), band])
 				else:
 					var diagnostic := _production_diagnostic(building, type_name)
 					if diagnostic != "active":

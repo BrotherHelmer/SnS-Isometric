@@ -12,6 +12,7 @@ const Scout = preload("one_shard_scout.gd")
 const Discoveries = preload("one_shard_discoveries.gd")
 const Economy = preload("one_shard_economy.gd")
 const RaidIntents = preload("one_shard_raid_intents.gd")
+const Placement = preload("one_shard_placement.gd")
 
 const SAVE_PATH := "user://one_shard_save.json"
 const AUTOSAVE_PATH := "user://one_shard_autosave.json"
@@ -907,12 +908,12 @@ func validate_placement(building_type: String, tile: Vector2i, rotation: int = 0
 	if building_type == Defs.BUILDING_WALL:
 		return _success(success_message)
 	if _footprint_touches_planned_or_connected_road(tile, footprint):
-		return _success(success_message)
+		return _with_placement_quality(_success(success_message), building_type, tile, rotation)
 	var spur := _auto_spur_tiles(tile, footprint)
 	if not spur.is_empty():
 		if not trees_to_clear.is_empty():
-			return _success("CLEARING REQUIRED — a short road will also be extended.")
-		return _success("Will extend a short road to this site.")
+			return _with_placement_quality(_success("CLEARING REQUIRED — a short road will also be extended."), building_type, tile, rotation)
+		return _with_placement_quality(_success("Will extend a short road to this site."), building_type, tile, rotation)
 
 	return _failure("RoadConnection", "No road access. Extend roads from Town Hall first, then place buildings beside connected roads.")
 
@@ -1033,6 +1034,7 @@ func request_build(building_type: String, tile: Vector2i, rotation: int = 0) -> 
 		site["deposit_remaining"] = _quarry_deposit_for_footprint(tile, _oriented_footprint(building_type, rotation))
 	_mark_site_clearing(site)
 	site["status"] = "CLEARING SITE" if bool(site.get("site_clearing", false)) else "Building."
+	_stamp_placement_quality(site, building_type, tile, rotation)
 	buildings.append(site)
 	_rebuild_occupied_tiles()
 	_recompute_road_network()
@@ -2293,6 +2295,30 @@ func get_current_intention() -> Dictionary:
 	return Intentions.current(self)
 
 
+func evaluate_placement_quality(building_type: String, tile: Vector2i, rotation: int = 0) -> Dictionary:
+	return Placement.score(self, building_type, tile, rotation)
+
+
+func _stamp_placement_quality(building: Dictionary, building_type: String, tile: Vector2i, rotation: int = 0) -> void:
+	var score: Dictionary = Placement.score(self, building_type, tile, rotation)
+	if score.is_empty():
+		return
+	building["placement_quality"] = float(score.get("scalar", 1.0))
+	building["placement_percent"] = int(score.get("percent", 100))
+	building["placement_band"] = String(score.get("band", Placement.BAND_GOOD))
+
+
+func _production_interval(building: Dictionary) -> float:
+	var building_type := String(building.get("type", ""))
+	var interval := 2.0
+	if Defs.PRODUCTION_DEFS.has(building_type):
+		interval = float(Defs.PRODUCTION_DEFS[building_type].get("interval", 5.0))
+	var quality := float(building.get("placement_quality", 1.0))
+	if quality > 0.01:
+		interval = interval / quality
+	return interval
+
+
 func diagnose_building_dict(building: Dictionary) -> Dictionary:
 	return Economy.diagnose(building, elapsed_seconds)
 
@@ -3527,7 +3553,10 @@ func _create_building(building_type: String, tile: Vector2i) -> Dictionary:
 		"clear_tiles": [],
 		"last_delivery_elapsed": -1.0,
 		"last_production_elapsed": -1.0,
-		"last_stall_kind": ""
+		"last_stall_kind": "",
+		"placement_quality": 1.0,
+		"placement_percent": 100,
+		"placement_band": Placement.BAND_GOOD
 	}
 
 
@@ -5334,7 +5363,7 @@ func _update_production(delta: float) -> void:
 
 		var definition: Dictionary = Defs.PRODUCTION_DEFS[building_type]
 		building["production_timer"] = float(building.get("production_timer", 0.0)) + delta
-		var interval := float(definition.get("interval", 5.0))
+		var interval := _production_interval(building)
 		if float(building["production_timer"]) < interval:
 			if not _holds_production_status(String(building.get("status", ""))):
 				building["status"] = "Active."
@@ -5486,12 +5515,16 @@ func _produce_from_building(building: Dictionary) -> bool:
 
 
 func _effective_output_amount(building: Dictionary, normal_amount: int) -> int:
-	if not is_hunger_penalty_active():
-		return normal_amount
-	for worker in workers:
-		if int(worker.get("building_id", 0)) == int(building.get("id", 0)) and bool(worker.get("hungry", false)):
-			return maxi(1, int(floor(float(normal_amount) * HUNGER_OUTPUT_MULTIPLIER)))
-	return normal_amount
+	var amount := normal_amount
+	if is_hunger_penalty_active():
+		for worker in workers:
+			if int(worker.get("building_id", 0)) == int(building.get("id", 0)) and bool(worker.get("hungry", false)):
+				amount = maxi(1, int(floor(float(normal_amount) * HUNGER_OUTPUT_MULTIPLIER)))
+				break
+	var quality := float(building.get("placement_quality", 1.0))
+	if quality > 0.0 and absf(quality - 1.0) > 0.001:
+		amount = maxi(1, int(round(float(amount) * quality)))
+	return amount
 
 
 func _record_production(building: Dictionary, output: String, output_amount: int, input_resource: String = "", input_amount: int = 0) -> void:
@@ -7996,6 +8029,15 @@ func _tile_from_key(key: String) -> Vector2i:
 
 func _success(message: String) -> Dictionary:
 	return {"success": true, "reason": "None", "message": message}
+
+
+func _with_placement_quality(result: Dictionary, building_type: String, tile: Vector2i, rotation: int) -> Dictionary:
+	var score: Dictionary = Placement.score(self, building_type, tile, rotation)
+	if not score.is_empty():
+		result["placement_quality"] = score
+		if bool(result.get("success", false)):
+			result["message"] = "%s  %s" % [String(result.get("message", "")), String(score.get("label", ""))]
+	return result
 
 
 func _failure(reason: String, message: String) -> Dictionary:
