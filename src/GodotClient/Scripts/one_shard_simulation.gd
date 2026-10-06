@@ -14,6 +14,7 @@ const Economy = preload("one_shard_economy.gd")
 const RaidIntents = preload("one_shard_raid_intents.gd")
 const Placement = preload("one_shard_placement.gd")
 const Frontier = preload("one_shard_frontier.gd")
+const Dawn = preload("one_shard_dawn.gd")
 
 const SAVE_PATH := "user://one_shard_save.json"
 const AUTOSAVE_PATH := "user://one_shard_autosave.json"
@@ -8122,18 +8123,12 @@ func _pressure_feedback_message(band: String, snapshot: Dictionary) -> String:
 
 
 func _compose_dawn_summary() -> void:
-	var defeated := maxi(0, int(stats.get("enemies_defeated", 0)) - night_enemies_defeated_at_dusk)
-	if night_enemies_spawned <= 0 and defeated <= 0 and night_casualties <= 0 and night_buildings_damaged <= 0:
-		dawn_summary = {}
+	dawn_summary = Dawn.compose(self)
+	if dawn_summary.is_empty():
 		return
-	dawn_summary = {
-		"title": "DAWN",
-		"survived": true,
-		"enemies_defeated": defeated,
-		"settlers_lost": night_casualties,
-		"buildings_damaged": night_buildings_damaged
-	}
-	last_message = "DAWN — Night survived. %d enemies defeated, %d settlers lost." % [defeated, night_casualties]
+	last_message = String(dawn_summary.get("title", "DAWN"))
+	_add_log(String(dawn_summary.get("body", last_message)).replace("\n", " · "))
+	playtest_log.note(self, "dawn_aftermath", last_message)
 
 
 func _notice_discoveries() -> void:

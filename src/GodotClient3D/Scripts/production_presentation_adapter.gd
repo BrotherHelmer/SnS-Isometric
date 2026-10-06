@@ -205,6 +205,7 @@ func building_descriptor(building: Dictionary, simulation, cached_has_barracks: 
 		"stall_icon": String(stall.get("icon", "")),
 		"stall_line": String(stall.get("line", "")),
 		"stall_hover": String(stall.get("hover", "")),
+		"dawn_highlight": float(building.get("dawn_highlight_until", 0.0)) > float(simulation.elapsed_seconds),
 	}
 
 

@@ -2356,11 +2356,14 @@ func _update_loop_hud() -> void:
 		nightfall_panel.visible = Time.get_ticks_msec() / 1000.0 < nightfall_event_until and (startup_overlay == null or not startup_overlay.visible)
 	var dawn: Dictionary = wyrdfall.get("dawn_summary", {})
 	if not dawn.is_empty():
-		_show_status("DAWN\nNight survived  ·  %d threats defeated  ·  %d lost  ·  %d damaged" % [
-			int(dawn.get("enemies_defeated", 0)),
-			int(dawn.get("settlers_lost", 0)),
-			int(dawn.get("buildings_damaged", 0))
-		], 6.0)
+		var body := String(dawn.get("body", ""))
+		if body == "":
+			body = "DAWN\nNight survived  ·  %d threats defeated  ·  %d lost  ·  %d damaged" % [
+				int(dawn.get("enemies_defeated", 0)),
+				int(dawn.get("settlers_lost", 0)),
+				int(dawn.get("buildings_damaged", 0))
+			]
+		_show_status(body, 5.0)
 		simulation_host.simulation.consume_dawn_summary()
 	var hint: Dictionary = wyrdfall.get("onboarding", {})
 	if not hint.is_empty() and status_message_text == "":
