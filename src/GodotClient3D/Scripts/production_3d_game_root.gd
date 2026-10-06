@@ -7,12 +7,15 @@ const Catalog = preload("res://src/GodotClient3D/Scripts/production_asset_catalo
 const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_profile.gd")
 const DemoFixture = preload("res://src/GodotClient3D/Scripts/production_demo_fixture.gd")
 const QualityProfile = preload("res://src/GodotClient3D/Scripts/production_quality_profile.gd")
+const UserSettings = preload("res://src/GodotClient3D/Scripts/production_user_settings.gd")
+const AccessTutorial = preload("res://src/GodotClient3D/Scripts/production_access_tutorial.gd")
+const AccessBenchmark = preload("res://src/GodotClient3D/Scripts/production_benchmark.gd")
 const RivalryTuning = preload("res://src/GodotClient/Scripts/one_shard_rivalry_tuning.gd")
 const Identity = preload("res://src/GodotClient3D/Scripts/production_identity.gd")
 const AudioDirector = preload("res://src/GodotClient3D/Scripts/production_audio_director.gd")
 const PressureMeterScript = preload("res://src/GodotClient3D/Scripts/wyrd_pressure_meter.gd")
 const MinimapScript = preload("res://src/GodotClient3D/Scripts/production_minimap.gd")
-const DISPLAY_SETTINGS_PATH := "user://display_settings.cfg"
+const DISPLAY_SETTINGS_PATH := "user://settings.cfg"
 const PREVIOUS_REALM_PATH := "user://previous_realm.json"
 
 const DEFAULT_SEED := 260821
@@ -246,6 +249,32 @@ var master_slider: HSlider
 var music_slider: HSlider
 var sfx_slider: HSlider
 var fullscreen_check: CheckBox
+var display_mode_select: OptionButton
+var resolution_select: OptionButton
+var vsync_check: CheckBox
+var ui_scale_slider: HSlider
+var ui_scale_value: Label
+var edge_pan_check: CheckBox
+var camera_speed_slider: HSlider
+var tutorial_check: CheckBox
+var bindings_body: Label
+var load_card: Control
+var load_button: Button
+var tutorial_button: Button
+var pause_options_button: Button
+var user_settings: Dictionary = UserSettings.defaults()
+var access_tutorial = AccessTutorial.new()
+var tutorial_overlay: Control
+var tutorial_title: Label
+var tutorial_body: Label
+var tutorial_skip_button: Button
+var tutorial_arrow: Label
+var last_tutorial_highlight := ""
+var last_camera_pan_gen := 0
+var last_camera_zoom_gen := 0
+var last_camera_rotate_gen := 0
+var access_benchmark = AccessBenchmark.new()
+var benchmark_requested := false
 var result_more_button: Button
 var result_more_stats := false
 var last_result_stats: Dictionary = {}
@@ -286,11 +315,16 @@ func _ready() -> void:
 	get_window().title = "Shard & Sovereign"
 	call_deferred("_apply_window_title")
 	var launch := _parse_launch_options()
-	quality_profile = QualityProfile.get_profile(String(launch.get("quality", "recommended")))
+	user_settings = UserSettings.load_settings()
+	if String(launch.get("quality", "")) != "":
+		user_settings["graphics_preset"] = QualityProfile.resolve_name(String(launch.get("quality")))
+	quality_profile = QualityProfile.get_profile(String(user_settings.get("graphics_preset", "high")))
+	benchmark_requested = AccessBenchmark.requested_from(launch)
 	_create_lighting()
 	_create_ui()
-	_restore_display_settings()
+	_apply_boot_settings()
 	_create_audio()
+	UserSettings.apply_audio(user_settings, audio_director)
 	_create_placement_ghost()
 	fixture_stage = String(launch.get("fixture", ""))
 	fixture_requested = fixture_stage != ""
@@ -302,13 +336,15 @@ func _ready() -> void:
 	_initialize_presentation()
 	if fixture_requested:
 		call_deferred("_apply_requested_fixture")
-	var auto_start := bool(launch.get("autostart", false)) or fixture_requested or bool(launch.get("load", false))
+	var auto_start := bool(launch.get("autostart", false)) or fixture_requested or bool(launch.get("load", false)) or benchmark_requested
 	if auto_start:
 		_hide_start_menu()
 		simulation_host.paused = false
 	else:
 		simulation_host.paused = true
 		_show_start_menu()
+	if benchmark_requested:
+		call_deferred("_run_access_benchmark")
 	if "--verify-release" in OS.get_cmdline_user_args():
 		call_deferred("_run_release_check")
 	debug_audio_cycle_active = bool(launch.get("debug_audio_cycle", false))
@@ -348,6 +384,7 @@ func _process(delta: float) -> void:
 	_tick_notice_feed()
 	_tick_shard_glance()
 	_tick_edge_pan(delta)
+	_tick_access_tutorial()
 	_update_shard_compass()
 	_tick_minimap(delta)
 	if simulation_host.simulation != null and simulation_host.simulation.game_finished:
@@ -383,6 +420,16 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			return
 		if startup_overlay != null and startup_overlay.visible:
+			if event.keycode == KEY_ESCAPE:
+				if settings_card != null and settings_card.visible:
+					_show_main_menu_card()
+				elif play_has_begun:
+					_resume_from_menu()
+				get_viewport().set_input_as_handled()
+			return
+		if event.keycode == KEY_ESCAPE and play_has_begun:
+			_show_start_menu()
+			get_viewport().set_input_as_handled()
 			return
 		if _handle_hud_hotkey(event as InputEventKey):
 			get_viewport().set_input_as_handled()
@@ -565,6 +612,9 @@ func start_new_3d(seed_value := DEFAULT_SEED) -> void:
 	_initialize_presentation()
 	simulation_host.paused = false
 	_hide_start_menu()
+	if access_tutorial != null and bool(user_settings.get("tutorial_enabled", true)):
+		access_tutorial.begin_for_sim(simulation_host.simulation)
+	_refresh_tutorial_overlay()
 	_show_status("Settlement founded.", 3.0)
 
 
@@ -714,7 +764,7 @@ func _sync_presentation() -> void:
 
 
 func _create_lighting() -> void:
-	get_viewport().msaa_3d = Viewport.MSAA_2X if bool(quality_profile.get("shadows", true)) else Viewport.MSAA_DISABLED
+	QualityProfile.apply_viewport(get_viewport(), quality_profile)
 	var environment_node := WorldEnvironment.new()
 	environment_node.name = "ShardlitEnvironment"
 	var environment := Environment.new()
@@ -1614,6 +1664,7 @@ func _create_ui() -> void:
 	placement_vbox.add_child(placement_label)
 	placement_panel.visible = false
 	_create_start_menu(root)
+	_create_tutorial_overlay(root)
 	_create_result_overlay(root)
 	_create_binding_confirm(root)
 
@@ -3072,6 +3123,8 @@ func _tick_edge_pan(delta: float) -> void:
 		return
 	var margin := 34.0
 	var edge := Vector2.ZERO
+	if not camera_rig.edge_pan_enabled:
+		return
 	if mouse.x <= margin:
 		edge.x -= 1.0
 	elif mouse.x >= view_size.x - margin:
@@ -3319,11 +3372,14 @@ func _create_start_menu(root: Control) -> void:
 	resume_button.visible = false
 	menu_save_button = _menu_action(menu_box, "SaveFromMenu", "SAVE", 40, save_game)
 	menu_save_button.visible = false
-	_menu_action(menu_box, "NewSettlement", "NEW REALM", 48, _show_new_realm_card)
-	continue_button = _menu_action(menu_box, "LoadSettlement", "CONTINUE", 44, load_game)
-	_menu_action(menu_box, "OpenSettings", "SETTINGS", 40, _show_settings_card)
+	continue_button = _menu_action(menu_box, "LoadSettlement", "CONTINUE", 48, load_game)
+	_menu_action(menu_box, "NewSettlement", "NEW GAME", 48, _show_new_realm_card)
+	load_button = _menu_action(menu_box, "LoadGame", "LOAD", 44, _show_load_card)
+	_menu_action(menu_box, "OpenSettings", "OPTIONS", 40, _show_settings_card)
+	tutorial_button = _menu_action(menu_box, "ReopenTutorial", "TUTORIAL", 36, _reopen_tutorial)
+	tutorial_button.visible = false
 	_menu_action(menu_box, "FeedbackBundle", "SAVE FEEDBACK REPORT", 32, _export_feedback)
-	_menu_action(menu_box, "QuitGame", "SAVE & QUIT", 40, _request_quit)
+	_menu_action(menu_box, "QuitGame", "QUIT", 40, _request_quit)
 	var build_label := Label.new()
 	build_label.text = "PLAYTEST · " + String(ProjectSettings.get_setting("application/config/version", "development"))
 	build_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -3368,44 +3424,46 @@ func _create_start_menu(root: Control) -> void:
 	new_realm_card.visible = false
 	_place_start_column(new_realm_card, 360.0)
 
-	settings_card = _menu_panel("SettingsPanel", Vector2(-190, -210), Vector2(380, 420))
+	settings_card = _menu_panel("SettingsPanel", Vector2(-220, -260), Vector2(440, 520))
 	startup_overlay.add_child(settings_card)
 	var settings_box := _menu_box(settings_card)
 	var settings_title := Label.new()
-	settings_title.text = "SETTINGS"
+	settings_title.text = "OPTIONS"
 	settings_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	Identity.apply_label(settings_title, "heading")
 	settings_box.add_child(settings_title)
-	var audio_settings := Identity.load_audio_settings()
-	master_slider = _add_volume_slider(settings_box, "Master", float(audio_settings.get("master", 1.0)))
-	music_slider = _add_volume_slider(settings_box, "Music", float(audio_settings.get("music", 0.72)))
-	sfx_slider = _add_volume_slider(settings_box, "Effects", float(audio_settings.get("sfx", 0.85)))
-	var quality_row := HBoxContainer.new()
-	var quality_label := Label.new()
-	quality_label.text = "Visual quality"
-	quality_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	Identity.apply_label(quality_label, "caption")
-	quality_row.add_child(quality_label)
-	quality_select = OptionButton.new()
-	quality_select.name = "QualityProfile"
-	quality_select.add_item("Recommended", 0)
-	quality_select.set_item_metadata(0, "recommended")
-	quality_select.add_item("Scalable Low", 1)
-	quality_select.set_item_metadata(1, "scalable_low")
-	quality_select.item_selected.connect(func(_index: int) -> void:
-		_apply_menu_quality()
-		_save_display_settings()
-	)
-	quality_row.add_child(quality_select)
-	settings_box.add_child(quality_row)
-	fullscreen_check = CheckBox.new()
-	fullscreen_check.text = "Fullscreen"
-	fullscreen_check.button_pressed = DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN
-	fullscreen_check.toggled.connect(_set_fullscreen)
-	settings_box.add_child(fullscreen_check)
+	var settings_scroll := ScrollContainer.new()
+	settings_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	settings_scroll.custom_minimum_size = Vector2(0, 360)
+	settings_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	settings_box.add_child(settings_scroll)
+	var settings_inner := VBoxContainer.new()
+	settings_inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	settings_inner.add_theme_constant_override("separation", 10)
+	settings_scroll.add_child(settings_inner)
+	_build_options_fields(settings_inner)
 	_menu_action(settings_box, "BackFromSettings", "BACK", 36, _show_main_menu_card)
 	settings_card.visible = false
-	_place_start_column(settings_card, 380.0)
+	_place_start_column(settings_card, 440.0)
+
+	load_card = _menu_panel("LoadPanel", Vector2(-180, -170), Vector2(360, 320))
+	startup_overlay.add_child(load_card)
+	var load_box := _menu_box(load_card)
+	var load_title := Label.new()
+	load_title.text = "LOAD"
+	load_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	Identity.apply_label(load_title, "heading")
+	load_box.add_child(load_title)
+	var load_caption := Label.new()
+	load_caption.text = "Continue the newest save, or the last realm you left."
+	load_caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	Identity.apply_label(load_caption, "caption")
+	load_box.add_child(load_caption)
+	_menu_action(load_box, "LoadNewest", "NEWEST SAVE", 44, load_game)
+	_menu_action(load_box, "LoadPrevious", "PREVIOUS REALM", 40, _load_previous_realm)
+	_menu_action(load_box, "BackFromLoad", "BACK", 36, _show_main_menu_card)
+	load_card.visible = false
+	_place_start_column(load_card, 360.0)
 
 	var review_button := Button.new()
 	review_button.name = "NewReviewSeed"
@@ -3497,27 +3555,49 @@ func _show_main_menu_card() -> void:
 		quit_button.text = "SAVE & QUIT" if play_has_begun else "QUIT"
 	new_realm_card.visible = false
 	settings_card.visible = false
-	if continue_button != null and simulation_host.simulation != null:
-		continue_button.disabled = not simulation_host.simulation.has_save_file()
+	if load_card != null:
+		load_card.visible = false
+	var has_save: bool = simulation_host.simulation != null and simulation_host.simulation.has_save_file()
+	if continue_button != null:
+		continue_button.visible = has_save and not play_has_begun
+		continue_button.disabled = not has_save
+	if load_button != null:
+		load_button.disabled = not has_save and not FileAccess.file_exists(PREVIOUS_REALM_PATH)
 	if resume_button != null:
 		resume_button.visible = play_has_begun
 	if menu_save_button != null:
 		menu_save_button.visible = play_has_begun
+	if tutorial_button != null:
+		tutorial_button.visible = play_has_begun
 	_place_start_column(menu_card, 360.0)
 
 
 func _show_new_realm_card() -> void:
 	menu_card.visible = false
 	settings_card.visible = false
+	if load_card != null:
+		load_card.visible = false
 	new_realm_card.visible = true
 	_place_start_column(new_realm_card, 360.0)
+
+
+func _show_load_card() -> void:
+	menu_card.visible = false
+	settings_card.visible = false
+	new_realm_card.visible = false
+	if load_card != null:
+		load_card.visible = true
+		_place_start_column(load_card, 360.0)
 
 
 func _show_settings_card() -> void:
 	menu_card.visible = false
 	new_realm_card.visible = false
+	if load_card != null:
+		load_card.visible = false
 	settings_card.visible = true
-	_place_start_column(settings_card, 380.0)
+	_sync_options_controls()
+	_place_start_column(settings_card, 440.0)
 
 
 func _create_result_overlay(root: Control) -> void:
@@ -3724,11 +3804,10 @@ func _apply_menu_quality() -> void:
 
 func apply_quality_profile(profile_name: String) -> void:
 	quality_profile = QualityProfile.get_profile(profile_name)
-	get_viewport().msaa_3d = Viewport.MSAA_2X if bool(quality_profile.get("shadows", true)) else Viewport.MSAA_DISABLED
+	user_settings["graphics_preset"] = QualityProfile.resolve_name(profile_name)
+	QualityProfile.apply_viewport(get_viewport(), quality_profile)
 	if sun_light != null:
-		sun_light.shadow_enabled = bool(quality_profile.get("shadows", true))
-		sun_light.light_angular_distance = 0.0
-		_apply_sun_shadow_settings(sun_light)
+		QualityProfile.apply_sun(sun_light, quality_profile)
 	_apply_quality_features()
 	if world_view != null:
 		world_view.apply_quality_profile(quality_profile)
@@ -3799,7 +3878,7 @@ func _author_title_composition() -> void:
 func _set_play_chrome_visible(value: bool) -> void:
 	if hud_root == null:
 		return
-	for chrome_name in ["TopBar", "LoopBar", "ProvinceMinimap", "NoticeFeed"]:
+	for chrome_name in ["TopBar", "LoopBar", "ProvinceMinimap", "NoticeFeed", "AccessTutorial"]:
 		var chrome := hud_root.find_child(chrome_name, true, false)
 		if chrome != null:
 			chrome.visible = value
@@ -3884,18 +3963,9 @@ func _apply_quality_features() -> void:
 
 
 func _apply_sun_shadow_settings(light: DirectionalLight3D) -> void:
-	# The Director: keep GFX-05's 2-split key, but park the cascade seam
-	# past the settlement and bias the flats so panning does not stripe.
-	if light == null:
-		return
-	light.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
-	light.directional_shadow_blend_splits = true
-	light.directional_shadow_split_1 = 0.82
-	light.directional_shadow_max_distance = float(quality_profile.get("shadow_distance", 48.0))
-	light.directional_shadow_fade_start = 0.86
-	light.directional_shadow_pancake_size = 4.0
-	light.shadow_bias = 0.06
-	light.shadow_normal_bias = 1.6
+	# The Director: High keeps GFX-05's 2-split key. Low drops to one cheap split
+	# or no shadows so weak GPUs stay playable.
+	QualityProfile.apply_sun(light, quality_profile)
 
 
 func sun_light_direction() -> Vector3:
@@ -4252,36 +4322,394 @@ func _add_volume_slider(host: VBoxContainer, caption: String, value: float) -> H
 
 
 func _on_volume_changed(_value: float = 0.0) -> void:
-	if audio_director == null:
-		return
-	audio_director.apply_settings({
-		"master": master_slider.value if master_slider != null else 1.0,
-		"music": music_slider.value if music_slider != null else 0.72,
-		"sfx": sfx_slider.value if sfx_slider != null else 0.85
-	})
+	user_settings["master"] = master_slider.value if master_slider != null else 1.0
+	user_settings["music"] = music_slider.value if music_slider != null else 0.72
+	user_settings["sfx"] = sfx_slider.value if sfx_slider != null else 0.85
+	UserSettings.apply_audio(user_settings, audio_director)
+	_save_user_settings()
 
 
 func _set_fullscreen(enabled: bool) -> void:
-	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if enabled else DisplayServer.WINDOW_MODE_WINDOWED)
-	_save_display_settings()
+	user_settings["display_mode"] = "fullscreen" if enabled else "windowed"
+	UserSettings.apply_display(user_settings)
+	_save_user_settings()
 
 
 func _save_display_settings() -> void:
-	var settings := ConfigFile.new()
-	settings.set_value("display", "fullscreen", fullscreen_check.button_pressed)
-	settings.set_value("display", "quality", String(quality_select.get_selected_metadata()))
-	settings.save(DISPLAY_SETTINGS_PATH)
+	_save_user_settings()
 
 
 func _restore_display_settings() -> void:
-	var settings := ConfigFile.new()
-	if settings.load(DISPLAY_SETTINGS_PATH) != OK:
+	_apply_boot_settings()
+
+
+func _save_user_settings() -> void:
+	_collect_options_from_controls()
+	UserSettings.save_settings(user_settings)
+
+
+func _apply_boot_settings() -> void:
+	UserSettings.apply_display(user_settings)
+	apply_quality_profile(String(user_settings.get("graphics_preset", "high")))
+	UserSettings.apply_camera(user_settings, camera_rig)
+	if access_tutorial != null:
+		access_tutorial.enabled = bool(user_settings.get("tutorial_enabled", true))
+	_sync_options_controls()
+	_apply_hud_font_scale()
+
+
+func _build_options_fields(host: VBoxContainer) -> void:
+	display_mode_select = _add_option_row(host, "DisplayMode", "Display", ["Windowed", "Fullscreen", "Borderless"], ["windowed", "fullscreen", "borderless"])
+	display_mode_select.item_selected.connect(func(_i: int) -> void:
+		user_settings["display_mode"] = String(display_mode_select.get_selected_metadata())
+		UserSettings.apply_display(user_settings)
+		_save_user_settings()
+	)
+	resolution_select = OptionButton.new()
+	resolution_select.name = "ResolutionSelect"
+	for size in UserSettings.RESOLUTIONS:
+		resolution_select.add_item("%d × %d" % [size.x, size.y])
+		resolution_select.set_item_metadata(resolution_select.item_count - 1, size)
+	resolution_select.item_selected.connect(func(_i: int) -> void:
+		var size: Vector2i = resolution_select.get_selected_metadata()
+		user_settings["width"] = size.x
+		user_settings["height"] = size.y
+		UserSettings.apply_display(user_settings)
+		_save_user_settings()
+	)
+	_add_labeled_row(host, "Resolution", resolution_select)
+	vsync_check = CheckBox.new()
+	vsync_check.name = "Vsync"
+	vsync_check.text = "VSync"
+	vsync_check.toggled.connect(func(pressed: bool) -> void:
+		user_settings["vsync"] = pressed
+		UserSettings.apply_display(user_settings)
+		_save_user_settings()
+	)
+	host.add_child(vsync_check)
+	ui_scale_slider = HSlider.new()
+	ui_scale_slider.min_value = 0.80
+	ui_scale_slider.max_value = 1.50
+	ui_scale_slider.step = 0.05
+	ui_scale_slider.value = 1.0
+	ui_scale_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ui_scale_value = Label.new()
+	ui_scale_value.custom_minimum_size.x = 48
+	Identity.apply_label(ui_scale_value, "caption")
+	ui_scale_slider.value_changed.connect(func(value: float) -> void:
+		user_settings["ui_scale"] = value
+		if ui_scale_value != null:
+			ui_scale_value.text = "%d%%" % int(round(value * 100.0))
+		UserSettings.apply_display(user_settings)
+		_apply_hud_font_scale()
+		_save_user_settings()
+	)
+	var scale_row := HBoxContainer.new()
+	var scale_label := Label.new()
+	scale_label.text = "UI scale"
+	scale_label.custom_minimum_size.x = 96
+	Identity.apply_label(scale_label, "caption")
+	scale_row.add_child(scale_label)
+	scale_row.add_child(ui_scale_slider)
+	scale_row.add_child(ui_scale_value)
+	host.add_child(scale_row)
+	quality_select = OptionButton.new()
+	quality_select.name = "QualityProfile"
+	quality_select.add_item("Low", 0)
+	quality_select.set_item_metadata(0, "low")
+	quality_select.add_item("Medium", 1)
+	quality_select.set_item_metadata(1, "medium")
+	quality_select.add_item("High", 2)
+	quality_select.set_item_metadata(2, "high")
+	quality_select.item_selected.connect(func(_index: int) -> void:
+		_apply_menu_quality()
+		_save_user_settings()
+	)
+	_add_labeled_row(host, "Graphics", quality_select)
+	master_slider = _add_volume_slider(host, "Master", float(user_settings.get("master", 1.0)))
+	music_slider = _add_volume_slider(host, "Music", float(user_settings.get("music", 0.72)))
+	sfx_slider = _add_volume_slider(host, "Effects", float(user_settings.get("sfx", 0.85)))
+	edge_pan_check = CheckBox.new()
+	edge_pan_check.text = "Edge-pan camera"
+	edge_pan_check.toggled.connect(func(pressed: bool) -> void:
+		user_settings["edge_pan"] = pressed
+		UserSettings.apply_camera(user_settings, camera_rig)
+		_save_user_settings()
+	)
+	host.add_child(edge_pan_check)
+	camera_speed_slider = HSlider.new()
+	camera_speed_slider.min_value = 0.40
+	camera_speed_slider.max_value = 2.50
+	camera_speed_slider.step = 0.05
+	camera_speed_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	camera_speed_slider.value_changed.connect(func(value: float) -> void:
+		user_settings["camera_speed"] = value
+		UserSettings.apply_camera(user_settings, camera_rig)
+		_save_user_settings()
+	)
+	_add_labeled_row(host, "Camera speed", camera_speed_slider)
+	tutorial_check = CheckBox.new()
+	tutorial_check.name = "TutorialEnabled"
+	tutorial_check.text = "Guided first morning"
+	tutorial_check.toggled.connect(func(pressed: bool) -> void:
+		user_settings["tutorial_enabled"] = pressed
+		if access_tutorial != null:
+			access_tutorial.enabled = pressed
+			if not pressed:
+				access_tutorial.skip()
+			elif play_has_begun:
+				access_tutorial.reopen()
+		_refresh_tutorial_overlay()
+		_save_user_settings()
+	)
+	host.add_child(tutorial_check)
+	fullscreen_check = CheckBox.new()
+	fullscreen_check.visible = false
+	fullscreen_check.toggled.connect(_set_fullscreen)
+	host.add_child(fullscreen_check)
+	var bind_title := Label.new()
+	bind_title.text = "Keys"
+	Identity.apply_label(bind_title, "caption")
+	host.add_child(bind_title)
+	bindings_body = Label.new()
+	bindings_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var lines: Array[String] = []
+	for row in UserSettings.KEY_BINDINGS:
+		lines.append("%s — %s" % [String(row["action"]), String(row["keys"])])
+	bindings_body.text = "\n".join(lines)
+	Identity.apply_label(bindings_body, "caption")
+	host.add_child(bindings_body)
+
+
+func _add_option_row(host: VBoxContainer, node_name: String, caption: String, labels: Array, metas: Array) -> OptionButton:
+	var select := OptionButton.new()
+	select.name = node_name
+	for index in labels.size():
+		select.add_item(String(labels[index]), index)
+		select.set_item_metadata(index, metas[index])
+	_add_labeled_row(host, caption, select)
+	return select
+
+
+func _add_labeled_row(host: VBoxContainer, caption: String, control: Control) -> void:
+	var row := HBoxContainer.new()
+	var label := Label.new()
+	label.text = caption
+	label.custom_minimum_size.x = 96
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	Identity.apply_label(label, "caption")
+	row.add_child(label)
+	control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(control)
+	host.add_child(row)
+
+
+func _sync_options_controls() -> void:
+	if display_mode_select != null:
+		_select_metadata(display_mode_select, String(user_settings.get("display_mode", "windowed")))
+	if resolution_select != null:
+		var want := Vector2i(int(user_settings.get("width", 1280)), int(user_settings.get("height", 720)))
+		for index in resolution_select.item_count:
+			if resolution_select.get_item_metadata(index) == want:
+				resolution_select.select(index)
+				break
+	if vsync_check != null:
+		vsync_check.set_pressed_no_signal(bool(user_settings.get("vsync", true)))
+	if ui_scale_slider != null:
+		ui_scale_slider.set_value_no_signal(float(user_settings.get("ui_scale", 1.0)))
+		if ui_scale_value != null:
+			ui_scale_value.text = "%d%%" % int(round(float(user_settings.get("ui_scale", 1.0)) * 100.0))
+	if quality_select != null:
+		_select_metadata(quality_select, QualityProfile.resolve_name(String(user_settings.get("graphics_preset", "high"))))
+	if master_slider != null:
+		master_slider.set_value_no_signal(float(user_settings.get("master", 1.0)))
+	if music_slider != null:
+		music_slider.set_value_no_signal(float(user_settings.get("music", 0.72)))
+	if sfx_slider != null:
+		sfx_slider.set_value_no_signal(float(user_settings.get("sfx", 0.85)))
+	if edge_pan_check != null:
+		edge_pan_check.set_pressed_no_signal(bool(user_settings.get("edge_pan", true)))
+	if camera_speed_slider != null:
+		camera_speed_slider.set_value_no_signal(float(user_settings.get("camera_speed", 1.0)))
+	if tutorial_check != null:
+		tutorial_check.set_pressed_no_signal(bool(user_settings.get("tutorial_enabled", true)))
+	if fullscreen_check != null:
+		fullscreen_check.set_pressed_no_signal(String(user_settings.get("display_mode", "windowed")) != "windowed")
+
+
+func _collect_options_from_controls() -> void:
+	if display_mode_select != null:
+		user_settings["display_mode"] = String(display_mode_select.get_selected_metadata())
+	if resolution_select != null and resolution_select.get_selected_metadata() is Vector2i:
+		var size: Vector2i = resolution_select.get_selected_metadata()
+		user_settings["width"] = size.x
+		user_settings["height"] = size.y
+	if vsync_check != null:
+		user_settings["vsync"] = vsync_check.button_pressed
+	if ui_scale_slider != null:
+		user_settings["ui_scale"] = ui_scale_slider.value
+	if quality_select != null:
+		user_settings["graphics_preset"] = QualityProfile.resolve_name(String(quality_select.get_selected_metadata()))
+	if master_slider != null:
+		user_settings["master"] = master_slider.value
+	if music_slider != null:
+		user_settings["music"] = music_slider.value
+	if sfx_slider != null:
+		user_settings["sfx"] = sfx_slider.value
+	if edge_pan_check != null:
+		user_settings["edge_pan"] = edge_pan_check.button_pressed
+	if camera_speed_slider != null:
+		user_settings["camera_speed"] = camera_speed_slider.value
+	if tutorial_check != null:
+		user_settings["tutorial_enabled"] = tutorial_check.button_pressed
+
+
+func _select_metadata(button: OptionButton, value: Variant) -> void:
+	for index in button.item_count:
+		if button.get_item_metadata(index) == value:
+			button.select(index)
+			return
+
+
+func _load_previous_realm() -> void:
+	if FileAccess.file_exists(PREVIOUS_REALM_PATH) and simulation_host.load_from_path(PREVIOUS_REALM_PATH):
+		selected_building_id = 0
+		selected_worker_id = 0
+		selected_entity_kind = ""
+		cancel_placement()
+		_initialize_presentation()
+		simulation_host.paused = false
+		_hide_start_menu()
+		_show_status("Previous realm loaded.", 4.0)
+	else:
+		load_game()
+
+
+func _reopen_tutorial() -> void:
+	user_settings["tutorial_enabled"] = true
+	if access_tutorial != null:
+		access_tutorial.reopen()
+		if simulation_host.simulation != null:
+			access_tutorial.begin_for_sim(simulation_host.simulation)
+	_save_user_settings()
+	_resume_from_menu()
+	_refresh_tutorial_overlay()
+
+
+func _run_access_benchmark() -> void:
+	await access_benchmark.run(self, true)
+
+
+func _create_tutorial_overlay(root: Control) -> void:
+	tutorial_overlay = PanelContainer.new()
+	tutorial_overlay.name = "AccessTutorial"
+	tutorial_overlay.visible = false
+	tutorial_overlay.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	tutorial_overlay.anchor_left = 0.0
+	tutorial_overlay.anchor_right = 0.0
+	tutorial_overlay.anchor_top = 1.0
+	tutorial_overlay.anchor_bottom = 1.0
+	tutorial_overlay.offset_left = 12.0
+	tutorial_overlay.offset_right = 420.0
+	tutorial_overlay.offset_top = -CONSOLE_HEIGHT - 118.0
+	tutorial_overlay.offset_bottom = -CONSOLE_HEIGHT - 12.0
+	tutorial_overlay.add_theme_stylebox_override("panel", Identity.panel_style(Color(0.02, 0.04, 0.05, 0.88), Identity.COLOR_LUMEN, 10))
+	root.add_child(tutorial_overlay)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 6)
+	var margin := MarginContainer.new()
+	for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
+		margin.add_theme_constant_override(side, 10)
+	tutorial_overlay.add_child(margin)
+	margin.add_child(box)
+	var header := HBoxContainer.new()
+	box.add_child(header)
+	tutorial_title = Label.new()
+	tutorial_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	Identity.apply_label(tutorial_title, "heading")
+	header.add_child(tutorial_title)
+	tutorial_skip_button = Button.new()
+	tutorial_skip_button.name = "SkipTutorial"
+	tutorial_skip_button.text = "Skip"
+	Identity.apply_button(tutorial_skip_button)
+	tutorial_skip_button.pressed.connect(_skip_access_tutorial)
+	header.add_child(tutorial_skip_button)
+	tutorial_body = Label.new()
+	tutorial_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	Identity.apply_label(tutorial_body, "body")
+	box.add_child(tutorial_body)
+	tutorial_arrow = Label.new()
+	tutorial_arrow.text = ""
+	Identity.apply_label(tutorial_arrow, "wyrd")
+	box.add_child(tutorial_arrow)
+
+
+func _skip_access_tutorial() -> void:
+	if access_tutorial != null:
+		access_tutorial.skip()
+	user_settings["tutorial_enabled"] = false
+	_save_user_settings()
+	_refresh_tutorial_overlay()
+
+
+func _tick_access_tutorial() -> void:
+	if access_tutorial == null or not play_has_begun:
 		return
-	var low := String(settings.get_value("display", "quality", "recommended")) == "scalable_low"
-	quality_select.select(1 if low else 0)
-	_apply_menu_quality()
-	fullscreen_check.set_pressed_no_signal(bool(settings.get_value("display", "fullscreen", false)))
-	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen_check.button_pressed else DisplayServer.WINDOW_MODE_WINDOWED)
+	if camera_rig != null:
+		if camera_rig.pan_generation != last_camera_pan_gen:
+			last_camera_pan_gen = camera_rig.pan_generation
+			access_tutorial.note_camera("pan")
+		if camera_rig.zoom_generation != last_camera_zoom_gen:
+			last_camera_zoom_gen = camera_rig.zoom_generation
+			access_tutorial.note_camera("zoom")
+		if camera_rig.rotate_generation != last_camera_rotate_gen:
+			last_camera_rotate_gen = camera_rig.rotate_generation
+			access_tutorial.note_camera("rotate")
+	_refresh_tutorial_overlay()
+
+
+func _refresh_tutorial_overlay() -> void:
+	if tutorial_overlay == null or access_tutorial == null:
+		return
+	if not play_has_begun or (startup_overlay != null and startup_overlay.visible):
+		tutorial_overlay.visible = false
+		_highlight_build_type("")
+		return
+	var state: Dictionary = access_tutorial.evaluate(simulation_host.simulation if simulation_host != null else null)
+	tutorial_overlay.visible = bool(state.get("visible", false))
+	if tutorial_title != null:
+		tutorial_title.text = "%s  ·  %d/%d" % [String(state.get("title", "")), int(state.get("step_index", 0)), int(state.get("step_count", 0))]
+	if tutorial_body != null:
+		tutorial_body.text = String(state.get("hint", ""))
+	if tutorial_arrow != null:
+		var highlight := String(state.get("highlight", ""))
+		tutorial_arrow.text = "Look to the build bar → %s" % Defs.building_name(highlight) if highlight != "" else ""
+		_highlight_build_type(highlight)
+
+
+func _highlight_build_type(building_type: String) -> void:
+	if last_tutorial_highlight == building_type:
+		return
+	last_tutorial_highlight = building_type
+	for index in build_strip_buttons.size():
+		var button := build_strip_buttons[index] as Button
+		if button == null:
+			continue
+		var active := building_type != "" and String(build_strip_types[index]) == building_type
+		var box := StyleBoxFlat.new()
+		box.bg_color = Color(0.94, 0.78, 0.50, 0.22 if active else 0.0)
+		box.border_color = HudSkin.COLOR_GOLD
+		box.set_border_width_all(2 if active else 0)
+		button.add_theme_stylebox_override("normal", box if active else StyleBoxEmpty.new())
+
+
+func _apply_hud_font_scale() -> void:
+	var scale := clampf(float(user_settings.get("ui_scale", 1.0)), 0.80, 1.50)
+	if hud_root != null and hud_root.theme != null:
+		hud_root.theme.default_font_size = maxi(16, int(round(16.0 * scale)))
+		hud_root.theme.set_font_size("font_size", "TooltipLabel", maxi(15, int(round(15.0 * scale))))
+	if objective_button != null:
+		HudSkin.set_font(objective_button, HudSkin.ui_font(600), maxi(HudSkin.SIZE_BODY + 1, int(round((HudSkin.SIZE_BODY + 1) * scale))), Color("#fff1cf"))
 
 
 func _notification(what: int) -> void:
@@ -4345,7 +4773,7 @@ func _ghost_material(color: Color) -> StandardMaterial3D:
 
 
 func _parse_launch_options() -> Dictionary:
-	var options := {"seed": DEFAULT_SEED, "load": false, "fixture": "", "quality": "recommended", "autostart": false, "debug_audio_cycle": false, "debug_ui_scene": "", "debug_quit": false, "evidence_capture": "", "evidence_ui": ""}
+	var options := {"seed": DEFAULT_SEED, "load": false, "fixture": "", "quality": "", "autostart": false, "debug_audio_cycle": false, "debug_ui_scene": "", "debug_quit": false, "evidence_capture": "", "evidence_ui": "", "benchmark": false}
 	for argument in OS.get_cmdline_user_args():
 		if argument == "--load":
 			options["load"] = true
@@ -4355,6 +4783,9 @@ func _parse_launch_options() -> Dictionary:
 			options["fixture"] = argument.trim_prefix("--fixture=")
 		elif argument.begins_with("--quality="):
 			options["quality"] = argument.trim_prefix("--quality=")
+		elif argument == "--benchmark" or argument.begins_with("--benchmark="):
+			options["benchmark"] = true
+			options["autostart"] = true
 		elif argument == "--autostart":
 			options["autostart"] = true
 		elif argument == "--debug-audio-cycle":

@@ -27,10 +27,10 @@ const FONT_DISPLAY_FILE := preload("res://assets/settlement3d/runtime/interface/
 ## Type scale (px). MIN is a hard floor enforced by tests/t_sns_ui_look.gd.
 const SIZE_MIN := 11
 const SIZE_BADGE := 11
-const SIZE_CAPTION := 12
-const SIZE_BODY := 14
+const SIZE_CAPTION := 13
+const SIZE_BODY := 15
 const SIZE_VALUE := 16
-const SIZE_TITLE := 18
+const SIZE_TITLE := 19
 const SIZE_HEAD := 22
 const ICONS := {
 	"wood": preload("res://assets/settlement3d/runtime/interface/ui/icon_wood.png"),
@@ -318,7 +318,7 @@ static func hud_theme() -> Theme:
 		return _theme
 	var theme := Theme.new()
 	theme.default_font = ui_font(400)
-	theme.default_font_size = 15
+	theme.default_font_size = 16
 	theme.set_font("font", "Button", ui_font(600))
 	theme.set_font("font", "OptionButton", ui_font(600))
 	theme.set_font("bold_font", "RichTextLabel", ui_font(700))
@@ -347,7 +347,7 @@ static func hud_theme() -> Theme:
 	theme.set_color("font_color", "TooltipLabel", COLOR_TEXT)
 	theme.set_color("font_outline_color", "TooltipLabel", COLOR_OUTLINE)
 	theme.set_constant("outline_size", "TooltipLabel", 2)
-	theme.set_font_size("font_size", "TooltipLabel", 14)
+	theme.set_font_size("font_size", "TooltipLabel", 15)
 	theme.set_stylebox("panel", "PopupMenu", frame("panel", 6.0))
 	theme.set_color("font_color", "PopupMenu", COLOR_TEXT)
 	theme.set_color("font_hover_color", "PopupMenu", COLOR_GOLD)

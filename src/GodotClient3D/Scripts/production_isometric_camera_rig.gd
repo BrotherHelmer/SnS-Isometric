@@ -17,6 +17,11 @@ var pan_drag_kind := "middle_drag"
 var input_enabled := true
 var pan_generation := 0
 var last_pan_source := ""
+var zoom_generation := 0
+var rotate_generation := 0
+var move_speed_scale := 1.0
+var edge_pan_enabled := true
+var target_yaw := PREFERRED_YAW
 
 
 func _ready() -> void:
@@ -40,8 +45,12 @@ func _process(delta: float) -> void:
 			float(Input.is_key_pressed(KEY_DOWN) or Input.is_key_pressed(KEY_S)) - float(Input.is_key_pressed(KEY_UP) or Input.is_key_pressed(KEY_W))
 		)
 		if input_vector != Vector2.ZERO:
-			_pan(input_vector.normalized() * delta * target_zoom * 0.42, false, "keyboard")
+			_pan(input_vector.normalized() * delta * target_zoom * 0.42 * move_speed_scale, false, "keyboard")
+		var yaw_input := float(Input.is_key_pressed(KEY_E)) - float(Input.is_key_pressed(KEY_Q))
+		if yaw_input != 0.0:
+			rotate_view(yaw_input * delta * 1.15)
 	position = position.lerp(target_position, minf(1.0, delta * 9.0))
+	rotation.y = lerp_angle(rotation.y, target_yaw, minf(1.0, delta * 10.0))
 	camera.size = lerpf(camera.size, target_zoom, minf(1.0, delta * 10.0))
 
 
@@ -54,9 +63,11 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
 			target_zoom = clampf(target_zoom - 3.5, CLOSE_ZOOM, STRATEGIC_ZOOM)
+			zoom_generation += 1
 			get_viewport().set_input_as_handled()
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
 			target_zoom = clampf(target_zoom + 3.5, CLOSE_ZOOM, STRATEGIC_ZOOM)
+			zoom_generation += 1
 			get_viewport().set_input_as_handled()
 		elif event.button_index == MOUSE_BUTTON_MIDDLE:
 			dragging = event.pressed
@@ -64,7 +75,7 @@ func _input(event: InputEvent) -> void:
 				pan_drag_kind = "middle_drag"
 			get_viewport().set_input_as_handled()
 	elif event is InputEventMouseMotion and dragging:
-		_pan(Vector2(-event.relative.x, -event.relative.y) * target_zoom * 0.0014, true, pan_drag_kind)
+		_pan(Vector2(-event.relative.x, -event.relative.y) * target_zoom * 0.0014 * move_speed_scale, true, pan_drag_kind)
 		get_viewport().set_input_as_handled()
 
 
@@ -97,14 +108,26 @@ func set_zoom_preset(preset: String) -> void:
 		camera.size = target_zoom
 
 
+func set_access_controls(speed: float, edge_pan: bool) -> void:
+	move_speed_scale = clampf(speed, 0.40, 2.50)
+	edge_pan_enabled = edge_pan
+
+
+func rotate_view(delta_yaw: float) -> void:
+	if is_zero_approx(delta_yaw):
+		return
+	target_yaw += delta_yaw
+	rotate_generation += 1
+
+
 func pan_from_mouse(relative: Vector2) -> void:
-	_pan(Vector2(-relative.x, -relative.y) * target_zoom * 0.0014, true, "pointer_drag")
+	_pan(Vector2(-relative.x, -relative.y) * target_zoom * 0.0014 * move_speed_scale, true, "pointer_drag")
 
 
 func pan_from_axes(amount: Vector2, source := "script") -> void:
 	if amount == Vector2.ZERO:
 		return
-	_pan(amount, false, source)
+	_pan(amount * move_speed_scale, false, source)
 
 
 func begin_pointer_pan() -> void:
