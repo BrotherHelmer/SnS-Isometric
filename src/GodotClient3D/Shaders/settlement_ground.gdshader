@@ -61,17 +61,9 @@ void fragment() {
 	float wash = smoothstep(tint_wash_lo, max(tint_wash_lo + 0.02, tint_wash_hi), macro);
 	vec3 albedo = ground * mix(vec3(1.0), light_tint, mix(tint_floor, 1.0, wash)) * macro_var * detail_var;
 	ALBEDO = albedo;
-	vec3 world_up_view = normalize((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
-	// Strategy camera barely reads a 4-tap fbm bump. Skip it at night LOD
-	// (8 extra noise2) so lavapipe night stays inside the +15% guard.
-	if (lod_cheap > 0.5) {
-		NORMAL = world_up_view;
-	} else {
-		float d = 0.18;
-		float n_l = noise2((world_pos.xz + vec2(-d, 0.0)) / max(detail_metres, 0.4));
-		float n_r = noise2((world_pos.xz + vec2(d, 0.0)) / max(detail_metres, 0.4));
-		vec3 bump = normalize(vec3((n_l - n_r) * 0.35, 1.0, 0.0));
-		NORMAL = normalize(mix(world_up_view, (VIEW_MATRIX * vec4(bump, 0.0)).xyz, 0.18));
-	}
+	// Flat world-up normals. The 4-tap bump plus half-res SSAO painted
+	// diagonal stripes that crawled when the camera panned. Colour breakup
+	// above still reads from the strategy camera.
+	NORMAL = normalize((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
 	ROUGHNESS = mix(0.96, 0.88, dirt_mask);
 }

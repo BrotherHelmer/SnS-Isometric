@@ -65,6 +65,17 @@ const CITY_PATROL_RADIUS := 12
 const CARRIER_BUILD_ACTION_SECONDS := 0.9
 const ROAD_BUILD_SECONDS := 1.6
 const INITIAL_REVEAL_RADIUS := 12
+# The Director: building/unit vision. Watchtower is the large scouting
+# ring, Outpost is medium-large, Lumen and other workplaces stay small.
+# Units reveal on tile change so a later scout order can just walk.
+const VISION_TOWN_HALL := 14
+const VISION_WATCHTOWER := 16
+const VISION_OUTPOST := 12
+const VISION_LUMEN := 10
+const VISION_BUILDING := 5
+const VISION_ROAD := 3
+const VISION_WORKER := 4
+const VISION_SOLDIER := 8
 const TOWN_HALL_PROTECTION_RADIUS := 8.0
 const OUTPOST_PROTECTION_RADIUS := 5.0
 const TOWER_PROTECTION_RADIUS := 3.0
@@ -645,6 +656,9 @@ func advance_tick() -> void:
 	stamp = _profile_stamp()
 	_process_carriers(TICK_SECONDS)
 	_profile_finish("carrier_updates", stamp)
+	stamp = _profile_stamp()
+	_update_unit_vision()
+	_profile_finish("unit_vision", stamp)
 	_profile_finish("worker_update_total", worker_stamp)
 	stamp = _profile_stamp()
 	_activate_revealed_enemy_camps()
@@ -3633,20 +3647,67 @@ func _recompute_road_network() -> void:
 	path_grid_dirty = true
 
 
+func building_vision_radius(building_type: String) -> int:
+	match building_type:
+		Defs.BUILDING_TOWN_HALL:
+			return VISION_TOWN_HALL
+		Defs.BUILDING_WATCHTOWER:
+			return VISION_WATCHTOWER
+		Defs.BUILDING_OUTPOST:
+			return VISION_OUTPOST
+		Defs.BUILDING_LUMEN_PILLAR:
+			return VISION_LUMEN
+		Defs.BUILDING_ROAD:
+			return VISION_ROAD
+		_:
+			return VISION_BUILDING
+
+
+func unit_vision_radius(unit_type: String) -> int:
+	if unit_type == "guard":
+		return VISION_SOLDIER
+	return VISION_WORKER
+
+
 func _reveal_from_world() -> void:
 	var town_center := _footprint_center(town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
 	if not is_town_hall_founded():
 		_reveal_radius(town_center, INITIAL_REVEAL_RADIUS)
 		return
-	_reveal_radius(town_center, 14)
+	_reveal_radius(town_center, building_vision_radius(Defs.BUILDING_TOWN_HALL))
 	for building in buildings:
 		if bool(building.get("construction", false)):
 			continue
 		var building_type := String(building["type"])
-		if building_type == Defs.BUILDING_ROAD:
-			_reveal_radius(building["position"], 4)
-		elif building_type != Defs.BUILDING_TOWN_HALL:
-			_reveal_radius(_footprint_center(building["position"], _building_footprint(building)), 6)
+		if building_type == Defs.BUILDING_TOWN_HALL:
+			continue
+		var center: Vector2i = building["position"]
+		if building_type != Defs.BUILDING_ROAD:
+			center = _footprint_center(building["position"], _building_footprint(building))
+		_reveal_radius(center, building_vision_radius(building_type))
+
+
+func _unit_tile(unit: Dictionary) -> Vector2i:
+	var position_value: Variant = unit.get("position", Vector2i.ZERO)
+	if typeof(position_value) == TYPE_VECTOR2I:
+		return position_value
+	if typeof(position_value) == TYPE_VECTOR2:
+		return Vector2i(roundi(position_value.x), roundi(position_value.y))
+	return _vector_from_data(position_value, Vector2i.ZERO)
+
+
+func _update_unit_vision() -> void:
+	# Tile-change only. A future scout/explore command just paths a unit;
+	# fog already follows the walker.
+	for worker in workers:
+		if int(worker.get("hp", WORKER_MAX_HP)) <= 0:
+			continue
+		var tile := _unit_tile(worker)
+		var last_tile: Vector2i = worker.get("last_vision_tile", Vector2i(99999, 99999))
+		if tile == last_tile:
+			continue
+		worker["last_vision_tile"] = tile
+		_reveal_radius(tile, unit_vision_radius(String(worker.get("type", ""))))
 
 
 func _is_wall_network_building(building: Dictionary) -> bool:
@@ -3670,6 +3731,10 @@ func _process_carriers(delta: float) -> void:
 			if String(worker.get("type", "")) != "carrier" or String(worker.get("state", "")) == "Sheltered":
 				continue
 			if worker["path"].is_empty():
+				# Drop night-paused hauls so reserved construction does not
+				# stay marked in-transit until a dawn resume can reassign.
+				if not Dictionary(worker.get("task", {})).is_empty() or int(worker.get("carried_amount", 0)) > 0:
+					_clear_worker(worker)
 				_send_worker_to_shelter(worker)
 			else:
 				_advance_carrier(worker, delta)
@@ -4220,22 +4285,39 @@ func _shelter_entries() -> Array:
 func _wake_workers_at_dawn() -> void:
 	for worker in workers:
 		worker["shelter_position"] = Vector2i(-1, -1)
-		if String(worker.get("type", "")) == "guard":
+		var worker_type := String(worker.get("type", ""))
+		if worker_type == "guard":
 			worker["state"] = "Patrolling" if int(worker.get("building_id", 0)) == 0 else "Guarding"
+			worker["path"] = []
 			continue
-		if String(worker.get("type", "")) == "carrier":
+		if worker_type == "carrier":
 			worker["path"] = []
 			worker["state"] = "Idle"
 			worker["arrival_state"] = "Idle"
 			continue
 		var building := _find_building_by_id(int(worker.get("building_id", 0)))
 		if building.is_empty():
+			# Free peasants, clearers, and "No shelter" leftovers used to
+			# stay Sheltered after dawn, so night-placed jobs never resumed.
+			if String(worker.get("state", "")) in ["Sheltered", "Going to shelter", "No shelter"]:
+				worker["path"] = []
+				worker["state"] = "Idle"
+				worker["arrival_state"] = "Idle"
 			continue
 		var destination := _worker_home_tile(building)
 		worker["path"] = _find_worker_path(worker["position"], destination)
 		worker["arrival_state"] = "Working"
 		worker["move_elapsed"] = 0.0
 		worker["state"] = "Working" if worker["path"].is_empty() else "Returning to work"
+	_resume_daytime_jobs()
+
+
+func _resume_daytime_jobs() -> void:
+	_ensure_carriers()
+	_assign_idle_workers_to_priority_clears()
+	for site in buildings:
+		if bool(site.get("construction", false)):
+			_sync_site_clearing(site, true)
 
 
 func _advance_carrier(worker: Dictionary, delta: float) -> void:
