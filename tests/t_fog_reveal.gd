@@ -31,8 +31,9 @@ func _test_building_vision_radii() -> void:
 
 func _test_completed_buildings_reveal() -> void:
 	var sim := _founded()
-	var far := sim.town_hall_position + Vector2i(26, 0)
-	_prepare_clear(sim, far, Vector2i(3, 3))
+	var far := _far_unrevealed(sim, 3)
+	_check(far.x >= 0, "found an in-map unexplored plot for the Watchtower")
+	_flatten_hidden(sim, far, Vector2i(3, 3))
 	_check(not sim.is_revealed(far), "a far tile starts unexplored")
 	var site := sim._create_building(Defs.BUILDING_CONSTRUCTION_SITE, far)
 	site["planned_type"] = Defs.BUILDING_WATCHTOWER
@@ -43,16 +44,16 @@ func _test_completed_buildings_reveal() -> void:
 	sim.finish_construction(site)
 	_check(sim.is_revealed(far), "a completed Watchtower reveals its tile")
 	_check(_count_revealed_near(sim, far, sim.building_vision_radius(Defs.BUILDING_WATCHTOWER)) > 80, "Watchtower paints a large vision disk")
-	var outpost_tile := sim.town_hall_position + Vector2i(0, 26)
-	_prepare_clear(sim, outpost_tile, Vector2i(2, 2))
+	var outpost_tile := _far_unrevealed(sim, 2)
+	_flatten_hidden(sim, outpost_tile, Vector2i(2, 2))
 	_check(not sim.is_revealed(outpost_tile), "a second far tile starts unexplored")
 	var outpost := sim._create_building(Defs.BUILDING_OUTPOST, outpost_tile)
 	sim.buildings.append(outpost)
 	sim._reveal_from_world()
 	_check(sim.is_revealed(outpost_tile), "a completed Outpost reveals fog")
 	var outpost_count := _count_revealed_near(sim, outpost_tile, sim.building_vision_radius(Defs.BUILDING_OUTPOST))
-	var lumber_tile := sim.town_hall_position + Vector2i(-26, 0)
-	_prepare_clear(sim, lumber_tile, Vector2i(3, 3))
+	var lumber_tile := _far_unrevealed(sim, 3)
+	_flatten_hidden(sim, lumber_tile, Vector2i(3, 3))
 	var lumber := sim._create_building(Defs.BUILDING_LUMBER_CAMP, lumber_tile)
 	sim.buildings.append(lumber)
 	sim._reveal_from_world()
@@ -63,8 +64,8 @@ func _test_completed_buildings_reveal() -> void:
 
 func _test_unit_tile_change_reveal() -> void:
 	var sim := _founded()
-	var far := sim.town_hall_position + Vector2i(24, 24)
-	_prepare_clear(sim, far, Vector2i(1, 1))
+	var far := _far_unrevealed(sim, 1)
+	_flatten_hidden(sim, far, Vector2i(1, 1))
 	_check(not sim.is_revealed(far), "walker target starts in fog")
 	var worker: Dictionary = sim.workers[0]
 	worker["position"] = far
@@ -76,8 +77,8 @@ func _test_unit_tile_change_reveal() -> void:
 	var before := sim.revealed_tiles.size()
 	sim._update_unit_vision()
 	_check(sim.revealed_tiles.size() == before, "standing still does not recost a vision flood")
-	var farther := far + Vector2i(6, 0)
-	_prepare_clear(sim, farther, Vector2i(1, 1))
+	var farther := _far_unrevealed(sim, 1)
+	_flatten_hidden(sim, farther, Vector2i(1, 1))
 	_check(not sim.is_revealed(farther), "soldier target starts in fog")
 	var guard := {
 		"id": sim.next_worker_id,
@@ -100,12 +101,45 @@ func _founded() -> Simulation:
 	return sim
 
 
-func _prepare_clear(sim: Simulation, anchor: Vector2i, footprint: Vector2i) -> void:
+func _far_unrevealed(sim: Simulation, clearance: int) -> Vector2i:
+	var origin: Vector2i = sim._footprint_center(sim.town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
+	var candidates: Array[Vector2i] = [
+		origin + Vector2i(22, 0),
+		origin + Vector2i(-22, 0),
+		origin + Vector2i(0, 22),
+		origin + Vector2i(0, -22),
+		origin + Vector2i(18, 18),
+		origin + Vector2i(-18, 18),
+		origin + Vector2i(18, -18),
+		origin + Vector2i(-18, -18),
+		Vector2i(2, 2),
+		Vector2i(sim.map_size.x - 4, 2),
+		Vector2i(2, sim.map_size.y - 4),
+		Vector2i(sim.map_size.x - 4, sim.map_size.y - 4)
+	]
+	for candidate in candidates:
+		if _hidden_plot_fits(sim, candidate, clearance):
+			return candidate
+	return Vector2i(-1, -1)
+
+
+func _hidden_plot_fits(sim: Simulation, anchor: Vector2i, clearance: int) -> bool:
+	for y in range(clearance):
+		for x in range(clearance):
+			var tile := anchor + Vector2i(x, y)
+			if not sim.is_inside_map(tile) or sim.is_revealed(tile):
+				return false
+	return true
+
+
+func _flatten_hidden(sim: Simulation, anchor: Vector2i, footprint: Vector2i) -> void:
+	# Do not use _prepare_test_tile: that helper also reveals the plot.
 	for y in range(footprint.y):
 		for x in range(footprint.x):
 			var tile := anchor + Vector2i(x, y)
 			if sim.is_inside_map(tile):
-				sim._prepare_test_tile(tile, Defs.TILE_GRASS)
+				sim._set_tile(tile, Defs.TILE_GRASS)
+				sim.revealed_tiles.erase(sim._tile_key(tile))
 
 
 func _count_revealed_near(sim: Simulation, center: Vector2i, radius: int) -> int:
