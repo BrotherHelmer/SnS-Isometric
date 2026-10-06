@@ -46,5 +46,8 @@ void fragment() {
 	float unknown = 1.0 - revealed;
 	float mist = value_noise(world_uv * 8.0 + vec2(-TIME * 0.004, TIME * 0.005));
 	ALBEDO = mix(unknown_color, mist_color, mist * 0.34);
-	ALPHA = unknown * unknown_opacity * inside;
+	// Off-map is fully unknown. Multiplying by `inside` used to punch a hole
+	// through the sheet so cliff wedges and water read before the edge was
+	// explored. Explored map-edge tiles still feather through smoothstep.
+	ALPHA = unknown * unknown_opacity;
 }

@@ -698,11 +698,12 @@ func _create_lighting() -> void:
 	# The Director: GFX-04 Forward+ SSAO at ~1 m, low direct-light dirt.
 	# Half-res is the project default (rendering/environment/ssao/half_size).
 	environment.ssao_radius = 0.95
-	environment.ssao_intensity = 1.15
+	environment.ssao_intensity = 1.05
 	environment.ssao_power = 1.25
 	environment.ssao_detail = 0.50
 	environment.ssao_horizon = 0.06
-	environment.ssao_sharpness = 0.90
+	# Sharp half-res SSAO striped the flats when the camera panned.
+	environment.ssao_sharpness = 0.35
 	environment.ssao_light_affect = 0.10
 	environment.ssao_ao_channel_affect = 0.55
 	environment.ssil_enabled = bool(quality_profile.get("ssil", false))
@@ -748,12 +749,7 @@ func _create_lighting() -> void:
 	# The Director: GFX-05 one key sun, PSSM 2-split, no PCSS softness.
 	sun.light_angular_distance = 0.0
 	sun.shadow_enabled = bool(quality_profile.get("shadows", true))
-	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
-	sun.directional_shadow_blend_splits = true
-	sun.directional_shadow_split_1 = 0.38
-	sun.directional_shadow_max_distance = float(quality_profile.get("shadow_distance", 48.0))
-	sun.shadow_bias = 0.03
-	sun.shadow_normal_bias = 0.8
+	_apply_sun_shadow_settings(sun)
 	lighting_rig.add_child(sun)
 	var fill := DirectionalLight3D.new()
 	fill_light = fill
@@ -3622,10 +3618,7 @@ func apply_quality_profile(profile_name: String) -> void:
 	if sun_light != null:
 		sun_light.shadow_enabled = bool(quality_profile.get("shadows", true))
 		sun_light.light_angular_distance = 0.0
-		sun_light.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
-		sun_light.directional_shadow_max_distance = float(quality_profile.get("shadow_distance", 48.0))
-		sun_light.shadow_bias = 0.03
-		sun_light.shadow_normal_bias = 0.8
+		_apply_sun_shadow_settings(sun_light)
 	_apply_quality_features()
 	if world_view != null:
 		world_view.apply_quality_profile(quality_profile)
@@ -3763,8 +3756,9 @@ func _apply_quality_features() -> void:
 	# over the +15% GFX-1 guard; windows/moon carry night form instead.
 	environment_resource.ssao_enabled = want_ssao and not night
 	environment_resource.ssao_radius = 0.95
-	environment_resource.ssao_intensity = 1.15
+	environment_resource.ssao_intensity = 1.05
 	environment_resource.ssao_detail = 0.50
+	environment_resource.ssao_sharpness = 0.35
 	environment_resource.ssao_light_affect = 0.10
 	RenderingServer.environment_set_ssao_quality(
 		RenderingServer.ENV_SSAO_QUALITY_LOW,
@@ -3777,6 +3771,21 @@ func _apply_quality_features() -> void:
 	environment_resource.ssil_enabled = bool(quality_profile.get("ssil", false))
 	environment_resource.glow_enabled = bool(quality_profile.get("glow", false))
 	environment_resource.volumetric_fog_enabled = bool(quality_profile.get("volumetric_fog", false))
+
+
+func _apply_sun_shadow_settings(light: DirectionalLight3D) -> void:
+	# The Director: keep GFX-05's 2-split key, but park the cascade seam
+	# past the settlement and bias the flats so panning does not stripe.
+	if light == null:
+		return
+	light.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+	light.directional_shadow_blend_splits = true
+	light.directional_shadow_split_1 = 0.82
+	light.directional_shadow_max_distance = float(quality_profile.get("shadow_distance", 48.0))
+	light.directional_shadow_fade_start = 0.86
+	light.directional_shadow_pancake_size = 4.0
+	light.shadow_bias = 0.06
+	light.shadow_normal_bias = 1.6
 
 
 func sun_light_direction() -> Vector3:

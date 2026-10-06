@@ -15,7 +15,7 @@ const BoundaryMistShader = preload("res://src/GodotClient3D/Shaders/production_b
 const ContactAO = preload("res://src/GodotClient3D/Scripts/production_contact_ao.gd")
 const RoadStampShader = preload("res://src/GodotClient3D/Shaders/settlement_road_stamp.gdshader")
 const FOG_MASK_DIVISOR := 1
-const FOG_VOLUME_PAD_METRES := 110.0
+const FOG_VOLUME_PAD_METRES := 220.0
 const FOG_VOLUME_HEIGHT_METRES := 56.0
 const FOG_VOLUME_CENTER_Y := 18.0
 const FOG_DISPLAY_UPSAMPLE := 8
@@ -218,6 +218,7 @@ func sync_frame(frame_snapshot: Dictionary) -> void:
 	var revealed_count := int(frame_snapshot.get("revealed_count", simulation.revealed_tiles.size()))
 	if revealed_count != last_revealed_count:
 		_sync_fog(false)
+		_sync_nature(true)
 		_rebuild_edge_forest(false)
 
 
@@ -490,6 +491,9 @@ func _rebuild_terrain() -> void:
 	material.set_shader_parameter("detail_amount", 0.048)
 	material.set_shader_parameter("dirt_amount", 0.36)
 	terrain_mesh_instance.material_override = material
+	# Self-shadow on the playable slab plus PSSM 2-split painted a moving
+	# diagonal seam. Buildings still cast onto the ground.
+	terrain_mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	terrain_root.add_child(terrain_mesh_instance)
 	terrain_body = StaticBody3D.new()
 	terrain_body.name = "TerrainPicker"
@@ -542,6 +546,10 @@ func _add_terrain_cell(surface: SurfaceTool, tile: Vector2i) -> void:
 			neighbor_y = float(simulation.get_height(neighbor)) * ScaleProfile.TERRAIN_ELEVATION_UNIT_METRES
 		if neighbor_y >= top_y - 0.001:
 			continue
+		# Off-map faces were hard dark wedges into the void. Unexplored
+		# exterior is fog; explored edges feather in the FOW shader.
+		if not simulation.is_inside_map(neighbor):
+			continue
 		var a: Vector3
 		var b: Vector3
 		match direction_index:
@@ -556,8 +564,7 @@ func _add_terrain_cell(surface: SurfaceTool, tile: Vector2i) -> void:
 		var down_a := Vector3(a.x, neighbor_y, a.z)
 		var down_b := Vector3(b.x, neighbor_y, b.z)
 		var normal := Vector3(float(directions[direction_index].x), 0.0, float(directions[direction_index].y))
-		var cliff_color := Color("#0c1614") if not simulation.is_inside_map(neighbor) else color.darkened(0.24)
-		_add_quad(surface, a, b, down_b, down_a, normal, cliff_color)
+		_add_quad(surface, a, b, down_b, down_a, normal, color.darkened(0.24))
 
 
 func _add_quad(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, normal: Vector3, color: Color) -> void:
@@ -663,6 +670,8 @@ func _rebuild_nature_multimeshes() -> void:
 	var transforms_by_path: Dictionary = {}
 	for key_value in nature_views:
 		var tile := _tile_from_key(String(key_value))
+		if not simulation.is_revealed(tile):
+			continue
 		var tile_type := String(nature_views[key_value])
 		var stage := int(nature_stages.get(key_value, 0))
 		if tile_type == Defs.TILE_TREE:
@@ -1961,10 +1970,13 @@ func _rebuild_edge_forest(force: bool) -> void:
 
 
 func _append_edge_tree(groups: Dictionary, path_value: String, logical: Vector2, ring: int, index := 0) -> void:
-	if not groups.has(path_value):
-		groups[path_value] = []
 	var key_tile := Vector2i(roundi(logical.x), roundi(logical.y))
 	var clamped := Vector2(clampf(logical.x, 0.0, float(maxi(0, map_size.x - 1))), clampf(logical.y, 0.0, float(maxi(0, map_size.y - 1))))
+	var edge_tile := Vector2i(roundi(clamped.x), roundi(clamped.y))
+	if simulation == null or not simulation.is_revealed(edge_tile):
+		return
+	if not groups.has(path_value):
+		groups[path_value] = []
 	var world_position := ScaleProfile.tile_to_flat_world(logical, map_size)
 	world_position.y = height_at_logical(clamped)
 	var jitter := _deterministic_offset(key_tile, 80 + ring + index, 0.55)
