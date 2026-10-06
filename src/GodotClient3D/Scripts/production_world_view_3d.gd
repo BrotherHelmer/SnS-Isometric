@@ -20,9 +20,9 @@ const HorizonShader = preload("res://src/GodotClient3D/Shaders/settlement_horizo
 const FOG_MASK_DIVISOR := 1
 const FOG_VOLUME_PAD_METRES := 0.35
 const WATER_Y := -0.78
-const WATER_PAD_METRES := 720.0
+const WATER_PAD_METRES := 2400.0
 const SHORE_FADE_METRES := 16.0
-const HORIZON_RADIUS_METRES := 210.0
+const HORIZON_RADIUS_METRES := 340.0
 const FOG_VOLUME_HEIGHT_METRES := 56.0
 const FOG_VOLUME_CENTER_Y := 18.0
 const FOG_DISPLAY_UPSAMPLE := 8
@@ -1680,10 +1680,7 @@ func _sync_fog(force: bool) -> void:
 					var sample := Vector2i(mask_x * FOG_MASK_DIVISOR + offset_x, mask_y * FOG_MASK_DIVISOR + offset_y)
 					if simulation.is_inside_map(sample):
 						valid_samples += 1
-						# G1: the slab rim is world geography. Interior unknown
-						# stays fog (#47); the coast always reads as an island.
-						var on_edge: bool = sample.x <= 0 or sample.y <= 0 or sample.x >= map_size.x - 1 or sample.y >= map_size.y - 1
-						if simulation.is_revealed(sample) or on_edge:
+						if simulation.is_revealed(sample):
 							revealed_samples += 1
 			mask_bytes[mask_y * mask_size.x + mask_x] = roundi(255.0 * float(revealed_samples) / maxf(1.0, float(valid_samples)))
 	var display_size := mask_size * FOG_DISPLAY_UPSAMPLE
@@ -1910,7 +1907,7 @@ func apply_quality_profile(quality: Dictionary) -> void:
 	foliage_density = clampf(float(quality.get("foliage_density", foliage_density)), 0.25, 1.0)
 	water_detail = clampf(float(quality.get("water_detail", water_detail)), 0.2, 1.0)
 	if water_material != null:
-		water_material.set_shader_parameter("wave", 0.04 * water_detail)
+		water_material.set_shader_parameter("wave", 0.035 * water_detail)
 	if simulation == null:
 		return
 	_rebuild_edge_forest(true)
@@ -1934,7 +1931,9 @@ func apply_light_palette(palette: Dictionary) -> void:
 	if water_material != null:
 		water_material.set_shader_parameter("atmosphere", atmosphere)
 		water_material.set_shader_parameter("lod_cheap", float(palette.get("terrain_lod_cheap", 0.0)))
-		water_material.set_shader_parameter("wave", 0.04 * water_detail * (0.0 if float(palette.get("terrain_lod_cheap", 0.0)) > 0.5 else 1.0))
+		water_material.set_shader_parameter("wave", 0.035 * water_detail * (0.0 if float(palette.get("terrain_lod_cheap", 0.0)) > 0.5 else 1.0))
+		var horizon: Color = palette.get("ground_bottom", Color("#2A464A"))
+		water_material.set_shader_parameter("horizon_color", Vector3(horizon.r, horizon.g, horizon.b))
 	if horizon_root != null:
 		for child in horizon_root.get_children():
 			if child is MeshInstance3D:
@@ -1974,69 +1973,43 @@ func apply_light_palette(palette: Dictionary) -> void:
 
 
 func _rebuild_water() -> void:
-	# The Director: G1 shoreline water. A disk, not a square, so far zoom
-	# never shows a diamond cut-out. Interior discarded; foam at the slab.
+	# The Director: G1 sea. A huge unshaded plane so max zoom never sees
+	# a disk or diamond rim. Colour fades into the sky-ground.
 	if water_root == null or map_size == Vector2i.ZERO:
 		return
 	if water_mesh_instance != null:
 		water_mesh_instance.queue_free()
 		water_mesh_instance = null
-	var span := Vector2(map_size) * ScaleProfile.LOGICAL_CELL_METRES
-	var radius := span.length() * 0.5 + WATER_PAD_METRES
-	var disk := CylinderMesh.new()
-	disk.top_radius = radius
-	disk.bottom_radius = radius
-	disk.height = 0.08
-	disk.radial_segments = 32 if water_detail >= 0.7 else 16
-	disk.rings = 4 if water_detail >= 0.7 else 2
-	disk.cap_bottom = false
+	var existing := water_root.get_node_or_null("ShoreBand")
+	if existing != null:
+		existing.queue_free()
+	var plane := PlaneMesh.new()
+	plane.size = Vector2(WATER_PAD_METRES * 2.0, WATER_PAD_METRES * 2.0)
+	plane.subdivide_width = 12 if water_detail >= 0.7 else 6
+	plane.subdivide_depth = 12 if water_detail >= 0.7 else 6
 	water_mesh_instance = MeshInstance3D.new()
 	water_mesh_instance.name = "IslandWater"
-	water_mesh_instance.mesh = disk
+	water_mesh_instance.mesh = plane
 	var center := ScaleProfile.tile_to_flat_world(Vector2(map_size - Vector2i.ONE) * 0.5, map_size)
 	water_mesh_instance.position = Vector3(center.x, WATER_Y, center.z)
 	water_mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	water_mesh_instance.extra_cull_margin = 240.0
+	water_mesh_instance.extra_cull_margin = 800.0
 	water_material = ShaderMaterial.new()
 	water_material.shader = WaterShader
 	water_material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
 	water_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
 	water_material.set_shader_parameter("atmosphere", _atmosphere_scale)
-	water_material.set_shader_parameter("wave", 0.05 * water_detail)
-	water_material.set_shader_parameter("foam_metres", 14.0)
+	water_material.set_shader_parameter("wave", 0.035 * water_detail)
+	water_material.set_shader_parameter("foam_metres", 6.0)
+	water_material.set_shader_parameter("fade_start", 70.0)
+	water_material.set_shader_parameter("fade_end", 380.0)
+	water_material.set_shader_parameter("horizon_color", Vector3(0.165, 0.275, 0.290))
 	water_mesh_instance.material_override = water_material
 	water_root.add_child(water_mesh_instance)
-	_rebuild_shore_band(center, span)
-
-
-func _rebuild_shore_band(center: Vector3, span: Vector2) -> void:
-	# Cheap foam lip around the slab so far zoom reads a beach, not a paper cut.
-	var existing := water_root.get_node_or_null("ShoreBand")
-	if existing != null:
-		existing.queue_free()
-	var band := MeshInstance3D.new()
-	band.name = "ShoreBand"
-	var torus := TorusMesh.new()
-	var inner := maxf(span.x, span.y) * 0.5 - 1.2
-	torus.inner_radius = inner
-	torus.outer_radius = inner + 7.5
-	torus.rings = 24
-	torus.ring_segments = 8
-	band.mesh = torus
-	band.position = Vector3(center.x, WATER_Y + 0.05, center.z)
-	band.scale = Vector3(span.x / maxf(span.y, 0.001), 0.18, 1.0)
-	band.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var foam := StandardMaterial3D.new()
-	foam.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	foam.albedo_color = Color("#D8CDB0")
-	foam.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	foam.albedo_color.a = 0.72
-	band.material_override = foam
-	water_root.add_child(band)
 
 
 func _rebuild_world_rim(force: bool) -> void:
-	# Full slab rim. Fog still hides unrevealed coast tiles (#47).
+	# Organic coast around the slab. Fog still hides unrevealed tiles (#47).
 	if simulation == null or terrain_root == null or map_size == Vector2i.ZERO:
 		return
 	var signature := "%d:%d" % [int(simulation.revealed_tiles.size()), terrain_height_signature]
@@ -2098,11 +2071,14 @@ func _add_rim_face(surface: SurfaceTool, tile: Vector2i, outward: Vector2i) -> i
 	else:
 		a = corners[0]
 		b = corners[3]
-	var jut := Vector3(float(outward.x), 0.0, float(outward.y)) * 0.55
-	var down_a := Vector3(a.x, WATER_Y - 0.04, a.z) + jut
-	var down_b := Vector3(b.x, WATER_Y - 0.04, b.z) + jut
-	var lip_a := a + jut * 0.18
-	var lip_b := b + jut * 0.18
+	var outward_dir := Vector2(float(outward.x), float(outward.y))
+	var tangent := Vector2(float(-outward.y), float(outward.x))
+	var jut_a := _coast_offset(Vector2(a.x, a.z), outward_dir, tangent)
+	var jut_b := _coast_offset(Vector2(b.x, b.z), outward_dir, tangent)
+	var down_a := Vector3(a.x, WATER_Y - 0.04, a.z) + jut_a
+	var down_b := Vector3(b.x, WATER_Y - 0.04, b.z) + jut_b
+	var lip_a := a + jut_a * 0.22
+	var lip_b := b + jut_b * 0.22
 	var rock_weight := 0
 	for oy in range(-2, 3):
 		for ox in range(-2, 3):
@@ -2110,15 +2086,26 @@ func _add_rim_face(surface: SurfaceTool, tile: Vector2i, outward: Vector2i) -> i
 			if simulation.is_inside_map(sample) and String(simulation.get_tile(sample)) == Defs.TILE_ROCK:
 				rock_weight += 1
 	var height_units := int(simulation.get_height(tile))
-	var cliff: bool = rock_weight >= 3 or height_units >= 2 or (_tile_hash(tile, 21 + outward.x * 3 + outward.y * 7) % 3 == 0 and (outward.y < 0 or outward.x < 0))
-	var color := Color("#6A6054") if cliff else Color("#C4A878")
-	color = color.darkened(0.08 + float(_tile_hash(tile, 33) % 12) / 100.0)
-	var normal := Vector3(float(outward.x), 0.22 if cliff else 0.55, float(outward.y)).normalized()
+	var jut_len := jut_a.length()
+	var cliff: bool = rock_weight >= 3 or height_units >= 2 or jut_len >= 6.2
+	var color := Color("#5C564C") if cliff else Color("#A8906C")
+	color = color.darkened(0.06 + float(_tile_hash(tile, 33) % 14) / 110.0)
+	var normal := Vector3(float(outward.x), 0.18 if cliff else 0.48, float(outward.y)).normalized()
 	_add_quad(surface, lip_a, lip_b, down_b, down_a, normal, color)
-	if cliff:
-		var shelf := Color("#55574d").lerp(color, 0.4)
-		_add_quad(surface, a, b, lip_b, lip_a, Vector3.UP, shelf.darkened(0.12))
+	var shelf := Color("#8A7A5C") if not cliff else Color("#4E5048")
+	_add_quad(surface, a, b, lip_b, lip_a, Vector3.UP, shelf.darkened(0.10))
 	return 1
+
+
+func _coast_offset(world_xz: Vector2, outward: Vector2, tangent: Vector2) -> Vector3:
+	# Shared by neighbouring rim faces so the shore is one irregular line.
+	var seed := float(visual_seed % 97) * 0.13
+	var n1 := sin(world_xz.x * 0.11 + world_xz.y * 0.07 + seed)
+	var n2 := sin(world_xz.x * 0.031 - world_xz.y * 0.045 + seed * 1.7)
+	var n3 := sin((world_xz.x + world_xz.y) * 0.019 + seed * 0.4)
+	var jut := clampf(1.6 + n1 * 2.6 + n2 * 3.8 + n3 * 2.4, 0.55, 11.0)
+	var wobble := sin(world_xz.x * 0.21 + world_xz.y * 0.17 + seed) * 0.95
+	return Vector3(outward.x, 0.0, outward.y) * jut + Vector3(tangent.x, 0.0, tangent.y) * wobble
 
 
 func _rebuild_horizon() -> void:
@@ -2130,8 +2117,8 @@ func _rebuild_horizon() -> void:
 		child.free()
 	var center := ScaleProfile.tile_to_flat_world(Vector2(map_size - Vector2i.ONE) * 0.5, map_size)
 	var rings := [
-		{"count": 10, "radius": HORIZON_RADIUS_METRES + 18.0, "h": 9.0, "w": 36.0},
-		{"count": 8, "radius": HORIZON_RADIUS_METRES + 70.0, "h": 12.0, "w": 48.0},
+		{"count": 10, "radius": HORIZON_RADIUS_METRES, "h": 8.0, "w": 40.0},
+		{"count": 8, "radius": HORIZON_RADIUS_METRES + 110.0, "h": 11.0, "w": 54.0},
 	]
 	var hill_index := 0
 	for ring_value in rings:

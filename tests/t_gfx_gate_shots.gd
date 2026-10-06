@@ -57,14 +57,12 @@ func _run() -> void:
 	game._update_day_night_lighting()
 	game._sync_presentation()
 	await _capture(game, "gfx_day.png")
-	# Far zoom under day light: the whole slab + sea, so the shot can
-	# prove there is no teal void. Gameplay zoom still caps at 68.
-	if game.camera_rig.camera != null:
-		game.camera_rig.target_zoom = 165.0
-		game.camera_rig.camera.size = 165.0
-		game.camera_rig.position = Vector3(home.x, 0.0, home.z)
-		game.camera_rig.target_position = Vector3(home.x, 0.0, home.z)
+	# Far establishing shot under day light: whole island in the sea.
+	_compose_far(game, home, 130.0)
 	await _capture(game, "gfx_far.png")
+	# Max allowed gameplay zoom-out (strategic 68).
+	game.camera_rig.compose_view(home, ProductionIsometricCameraRig3D.STRATEGIC_ZOOM)
+	await _capture(game, "gfx_zoom_day.png")
 	game.camera_rig.compose_view(home, 34.0)
 	# Golden hour: about 6 s before nightfall on that Day 3.
 	sim.is_night = false
@@ -72,6 +70,9 @@ func _run() -> void:
 	game._update_day_night_lighting()
 	game._sync_presentation()
 	await _capture(game, "gfx_dusk.png")
+	game.camera_rig.compose_view(home, ProductionIsometricCameraRig3D.STRATEGIC_ZOOM)
+	await _capture(game, "gfx_zoom_dusk.png")
+	game.camera_rig.compose_view(home, 34.0)
 	print("GFX dusk sun/camera angle=%.1f energy=%.2f" % [game.sun_camera_angle_degrees(), game.sun_light.light_energy])
 	await _sample_perf(game, "dusk")
 	sim.is_night = false
@@ -92,6 +93,14 @@ func _run() -> void:
 	await process_frame
 	print("GFX_GATE_SHOTS PASS dir=%s" % dest_root)
 	quit(0)
+
+
+func _compose_far(game, home: Vector3, size: float) -> void:
+	if game.camera_rig.camera != null:
+		game.camera_rig.target_zoom = size
+		game.camera_rig.camera.size = size
+		game.camera_rig.position = Vector3(home.x, 0.0, home.z)
+		game.camera_rig.target_position = Vector3(home.x, 0.0, home.z)
 
 
 func _capture(game, filename: String) -> void:
