@@ -120,6 +120,7 @@ var hostile_count := 0
 var rival_activity_count := 0
 var presentation_paused := false
 var _terrain_yard_cache: Dictionary = {}
+var _terrain_occupied_cache: Dictionary = {}
 var _atmosphere_scale := 1.0
 var _ground_tint := Color(1.0, 1.0, 1.0)
 
@@ -498,11 +499,15 @@ func _rebuild_terrain() -> void:
 	if terrain_body != null:
 		terrain_body.queue_free()
 	_terrain_yard_cache = _yard_tiles(3)
+	_terrain_occupied_cache = _structure_tiles()
 	var surface := SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for y in range(map_size.y):
 		for x in range(map_size.x):
-			_add_terrain_cell(surface, Vector2i(x, y))
+			var tile := Vector2i(x, y)
+			if _is_coastal_water_tile(tile) and not _terrain_occupied_cache.has(_tile_key(tile)):
+				continue
+			_add_terrain_cell(surface, tile)
 	var mesh := surface.commit()
 	terrain_mesh_instance = MeshInstance3D.new()
 	terrain_mesh_instance.name = "ContinuousTerrain"
@@ -517,6 +522,8 @@ func _rebuild_terrain() -> void:
 	material.set_shader_parameter("macro_amount", 0.078)
 	material.set_shader_parameter("detail_amount", 0.048)
 	material.set_shader_parameter("dirt_amount", 0.36)
+	material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
+	material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
 	terrain_mesh_instance.material_override = material
 	# Self-shadow on the playable slab plus PSSM 2-split painted a moving
 	# diagonal seam. Buildings still cast onto the ground.
@@ -552,14 +559,11 @@ func _add_terrain_cell(surface: SurfaceTool, tile: Vector2i) -> void:
 	var directions: Array[Vector2i] = [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]
 	for direction_index in directions.size():
 		var neighbor: Vector2i = tile + directions[direction_index]
-		var neighbor_y := top_y - 4.5
-		if simulation.is_inside_map(neighbor):
+		var open_water := _neighbor_is_open_water(neighbor)
+		var neighbor_y := WATER_Y if open_water else top_y - 4.5
+		if not open_water and simulation.is_inside_map(neighbor):
 			neighbor_y = float(simulation.get_height(neighbor)) * ScaleProfile.TERRAIN_ELEVATION_UNIT_METRES
 		if neighbor_y >= top_y - 0.001:
-			continue
-		# Off-map faces were hard dark wedges into the void. Unexplored
-		# exterior is fog; explored edges feather in the FOW shader.
-		if not simulation.is_inside_map(neighbor):
 			continue
 		var a: Vector3
 		var b: Vector3
@@ -574,8 +578,11 @@ func _add_terrain_cell(surface: SurfaceTool, tile: Vector2i) -> void:
 				a = corners[0]; b = corners[3]
 		var down_a := Vector3(a.x, neighbor_y, a.z)
 		var down_b := Vector3(b.x, neighbor_y, b.z)
-		var normal := Vector3(float(directions[direction_index].x), 0.0, float(directions[direction_index].y))
-		_add_quad(surface, a, b, down_b, down_a, normal, color.darkened(0.24))
+		var normal := Vector3(float(directions[direction_index].x), 0.16 if open_water else 0.0, float(directions[direction_index].y)).normalized()
+		var wall := color.lerp(Color("#6A5E4C") if open_water else color.darkened(0.24), 0.72 if open_water else 1.0)
+		if open_water:
+			wall = wall.lerp(Color("#4A4840"), 0.28)
+		_add_quad(surface, a, b, down_b, down_a, normal, wall)
 
 
 func _add_quad(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, normal: Vector3, color: Color) -> void:
@@ -603,11 +610,10 @@ func _terrain_color(tile: Vector2i) -> Color:
 	base = base.lerp(Color("#445840"), hash_b * 0.02)
 	base = base.lerp(Color("#2a4438"), clampf(float(tree_weight) / 28.0, 0.0, 0.22))
 	base = base.lerp(Color("#55574d"), clampf(float(rock_weight) / 32.0, 0.0, 0.18))
-	var edge := mini(mini(tile.x, tile.y), mini(map_size.x - 1 - tile.x, map_size.y - 1 - tile.y))
-	if edge <= 1:
-		base = base.lerp(Color("#C4A878") if rock_weight < 3 else Color("#6A6054"), 0.28)
-	elif edge <= 3:
-		base = base.lerp(Color("#8A7A58"), 0.10)
+	if _borders_open_water(tile):
+		base = base.lerp(Color("#C4A878") if rock_weight < 3 else Color("#6A6054"), 0.42)
+	elif _is_coastal_water_tile(tile):
+		base = base.lerp(Color("#8A7A58"), 0.16)
 	if _terrain_yard_cache.has(_tile_key(tile)):
 		base = base.lerp(Color("#7a6a40"), 0.08)
 	if String(simulation.get_tile(tile)) == Defs.TILE_SHARD:
@@ -684,6 +690,9 @@ func _rebuild_nature_multimeshes() -> void:
 		if not simulation.is_revealed(tile):
 			continue
 		var tile_type := String(nature_views[key_value])
+		var coastal := _is_coastal_water_tile(tile)
+		if coastal and tile_type != Defs.TILE_ROCK:
+			continue
 		var stage := int(nature_stages.get(key_value, 0))
 		if tile_type == Defs.TILE_TREE:
 			if _nature_suppressed_near_activity(tile):
@@ -701,10 +710,13 @@ func _rebuild_nature_multimeshes() -> void:
 		elif tile_type == Defs.TILE_ROCK:
 			if _nature_suppressed_near_activity(tile):
 				continue
-			var rock_count := 2 if stage >= 2 and _same_type_neighbors(tile, Defs.TILE_ROCK) >= 3 else 1
+			if coastal and _tile_hash(tile, 41) % 3 != 0:
+				continue
+			var rock_count := 1 if coastal else (2 if stage >= 2 and _same_type_neighbors(tile, Defs.TILE_ROCK) >= 3 else 1)
 			for index in rock_count:
 				var rock_path := String(Catalog.ROCKS[_tile_hash(tile, 101 + index) % Catalog.ROCKS.size()])
-				_append_nature_transform(transforms_by_path, rock_path, tile, index, 0.66, 0.46 + float(stage) * 0.28, 0.18)
+				var y_override := WATER_Y + 0.10 if coastal else NAN
+				_append_nature_transform(transforms_by_path, rock_path, tile, index, 0.66, 0.40 + float(stage) * 0.22, 0.18, y_override)
 		elif tile_type == "STUMP":
 			if _nature_suppressed_near_activity(tile):
 				continue
@@ -743,6 +755,8 @@ func _rebuild_grass_multimeshes() -> void:
 			if String(simulation.get_tile(tile)) != Defs.TILE_GRASS:
 				continue
 			if occupied.has(_tile_key(tile)):
+				continue
+			if _is_coastal_water_tile(tile):
 				continue
 			var near_yard := yard.has(_tile_key(tile))
 			if near_yard:
@@ -818,12 +832,14 @@ func _spawn_nature_multimeshes(host: Node3D, transforms_by_path: Dictionary) -> 
 		host.add_child(instance)
 
 
-func _append_nature_transform(groups: Dictionary, path_value: String, tile: Vector2i, index: int, radius: float, base_scale: float, scale_range: float) -> void:
+func _append_nature_transform(groups: Dictionary, path_value: String, tile: Vector2i, index: int, radius: float, base_scale: float, scale_range: float, y_override := NAN) -> void:
 	if not groups.has(path_value):
 		groups[path_value] = []
 	var world_position := tile_to_world(Vector2(tile))
 	var offset := _deterministic_offset(tile, index, radius)
 	world_position += Vector3(offset.x, 0.0, offset.y)
+	if not is_nan(y_override):
+		world_position.y = y_override
 	var scale_value := (base_scale + float(_tile_hash(tile, 41 + index) % 100) / 100.0 * scale_range) * ScaleProfile.nature_model_scale(path_value)
 	var yaw := float(_tile_hash(tile, 53 + index) % 628) / 100.0
 	var basis := Basis(Vector3.UP, yaw).scaled(Vector3.ONE * scale_value)
@@ -2003,43 +2019,59 @@ func _rebuild_water() -> void:
 	water_material.set_shader_parameter("foam_metres", 6.0)
 	water_material.set_shader_parameter("fade_start", 70.0)
 	water_material.set_shader_parameter("fade_end", 380.0)
-	water_material.set_shader_parameter("horizon_color", Vector3(0.165, 0.275, 0.290))
+	water_material.set_shader_parameter("horizon_color", Vector3(0.145, 0.240, 0.255))
 	water_mesh_instance.material_override = water_material
 	water_root.add_child(water_mesh_instance)
 
 
 func _rebuild_world_rim(force: bool) -> void:
-	# Organic coast around the slab. Fog still hides unrevealed tiles (#47).
-	if simulation == null or terrain_root == null or map_size == Vector2i.ZERO:
-		return
-	var signature := "%d:%d" % [int(simulation.revealed_tiles.size()), terrain_height_signature]
-	if not force and signature == rim_signature:
-		return
-	rim_signature = signature
+	# No continuous wall. A strip along the AABB reads as a tan plate at
+	# far zoom. The noisy waterline (shader + skipped coastal cells) is
+	# the coast. Isolated rocks still come from edge nature.
 	if rim_mesh_instance != null:
 		rim_mesh_instance.queue_free()
 		rim_mesh_instance = null
-	var surface := SurfaceTool.new()
-	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var faces := 0
-	for x in map_size.x:
-		faces += _add_rim_face(surface, Vector2i(x, 0), Vector2i(0, -1))
-		faces += _add_rim_face(surface, Vector2i(x, map_size.y - 1), Vector2i(0, 1))
-	for y in map_size.y:
-		faces += _add_rim_face(surface, Vector2i(0, y), Vector2i(-1, 0))
-		faces += _add_rim_face(surface, Vector2i(map_size.x - 1, y), Vector2i(1, 0))
-	if faces <= 0:
-		return
-	rim_mesh_instance = MeshInstance3D.new()
-	rim_mesh_instance.name = "IslandRim"
-	rim_mesh_instance.mesh = surface.commit()
-	rim_mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var material := StandardMaterial3D.new()
-	material.vertex_color_use_as_albedo = true
-	material.roughness = 0.92
-	material.metallic = 0.0
-	rim_mesh_instance.material_override = material
-	terrain_root.add_child(rim_mesh_instance)
+	if force:
+		rim_signature = ""
+
+
+func _coast_carve_metres(world_xz: Vector2) -> float:
+	# Must match settlement_water.gdshader and settlement_ground.gdshader.
+	var n1 := sin(world_xz.x * 0.048 + world_xz.y * 0.037 + 0.41)
+	var n2 := sin(world_xz.x * 0.11 + world_xz.y * 0.07 + 1.27)
+	var n3 := sin(world_xz.x * 0.031 - world_xz.y * 0.045 + 2.19)
+	var n4 := sin((world_xz.x + world_xz.y) * 0.019)
+	return maxf(3.2, 16.0 + n1 * 8.4 + n2 * 6.4 + n3 * 3.6 + n4 * 1.6)
+
+
+func _world_inward_metres(world_xz: Vector2) -> float:
+	var minimum := _fog_world_min_xz()
+	var size := _fog_world_size_xz()
+	return minf(
+		minf(world_xz.x - minimum.x, minimum.x + size.x - world_xz.x),
+		minf(world_xz.y - minimum.y, minimum.y + size.y - world_xz.y)
+	)
+
+
+func _is_coastal_water_tile(tile: Vector2i) -> bool:
+	if map_size == Vector2i.ZERO:
+		return false
+	var center := ScaleProfile.tile_to_flat_world(Vector2(tile), map_size)
+	var xz := Vector2(center.x, center.z)
+	return _world_inward_metres(xz) < _coast_carve_metres(xz)
+
+
+func _neighbor_is_open_water(neighbor: Vector2i) -> bool:
+	if not simulation.is_inside_map(neighbor):
+		return true
+	return _is_coastal_water_tile(neighbor) and not _terrain_occupied_cache.has(_tile_key(neighbor))
+
+
+func _borders_open_water(tile: Vector2i) -> bool:
+	for direction in [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]:
+		if _neighbor_is_open_water(tile + direction):
+			return true
+	return false
 
 
 func _add_rim_face(surface: SurfaceTool, tile: Vector2i, outward: Vector2i) -> int:
@@ -2195,6 +2227,9 @@ func _append_edge_tree(groups: Dictionary, path_value: String, logical: Vector2,
 	if not groups.has(path_value):
 		groups[path_value] = []
 	var world_position := ScaleProfile.tile_to_flat_world(logical, map_size)
+	var xz := Vector2(world_position.x, world_position.z)
+	if _world_inward_metres(xz) < _coast_carve_metres(xz):
+		return
 	world_position.y = height_at_logical(clamped)
 	var jitter := _deterministic_offset(key_tile, 80 + ring + index, 0.55)
 	world_position += Vector3(jitter.x, 0.0, jitter.y)

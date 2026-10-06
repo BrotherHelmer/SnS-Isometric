@@ -19,8 +19,20 @@ uniform float detail_amount = 0.048;
 uniform float dirt_amount = 0.36;
 // 1 at night / distant LOD: one-octave noise, no 4-tap detail normals.
 uniform float lod_cheap = 0.0;
+// G1: same noisy waterline as settlement_water.gdshader.
+uniform vec2 world_min_xz = vec2(-87.5, -87.5);
+uniform vec2 world_size_xz = vec2(175.0, 175.0);
+uniform vec3 beach_color : source_color = vec3(0.62, 0.52, 0.38);
+uniform vec3 rock_shore : source_color = vec3(0.36, 0.34, 0.30);
 
 varying vec3 world_pos;
+
+float coast_noise(vec2 p) {
+	return sin(p.x * 0.048 + p.y * 0.037 + 0.41) * 0.42
+		+ sin(p.x * 0.11 + p.y * 0.07 + 1.27) * 0.32
+		+ sin(p.x * 0.031 - p.y * 0.045 + 2.19) * 0.18
+		+ sin((p.x + p.y) * 0.019) * 0.08;
+}
 
 float hash21(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -42,6 +54,13 @@ void vertex() {
 }
 
 void fragment() {
+	vec2 raw = (world_pos.xz - world_min_xz) / max(world_size_xz, vec2(0.001));
+	float inward = min(min(raw.x, 1.0 - raw.x), min(raw.y, 1.0 - raw.y)) * min(world_size_xz.x, world_size_xz.y);
+	float carve = max(16.0 + coast_noise(world_pos.xz) * 20.0, 3.2);
+	if (inward < carve) {
+		discard;
+	}
+	float beach = 1.0 - smoothstep(0.0, 9.0, inward - carve);
 	vec2 macro_uv = world_pos.xz / max(macro_metres, 1.0);
 	vec2 detail_uv = world_pos.xz / max(detail_metres, 0.4) + vec2(8.2, 3.7);
 	float macro = lod_cheap > 0.5 ? noise2(macro_uv) : fbm(macro_uv);
@@ -60,6 +79,8 @@ void fragment() {
 	float detail_var = mix(1.0 - detail_amount, 1.0 + detail_amount, detail);
 	float wash = smoothstep(tint_wash_lo, max(tint_wash_lo + 0.02, tint_wash_hi), macro);
 	vec3 albedo = ground * mix(vec3(1.0), light_tint, mix(tint_floor, 1.0, wash)) * macro_var * detail_var;
+	vec3 shore = mix(beach_color, rock_shore, clamp(dirt_mask * 0.65 + macro * 0.35, 0.0, 1.0));
+	albedo = mix(albedo, shore, beach * 0.78);
 	ALBEDO = albedo;
 	// Flat world-up normals. The 4-tap bump plus half-res SSAO painted
 	// diagonal stripes that crawled when the camera panned. Colour breakup

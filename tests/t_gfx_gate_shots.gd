@@ -61,7 +61,7 @@ func _run() -> void:
 	_compose_far(game, home, 130.0)
 	await _capture(game, "gfx_far.png")
 	# Max allowed gameplay zoom-out (strategic 68).
-	game.camera_rig.compose_view(home, ProductionIsometricCameraRig3D.STRATEGIC_ZOOM)
+	game.camera_rig.compose_view(home, 68.0)
 	await _capture(game, "gfx_zoom_day.png")
 	game.camera_rig.compose_view(home, 34.0)
 	# Golden hour: about 6 s before nightfall on that Day 3.
@@ -70,7 +70,7 @@ func _run() -> void:
 	game._update_day_night_lighting()
 	game._sync_presentation()
 	await _capture(game, "gfx_dusk.png")
-	game.camera_rig.compose_view(home, ProductionIsometricCameraRig3D.STRATEGIC_ZOOM)
+	game.camera_rig.compose_view(home, 68.0)
 	await _capture(game, "gfx_zoom_dusk.png")
 	game.camera_rig.compose_view(home, 34.0)
 	print("GFX dusk sun/camera angle=%.1f energy=%.2f" % [game.sun_camera_angle_degrees(), game.sun_light.light_energy])
