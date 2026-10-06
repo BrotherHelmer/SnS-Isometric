@@ -11,6 +11,7 @@ const PlaytestLog = preload("one_shard_playtest_log.gd")
 const Scout = preload("one_shard_scout.gd")
 const Discoveries = preload("one_shard_discoveries.gd")
 const Economy = preload("one_shard_economy.gd")
+const RaidIntents = preload("one_shard_raid_intents.gd")
 
 const SAVE_PATH := "user://one_shard_save.json"
 const AUTOSAVE_PATH := "user://one_shard_autosave.json"
@@ -153,6 +154,9 @@ var day_count := 1
 var is_night := false
 var night_warning_sent := false
 var night_final_warning_sent := false
+var dusk_warning_sent := false
+var horn_warning_sent := false
+var raid_plan: Dictionary = {}
 var last_message := "Extend the road from the waiting carrier."
 var game_finished := false
 var victory := false
@@ -329,6 +333,9 @@ func start_new_run(width: int = MAP_WIDTH, height: int = MAP_HEIGHT, seed_value:
 	is_night = false
 	night_warning_sent = false
 	night_final_warning_sent = false
+	dusk_warning_sent = false
+	horn_warning_sent = false
+	raid_plan = {}
 	last_message = "Choose any clear, visible 4x4 site for the Town Hall."
 	game_finished = false
 	victory = false
@@ -5830,6 +5837,22 @@ func _update_population_growth(delta: float) -> void:
 func _update_time(delta: float) -> void:
 	phase_time += delta
 	var remaining := DAY_LENGTH_SECONDS - phase_time
+	if not is_night and not dusk_warning_sent and remaining <= RaidIntents.DUSK_WARNING_SECONDS:
+		dusk_warning_sent = true
+		if dusk_forecast.is_empty():
+			dusk_forecast = Wyrdfall.night_forecast(float(get_wyrd_pressure().get("value", 0.0)), day_count <= 1)
+		_prepare_raid_plan()
+		last_message = RaidIntents.dusk_message()
+		_add_log("Dusk approaches.")
+		playtest_log.note(self, "dusk_warning", last_message)
+	if not is_night and not horn_warning_sent and remaining <= RaidIntents.HORN_WARNING_SECONDS:
+		horn_warning_sent = true
+		if _hostile_forces_nearby():
+			if raid_plan.is_empty():
+				_prepare_raid_plan()
+			last_message = RaidIntents.horn_message(String(raid_plan.get("bearing", "the woods")))
+			_add_log(last_message)
+			playtest_log.note(self, "horn_warning", last_message)
 	if not is_night and not night_warning_sent and remaining <= NIGHT_WARNING_SECONDS:
 		night_warning_sent = true
 		path_grid_dirty = true
@@ -5873,6 +5896,8 @@ func _start_night() -> void:
 	phase_time = 0.0
 	night_warning_sent = false
 	night_final_warning_sent = false
+	dusk_warning_sent = false
+	horn_warning_sent = false
 	path_grid_dirty = true
 	night_casualties = 0
 	night_buildings_damaged = 0
@@ -5896,6 +5921,8 @@ func _end_night() -> void:
 	phase_time = 0.0
 	night_warning_sent = false
 	night_final_warning_sent = false
+	dusk_warning_sent = false
+	horn_warning_sent = false
 	day_count += 1
 	path_grid_dirty = true
 	_retreat_enemies_at_dawn()
@@ -5938,6 +5965,8 @@ func _spawn_wave() -> void:
 		_add_log("The first night remains quiet. No raiders emerge.")
 		last_message = "QUIET NIGHT - no raiders emerged from the fog."
 		return
+	if raid_plan.is_empty():
+		_prepare_raid_plan()
 	var spawn_origins := _night_spawn_origins()
 	for i in range(wave_size):
 		var origin: Vector2i = shard_position if spawn_origins.is_empty() else spawn_origins[i % spawn_origins.size()]
@@ -5946,7 +5975,7 @@ func _spawn_wave() -> void:
 		_spawn_enemy(origin, hp, damage, -0.08 * float(i), 0, String(roster[i % roster.size()]), armor)
 	night_enemies_spawned += wave_size
 	_begin_raid(int(plan.get("steal", RaidTuning.steal_for_night(day_count, day_count <= 1))))
-	playtest_log.note(self, "raid_started", "wave=%d" % wave_size)
+	playtest_log.note(self, "raid_started", "wave=%d intent=%s" % [wave_size, String(raid_plan.get("intent", ""))])
 	if reckoning_active:
 		reckoning_waves_spawned += 1
 	var bearing := "the wilds"
@@ -5997,6 +6026,62 @@ func _night_spawn_origins() -> Array[Vector2i]:
 			return _manhattan(town_center, first) > _manhattan(town_center, second)
 		)
 	return candidates.slice(0, mini(8, candidates.size()))
+
+
+func _prepare_raid_plan() -> Dictionary:
+	var intent := RaidIntents.choose(day_count, rng_seed)
+	var bearing_tile := shard_position
+	for camp in enemy_camps:
+		if bool(camp.get("destroyed", false)):
+			continue
+		bearing_tile = Vector2i(camp.get("position", shard_position))
+		break
+	if bearing_tile == shard_position:
+		var origins := _night_spawn_origins()
+		if not origins.is_empty():
+			bearing_tile = origins[0]
+	var target := {}
+	if intent != RaidIntents.INTENT_CENTER:
+		var yards := _raid_economy_candidates()
+		if not yards.is_empty():
+			target = yards[0]
+	if target.is_empty():
+		target = _find_town_hall()
+	raid_plan = {
+		"intent": intent,
+		"bearing": _bearing_from_town(bearing_tile),
+		"target_id": int(target.get("id", 0)),
+		"target_name": _display_building_name(target) if not target.is_empty() else "the settlement"
+	}
+	dusk_forecast["raid_intent"] = intent
+	dusk_forecast["bearing"] = raid_plan["bearing"]
+	return raid_plan
+
+
+func _raid_economy_candidates() -> Array:
+	var yards: Array = []
+	for building in buildings:
+		var building_type := String(building.get("type", ""))
+		if bool(building.get("construction", false)):
+			continue
+		if building_type == Defs.BUILDING_TOWN_HALL or building_type == Defs.BUILDING_ROAD:
+			continue
+		if building_type in RaidTuning.LOOT_BUILDING_TYPES:
+			yards.append(building)
+	return yards
+
+
+func _hostile_forces_nearby() -> bool:
+	for camp in enemy_camps:
+		if not bool(camp.get("destroyed", false)):
+			return true
+	for feature in world_features:
+		if String(feature.get("kind", "")) == Discoveries.KIND_TRACES and bool(feature.get("revealed", false)):
+			return true
+	if hidden_threat_level > 0:
+		return true
+	var threat := String(dusk_forecast.get("threat", "QUIET"))
+	return threat != "" and threat != Wyrdfall.BAND_QUIET
 
 
 func _bearing_from_town(origin: Vector2i) -> String:
@@ -6064,7 +6149,8 @@ func _spawn_enemy(
 		"hit_direction": _vector_to_data(Vector2i.ZERO),
 		"retreating": false,
 		"retreat_target": _vector_to_data(origin),
-		"target_refresh_timer": 0.0
+		"target_refresh_timer": 0.0,
+		"raid_intent": String(raid_plan.get("intent", ""))
 	})
 	next_enemy_id += 1
 
@@ -6095,6 +6181,9 @@ func _update_enemies(delta: float) -> void:
 
 func _update_enemy(enemy: Dictionary, delta: float) -> void:
 	if day_count <= 1 and is_night and phase_time >= RaidTuning.NIGHT1_RETREAT_SECONDS and not bool(enemy.get("retreating", false)):
+		enemy["retreating"] = true
+		enemy["path"] = []
+	elif day_count > 1 and String(enemy.get("raid_intent", "")) == RaidIntents.INTENT_PROBE and is_night and phase_time >= RaidIntents.PROBE_RETREAT_SECONDS and not bool(enemy.get("retreating", false)):
 		enemy["retreating"] = true
 		enemy["path"] = []
 	if bool(enemy.get("retreating", false)):
@@ -6256,6 +6345,21 @@ func _find_enemy_target_unprofiled(enemy: Dictionary) -> Dictionary:
 		var exposed_target := _best_enemy_target(enemy, exposed_workers, "worker", false)
 		if not exposed_target.is_empty():
 			return exposed_target
+	var raid_intent := String(enemy.get("raid_intent", raid_plan.get("intent", "")))
+	if raid_intent == RaidIntents.INTENT_ECONOMY:
+		var economy := _raid_economy_candidates()
+		var economy_hit := _best_enemy_target(enemy, economy, "building", false)
+		if not economy_hit.is_empty():
+			return economy_hit
+	elif raid_intent == RaidIntents.INTENT_CENTER:
+		var hall := _find_town_hall()
+		if not hall.is_empty():
+			return {"kind": "building", "entity": hall}
+	elif raid_intent == RaidIntents.INTENT_PROBE:
+		var probe := _raid_economy_candidates()
+		var probe_hit := _best_enemy_target(enemy, probe, "building", false)
+		if not probe_hit.is_empty():
+			return probe_hit
 	var is_brute := String(enemy.get("enemy_type", ENEMY_RAIDER)) == ENEMY_BRUTE
 	if is_brute:
 		var structure_targets: Array = []
@@ -8143,6 +8247,9 @@ func _serialize_state() -> Dictionary:
 		"is_night": is_night,
 		"night_warning_sent": night_warning_sent,
 		"night_final_warning_sent": night_final_warning_sent,
+		"dusk_warning_sent": dusk_warning_sent,
+		"horn_warning_sent": horn_warning_sent,
+		"raid_plan": raid_plan,
 		"last_message": last_message,
 		"game_finished": game_finished,
 		"victory": victory,
@@ -8250,6 +8357,9 @@ func _restore_state(data: Dictionary) -> void:
 	is_night = bool(data.get("is_night", false))
 	night_warning_sent = bool(data.get("night_warning_sent", false))
 	night_final_warning_sent = bool(data.get("night_final_warning_sent", false))
+	dusk_warning_sent = bool(data.get("dusk_warning_sent", false))
+	horn_warning_sent = bool(data.get("horn_warning_sent", false))
+	raid_plan = data.get("raid_plan", {})
 	last_message = String(data.get("last_message", "Run loaded."))
 	game_finished = bool(data.get("game_finished", false))
 	victory = bool(data.get("victory", false))
