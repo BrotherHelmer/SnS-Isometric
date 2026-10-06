@@ -2459,6 +2459,12 @@ func _update_inspector_core() -> void:
 				var band := String(building.get("placement_band", ""))
 				if band != "" and int(building.get("placement_percent", 0)) > 0 and String(building.get("type", "")) in [Defs.BUILDING_LUMBER_CAMP, Defs.BUILDING_QUARRY, Defs.BUILDING_FARM]:
 					lines.append("Site  %d%% %s" % [int(building.get("placement_percent", 0)), band])
+			if simulation_host.simulation.has_method("evaluate_frontier"):
+				var frontier: Dictionary = simulation_host.simulation.evaluate_frontier(building)
+				if bool(frontier.get("exposed", false)):
+					lines.append("[color=#f0a06e]Frontier  exposed — far from town[/color]")
+				elif String(building.get("type", "")) not in [Defs.BUILDING_ROAD, Defs.BUILDING_WALL, Defs.BUILDING_TOWN_HALL]:
+					lines.append("Frontier  sheltered")
 				else:
 					var diagnostic := _production_diagnostic(building, type_name)
 					if diagnostic != "active":
