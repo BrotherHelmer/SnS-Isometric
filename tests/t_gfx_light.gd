@@ -8,6 +8,8 @@ const HaloCatalog = preload("res://src/GodotClient3D/Scripts/production_building
 const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
 const QualityProfile = preload("res://src/GodotClient3D/Scripts/production_quality_profile.gd")
 const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_profile.gd")
+const BuildingMaterials = preload("res://src/GodotClient3D/Scripts/production_building_materials.gd")
+const Catalog = preload("res://src/GodotClient3D/Scripts/production_asset_catalog.gd")
 
 var failures: Array[String] = []
 
@@ -96,6 +98,9 @@ func _run() -> void:
 				stamp_batches += 1
 	_check(stamp_batches <= 3, "road detail is 2–3 batched stamps, not per-tile Decals")
 	_check(game.sun_light.directional_shadow_mode == DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS, "sun uses PSSM 2-split")
+	_check(game.sun_light.directional_shadow_split_1 >= 0.78 and game.sun_light.directional_shadow_split_1 <= 0.88, "PSSM split stays parked at 0.82")
+	_check(is_equal_approx(game.environment_resource.ssao_sharpness, 0.35), "SSAO sharpness stays 0.35")
+	_check(game.world_view.terrain_mesh_instance != null and game.world_view.terrain_mesh_instance.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "terrain does not cast")
 	_check(is_zero_approx(game.sun_light.light_angular_distance), "sun angular distance is 0 (no PCSS)")
 	_check(game.sun_light.directional_shadow_max_distance <= 52.0, "shadow distance stays near the play volume")
 	var shadow_suns := 0
@@ -112,6 +117,14 @@ func _run() -> void:
 		if view.find_child("ContactAO", true, false) != null:
 			contact_count += 1
 	_check(contact_count > 0, "buildings carry a contact-AO disc")
+	_check(is_equal_approx(BuildingMaterials.roughness_for("plaster"), 0.80), "plaster roughness is 0.80")
+	_check(is_equal_approx(BuildingMaterials.roughness_for("timber"), 0.70), "timber roughness is 0.70")
+	_check(is_equal_approx(BuildingMaterials.roughness_for("roof"), 0.72), "roof roughness is 0.72")
+	_check(is_equal_approx(BuildingMaterials.roughness_for("stone"), 0.85), "stone roughness is 0.85")
+	_check(Catalog.TREES.size() >= 4 and Catalog.TREES.size() <= 8, "vegetation kit is 4–6 tree silhouettes")
+	_check(Catalog.EDGE_TREES.size() >= 4, "edge forest uses more than one cone")
+	_check(Identity.PALETTE_WINDOW.is_equal_approx(Color("#F2B56B")), "window/fire accent is #F2B56B")
+	_check(float(night_p["torch_range"]) <= 4.2, "night window pools stay short-range")
 
 	game.apply_quality_profile("recommended")
 	_check(not game.environment_resource.ssil_enabled and not game.environment_resource.glow_enabled, "recommended profile keeps SSIL and glow off")
@@ -143,6 +156,14 @@ func _run() -> void:
 	print("GFX halo placements=%d overlap=%d" % [live.size(), overlap])
 	_check(overlap == 0, "halos never overlap footprints or road tiles")
 	_check(HaloCatalog.authored_for("HOUSE").size() >= 4 and HaloCatalog.authored_for("HOUSE").size() <= 12, "house halo table has 4–12 authored slots")
+	_check(HaloCatalog.prop_path("dirt_plot").contains("dirt_plot"), "story zones can place a dirt plot")
+	_check(HaloCatalog.authored_for("FARM").size() >= 6, "farm story zone is authored")
+	_check(game.world_view.water_mesh_instance != null and game.world_view.water_material != null, "island water plane is live")
+	_check(game.world_view.find_child("OuterWildernessFloor", true, false) == null, "teal wilderness floor is gone")
+	_check(game.world_view.horizon_root != null and game.world_view.horizon_root.get_child_count() >= 12, "distant horizon hills are instanced")
+	var fog: Dictionary = game.world_view.fog_configuration()
+	_check(bool(fog.get("exterior_opaque", false)), "unexplored off-map fog stays opaque")
+	_check(float(fog.get("shore_fade_metres", 0.0)) >= 8.0, "explored edges open a short shore band")
 	_check(HaloCatalog.authored_for("SAWMILL").size() >= 4, "sawmill halo table is authored")
 	_check(HaloCatalog.authored_for("BAKERY").size() >= 4, "bakery halo table is authored")
 	_check(HaloCatalog.authored_for("QUARRY").size() >= 4, "quarry halo table is authored")
