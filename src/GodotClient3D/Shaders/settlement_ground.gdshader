@@ -24,6 +24,10 @@ uniform vec2 world_min_xz = vec2(-87.5, -87.5);
 uniform vec2 world_size_xz = vec2(175.0, 175.0);
 uniform vec3 beach_color : source_color = vec3(0.62, 0.52, 0.38);
 uniform vec3 rock_shore : source_color = vec3(0.36, 0.34, 0.30);
+uniform vec3 wet_sand : source_color = vec3(0.42, 0.36, 0.28);
+uniform float beach_margin_metres = 5.0;
+uniform float coast_jut_metres = 12.0;
+uniform float apron_mode = 0.0;
 
 varying vec3 world_pos;
 
@@ -34,11 +38,19 @@ float coast_noise(vec2 p) {
 		+ sin((p.x + p.y) * 0.019) * 0.08;
 }
 
-float island_land(vec2 world_xz) {
+float inward_metres(vec2 world_xz) {
 	vec2 raw = (world_xz - world_min_xz) / max(world_size_xz, vec2(0.001));
-	vec2 p = (raw - vec2(0.5)) * 2.0;
-	float ellipse = sqrt(pow(p.x / 0.84, 2.0) + pow(p.y / 0.76, 2.0));
-	return 1.0 - (ellipse + coast_noise(world_xz) * 0.22);
+	return min(min(raw.x, 1.0 - raw.x), min(raw.y, 1.0 - raw.y)) * min(world_size_xz.x, world_size_xz.y);
+}
+
+// Same rounded-rect + seaward jut as settlement_water.gdshader.
+float island_land(vec2 world_xz) {
+	vec2 center = world_min_xz + 0.5 * world_size_xz;
+	vec2 half = 0.5 * world_size_xz;
+	vec2 q = abs(world_xz - center) - half;
+	float sd = length(max(q, vec2(0.0))) + min(max(q.x, q.y), 0.0) - beach_margin_metres;
+	float jut = max(coast_noise(world_xz), 0.0) * coast_jut_metres;
+	return -sd + jut;
 }
 
 float hash21(vec2 p) {
@@ -62,12 +74,16 @@ void vertex() {
 
 void fragment() {
 	float land = island_land(world_pos.xz);
-	// Keep beach/cliff side-faces (they drop to the water). Only the top
-	// slab is carved, otherwise a sky-gap rim lights up at far zoom.
-	if (land <= 0.0 && world_pos.y > -0.05) {
-		discard;
+	float inward = inward_metres(world_pos.xz);
+	if (apron_mode > 0.5) {
+		if (inward > 0.25) {
+			discard;
+		}
+		if (land <= 0.0) {
+			discard;
+		}
 	}
-	float beach = 1.0 - smoothstep(0.0, 0.08, max(land, 0.0));
+	float beach = 1.0 - smoothstep(0.0, beach_margin_metres + 1.8, max(land, 0.0));
 	vec2 macro_uv = world_pos.xz / max(macro_metres, 1.0);
 	vec2 detail_uv = world_pos.xz / max(detail_metres, 0.4) + vec2(8.2, 3.7);
 	float macro = lod_cheap > 0.5 ? noise2(macro_uv) : fbm(macro_uv);
@@ -87,7 +103,11 @@ void fragment() {
 	float wash = smoothstep(tint_wash_lo, max(tint_wash_lo + 0.02, tint_wash_hi), macro);
 	vec3 albedo = ground * mix(vec3(1.0), light_tint, mix(tint_floor, 1.0, wash)) * macro_var * detail_var;
 	vec3 shore = mix(beach_color, rock_shore, clamp(dirt_mask * 0.65 + macro * 0.35, 0.0, 1.0));
-	albedo = mix(albedo, shore, beach * 0.78);
+	albedo = mix(albedo, shore, beach * (apron_mode > 0.5 ? 0.92 : 0.22));
+	if (apron_mode > 0.5) {
+		float wet = 1.0 - smoothstep(0.0, 3.2, max(land, 0.0));
+		albedo = mix(albedo, wet_sand, wet * 0.55);
+	}
 	ALBEDO = albedo;
 	// Flat world-up normals. The 4-tap bump plus half-res SSAO painted
 	// diagonal stripes that crawled when the camera panned. Colour breakup

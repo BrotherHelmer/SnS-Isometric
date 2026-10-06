@@ -21,6 +21,10 @@ const FOG_MASK_DIVISOR := 1
 const FOG_VOLUME_PAD_METRES := 0.35
 const WATER_Y := -0.22
 const WATER_PAD_METRES := 2400.0
+const BEACH_MARGIN_TILES := 2
+const BEACH_MARGIN_METRES := 5.0
+const COAST_JUT_METRES := 12.0
+const BEACH_APRON_PAD_METRES := 20.0
 const SHORE_FADE_METRES := 16.0
 const HORIZON_RADIUS_METRES := 420.0
 const FOG_VOLUME_HEIGHT_METRES := 56.0
@@ -103,6 +107,7 @@ var fog_plane: MeshInstance3D
 var boundary_mist_material: ShaderMaterial
 var water_mesh_instance: MeshInstance3D
 var water_material: ShaderMaterial
+var beach_apron_instance: MeshInstance3D
 var rim_mesh_instance: MeshInstance3D
 var horizon_root: Node3D
 var rim_signature := ""
@@ -134,6 +139,7 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 		water_root = null
 		water_mesh_instance = null
 		water_material = null
+		beach_apron_instance = null
 		rim_mesh_instance = null
 		horizon_root = null
 		rim_signature = ""
@@ -504,10 +510,7 @@ func _rebuild_terrain() -> void:
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for y in range(map_size.y):
 		for x in range(map_size.x):
-			var tile := Vector2i(x, y)
-			if _is_coastal_water_tile(tile) and not _terrain_occupied_cache.has(_tile_key(tile)):
-				continue
-			_add_terrain_cell(surface, tile)
+			_add_terrain_cell(surface, Vector2i(x, y))
 	var mesh := surface.commit()
 	terrain_mesh_instance = MeshInstance3D.new()
 	terrain_mesh_instance.name = "ContinuousTerrain"
@@ -524,6 +527,9 @@ func _rebuild_terrain() -> void:
 	material.set_shader_parameter("dirt_amount", 0.36)
 	material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
 	material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
+	material.set_shader_parameter("beach_margin_metres", BEACH_MARGIN_METRES)
+	material.set_shader_parameter("coast_jut_metres", COAST_JUT_METRES)
+	material.set_shader_parameter("apron_mode", 0.0)
 	terrain_mesh_instance.material_override = material
 	# Self-shadow on the playable slab plus PSSM 2-split painted a moving
 	# diagonal seam. Buildings still cast onto the ground.
@@ -542,6 +548,7 @@ func _rebuild_terrain() -> void:
 	# + horizon replace it. Unexplored still sits under #47 fog.
 	boundary_mist_material = null
 	terrain_height_signature = _calculate_height_signature()
+	_rebuild_beach_apron()
 
 
 func _add_terrain_cell(surface: SurfaceTool, tile: Vector2i) -> void:
@@ -559,10 +566,9 @@ func _add_terrain_cell(surface: SurfaceTool, tile: Vector2i) -> void:
 	var directions: Array[Vector2i] = [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]
 	for direction_index in directions.size():
 		var neighbor: Vector2i = tile + directions[direction_index]
-		var open_water := _neighbor_is_open_water(neighbor)
-		var neighbor_y := WATER_Y if open_water else top_y - 4.5
-		if not open_water and simulation.is_inside_map(neighbor):
-			neighbor_y = float(simulation.get_height(neighbor)) * ScaleProfile.TERRAIN_ELEVATION_UNIT_METRES
+		if not simulation.is_inside_map(neighbor):
+			continue
+		var neighbor_y := float(simulation.get_height(neighbor)) * ScaleProfile.TERRAIN_ELEVATION_UNIT_METRES
 		if neighbor_y >= top_y - 0.001:
 			continue
 		var a: Vector3
@@ -578,11 +584,8 @@ func _add_terrain_cell(surface: SurfaceTool, tile: Vector2i) -> void:
 				a = corners[0]; b = corners[3]
 		var down_a := Vector3(a.x, neighbor_y, a.z)
 		var down_b := Vector3(b.x, neighbor_y, b.z)
-		var normal := Vector3(float(directions[direction_index].x), 0.16 if open_water else 0.0, float(directions[direction_index].y)).normalized()
-		var wall := color.lerp(Color("#6A5E4C") if open_water else color.darkened(0.24), 0.72 if open_water else 1.0)
-		if open_water:
-			wall = wall.lerp(Color("#4A4840"), 0.28)
-		_add_quad(surface, a, b, down_b, down_a, normal, wall)
+		var normal := Vector3(float(directions[direction_index].x), 0.0, float(directions[direction_index].y))
+		_add_quad(surface, a, b, down_b, down_a, normal, color.darkened(0.24))
 
 
 func _add_quad(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, normal: Vector3, color: Color) -> void:
@@ -610,10 +613,9 @@ func _terrain_color(tile: Vector2i) -> Color:
 	base = base.lerp(Color("#445840"), hash_b * 0.02)
 	base = base.lerp(Color("#2a4438"), clampf(float(tree_weight) / 28.0, 0.0, 0.22))
 	base = base.lerp(Color("#55574d"), clampf(float(rock_weight) / 32.0, 0.0, 0.18))
-	if _borders_open_water(tile):
-		base = base.lerp(Color("#C4A878") if rock_weight < 3 else Color("#6A6054"), 0.42)
-	elif _is_coastal_water_tile(tile):
-		base = base.lerp(Color("#8A7A58"), 0.16)
+	var edge := mini(mini(tile.x, tile.y), mini(map_size.x - 1 - tile.x, map_size.y - 1 - tile.y))
+	if edge <= 1:
+		base = base.lerp(Color("#C4A878") if rock_weight < 3 else Color("#6A6054"), 0.18)
 	if _terrain_yard_cache.has(_tile_key(tile)):
 		base = base.lerp(Color("#7a6a40"), 0.08)
 	if String(simulation.get_tile(tile)) == Defs.TILE_SHARD:
@@ -690,9 +692,6 @@ func _rebuild_nature_multimeshes() -> void:
 		if not simulation.is_revealed(tile):
 			continue
 		var tile_type := String(nature_views[key_value])
-		var coastal := _is_coastal_water_tile(tile)
-		if coastal and tile_type != Defs.TILE_ROCK:
-			continue
 		var stage := int(nature_stages.get(key_value, 0))
 		if tile_type == Defs.TILE_TREE:
 			if _nature_suppressed_near_activity(tile):
@@ -710,13 +709,10 @@ func _rebuild_nature_multimeshes() -> void:
 		elif tile_type == Defs.TILE_ROCK:
 			if _nature_suppressed_near_activity(tile):
 				continue
-			if coastal and _tile_hash(tile, 41) % 3 != 0:
-				continue
-			var rock_count := 1 if coastal else (2 if stage >= 2 and _same_type_neighbors(tile, Defs.TILE_ROCK) >= 3 else 1)
+			var rock_count := 2 if stage >= 2 and _same_type_neighbors(tile, Defs.TILE_ROCK) >= 3 else 1
 			for index in rock_count:
 				var rock_path := String(Catalog.ROCKS[_tile_hash(tile, 101 + index) % Catalog.ROCKS.size()])
-				var y_override := WATER_Y + 0.10 if coastal else NAN
-				_append_nature_transform(transforms_by_path, rock_path, tile, index, 0.66, 0.40 + float(stage) * 0.22, 0.18, y_override)
+				_append_nature_transform(transforms_by_path, rock_path, tile, index, 0.66, 0.46 + float(stage) * 0.28, 0.18)
 		elif tile_type == "STUMP":
 			if _nature_suppressed_near_activity(tile):
 				continue
@@ -754,9 +750,8 @@ func _rebuild_grass_multimeshes() -> void:
 				continue
 			if occupied.has(_tile_key(tile)):
 				continue
-			if _is_coastal_water_tile(tile):
+			if not simulation.is_revealed(tile):
 				continue
-			if not simulation.is_revealed(tile) and _tile_hash(tile, 29) % 3 != 0:
 				continue
 			var near_yard := yard.has(_tile_key(tile))
 			if near_yard:
@@ -2016,7 +2011,9 @@ func _rebuild_water() -> void:
 	water_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
 	water_material.set_shader_parameter("atmosphere", _atmosphere_scale)
 	water_material.set_shader_parameter("wave", 0.035 * water_detail)
-	water_material.set_shader_parameter("foam_metres", 6.0)
+	water_material.set_shader_parameter("foam_metres", 4.8)
+	water_material.set_shader_parameter("beach_margin_metres", BEACH_MARGIN_METRES)
+	water_material.set_shader_parameter("coast_jut_metres", COAST_JUT_METRES)
 	water_material.set_shader_parameter("fade_start", 70.0)
 	water_material.set_shader_parameter("fade_end", 380.0)
 	water_material.set_shader_parameter("horizon_color", Vector3(0.145, 0.240, 0.255))
@@ -2026,8 +2023,7 @@ func _rebuild_water() -> void:
 
 func _rebuild_world_rim(force: bool) -> void:
 	# No continuous wall. A strip along the AABB reads as a tan plate at
-	# far zoom. The noisy waterline (shader + skipped coastal cells) is
-	# the coast. Isolated rocks still come from edge nature.
+	# far zoom. The shader iso-line outside the playable AABB is the coast.
 	if rim_mesh_instance != null:
 		rim_mesh_instance.queue_free()
 		rim_mesh_instance = null
@@ -2042,16 +2038,6 @@ func _coast_noise(world_xz: Vector2) -> float:
 		+ sin((world_xz.x + world_xz.y) * 0.019) * 0.08
 
 
-func _island_land(world_xz: Vector2) -> float:
-	# Must match settlement_water / settlement_ground / fog shaders.
-	var minimum := _fog_world_min_xz()
-	var size := _fog_world_size_xz()
-	var raw := (world_xz - minimum) / Vector2(maxf(size.x, 0.001), maxf(size.y, 0.001))
-	var p := (raw - Vector2(0.5, 0.5)) * 2.0
-	var ellipse := sqrt((p.x / 0.84) * (p.x / 0.84) + (p.y / 0.76) * (p.y / 0.76))
-	return 1.0 - (ellipse + _coast_noise(world_xz) * 0.22)
-
-
 func _world_inward_metres(world_xz: Vector2) -> float:
 	var minimum := _fog_world_min_xz()
 	var size := _fog_world_size_xz()
@@ -2061,11 +2047,77 @@ func _world_inward_metres(world_xz: Vector2) -> float:
 	)
 
 
+func island_land_metres(world_xz: Vector2) -> float:
+	# Shore sits outside the playable AABB as a rounded rectangle: straight
+	# edges keep a 2-tile beach, corners are quarter-circles of that radius.
+	# Jut only grows the beach seaward. Must match the water/ground shaders.
+	var minimum := _fog_world_min_xz()
+	var size := _fog_world_size_xz()
+	var center := minimum + size * 0.5
+	var half := size * 0.5
+	var q := Vector2(absf(world_xz.x - center.x) - half.x, absf(world_xz.y - center.y) - half.y)
+	var sd := Vector2(maxf(q.x, 0.0), maxf(q.y, 0.0)).length() + minf(maxf(q.x, q.y), 0.0) - BEACH_MARGIN_METRES
+	var jut := maxf(0.0, _coast_noise(world_xz)) * COAST_JUT_METRES
+	return -sd + jut
+
+
+func playable_tile_is_on_land(tile: Vector2i) -> bool:
+	if map_size == Vector2i.ZERO or simulation == null or not simulation.is_inside_map(tile):
+		return false
+	var center := ScaleProfile.tile_to_flat_world(Vector2(tile), map_size)
+	return island_land_metres(Vector2(center.x, center.z)) >= BEACH_MARGIN_METRES
+
+
+func _island_land(world_xz: Vector2) -> float:
+	return island_land_metres(world_xz)
+
+
 func _is_coastal_water_tile(tile: Vector2i) -> bool:
 	if map_size == Vector2i.ZERO:
 		return false
 	var center := ScaleProfile.tile_to_flat_world(Vector2(tile), map_size)
-	return _island_land(Vector2(center.x, center.z)) <= 0.0
+	return island_land_metres(Vector2(center.x, center.z)) <= 0.0
+
+
+func _rebuild_beach_apron() -> void:
+	# High-segment ring outside the playable slab. The shader iso-line is
+	# the shore — not a saw of 2.5 m tiles.
+	if terrain_root == null or map_size == Vector2i.ZERO:
+		return
+	if beach_apron_instance != null:
+		beach_apron_instance.queue_free()
+		beach_apron_instance = null
+	var leftover := terrain_root.get_node_or_null("BeachApron")
+	if leftover != null:
+		leftover.queue_free()
+	var size_xz := _fog_world_size_xz()
+	var plane := PlaneMesh.new()
+	plane.size = size_xz + Vector2(BEACH_APRON_PAD_METRES * 2.0, BEACH_APRON_PAD_METRES * 2.0)
+	plane.subdivide_width = 96
+	plane.subdivide_depth = 96
+	beach_apron_instance = MeshInstance3D.new()
+	beach_apron_instance.name = "BeachApron"
+	beach_apron_instance.mesh = plane
+	var center := ScaleProfile.tile_to_flat_world(Vector2(map_size - Vector2i.ONE) * 0.5, map_size)
+	beach_apron_instance.position = Vector3(center.x, 0.0, center.z)
+	beach_apron_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	beach_apron_instance.extra_cull_margin = 48.0
+	var material := ShaderMaterial.new()
+	material.shader = preload("res://src/GodotClient3D/Shaders/settlement_ground.gdshader")
+	material.set_shader_parameter("light_tint", Vector3(_ground_tint.r, _ground_tint.g, _ground_tint.b))
+	material.set_shader_parameter("tint_floor", 0.0)
+	material.set_shader_parameter("macro_metres", 14.0)
+	material.set_shader_parameter("detail_metres", 1.2)
+	material.set_shader_parameter("macro_amount", 0.078)
+	material.set_shader_parameter("detail_amount", 0.048)
+	material.set_shader_parameter("dirt_amount", 0.22)
+	material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
+	material.set_shader_parameter("world_size_xz", size_xz)
+	material.set_shader_parameter("beach_margin_metres", BEACH_MARGIN_METRES)
+	material.set_shader_parameter("coast_jut_metres", COAST_JUT_METRES)
+	material.set_shader_parameter("apron_mode", 1.0)
+	beach_apron_instance.material_override = material
+	terrain_root.add_child(beach_apron_instance)
 
 
 func _neighbor_is_open_water(neighbor: Vector2i) -> bool:
