@@ -3696,14 +3696,31 @@ func _unit_tile(unit: Dictionary) -> Vector2i:
 	return _vector_from_data(position_value, Vector2i.ZERO)
 
 
+func _cached_vision_tile(unit: Dictionary) -> Vector2i:
+	var raw: Variant = unit.get("last_vision_tile", null)
+	if raw == null:
+		return Vector2i(99999, 99999)
+	if typeof(raw) == TYPE_VECTOR2I:
+		return raw
+	if typeof(raw) == TYPE_VECTOR2:
+		return Vector2i(roundi(raw.x), roundi(raw.y))
+	if typeof(raw) == TYPE_STRING:
+		var parts: PackedStringArray = String(raw).trim_prefix("(").trim_suffix(")").split(",")
+		if parts.size() == 2:
+			return Vector2i(int(parts[0]), int(parts[1]))
+		return Vector2i(99999, 99999)
+	return _vector_from_data(raw, Vector2i(99999, 99999))
+
+
 func _update_unit_vision() -> void:
 	# Tile-change only. A future scout/explore command just paths a unit;
-	# fog already follows the walker.
+	# fog already follows the walker. last_vision_tile is a runtime cache;
+	# JSON saves used to stringify Vector2i and crash the typed read.
 	for worker in workers:
 		if int(worker.get("hp", WORKER_MAX_HP)) <= 0:
 			continue
 		var tile := _unit_tile(worker)
-		var last_tile: Vector2i = worker.get("last_vision_tile", Vector2i(99999, 99999))
+		var last_tile := _cached_vision_tile(worker)
 		if tile == last_tile:
 			continue
 		worker["last_vision_tile"] = tile
@@ -8012,6 +8029,7 @@ func _serialize_workers() -> Array:
 		for tile in worker.get("path", []):
 			path.append(_vector_to_data(tile))
 		item["path"] = path
+		item.erase("last_vision_tile")
 		saved.append(item)
 	return saved
 
@@ -8045,6 +8063,7 @@ func _restore_workers(saved: Array) -> Array:
 		for tile_data in worker.get("path", []):
 			path.append(_vector_from_data(tile_data, Vector2i.ZERO))
 		worker["path"] = path
+		worker.erase("last_vision_tile")
 		restored.append(worker)
 	return restored
 

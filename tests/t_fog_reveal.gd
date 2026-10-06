@@ -18,6 +18,7 @@ func _run() -> void:
 	_test_building_vision_radii()
 	_test_completed_buildings_reveal()
 	_test_unit_tile_change_reveal()
+	_test_unit_vision_survives_json_string()
 
 
 func _test_building_vision_radii() -> void:
@@ -93,6 +94,20 @@ func _test_unit_tile_change_reveal() -> void:
 	sim._update_unit_vision()
 	_check(sim.is_revealed(farther), "a soldier stepping onto a tile reveals it")
 	_check(_count_revealed_near(sim, farther, Simulation.VISION_SOLDIER) > _count_revealed_near(sim, far, Simulation.VISION_WORKER), "soldiers reveal a larger ring than workers")
+
+
+func _test_unit_vision_survives_json_string() -> void:
+	var sim := _founded()
+	var worker: Dictionary = sim.workers[0]
+	worker["last_vision_tile"] = "(%d, %d)" % [int(worker["position"].x), int(worker["position"].y)]
+	sim._update_unit_vision()
+	_check(typeof(worker.get("last_vision_tile")) == TYPE_VECTOR2I or worker["position"] == sim._cached_vision_tile(worker), "stringified last_vision_tile does not crash the vision pass")
+	worker["last_vision_tile"] = worker["position"]
+	var serialized: Array = sim._serialize_workers()
+	_check(serialized.size() > 0 and not serialized[0].has("last_vision_tile"), "vision cache is not written into the save")
+	sim.workers = sim._restore_workers(serialized)
+	sim._update_unit_vision()
+	_check(sim.workers.size() > 0, "workers restore after stripping the vision cache")
 
 
 func _founded() -> Simulation:
