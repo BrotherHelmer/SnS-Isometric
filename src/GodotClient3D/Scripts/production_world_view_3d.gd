@@ -1680,7 +1680,10 @@ func _sync_fog(force: bool) -> void:
 					var sample := Vector2i(mask_x * FOG_MASK_DIVISOR + offset_x, mask_y * FOG_MASK_DIVISOR + offset_y)
 					if simulation.is_inside_map(sample):
 						valid_samples += 1
-						if simulation.is_revealed(sample):
+						# G1: the slab rim is world geography. Interior unknown
+						# stays fog (#47); the coast always reads as an island.
+						var on_edge: bool = sample.x <= 0 or sample.y <= 0 or sample.x >= map_size.x - 1 or sample.y >= map_size.y - 1
+						if simulation.is_revealed(sample) or on_edge:
 							revealed_samples += 1
 			mask_bytes[mask_y * mask_size.x + mask_x] = roundi(255.0 * float(revealed_samples) / maxf(1.0, float(valid_samples)))
 	var display_size := mask_size * FOG_DISPLAY_UPSAMPLE
@@ -2003,6 +2006,33 @@ func _rebuild_water() -> void:
 	water_material.set_shader_parameter("foam_metres", 14.0)
 	water_mesh_instance.material_override = water_material
 	water_root.add_child(water_mesh_instance)
+	_rebuild_shore_band(center, span)
+
+
+func _rebuild_shore_band(center: Vector3, span: Vector2) -> void:
+	# Cheap foam lip around the slab so far zoom reads a beach, not a paper cut.
+	var existing := water_root.get_node_or_null("ShoreBand")
+	if existing != null:
+		existing.queue_free()
+	var band := MeshInstance3D.new()
+	band.name = "ShoreBand"
+	var torus := TorusMesh.new()
+	var inner := maxf(span.x, span.y) * 0.5 - 1.2
+	torus.inner_radius = inner
+	torus.outer_radius = inner + 7.5
+	torus.rings = 24
+	torus.ring_segments = 8
+	band.mesh = torus
+	band.position = Vector3(center.x, WATER_Y + 0.05, center.z)
+	band.scale = Vector3(span.x / maxf(span.y, 0.001), 0.18, 1.0)
+	band.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var foam := StandardMaterial3D.new()
+	foam.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	foam.albedo_color = Color("#D8CDB0")
+	foam.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	foam.albedo_color.a = 0.72
+	band.material_override = foam
+	water_root.add_child(band)
 
 
 func _rebuild_world_rim(force: bool) -> void:
@@ -2100,8 +2130,8 @@ func _rebuild_horizon() -> void:
 		child.free()
 	var center := ScaleProfile.tile_to_flat_world(Vector2(map_size - Vector2i.ONE) * 0.5, map_size)
 	var rings := [
-		{"count": 14, "radius": float(maxi(map_size.x, map_size.y)) * ScaleProfile.LOGICAL_CELL_METRES * 0.5 + 28.0, "h": 4.8, "w": 16.0},
-		{"count": 12, "radius": HORIZON_RADIUS_METRES, "h": 7.5, "w": 28.0},
+		{"count": 10, "radius": HORIZON_RADIUS_METRES + 18.0, "h": 9.0, "w": 36.0},
+		{"count": 8, "radius": HORIZON_RADIUS_METRES + 70.0, "h": 12.0, "w": 48.0},
 	]
 	var hill_index := 0
 	for ring_value in rings:
@@ -2115,19 +2145,19 @@ func _rebuild_horizon() -> void:
 			var mesh := SphereMesh.new()
 			var width := float(ring["w"]) + float((index * 7 + visual_seed) % 10)
 			var height := float(ring["h"]) + float((index * 11 + visual_seed) % 5)
-			mesh.radius = width * 0.55
+			mesh.radius = width * 0.62
 			mesh.height = height
-			mesh.radial_segments = 8
-			mesh.rings = 4
+			mesh.radial_segments = 16
+			mesh.rings = 8
 			hill.mesh = mesh
-			hill.position = Vector3(center.x + cos(angle) * radius, WATER_Y + height * 0.28, center.z + sin(angle) * radius)
-			hill.scale = Vector3(1.35, 0.42, 1.10)
+			hill.position = Vector3(center.x + cos(angle) * radius, WATER_Y + height * 0.22, center.z + sin(angle) * radius)
+			hill.scale = Vector3(1.55, 0.34, 1.20)
 			hill.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			hill.extra_cull_margin = 180.0
 			var material := StandardMaterial3D.new()
 			material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-			var tone := Color("#243028") if hill_index % 3 != 0 else Color("#1E282C")
-			material.albedo_color = tone * clampf(_atmosphere_scale, 0.35, 1.0)
+			var tone := Color("#3A4A42") if hill_index % 3 != 0 else Color("#354048")
+			material.albedo_color = tone * clampf(_atmosphere_scale, 0.45, 1.0)
 			hill.material_override = material
 			horizon_root.add_child(hill)
 			hill_index += 1
