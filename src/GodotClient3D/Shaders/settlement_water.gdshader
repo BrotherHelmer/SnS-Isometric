@@ -27,6 +27,14 @@ float coast_noise(vec2 p) {
 		+ sin((p.x + p.y) * 0.019) * 0.08;
 }
 
+// >0 is land. Ellipse + coves — not a rectangular inset.
+float island_land(vec2 world_xz) {
+	vec2 raw = (world_xz - world_min_xz) / max(world_size_xz, vec2(0.001));
+	vec2 p = (raw - vec2(0.5)) * 2.0;
+	float ellipse = sqrt(pow(p.x / 0.84, 2.0) + pow(p.y / 0.76, 2.0));
+	return 1.0 - (ellipse + coast_noise(world_xz) * 0.22);
+}
+
 void vertex() {
 	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	if (lod_cheap < 0.5) {
@@ -38,16 +46,13 @@ void vertex() {
 }
 
 void fragment() {
-	vec2 raw = (world_pos.xz - world_min_xz) / max(world_size_xz, vec2(0.001));
-	float inside = step(0.0, raw.x) * step(raw.x, 1.0) * step(0.0, raw.y) * step(raw.y, 1.0);
-	float inward = min(min(raw.x, 1.0 - raw.x), min(raw.y, 1.0 - raw.y)) * min(world_size_xz.x, world_size_xz.y);
-	float carve = max(16.0 + coast_noise(world_pos.xz) * 20.0, 3.2);
-	if (inside > 0.5 && inward > carve) {
+	float land = island_land(world_pos.xz);
+	if (land > 0.0) {
 		discard;
 	}
 	vec2 outside = max(world_min_xz - world_pos.xz, world_pos.xz - (world_min_xz + world_size_xz));
 	float dist_out = max(max(outside.x, outside.y), 0.0);
-	float from_shore = inside > 0.5 ? (carve - inward) : dist_out;
+	float from_shore = max(-land, 0.0) * min(world_size_xz.x, world_size_xz.y) * 0.5;
 	float foam = 1.0 - smoothstep(0.8, foam_metres, max(from_shore, 0.0));
 	float ripple = lod_cheap > 0.5 ? 0.5 : (sin(world_pos.x * 1.35 + world_pos.z * 1.05 + TIME * 0.28) * 0.5 + 0.5);
 	vec3 water = mix(deep_color, shallow_color, clamp(foam * 0.28 + ripple * 0.06, 0.0, 1.0));

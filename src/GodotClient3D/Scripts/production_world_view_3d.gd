@@ -19,15 +19,15 @@ const WaterShader = preload("res://src/GodotClient3D/Shaders/settlement_water.gd
 const HorizonShader = preload("res://src/GodotClient3D/Shaders/settlement_horizon.gdshader")
 const FOG_MASK_DIVISOR := 1
 const FOG_VOLUME_PAD_METRES := 0.35
-const WATER_Y := -0.78
+const WATER_Y := -0.22
 const WATER_PAD_METRES := 2400.0
 const SHORE_FADE_METRES := 16.0
 const HORIZON_RADIUS_METRES := 420.0
 const FOG_VOLUME_HEIGHT_METRES := 56.0
 const FOG_VOLUME_CENTER_Y := 18.0
 const FOG_DISPLAY_UPSAMPLE := 8
-const FOG_UNKNOWN_BASE := Vector3(0.07, 0.13, 0.12)
-const FOG_MIST_BASE := Vector3(0.10, 0.18, 0.16)
+const FOG_UNKNOWN_BASE := Vector3(0.09, 0.12, 0.08)
+const FOG_MIST_BASE := Vector3(0.12, 0.16, 0.10)
 
 var simulation
 var map_size := Vector2i.ZERO
@@ -750,13 +750,13 @@ func _rebuild_grass_multimeshes() -> void:
 	for y in range(map_size.y):
 		for x in range(map_size.x):
 			var tile := Vector2i(x, y)
-			if not simulation.is_revealed(tile):
-				continue
 			if String(simulation.get_tile(tile)) != Defs.TILE_GRASS:
 				continue
 			if occupied.has(_tile_key(tile)):
 				continue
 			if _is_coastal_water_tile(tile):
+				continue
+			if not simulation.is_revealed(tile) and _tile_hash(tile, 29) % 3 != 0:
 				continue
 			var near_yard := yard.has(_tile_key(tile))
 			if near_yard:
@@ -1735,7 +1735,7 @@ func _ensure_fog_volume() -> void:
 	# pan cannot look through unknown padding onto the settlement. Camera pan is
 	# clamped to revealed land so the isometric view cannot fill with fog.
 	var map_span := Vector2(map_size) * ScaleProfile.LOGICAL_CELL_METRES
-	var cover := Vector2(map_span.x + FOG_VOLUME_PAD_METRES * 2.0, map_span.y + FOG_VOLUME_PAD_METRES * 2.0)
+	var cover := Vector2(map_span.x + 160.0, map_span.y + 160.0)
 	var center := ScaleProfile.tile_to_flat_world(Vector2(map_size - Vector2i.ONE) * 0.5, map_size)
 	if fog_plane == null:
 		fog_plane = MeshInstance3D.new()
@@ -1746,7 +1746,7 @@ func _ensure_fog_volume() -> void:
 	sheet.subdivide_width = 16
 	sheet.subdivide_depth = 16
 	fog_plane.mesh = sheet
-	fog_plane.position = Vector3(center.x, 0.22, center.z)
+	fog_plane.position = Vector3(center.x, 0.06, center.z)
 	fog_plane.material_override = fog_material
 	fog_plane.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	fog_plane.extra_cull_margin = 96.0
@@ -2035,13 +2035,21 @@ func _rebuild_world_rim(force: bool) -> void:
 		rim_signature = ""
 
 
-func _coast_carve_metres(world_xz: Vector2) -> float:
-	# Must match settlement_water.gdshader and settlement_ground.gdshader.
-	var n1 := sin(world_xz.x * 0.048 + world_xz.y * 0.037 + 0.41)
-	var n2 := sin(world_xz.x * 0.11 + world_xz.y * 0.07 + 1.27)
-	var n3 := sin(world_xz.x * 0.031 - world_xz.y * 0.045 + 2.19)
-	var n4 := sin((world_xz.x + world_xz.y) * 0.019)
-	return maxf(3.2, 16.0 + n1 * 8.4 + n2 * 6.4 + n3 * 3.6 + n4 * 1.6)
+func _coast_noise(world_xz: Vector2) -> float:
+	return sin(world_xz.x * 0.048 + world_xz.y * 0.037 + 0.41) * 0.42 \
+		+ sin(world_xz.x * 0.11 + world_xz.y * 0.07 + 1.27) * 0.32 \
+		+ sin(world_xz.x * 0.031 - world_xz.y * 0.045 + 2.19) * 0.18 \
+		+ sin((world_xz.x + world_xz.y) * 0.019) * 0.08
+
+
+func _island_land(world_xz: Vector2) -> float:
+	# Must match settlement_water / settlement_ground / fog shaders.
+	var minimum := _fog_world_min_xz()
+	var size := _fog_world_size_xz()
+	var raw := (world_xz - minimum) / Vector2(maxf(size.x, 0.001), maxf(size.y, 0.001))
+	var p := (raw - Vector2(0.5, 0.5)) * 2.0
+	var ellipse := sqrt((p.x / 0.84) * (p.x / 0.84) + (p.y / 0.76) * (p.y / 0.76))
+	return 1.0 - (ellipse + _coast_noise(world_xz) * 0.22)
 
 
 func _world_inward_metres(world_xz: Vector2) -> float:
@@ -2057,8 +2065,7 @@ func _is_coastal_water_tile(tile: Vector2i) -> bool:
 	if map_size == Vector2i.ZERO:
 		return false
 	var center := ScaleProfile.tile_to_flat_world(Vector2(tile), map_size)
-	var xz := Vector2(center.x, center.z)
-	return _world_inward_metres(xz) < _coast_carve_metres(xz)
+	return _island_land(Vector2(center.x, center.z)) <= 0.0
 
 
 func _neighbor_is_open_water(neighbor: Vector2i) -> bool:
@@ -2228,7 +2235,7 @@ func _append_edge_tree(groups: Dictionary, path_value: String, logical: Vector2,
 		groups[path_value] = []
 	var world_position := ScaleProfile.tile_to_flat_world(logical, map_size)
 	var xz := Vector2(world_position.x, world_position.z)
-	if _world_inward_metres(xz) < _coast_carve_metres(xz):
+	if _island_land(xz) <= 0.0:
 		return
 	world_position.y = height_at_logical(clamped)
 	var jitter := _deterministic_offset(key_tile, 80 + ring + index, 0.55)

@@ -34,6 +34,13 @@ float coast_noise(vec2 p) {
 		+ sin((p.x + p.y) * 0.019) * 0.08;
 }
 
+float island_land(vec2 world_xz) {
+	vec2 raw = (world_xz - world_min_xz) / max(world_size_xz, vec2(0.001));
+	vec2 p = (raw - vec2(0.5)) * 2.0;
+	float ellipse = sqrt(pow(p.x / 0.84, 2.0) + pow(p.y / 0.76, 2.0));
+	return 1.0 - (ellipse + coast_noise(world_xz) * 0.22);
+}
+
 float hash21(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
 }
@@ -54,13 +61,13 @@ void vertex() {
 }
 
 void fragment() {
-	vec2 raw = (world_pos.xz - world_min_xz) / max(world_size_xz, vec2(0.001));
-	float inward = min(min(raw.x, 1.0 - raw.x), min(raw.y, 1.0 - raw.y)) * min(world_size_xz.x, world_size_xz.y);
-	float carve = max(16.0 + coast_noise(world_pos.xz) * 20.0, 3.2);
-	if (inward < carve) {
+	float land = island_land(world_pos.xz);
+	// Keep beach/cliff side-faces (they drop to the water). Only the top
+	// slab is carved, otherwise a sky-gap rim lights up at far zoom.
+	if (land <= 0.0 && world_pos.y > -0.05) {
 		discard;
 	}
-	float beach = 1.0 - smoothstep(0.0, 9.0, inward - carve);
+	float beach = 1.0 - smoothstep(0.0, 0.08, max(land, 0.0));
 	vec2 macro_uv = world_pos.xz / max(macro_metres, 1.0);
 	vec2 detail_uv = world_pos.xz / max(detail_metres, 0.4) + vec2(8.2, 3.7);
 	float macro = lod_cheap > 0.5 ? noise2(macro_uv) : fbm(macro_uv);
