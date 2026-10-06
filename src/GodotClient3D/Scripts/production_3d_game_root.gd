@@ -565,6 +565,7 @@ func begin_placement(building_type: String) -> void:
 				cancel_placement()
 			audio_director.play_ui_click()
 			_show_toast("Insufficient Resources", "%s needs %s" % [Defs.building_name(building_type), ", ".join(missing)], "warning", 3.5)
+			simulation_host.simulation.note_player_command("resource_blocked", String(building_type))
 			return
 	
 	# Cancel any existing placement or dragging state first
@@ -575,6 +576,8 @@ func begin_placement(building_type: String) -> void:
 	# Now start fresh placement
 	placement_preview_locked = false
 	placement_type = building_type
+	if simulation_host.simulation != null:
+		simulation_host.simulation.note_player_command("player_command", "place:%s" % building_type)
 	placement_rotation = 0
 	placement_ghost.visible = true
 	selected_building_id = 0
@@ -2223,6 +2226,7 @@ func _update_loop_hud() -> void:
 	var binding_active := bool(wyrdfall.get("binding_active", false))
 	var steps: Array = objective.get("steps", [])
 	if objective_button != null:
+		var intention: Dictionary = simulation_host.simulation.get_current_intention()
 		var sim_objectives: Array = simulation_host.simulation.get_objectives()
 		var active_sim_obj := ""
 		for obj in sim_objectives:
@@ -2231,13 +2235,22 @@ func _update_loop_hud() -> void:
 				break
 		if binding_active:
 			objective_button.text = "HOLD THE BINDING"
+		elif not intention.is_empty():
+			var next_step := String(intention.get("title", ""))
+			for row in intention.get("criteria", []):
+				if not bool(row.get("done", false)):
+					next_step = "%s — %s" % [String(intention.get("title", "")), String(row.get("label", ""))]
+					break
+			objective_button.text = next_step
 		elif active_sim_obj != "":
 			objective_button.text = active_sim_obj
 		elif not steps.is_empty():
 			objective_button.text = String(steps[0])
 		else:
 			objective_button.text = String(objective.get("title", "FEED THE SETTLEMENT"))
-		objective_button.tooltip_text = "%s — %s" % [String(objective.get("title", "")), String(objective.get("detail", "Click for the next step."))]
+		var tip_title := String(intention.get("title", objective.get("title", "")))
+		var tip_detail := String(intention.get("detail", objective.get("detail", "Click for the next step.")))
+		objective_button.tooltip_text = "%s — %s" % [tip_title, tip_detail]
 	var objective_id := String(objective.get("id", ""))
 	# Issue #1 fix: Do NOT snap camera to shard location automatically
 	# if objective_id == "reach" and not reach_guidance_shown and play_has_begun:
@@ -2991,22 +3004,30 @@ func _show_objective_detail(value: bool) -> void:
 	if not value:
 		return
 	objective_detail_panel.size = Vector2(286, 156)
+	var intentions: Array = simulation_host.simulation.get_settlement_intentions()
 	var sim_objectives: Array = simulation_host.simulation.get_objectives()
-	var lines: Array[String] = ["Current Goals", ""]
-	if sim_objectives.is_empty():
-		var objective: Dictionary = simulation_host.simulation.get_macro_objective()
-		lines.append(String(objective.get("title", "FEED THE SETTLEMENT")))
-		lines.append(String(objective.get("summary", objective.get("detail", ""))))
+	var lines: Array[String] = ["What matters next", ""]
+	for intention_value in intentions:
+		var intention: Dictionary = intention_value
+		lines.append(String(intention.get("title", "")))
+		for row in intention.get("criteria", []):
+			lines.append("%s %s" % ["[✓]" if bool(row.get("done", false)) else "[ ]", String(row.get("label", ""))])
 		lines.append("")
-		var steps: Array = objective.get("steps", [])
-		for step in steps:
-			lines.append("• %s" % String(step))
-	else:
-		for obj in sim_objectives:
-			var complete := bool(obj.get("complete", false))
-			var mark := "[✓]" if complete else "[ ]"
-			var text := String(obj.get("text", ""))
-			lines.append("%s %s" % [mark, text])
+	if intentions.is_empty():
+		if sim_objectives.is_empty():
+			var objective: Dictionary = simulation_host.simulation.get_macro_objective()
+			lines.append(String(objective.get("title", "FEED THE SETTLEMENT")))
+			lines.append(String(objective.get("summary", objective.get("detail", ""))))
+			lines.append("")
+			var steps: Array = objective.get("steps", [])
+			for step in steps:
+				lines.append("• %s" % String(step))
+		else:
+			for obj in sim_objectives:
+				var complete := bool(obj.get("complete", false))
+				var mark := "[✓]" if complete else "[ ]"
+				var text := String(obj.get("text", ""))
+				lines.append("%s %s" % [mark, text])
 	objective_detail_body.text = "\n".join(lines)
 
 
@@ -3017,6 +3038,7 @@ func _glance_at_shard() -> void:
 	var shard_world := world_view.tile_to_world(Vector2(simulation_host.simulation.shard_position))
 	camera_rig.compose_view(shard_world, ProductionIsometricCameraRig3D.NORMAL_ZOOM)
 	shard_glance_until = Time.get_ticks_msec() / 1000.0 + 1.35
+	simulation_host.simulation.note_player_command("camera_jump", "shard")
 
 
 func _tick_shard_glance() -> void:

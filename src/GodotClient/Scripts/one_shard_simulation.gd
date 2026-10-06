@@ -6,6 +6,8 @@ const RivalryTuning = preload("one_shard_rivalry_tuning.gd")
 const Wyrdfall = preload("one_shard_wyrdfall.gd")
 const RaidTuning = preload("res://src/GodotClient/Scripts/one_shard_raid_tuning.gd")
 const SaveStore = preload("one_shard_save_store.gd")
+const Intentions = preload("one_shard_intentions.gd")
+const PlaytestLog = preload("one_shard_playtest_log.gd")
 
 const SAVE_PATH := "user://one_shard_save.json"
 const AUTOSAVE_PATH := "user://one_shard_autosave.json"
@@ -115,6 +117,9 @@ var log_entries: Array[String] = []
 var run_journal: Array = []
 var _pending_diagnostic_lines: Array[String] = []
 var objectives: Array = []
+var intention_completed: Dictionary = {}
+var intention_flags: Dictionary = {}
+var playtest_log := PlaytestLog.new()
 var stats: Dictionary = {}
 var diagnostics_enabled := true
 
@@ -283,6 +288,9 @@ func start_new_run(width: int = MAP_WIDTH, height: int = MAP_HEIGHT, seed_value:
 		"peak_wyrd_pressure": 0.0,
 		"territory_revealed": 0
 	}
+	intention_completed = {}
+	intention_flags = {}
+	playtest_log.configure()
 	objectives = [
 		{"id": "found", "text": "Choose a clear site and build the Town Hall", "complete": false},
 		{"id": "road", "text": "Extend the Road from the Town Hall", "complete": false},
@@ -681,6 +689,7 @@ func advance_tick() -> void:
 	_maybe_finish_raid()
 	stamp = _profile_stamp()
 	_update_objectives()
+	Intentions.evaluate(self)
 	_profile_finish("objective_updates", stamp)
 	stamp = _profile_stamp()
 	_update_diagnostic_snapshot(TICK_SECONDS)
@@ -2202,6 +2211,18 @@ func get_projectiles() -> Array:
 
 func get_objectives() -> Array:
 	return objectives.duplicate(true)
+
+
+func get_settlement_intentions() -> Array:
+	return Intentions.evaluate(self)
+
+
+func get_current_intention() -> Dictionary:
+	return Intentions.current(self)
+
+
+func note_player_command(event_type: String, detail: String = "") -> void:
+	playtest_log.note_command(self, event_type, detail)
 
 
 func get_log_entries() -> Array[String]:
@@ -5568,6 +5589,7 @@ func _start_night() -> void:
 	_send_workers_to_shelter()
 	_spawn_wave()
 	_emit_audio("night")
+	playtest_log.note(self, "night_started", "Night %d" % day_count)
 
 
 func _end_night() -> void:
@@ -5588,7 +5610,9 @@ func _end_night() -> void:
 		})
 	_wake_workers_at_dawn()
 	stats["days_survived"] = max(int(stats.get("days_survived", 0)), day_count - 1)
+	intention_flags["first_dawn"] = true
 	_add_log("Dawn breaks. Day %d begins." % day_count)
+	playtest_log.note(self, "dawn", "Day %d" % day_count)
 	last_message = "Hungry workers are recovering." if hungry_population > 0 else "Dawn breaks."
 	_compose_dawn_summary()
 	if rivalry != null:
@@ -5624,6 +5648,7 @@ func _spawn_wave() -> void:
 		_spawn_enemy(origin, hp, damage, -0.08 * float(i), 0, String(roster[i % roster.size()]), armor)
 	night_enemies_spawned += wave_size
 	_begin_raid(int(plan.get("steal", RaidTuning.steal_for_night(day_count, day_count <= 1))))
+	playtest_log.note(self, "raid_started", "wave=%d" % wave_size)
 	if reckoning_active:
 		reckoning_waves_spawned += 1
 	var bearing := "the wilds"
@@ -6775,9 +6800,24 @@ func _record_event(event_type: String, message: String, details: Dictionary = {}
 	run_journal.append(event)
 	while run_journal.size() > 1000:
 		run_journal.pop_front()
+	_mirror_playtest_event(event_type, message)
 	if not diagnostics_enabled:
 		return
 	_pending_diagnostic_lines.append(JSON.stringify(event))
+
+
+func _mirror_playtest_event(event_type: String, message: String) -> void:
+	match event_type:
+		"construction_started":
+			playtest_log.note_command(self, "build_placed", message)
+		"raid_started", "raid_wave":
+			playtest_log.note(self, "raid_started", message)
+		"building_attacked":
+			playtest_log.note(self, "building_damaged", message)
+		"discovery", "intention_complete":
+			playtest_log.note(self, event_type, message)
+		"scout_order":
+			playtest_log.note_command(self, "scout_order", message)
 
 
 func _flush_diagnostic_events() -> void:
@@ -7765,6 +7805,8 @@ func _serialize_state() -> Dictionary:
 		"notice_log": notice_log,
 		"run_journal": run_journal,
 		"objectives": objectives,
+		"intention_completed": intention_completed,
+		"intention_flags": intention_flags,
 		"stats": stats,
 		"next_building_id": next_building_id,
 		"next_worker_id": next_worker_id,
@@ -7846,6 +7888,8 @@ func _restore_state(data: Dictionary) -> void:
 	pending_notices.clear()
 	run_journal = data.get("run_journal", [])
 	objectives = data.get("objectives", objectives)
+	intention_completed = data.get("intention_completed", {})
+	intention_flags = data.get("intention_flags", {})
 	stats = data.get("stats", stats)
 	if not stats.has("workers_lost"):
 		stats["workers_lost"] = 0
