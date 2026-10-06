@@ -675,8 +675,13 @@ func _update_damage_visual(hp: int, max_hp: int) -> void:
 		damage_marker.position.y = 0.08
 		add_child(damage_marker)
 	var fraction := clampf(float(hp) / float(maxi(1, max_hp)), 0.0, 1.0)
-	damage_marker.material_override = _material(Color(0.92, 0.15, 0.08, 0.76).lerp(Color(0.93, 0.60, 0.14, 0.70), fraction), 0.25)
-	damage_marker.visible = hp > 0 and hp < max_hp
+	var dawn_highlight := bool(last_snapshot.get("dawn_highlight", false))
+	if dawn_highlight:
+		damage_marker.material_override = _material(Color(0.95, 0.78, 0.28, 0.88), 0.2)
+		damage_marker.visible = true
+	else:
+		damage_marker.material_override = _material(Color(0.92, 0.15, 0.08, 0.76).lerp(Color(0.93, 0.60, 0.14, 0.70), fraction), 0.25)
+		damage_marker.visible = hp > 0 and hp < max_hp
 
 
 func _update_stall_icon(snapshot: Dictionary) -> void:
