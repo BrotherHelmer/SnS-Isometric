@@ -2440,9 +2440,18 @@ func _update_inspector_core() -> void:
 				if input_resource != "":
 					lines.append("%s  %d" % [Defs.resource_name(input_resource), int(Dictionary(building.get("local_inventory", {})).get(input_resource, 0))])
 				lines.append("%s  %d" % [Defs.resource_name(output_resource), int(Dictionary(building.get("local_inventory", {})).get(output_resource, 0))])
-				var diagnostic := _production_diagnostic(building, type_name)
-				if diagnostic != "active":
-					lines.append("[color=#f0a06e]%s[/color]" % diagnostic.capitalize())
+				var stall: Dictionary = simulation_host.simulation.diagnose_building_dict(building)
+				if bool(stall.get("stalled", false)):
+					lines.append("[color=#f0a06e]%s[/color]" % String(stall.get("line", "")))
+					var last_ago := float(stall.get("last_delivery_seconds", -1.0))
+					if last_ago >= 0.0:
+						lines.append("Last delivery  %d sec ago" % int(round(last_ago)))
+					else:
+						lines.append("Last delivery  none yet")
+				else:
+					var diagnostic := _production_diagnostic(building, type_name)
+					if diagnostic != "active":
+						lines.append("[color=#f0a06e]%s[/color]" % diagnostic.capitalize())
 			if type_name == Defs.BUILDING_BARRACKS and not construction:
 				var progress := clampf(float(building.get("training_progress", 0.0)) / Simulation.BARRACKS_TRAIN_SECONDS, 0.0, 1.0)
 				lines.append("Recruit  %d available" % simulation_host.simulation.workers_free())

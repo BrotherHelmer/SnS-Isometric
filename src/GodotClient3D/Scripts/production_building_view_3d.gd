@@ -17,6 +17,7 @@ var workyard_root: Node3D
 var selection_ring: MeshInstance3D
 var selection_area: Area3D
 var progress_label: Label3D
+var stall_label: Label3D
 var sockets: Dictionary = {}
 var inventory_indicators: Array[Node3D] = []
 var last_snapshot: Dictionary = {}
@@ -90,6 +91,7 @@ func apply_snapshot(snapshot: Dictionary) -> void:
 	_update_damage_visual(int(snapshot.get("hp", 1)), int(snapshot.get("max_hp", 1)))
 	_update_night_presentation(bool(snapshot.get("night", false)), int(snapshot.get("sheltered_occupants", 0)))
 	_update_activity_presentation(bool(snapshot.get("production_active", false)), bool(snapshot.get("night", false)))
+	_update_stall_icon(snapshot)
 
 
 func set_selected(value: bool) -> void:
@@ -127,6 +129,7 @@ func _rebuild() -> void:
 	lantern_light = null
 	selection_area = null
 	progress_label = null
+	stall_label = null
 	ownership_banner = null
 	damage_marker = null
 	window_light = null
@@ -674,6 +677,27 @@ func _update_damage_visual(hp: int, max_hp: int) -> void:
 	var fraction := clampf(float(hp) / float(maxi(1, max_hp)), 0.0, 1.0)
 	damage_marker.material_override = _material(Color(0.92, 0.15, 0.08, 0.76).lerp(Color(0.93, 0.60, 0.14, 0.70), fraction), 0.25)
 	damage_marker.visible = hp > 0 and hp < max_hp
+
+
+func _update_stall_icon(snapshot: Dictionary) -> void:
+	var icon := String(snapshot.get("stall_icon", ""))
+	if icon == "":
+		if stall_label != null:
+			stall_label.visible = false
+		return
+	if stall_label == null:
+		stall_label = Label3D.new()
+		stall_label.name = "StallIcon"
+		stall_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		stall_label.no_depth_test = true
+		stall_label.font_size = 28
+		stall_label.outline_size = 8
+		stall_label.modulate = Color("#f0a06e")
+		stall_label.position = Vector3(0.0, 3.4, 0.0)
+		add_child(stall_label)
+	if stall_label.text != icon:
+		stall_label.text = icon
+	stall_label.visible = true
 
 
 func apply_light_palette(window_color: Color, torch_color: Color, torch_range: float) -> void:

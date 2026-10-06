@@ -166,6 +166,7 @@ func building_descriptor(building: Dictionary, simulation, cached_has_barracks: 
 	var input_resource := String(type_definition.get("input", ""))
 	var output_resource := String(type_definition.get("output", ""))
 	var has_barracks := cached_has_barracks
+	var stall: Dictionary = simulation.diagnose_building_dict(building) if simulation.has_method("diagnose_building_dict") else {}
 	return {
 		"id": int(building.get("id", 0)),
 		"type": type_name,
@@ -200,6 +201,10 @@ func building_descriptor(building: Dictionary, simulation, cached_has_barracks: 
 		"is_road": type_name == Defs.BUILDING_ROAD,
 		"site_clearing": is_construction and bool(building.get("site_clearing", false)),
 		"has_barracks": has_barracks,
+		"stall_kind": String(stall.get("kind", "")),
+		"stall_icon": String(stall.get("icon", "")),
+		"stall_line": String(stall.get("line", "")),
+		"stall_hover": String(stall.get("hover", "")),
 	}
 
 
