@@ -63,6 +63,10 @@ func _run() -> void:
 	game._update_day_night_lighting()
 	game._sync_presentation()
 	await _capture(game, "gfx_dusk.png")
+	# Far zoom: island edge must read as water/horizon, not a teal void.
+	game.camera_rig.compose_view(home, 68.0)
+	await _capture(game, "gfx_far.png")
+	game.camera_rig.compose_view(home, 34.0)
 	print("GFX dusk sun/camera angle=%.1f energy=%.2f" % [game.sun_camera_angle_degrees(), game.sun_light.light_energy])
 	await _sample_perf(game, "dusk")
 	sim.is_night = false

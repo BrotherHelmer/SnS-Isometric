@@ -15,8 +15,14 @@ const BoundaryMistShader = preload("res://src/GodotClient3D/Shaders/production_b
 const ContactAO = preload("res://src/GodotClient3D/Scripts/production_contact_ao.gd")
 const RoadStampShader = preload("res://src/GodotClient3D/Shaders/settlement_road_stamp.gdshader")
 const FoliageShader = preload("res://src/GodotClient3D/Shaders/settlement_foliage.gdshader")
+const WaterShader = preload("res://src/GodotClient3D/Shaders/settlement_water.gdshader")
+const HorizonShader = preload("res://src/GodotClient3D/Shaders/settlement_horizon.gdshader")
 const FOG_MASK_DIVISOR := 1
 const FOG_VOLUME_PAD_METRES := 220.0
+const WATER_Y := -0.78
+const WATER_PAD_METRES := 560.0
+const SHORE_FADE_METRES := 16.0
+const HORIZON_RADIUS_METRES := 248.0
 const FOG_VOLUME_HEIGHT_METRES := 56.0
 const FOG_VOLUME_CENTER_Y := 18.0
 const FOG_DISPLAY_UPSAMPLE := 8
@@ -95,6 +101,12 @@ var fog_mask_size := Vector2i.ZERO
 var fog_material: ShaderMaterial
 var fog_plane: MeshInstance3D
 var boundary_mist_material: ShaderMaterial
+var water_mesh_instance: MeshInstance3D
+var water_material: ShaderMaterial
+var rim_mesh_instance: MeshInstance3D
+var horizon_root: Node3D
+var rim_signature := ""
+var water_detail := 1.0
 var fog_screen: MeshInstance3D
 var fog_screen_material: ShaderMaterial
 var fog_overlay_camera: Camera3D
@@ -119,6 +131,11 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 			child.free()
 		terrain_root = null
 		water_root = null
+		water_mesh_instance = null
+		water_material = null
+		rim_mesh_instance = null
+		horizon_root = null
+		rim_signature = ""
 		roads_root = null
 		road_preview_root = null
 		road_stamp_root = null
@@ -181,9 +198,13 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 	map_size = Vector2i(world_snapshot.get("map_size", Vector2i.ZERO))
 	visual_seed = int(world_snapshot.get("seed", 1))
 	foliage_density = clampf(float(quality.get("foliage_density", 1.0)), 0.25, 1.0)
+	water_detail = clampf(float(quality.get("water_detail", 1.0)), 0.2, 1.0)
 	civilian_animation_budget = maxi(12, roundi(32.0 * clampf(float(quality.get("animation_lod", 1.0)), 0.4, 1.0)))
 	_create_roots()
 	_rebuild_terrain()
+	_rebuild_water()
+	_rebuild_world_rim(true)
+	_rebuild_horizon()
 	_sync_nature(true)
 	_sync_grass(true)
 	_sync_fog(true)
@@ -222,6 +243,7 @@ func sync_frame(frame_snapshot: Dictionary) -> void:
 		_sync_fog(false)
 		_sync_nature(true)
 		_rebuild_edge_forest(false)
+		_rebuild_world_rim(false)
 
 
 func tile_to_world(tile_position: Vector2) -> Vector3:
@@ -372,6 +394,8 @@ func fog_configuration() -> Dictionary:
 		"world_anchored": true,
 		"volume_mesh": fog_plane != null,
 		"exterior_opaque": true,
+		"shore_fade_metres": SHORE_FADE_METRES,
+		"island_water": water_mesh_instance != null,
 		"world_min_xz": _fog_world_min_xz(),
 		"world_size_xz": _fog_world_size_xz(),
 		"mask_size": Vector2i(fog_visibility_texture.get_width(), fog_visibility_texture.get_height()) if fog_visibility_texture != null else Vector2i.ZERO,
@@ -446,6 +470,7 @@ func _create_roots() -> void:
 	resource_visuals_root = _named_root("ResourceVisuals")
 	grass_root = _named_root("GrassCover")
 	edge_forest_root = _named_root("EdgeForest")
+	horizon_root = _named_root("Horizon")
 	halo_root = _named_root("BuildingHalos")
 	environment_root = _named_root("Environment")
 	vfx_root = _named_root("VFX")
@@ -506,25 +531,9 @@ func _rebuild_terrain() -> void:
 	collision.shape = shape
 	terrain_body.add_child(collision)
 	terrain_root.add_child(terrain_body)
-	var boundary_floor := MeshInstance3D.new()
-	boundary_floor.name = "OuterWildernessFloor"
-	var boundary_mesh := PlaneMesh.new()
-	boundary_mesh.size = Vector2(
-		float(map_size.x) * ScaleProfile.LOGICAL_CELL_METRES + 240.0,
-		float(map_size.y) * ScaleProfile.LOGICAL_CELL_METRES + 240.0
-	)
-	boundary_floor.mesh = boundary_mesh
-	boundary_floor.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	# Raise exterior mist above the exposed slab edges in the isometric view.
-	# The shader discards the playable interior, preserving its low terrain.
-	boundary_floor.position.y = 2.0
-	boundary_mist_material = ShaderMaterial.new()
-	boundary_mist_material.shader = BoundaryMistShader
-	boundary_mist_material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
-	boundary_mist_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
-	boundary_mist_material.set_shader_parameter("color_scale", 1.0)
-	boundary_floor.material_override = boundary_mist_material
-	terrain_root.add_child(boundary_floor)
+	# G1: the teal OuterWildernessFloor was the box-like void. Water + rim
+	# + horizon replace it. Unexplored still sits under #47 fog.
+	boundary_mist_material = null
 	terrain_height_signature = _calculate_height_signature()
 
 
@@ -596,9 +605,9 @@ func _terrain_color(tile: Vector2i) -> Color:
 	base = base.lerp(Color("#55574d"), clampf(float(rock_weight) / 32.0, 0.0, 0.18))
 	var edge := mini(mini(tile.x, tile.y), mini(map_size.x - 1 - tile.x, map_size.y - 1 - tile.y))
 	if edge <= 1:
-		base = base.lerp(Color("#1a3330"), 0.18)
+		base = base.lerp(Color("#C4A878") if rock_weight < 3 else Color("#6A6054"), 0.28)
 	elif edge <= 3:
-		base = base.lerp(Color("#243c34"), 0.08)
+		base = base.lerp(Color("#8A7A58"), 0.10)
 	if _terrain_yard_cache.has(_tile_key(tile)):
 		base = base.lerp(Color("#7a6a40"), 0.08)
 	if String(simulation.get_tile(tile)) == Defs.TILE_SHARD:
@@ -1701,6 +1710,7 @@ func _sync_fog(force: bool) -> void:
 	fog_material.set_shader_parameter("unknown_opacity", 1.0)
 	fog_material.set_shader_parameter("edge_softness", 0.45)
 	fog_material.set_shader_parameter("noise_strength", 0.18)
+	fog_material.set_shader_parameter("shore_fade_metres", SHORE_FADE_METRES)
 	_ensure_fog_volume()
 
 
@@ -1895,6 +1905,9 @@ func _same_type_neighbors(tile: Vector2i, tile_type: String) -> int:
 
 func apply_quality_profile(quality: Dictionary) -> void:
 	foliage_density = clampf(float(quality.get("foliage_density", foliage_density)), 0.25, 1.0)
+	water_detail = clampf(float(quality.get("water_detail", water_detail)), 0.2, 1.0)
+	if water_material != null:
+		water_material.set_shader_parameter("wave", 0.04 * water_detail)
 	if simulation == null:
 		return
 	_rebuild_edge_forest(true)
@@ -1915,6 +1928,14 @@ func apply_light_palette(palette: Dictionary) -> void:
 		fog_screen_material.set_shader_parameter("mist_color", FOG_MIST_BASE * atmosphere)
 	if boundary_mist_material != null:
 		boundary_mist_material.set_shader_parameter("color_scale", atmosphere)
+	if water_material != null:
+		water_material.set_shader_parameter("atmosphere", atmosphere)
+		water_material.set_shader_parameter("lod_cheap", float(palette.get("terrain_lod_cheap", 0.0)))
+		water_material.set_shader_parameter("wave", 0.04 * water_detail * (0.0 if float(palette.get("terrain_lod_cheap", 0.0)) > 0.5 else 1.0))
+	if horizon_root != null:
+		for child in horizon_root.get_children():
+			if child is MeshInstance3D and (child as MeshInstance3D).material_override is ShaderMaterial:
+				((child as MeshInstance3D).material_override as ShaderMaterial).set_shader_parameter("atmosphere", atmosphere)
 	_ground_tint = palette.get("ground_tint", Color(1.0, 1.0, 1.0))
 	if terrain_mesh_instance != null and terrain_mesh_instance.material_override is ShaderMaterial:
 		var ground_mat := terrain_mesh_instance.material_override as ShaderMaterial
@@ -1942,6 +1963,157 @@ func apply_light_palette(palette: Dictionary) -> void:
 	for view in rivalry_structure_views.values():
 		if view.has_method("apply_light_palette"):
 			view.apply_light_palette(window_color, torch_color, torch_range)
+
+
+func _rebuild_water() -> void:
+	# The Director: G1 shoreline water. One plane, cheap waves, foam at the
+	# island edge. Interior is discarded so the playable slab stays grass.
+	if water_root == null or map_size == Vector2i.ZERO:
+		return
+	if water_mesh_instance != null:
+		water_mesh_instance.queue_free()
+		water_mesh_instance = null
+	var span := Vector2(map_size) * ScaleProfile.LOGICAL_CELL_METRES
+	var plane := PlaneMesh.new()
+	plane.size = Vector2(span.x + WATER_PAD_METRES * 2.0, span.y + WATER_PAD_METRES * 2.0)
+	plane.subdivide_width = 20 if water_detail >= 0.7 else 8
+	plane.subdivide_depth = 20 if water_detail >= 0.7 else 8
+	water_mesh_instance = MeshInstance3D.new()
+	water_mesh_instance.name = "IslandWater"
+	water_mesh_instance.mesh = plane
+	var center := ScaleProfile.tile_to_flat_world(Vector2(map_size - Vector2i.ONE) * 0.5, map_size)
+	water_mesh_instance.position = Vector3(center.x, WATER_Y, center.z)
+	water_mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	water_material = ShaderMaterial.new()
+	water_material.shader = WaterShader
+	water_material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
+	water_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
+	water_material.set_shader_parameter("atmosphere", _atmosphere_scale)
+	water_material.set_shader_parameter("wave", 0.04 * water_detail)
+	water_material.set_shader_parameter("foam_metres", 5.0)
+	water_mesh_instance.material_override = water_material
+	water_root.add_child(water_mesh_instance)
+
+
+func _rebuild_world_rim(force: bool) -> void:
+	# Explored edge only. Unexplored sides stay fog until the tile reveals (#47).
+	if simulation == null or terrain_root == null or map_size == Vector2i.ZERO:
+		return
+	var signature := "%d:%d" % [int(simulation.revealed_tiles.size()), terrain_height_signature]
+	if not force and signature == rim_signature:
+		return
+	rim_signature = signature
+	if rim_mesh_instance != null:
+		rim_mesh_instance.queue_free()
+		rim_mesh_instance = null
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var faces := 0
+	for x in map_size.x:
+		faces += _add_rim_face(surface, Vector2i(x, 0), Vector2i(0, -1))
+		faces += _add_rim_face(surface, Vector2i(x, map_size.y - 1), Vector2i(0, 1))
+	for y in map_size.y:
+		faces += _add_rim_face(surface, Vector2i(0, y), Vector2i(-1, 0))
+		faces += _add_rim_face(surface, Vector2i(map_size.x - 1, y), Vector2i(1, 0))
+	if faces <= 0:
+		return
+	rim_mesh_instance = MeshInstance3D.new()
+	rim_mesh_instance.name = "IslandRim"
+	rim_mesh_instance.mesh = surface.commit()
+	rim_mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var material := StandardMaterial3D.new()
+	material.vertex_color_use_as_albedo = true
+	material.roughness = 0.92
+	material.metallic = 0.0
+	rim_mesh_instance.material_override = material
+	terrain_root.add_child(rim_mesh_instance)
+
+
+func _add_rim_face(surface: SurfaceTool, tile: Vector2i, outward: Vector2i) -> int:
+	if simulation == null or not simulation.is_revealed(tile):
+		return 0
+	var center := ScaleProfile.tile_to_flat_world(Vector2(tile), map_size)
+	var half := ScaleProfile.LOGICAL_CELL_METRES * 0.5
+	var top_y := float(simulation.get_height(tile)) * ScaleProfile.TERRAIN_ELEVATION_UNIT_METRES
+	var corners := [
+		Vector3(center.x - half, top_y, center.z - half),
+		Vector3(center.x + half, top_y, center.z - half),
+		Vector3(center.x + half, top_y, center.z + half),
+		Vector3(center.x - half, top_y, center.z + half),
+	]
+	var a: Vector3
+	var b: Vector3
+	if outward.y < 0:
+		a = corners[1]
+		b = corners[0]
+	elif outward.x > 0:
+		a = corners[2]
+		b = corners[1]
+	elif outward.y > 0:
+		a = corners[3]
+		b = corners[2]
+	else:
+		a = corners[0]
+		b = corners[3]
+	var jut := Vector3(float(outward.x), 0.0, float(outward.y)) * 0.55
+	var down_a := Vector3(a.x, WATER_Y - 0.04, a.z) + jut
+	var down_b := Vector3(b.x, WATER_Y - 0.04, b.z) + jut
+	var lip_a := a + jut * 0.18
+	var lip_b := b + jut * 0.18
+	var rock_weight := 0
+	for oy in range(-2, 3):
+		for ox in range(-2, 3):
+			var sample := tile + Vector2i(ox, oy)
+			if simulation.is_inside_map(sample) and String(simulation.get_tile(sample)) == Defs.TILE_ROCK:
+				rock_weight += 1
+	var cliff := rock_weight >= 3 or simulation.get_height(tile) >= 2 or (_tile_hash(tile, 21 + outward.x * 3 + outward.y * 7) % 3 == 0 and (outward.y < 0 or outward.x < 0))
+	var color := Color("#6A6054") if cliff else Color("#C4A878")
+	color = color.darkened(0.08 + float(_tile_hash(tile, 33) % 12) / 100.0)
+	var normal := Vector3(float(outward.x), 0.22 if cliff else 0.55, float(outward.y)).normalized()
+	_add_quad(surface, lip_a, lip_b, down_b, down_a, normal, color)
+	if cliff:
+		var shelf := Color("#55574d").lerp(color, 0.4)
+		_add_quad(surface, a, b, lip_b, lip_a, Vector3.UP, shelf.darkened(0.12))
+	return 1
+
+
+func _rebuild_horizon() -> void:
+	# Low-detail hills just past the fog pad so far zoom is sea + sky, not void.
+	if horizon_root == null or map_size == Vector2i.ZERO:
+		return
+	for child in horizon_root.get_children():
+		horizon_root.remove_child(child)
+		child.free()
+	var center := ScaleProfile.tile_to_flat_world(Vector2(map_size - Vector2i.ONE) * 0.5, map_size)
+	var rings := [
+		{"count": 16, "radius": float(maxi(map_size.x, map_size.y)) * ScaleProfile.LOGICAL_CELL_METRES * 0.5 + 14.0, "h": 5.2, "w": 18.0},
+		{"count": 12, "radius": HORIZON_RADIUS_METRES, "h": 9.0, "w": 36.0},
+	]
+	var hill_index := 0
+	for ring_value in rings:
+		var ring: Dictionary = ring_value
+		var count := int(ring["count"])
+		for index in count:
+			var angle := TAU * float(index) / float(count) + float((visual_seed + hill_index) % 17) * 0.03
+			var radius := float(ring["radius"]) + float((visual_seed + hill_index * 13) % 16)
+			var hill := MeshInstance3D.new()
+			hill.name = "HorizonHill_%d" % hill_index
+			var mesh := PrismMesh.new()
+			var width := float(ring["w"]) + float((index * 7 + visual_seed) % 14)
+			var height := float(ring["h"]) + float((index * 11 + visual_seed) % 7)
+			mesh.size = Vector3(width, height, 11.0 + float(index % 4) * 1.2)
+			hill.mesh = mesh
+			hill.position = Vector3(center.x + cos(angle) * radius, WATER_Y + height * 0.40, center.z + sin(angle) * radius)
+			hill.rotation.y = -angle + PI * 0.5
+			hill.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			var material := ShaderMaterial.new()
+			material.shader = HorizonShader
+			var tone := Color("#3A4A38") if hill_index % 3 != 0 else Color("#2E3A40")
+			material.set_shader_parameter("albedo_color", Vector3(tone.r, tone.g, tone.b))
+			material.set_shader_parameter("atmosphere", _atmosphere_scale)
+			hill.material_override = material
+			horizon_root.add_child(hill)
+			hill_index += 1
 
 
 # The Director: a dark teal conifer mass outside the playable map only.

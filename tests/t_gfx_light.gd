@@ -98,6 +98,9 @@ func _run() -> void:
 				stamp_batches += 1
 	_check(stamp_batches <= 3, "road detail is 2–3 batched stamps, not per-tile Decals")
 	_check(game.sun_light.directional_shadow_mode == DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS, "sun uses PSSM 2-split")
+	_check(game.sun_light.directional_shadow_split_1 >= 0.78 and game.sun_light.directional_shadow_split_1 <= 0.88, "PSSM split stays parked at 0.82")
+	_check(is_equal_approx(game.environment_resource.ssao_sharpness, 0.35), "SSAO sharpness stays 0.35")
+	_check(game.world_view.terrain_mesh_instance != null and game.world_view.terrain_mesh_instance.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "terrain does not cast")
 	_check(is_zero_approx(game.sun_light.light_angular_distance), "sun angular distance is 0 (no PCSS)")
 	_check(game.sun_light.directional_shadow_max_distance <= 52.0, "shadow distance stays near the play volume")
 	var shadow_suns := 0
@@ -155,6 +158,12 @@ func _run() -> void:
 	_check(HaloCatalog.authored_for("HOUSE").size() >= 4 and HaloCatalog.authored_for("HOUSE").size() <= 12, "house halo table has 4–12 authored slots")
 	_check(HaloCatalog.prop_path("dirt_plot").contains("dirt_plot"), "story zones can place a dirt plot")
 	_check(HaloCatalog.authored_for("FARM").size() >= 6, "farm story zone is authored")
+	_check(game.world_view.water_mesh_instance != null and game.world_view.water_material != null, "island water plane is live")
+	_check(game.world_view.find_child("OuterWildernessFloor", true, false) == null, "teal wilderness floor is gone")
+	_check(game.world_view.horizon_root != null and game.world_view.horizon_root.get_child_count() >= 12, "distant horizon hills are instanced")
+	var fog := game.world_view.fog_configuration()
+	_check(bool(fog.get("exterior_opaque", false)), "unexplored off-map fog stays opaque")
+	_check(float(fog.get("shore_fade_metres", 0.0)) >= 8.0, "explored edges open a short shore band")
 	_check(HaloCatalog.authored_for("SAWMILL").size() >= 4, "sawmill halo table is authored")
 	_check(HaloCatalog.authored_for("BAKERY").size() >= 4, "bakery halo table is authored")
 	_check(HaloCatalog.authored_for("QUARRY").size() >= 4, "quarry halo table is authored")

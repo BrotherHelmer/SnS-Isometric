@@ -9,6 +9,8 @@ uniform vec2 world_size_xz = vec2(175.0, 175.0);
 uniform float unknown_opacity : hint_range(0.0, 1.0) = 0.998;
 uniform float edge_softness : hint_range(0.01, 0.5) = 0.42;
 uniform float noise_strength : hint_range(0.0, 0.3) = 0.22;
+// Explored shoreline only. Unexplored off-map stays fully unknown (#47).
+uniform float shore_fade_metres = 16.0;
 
 varying vec2 world_xz;
 
@@ -46,8 +48,11 @@ void fragment() {
 	float unknown = 1.0 - revealed;
 	float mist = value_noise(world_uv * 8.0 + vec2(-TIME * 0.004, TIME * 0.005));
 	ALBEDO = mix(unknown_color, mist_color, mist * 0.34);
-	// Off-map is fully unknown. Multiplying by `inside` used to punch a hole
-	// through the sheet so cliff wedges and water read before the edge was
-	// explored. Explored map-edge tiles still feather through smoothstep.
-	ALPHA = unknown * unknown_opacity;
+	// Off-map is fully unknown unless the nearest map-edge texel is already
+	// revealed. That opens a short shore band so G1 water/cliffs read after
+	// exploration, without punching a hole through unexplored fog (#47).
+	vec2 outside = max(world_min_xz - world_xz, world_xz - (world_min_xz + world_size_xz));
+	float dist_out = max(max(outside.x, outside.y), 0.0);
+	float shore = (1.0 - inside) * smoothstep(0.42, 0.74, visibility) * (1.0 - smoothstep(2.4, max(shore_fade_metres, 2.5), dist_out));
+	ALPHA = unknown * unknown_opacity * (1.0 - shore);
 }
