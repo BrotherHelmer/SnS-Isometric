@@ -6,9 +6,9 @@ render_mode diffuse_burley, specular_schlick_ggx, cull_disabled;
 // cannot stripe the flats the way the old ground bump did.
 uniform vec2 world_min_xz;
 uniform vec2 world_size_xz;
-uniform vec3 deep_color : source_color = vec3(0.165, 0.275, 0.290); // #2A464A
-uniform vec3 shallow_color : source_color = vec3(0.310, 0.455, 0.435); // #4F746F
-uniform vec3 foam_color : source_color = vec3(0.820, 0.800, 0.725); // #D1CCB9
+uniform vec3 deep_color : source_color = vec3(0.22, 0.36, 0.37); // #385C5E
+	uniform vec3 shallow_color : source_color = vec3(0.42, 0.56, 0.50); // #6B8F80
+	uniform vec3 foam_color : source_color = vec3(0.88, 0.84, 0.74); // #E0D6BD
 uniform float wave = 0.04;
 uniform float foam_metres = 5.0;
 uniform float lod_cheap = 0.0;

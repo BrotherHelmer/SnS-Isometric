@@ -48,11 +48,11 @@ void fragment() {
 	float unknown = 1.0 - revealed;
 	float mist = value_noise(world_uv * 8.0 + vec2(-TIME * 0.004, TIME * 0.005));
 	ALBEDO = mix(unknown_color, mist_color, mist * 0.34);
-	// Off-map is fully unknown unless the nearest map-edge texel is already
-	// revealed. That opens a short shore band so G1 water/cliffs read after
-	// exploration, without punching a hole through unexplored fog (#47).
+	// #47: unexplored on-map stays fully unknown. Off-map is water/horizon
+	// (G1), not a teal pad — so we do not re-opaque the sea after 16 m.
+	// A short lip of mist still sits on revealed shores.
 	vec2 outside = max(world_min_xz - world_xz, world_xz - (world_min_xz + world_size_xz));
 	float dist_out = max(max(outside.x, outside.y), 0.0);
-	float shore = (1.0 - inside) * smoothstep(0.42, 0.74, visibility) * (1.0 - smoothstep(2.4, max(shore_fade_metres, 2.5), dist_out));
-	ALPHA = unknown * unknown_opacity * (1.0 - shore);
+	float lip = (1.0 - inside) * smoothstep(0.42, 0.74, visibility) * (1.0 - smoothstep(0.6, max(shore_fade_metres * 0.55, 2.5), dist_out)) * 0.28;
+	ALPHA = unknown * unknown_opacity * inside + lip;
 }

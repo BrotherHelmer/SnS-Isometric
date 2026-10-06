@@ -9,10 +9,10 @@ The playable province is no longer a slab in a teal void.
   to the water line. Unexplored edges stay under #47 fog.
 - **Horizon**: two low-detail hill rings (near shore + far sea) plus the
   period sky gradient so far zoom never shows a box.
-- Fog-of-war keeps #47 behaviour: off-map is opaque until the nearest
-  map-edge texel is revealed, then a 16 m shore band opens. PSSM split
-  0.82, terrain does not cast, flat world-up ground normals, SSAO
-  sharpness 0.35.
+- Fog-of-war keeps #47 on-map behaviour: unexplored tiles stay unknown.
+  Off-map is the G1 sea/horizon (not a 220 m teal pad). A short mist
+  lip sits on revealed shores. PSSM split 0.82, terrain does not cast,
+  flat world-up ground normals, SSAO sharpness 0.35.
 
 Stacked on GFX-10 over `cursor/dawn-aftermath-72ce`. No HUD, audio,
 gameplay-rule or workflow changes.

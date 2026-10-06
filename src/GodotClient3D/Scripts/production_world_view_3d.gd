@@ -18,11 +18,11 @@ const FoliageShader = preload("res://src/GodotClient3D/Shaders/settlement_foliag
 const WaterShader = preload("res://src/GodotClient3D/Shaders/settlement_water.gdshader")
 const HorizonShader = preload("res://src/GodotClient3D/Shaders/settlement_horizon.gdshader")
 const FOG_MASK_DIVISOR := 1
-const FOG_VOLUME_PAD_METRES := 220.0
+const FOG_VOLUME_PAD_METRES := 6.0
 const WATER_Y := -0.78
-const WATER_PAD_METRES := 560.0
+const WATER_PAD_METRES := 720.0
 const SHORE_FADE_METRES := 16.0
-const HORIZON_RADIUS_METRES := 248.0
+const HORIZON_RADIUS_METRES := 210.0
 const FOG_VOLUME_HEIGHT_METRES := 56.0
 const FOG_VOLUME_CENTER_Y := 18.0
 const FOG_DISPLAY_UPSAMPLE := 8
@@ -1984,6 +1984,7 @@ func _rebuild_water() -> void:
 	var center := ScaleProfile.tile_to_flat_world(Vector2(map_size - Vector2i.ONE) * 0.5, map_size)
 	water_mesh_instance.position = Vector3(center.x, WATER_Y, center.z)
 	water_mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	water_mesh_instance.extra_cull_margin = 240.0
 	water_material = ShaderMaterial.new()
 	water_material.shader = WaterShader
 	water_material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
@@ -2030,7 +2031,10 @@ func _rebuild_world_rim(force: bool) -> void:
 
 
 func _add_rim_face(surface: SurfaceTool, tile: Vector2i, outward: Vector2i) -> int:
-	if simulation == null or not simulation.is_revealed(tile):
+	# The Director: the slab edge is world geography, not a discovery.
+	# Fog still covers unrevealed coast tiles; the rim is there so far
+	# zoom reads as an island instead of a paper cut-out.
+	if simulation == null or not simulation.is_inside_map(tile):
 		return 0
 	var center := ScaleProfile.tile_to_flat_world(Vector2(tile), map_size)
 	var half := ScaleProfile.LOGICAL_CELL_METRES * 0.5
@@ -2087,8 +2091,8 @@ func _rebuild_horizon() -> void:
 		child.free()
 	var center := ScaleProfile.tile_to_flat_world(Vector2(map_size - Vector2i.ONE) * 0.5, map_size)
 	var rings := [
-		{"count": 16, "radius": float(maxi(map_size.x, map_size.y)) * ScaleProfile.LOGICAL_CELL_METRES * 0.5 + 14.0, "h": 5.2, "w": 18.0},
-		{"count": 12, "radius": HORIZON_RADIUS_METRES, "h": 9.0, "w": 36.0},
+		{"count": 18, "radius": float(maxi(map_size.x, map_size.y)) * ScaleProfile.LOGICAL_CELL_METRES * 0.5 + 22.0, "h": 6.4, "w": 22.0},
+		{"count": 14, "radius": HORIZON_RADIUS_METRES, "h": 11.0, "w": 42.0},
 	]
 	var hill_index := 0
 	for ring_value in rings:
@@ -2107,6 +2111,7 @@ func _rebuild_horizon() -> void:
 			hill.position = Vector3(center.x + cos(angle) * radius, WATER_Y + height * 0.40, center.z + sin(angle) * radius)
 			hill.rotation.y = -angle + PI * 0.5
 			hill.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			hill.extra_cull_margin = 180.0
 			var material := ShaderMaterial.new()
 			material.shader = HorizonShader
 			var tone := Color("#3A4A38") if hill_index % 3 != 0 else Color("#2E3A40")
