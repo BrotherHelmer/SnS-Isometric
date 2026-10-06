@@ -1892,7 +1892,7 @@ func _same_type_neighbors(tile: Vector2i, tile_type: String) -> int:
 
 
 func apply_quality_profile(quality: Dictionary) -> void:
-	foliage_density = clampf(float(quality.get("foliage_density", foliage_density)), 0.25, 1.0)
+	foliage_density = clampf(float(quality.get("foliage_density", quality.get("ground_detail", foliage_density))), 0.25, 1.0)
 	if simulation == null:
 		return
 	_rebuild_edge_forest(true)
