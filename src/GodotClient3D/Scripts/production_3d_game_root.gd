@@ -4307,12 +4307,12 @@ func _maybe_show_nightfall(wyrdfall: Dictionary) -> void:
 	last_nightfall_day = day
 	var forecast: Dictionary = wyrdfall.get("forecast", {})
 	if nightfall_label != null:
-		nightfall_label.text = "NIGHTFALL\nThreat: %s   Likely activity: %s" % [
+		nightfall_label.text = "DUSK APPROACHES\nThreat: %s   Likely activity: %s" % [
 			String(forecast.get("threat", "QUIET")),
 			String(forecast.get("activity", "Unknown"))
 		]
-	# Look lift: no centre pop-ups; the nightfall forecast is a feed notice.
-	_push_notice_feed("Nightfall soon", "Threat: %s  ·  Likely activity: %s" % [String(forecast.get("threat", "QUIET")).capitalize(), String(forecast.get("activity", "Unknown"))], "warning")
+	# Look lift: no centre pop-ups; dusk is a feed notice so the player can still act.
+	_push_notice_feed("Dusk approaches", "Threat: %s  ·  Likely activity: %s" % [String(forecast.get("threat", "QUIET")).capitalize(), String(forecast.get("activity", "Unknown"))], "warning")
 
 
 func _ghost_material(color: Color) -> StandardMaterial3D:
