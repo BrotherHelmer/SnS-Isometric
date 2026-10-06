@@ -5,8 +5,9 @@ The playable province is no longer a slab in a teal void.
 - **Water plane** around the map: cheap `settlement_water.gdshader`,
   subtle vertex waves by day, foam in a short shore band. Night LOD
   turns waves off. Interior discarded so grass stays grass.
-- **Rim** of beach / rock faces on *explored* edge tiles only, dropping
-  to the water line. Unexplored edges stay under #47 fog.
+- **Rim** of beach / rock around the whole slab, plus a cheap foam
+  band. Interior unexplored tiles stay under #47 fog; the coast is
+  world geography so far zoom reads as an island.
 - **Horizon**: two low-detail hill rings (near shore + far sea) plus the
   period sky gradient so far zoom never shows a box.
 - Fog-of-war keeps #47 on-map behaviour: unexplored tiles stay unknown.
