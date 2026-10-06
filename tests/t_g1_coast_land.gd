@@ -94,8 +94,8 @@ func _placed_entity_tiles(sim, world) -> Array[Vector2i]:
 	for building_value in sim.get_buildings():
 		var building: Dictionary = building_value
 		var type_name := String(building.get("planned_type", "")) if bool(building.get("construction", false)) else String(building.get("type", ""))
-		var anchor: Vector2i = building.get("position", Vector2i.ZERO)
-		var footprint: Vector2i = building.get("footprint", Defs.building_footprint(type_name))
+		var anchor := _as_tile(building.get("position", Vector2i.ZERO))
+		var footprint := _as_tile(building.get("footprint", Defs.building_footprint(type_name)))
 		if footprint == Vector2i.ZERO:
 			footprint = Defs.building_footprint(type_name)
 		for oy in range(footprint.y):
@@ -112,6 +112,14 @@ func _placed_entity_tiles(sim, world) -> Array[Vector2i]:
 	for tile_value in tiles.keys():
 		result.append(tile_value)
 	return result
+
+
+func _as_tile(value) -> Vector2i:
+	if typeof(value) == TYPE_VECTOR2I:
+		return value
+	if typeof(value) == TYPE_DICTIONARY:
+		return Vector2i(int(value.get("x", 0)), int(value.get("y", 0)))
+	return Vector2i.ZERO
 
 
 func _tile_min_land(world, tile: Vector2i) -> float:
