@@ -13,6 +13,7 @@ const Discoveries = preload("one_shard_discoveries.gd")
 const Economy = preload("one_shard_economy.gd")
 const RaidIntents = preload("one_shard_raid_intents.gd")
 const Placement = preload("one_shard_placement.gd")
+const Frontier = preload("one_shard_frontier.gd")
 
 const SAVE_PATH := "user://one_shard_save.json"
 const AUTOSAVE_PATH := "user://one_shard_autosave.json"
@@ -2297,6 +2298,10 @@ func get_current_intention() -> Dictionary:
 
 func evaluate_placement_quality(building_type: String, tile: Vector2i, rotation: int = 0) -> Dictionary:
 	return Placement.score(self, building_type, tile, rotation)
+
+
+func evaluate_frontier(building: Dictionary) -> Dictionary:
+	return Frontier.evaluate(self, building)
 
 
 func _stamp_placement_quality(building: Dictionary, building_type: String, tile: Vector2i, rotation: int = 0) -> void:
@@ -6477,6 +6482,8 @@ func _best_enemy_target(enemy: Dictionary, candidates: Array, kind: String, requ
 			order += 1
 			continue
 		var score := _manhattan(enemy["position"], target_position) + load * 10
+		if kind == "building" and String(enemy.get("raid_intent", raid_plan.get("intent", ""))) == RaidIntents.INTENT_ECONOMY:
+			score -= int(round(Frontier.exposure_score(self, candidate) * 20.0))
 		ranked.append({"entity": candidate, "position": target_position, "score": score, "order": order})
 		order += 1
 	ranked.sort_custom(func(first: Dictionary, second: Dictionary) -> bool:
