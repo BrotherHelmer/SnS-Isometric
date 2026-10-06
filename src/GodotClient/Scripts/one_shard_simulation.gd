@@ -9,6 +9,7 @@ const SaveStore = preload("one_shard_save_store.gd")
 const Intentions = preload("one_shard_intentions.gd")
 const PlaytestLog = preload("one_shard_playtest_log.gd")
 const Scout = preload("one_shard_scout.gd")
+const Discoveries = preload("one_shard_discoveries.gd")
 
 const SAVE_PATH := "user://one_shard_save.json"
 const AUTOSAVE_PATH := "user://one_shard_autosave.json"
@@ -3258,7 +3259,29 @@ func _place_wilderness_opportunities() -> void:
 	_place_resource_cluster(cache_center, Defs.TILE_ROCK, 8, 20)
 	_register_feature("rich_forest", forest_center, "A dense stand of timber waits beyond the first hills.")
 	_register_feature("stone_region", stone_center, "Broken stone ridges hold a rich quarry.")
-	_register_feature("ruined_cache", cache_center, "Collapsed stores and cut stone mark an abandoned cache.")
+	_register_feature("ruined_cache", cache_center, "Someone defended this ridge before you.")
+	_place_fog_discoveries(town_center, toward_shard)
+
+
+func _place_fog_discoveries(town_center: Vector2i, toward_shard: Vector2) -> void:
+	var side := Vector2(-toward_shard.y, toward_shard.x)
+	var cart := town_center + Vector2i(roundi(side.x * 18.0 + toward_shard.x * 10.0), roundi(side.y * 18.0 + toward_shard.y * 10.0))
+	var ruins := town_center + Vector2i(roundi(-side.x * 19.0 + toward_shard.x * 12.0), roundi(-side.y * 19.0 + toward_shard.y * 11.0))
+	var traces := town_center + Vector2i(roundi(toward_shard.x * 20.0), roundi(toward_shard.y * 18.0))
+	var landmark := town_center + Vector2i(roundi(-toward_shard.x * 17.0 + side.x * 10.0), roundi(-toward_shard.y * 16.0 + side.y * 10.0))
+	cart = _clamp_discovery_tile(cart)
+	ruins = _clamp_discovery_tile(ruins)
+	traces = _clamp_discovery_tile(traces)
+	landmark = _clamp_discovery_tile(landmark)
+	_clear_area(cart, 1)
+	_register_feature(Discoveries.KIND_CART, cart, "An overturned cart, still packed.")
+	_register_feature(Discoveries.KIND_RUINS, ruins, "Someone defended this ridge before you.")
+	_register_feature(Discoveries.KIND_TRACES, traces, "Tracks lead into the fog.")
+	_register_feature(Discoveries.KIND_LANDMARK, landmark, "A standing stone older than the crater.")
+
+
+func _clamp_discovery_tile(tile: Vector2i) -> Vector2i:
+	return Vector2i(clampi(tile.x, 3, map_size.x - 4), clampi(tile.y, 3, map_size.y - 4))
 
 
 func _register_world_features() -> void:
@@ -7933,9 +7956,12 @@ func _notice_discoveries() -> void:
 			_offer_onboarding("shard", "The Shard still burns. Reach it. Bind it. Survive what wakes.")
 		elif kind == "wyrd_spring":
 			_offer_onboarding("outpost", "A Wyrd spring. An Outpost here yields power — and raises Pressure.")
+		var report: Dictionary = Discoveries.apply(self, feature)
+		message = String(report.get("body", message))
+		add_map_marker(kind, position, String(report.get("title", Discoveries.title_for(kind))), 0.0)
 		_add_log(message)
-		if last_message == "" or last_message.begins_with("Choose") or last_message.begins_with("Day") or last_message.begins_with("Dawn"):
-			last_message = message
+		last_message = message
+		_record_event("discovery", message, {"kind": kind, "tile": _vector_to_data(position)})
 
 
 func _notice_shard_contact() -> void:
