@@ -110,6 +110,8 @@ var placement_legend_label: Label
 var inspector_label: RichTextLabel
 var assault_button: Button
 var recall_button: Button
+var scout_button: Button
+var scout_aiming := false
 var pause_button: Button
 var play_button: Button
 var speed_button: Button
@@ -371,6 +373,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			_set_build_palette_visible(false)
 			get_viewport().set_input_as_handled()
 			return
+		if event.keycode == KEY_ESCAPE and scout_aiming:
+			scout_aiming = false
+			_show_status("Scout cancelled.")
+			get_viewport().set_input_as_handled()
+			return
 		if event.keycode == KEY_ESCAPE and objective_detail_panel != null and objective_detail_panel.visible:
 			_show_objective_detail(false)
 			get_viewport().set_input_as_handled()
@@ -443,7 +450,10 @@ func _unhandled_input(event: InputEvent) -> void:
 				_finish_clear_drag(event.position)
 			if map_drag_active:
 				if not map_drag_moved:
-					_select_from_pointer(event.position)
+					if scout_aiming:
+						_commit_scout_click(event.position)
+					else:
+						_select_from_pointer(event.position)
 				map_drag_active = false
 				map_drag_moved = false
 			if consumed:
@@ -494,7 +504,36 @@ func _handle_hud_hotkey(event: InputEventKey) -> bool:
 		KEY_H:
 			_select_town_hall()
 			return true
+		KEY_Y:
+			if _begin_scout_aim():
+				return true
 	return false
+
+
+func _begin_scout_aim() -> bool:
+	if simulation_host.simulation == null:
+		return false
+	var worker: Dictionary = simulation_host.simulation.get_worker_by_id(selected_worker_id) if selected_worker_id > 0 else {}
+	if worker.is_empty() or not simulation_host.simulation.is_patrol_scout(worker) or worker.has("scout_mission"):
+		_show_status("Select a free patrol soldier, then press Scout (Y).")
+		return false
+	scout_aiming = true
+	cancel_placement()
+	_show_status("Scout Direction — click into the fog. %s will walk there and return on his own." % String(worker.get("display_name", "The soldier")))
+	return true
+
+
+func _commit_scout_click(screen_position: Vector2) -> void:
+	scout_aiming = false
+	if simulation_host.simulation == null or world_view == null:
+		return
+	var hit: Dictionary = _raycast_terrain(screen_position)
+	if hit.is_empty():
+		_show_status("Click the land to choose a scouting direction.")
+		return
+	var tile := world_view.world_to_tile(hit.position)
+	var result: Dictionary = simulation_host.simulation.request_scout_direction(selected_worker_id, tile)
+	_show_command_result(result)
 
 
 func _select_town_hall() -> void:
@@ -1529,6 +1568,14 @@ func _create_ui() -> void:
 	recall_button.pressed.connect(func() -> void: _show_command_result(simulation_host.simulation.recall_assault_soldiers()))
 	action_row.add_child(recall_button)
 	recall_button.visible = false
+	scout_button = Button.new()
+	scout_button.name = "ScoutDirection"
+	scout_button.text = "SCOUT (Y)"
+	scout_button.tooltip_text = "Scout Direction: click into the fog. The soldier walks short legs, reveals as he goes, and returns on his own."
+	Identity.apply_button(scout_button)
+	scout_button.pressed.connect(_begin_scout_aim)
+	action_row.add_child(scout_button)
+	scout_button.visible = false
 	inspector_panel.visible = false
 
 	placement_panel = PanelContainer.new()
@@ -2332,6 +2379,8 @@ func _update_inspector() -> void:
 func _update_inspector_core() -> void:
 	assault_button.visible = false
 	recall_button.visible = false
+	if scout_button != null:
+		scout_button.visible = false
 	if selected_entity_kind == "rivalry_structure" and selected_building_id > 0:
 		var structure_snapshot := _find_frame_entity("rivalry_structures", selected_building_id)
 		if not structure_snapshot.is_empty():
@@ -2424,9 +2473,17 @@ func _update_inspector_core() -> void:
 			]
 			if String(worker.get("type", "")) not in ["guard"]:
 				lines.append("Carrying  %s" % ("%s ×%d" % [String(descriptor.get("cargo", "")).capitalize(), int(descriptor.get("cargo_amount", 0))] if int(descriptor.get("cargo_amount", 0)) > 0 else "—"))
+			else:
+				var scout_name := String(worker.get("display_name", "Soldier"))
+				if worker.has("scout_mission"):
+					lines.append("%s is scouting." % scout_name)
+				else:
+					lines.append("%s can Scout (Y) into the fog." % scout_name)
 			lines.append(_debug_id_line(selected_worker_id))
 			inspector_label.text = "\n".join(lines)
 			inspector_panel.visible = true
+			if scout_button != null:
+				scout_button.visible = simulation_host.simulation.is_patrol_scout(worker) and not worker.has("scout_mission")
 			return
 	if debug_visible:
 		var metrics := world_view.presentation_metrics()
@@ -2440,6 +2497,8 @@ func _update_inspector_core() -> void:
 	else:
 		inspector_label.text = ""
 		inspector_panel.visible = false
+		if scout_button != null:
+			scout_button.visible = false
 
 
 ## Look lift: stat rows get an icon, a muted label and a bold value, laid out

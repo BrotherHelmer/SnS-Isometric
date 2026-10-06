@@ -215,6 +215,7 @@ func sync_frame(frame_snapshot: Dictionary) -> void:
 	_sync_claim_overlays(frame_snapshot.get("lumen_sources", []), frame_snapshot.get("claims", {}))
 	_update_shard_beacon(frame_snapshot.get("wyrdfall", {}))
 	_sync_wyrd_springs(frame_snapshot.get("wyrd_sites", []))
+	_sync_map_markers()
 	var revealed_count := int(frame_snapshot.get("revealed_count", simulation.revealed_tiles.size()))
 	if revealed_count != last_revealed_count:
 		_sync_fog(false)
@@ -2081,3 +2082,26 @@ func _instantiate_cached(path_value: String) -> Node3D:
 		packed_cache[path_value] = load(path_value) as PackedScene
 	var packed: PackedScene = packed_cache[path_value]
 	return packed.instantiate() as Node3D if packed != null else null
+
+
+func _sync_map_markers() -> void:
+	var host := get_node_or_null("MapMarkers")
+	if host == null:
+		host = Node3D.new()
+		host.name = "MapMarkers"
+		add_child(host)
+	for child in host.get_children():
+		child.queue_free()
+	if simulation == null or not simulation.has_method("get_map_markers"):
+		return
+	for marker_value in simulation.get_map_markers():
+		var marker: Dictionary = marker_value
+		var tile: Vector2i = marker.get("position", Vector2i.ZERO)
+		var label := Label3D.new()
+		label.text = String(marker.get("title", "?"))
+		label.font_size = 28
+		label.modulate = Color("#efcf8a") if String(marker.get("kind", "")) != "skull" else Color("#f0a06e")
+		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		label.no_depth_test = true
+		label.position = tile_to_world(Vector2(tile)) + Vector3.UP * 2.4
+		host.add_child(label)
