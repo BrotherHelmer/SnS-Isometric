@@ -38,7 +38,7 @@ void fragment() {
 	float foam = 1.0 - smoothstep(0.35, foam_metres, dist_out);
 	float ripple = lod_cheap > 0.5 ? 0.5 : (sin(world_pos.x * 1.55 + world_pos.z * 1.15 + TIME * 0.35) * 0.5 + 0.5);
 	vec3 water = mix(deep_color, shallow_color, clamp(foam * 0.70 + ripple * 0.10, 0.0, 1.0));
-	ALBEDO = mix(water, foam_color, foam * 0.52) * atmosphere;
+	ALBEDO = mix(water, foam_color, foam * 0.70) * mix(0.72, 1.0, atmosphere);
 	NORMAL = normalize((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
 	ROUGHNESS = mix(0.20, 0.58, foam);
 	METALLIC = 0.06;

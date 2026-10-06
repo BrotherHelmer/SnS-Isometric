@@ -18,7 +18,7 @@ const FoliageShader = preload("res://src/GodotClient3D/Shaders/settlement_foliag
 const WaterShader = preload("res://src/GodotClient3D/Shaders/settlement_water.gdshader")
 const HorizonShader = preload("res://src/GodotClient3D/Shaders/settlement_horizon.gdshader")
 const FOG_MASK_DIVISOR := 1
-const FOG_VOLUME_PAD_METRES := 6.0
+const FOG_VOLUME_PAD_METRES := 0.35
 const WATER_Y := -0.78
 const WATER_PAD_METRES := 720.0
 const SHORE_FADE_METRES := 16.0
@@ -1934,8 +1934,13 @@ func apply_light_palette(palette: Dictionary) -> void:
 		water_material.set_shader_parameter("wave", 0.04 * water_detail * (0.0 if float(palette.get("terrain_lod_cheap", 0.0)) > 0.5 else 1.0))
 	if horizon_root != null:
 		for child in horizon_root.get_children():
-			if child is MeshInstance3D and (child as MeshInstance3D).material_override is ShaderMaterial:
-				((child as MeshInstance3D).material_override as ShaderMaterial).set_shader_parameter("atmosphere", atmosphere)
+			if child is MeshInstance3D:
+				var hill_mat := (child as MeshInstance3D).material_override
+				if hill_mat is ShaderMaterial:
+					(hill_mat as ShaderMaterial).set_shader_parameter("atmosphere", atmosphere)
+				elif hill_mat is StandardMaterial3D:
+					var base := Color("#243028")
+					(hill_mat as StandardMaterial3D).albedo_color = base * clampf(atmosphere, 0.35, 1.0)
 	_ground_tint = palette.get("ground_tint", Color(1.0, 1.0, 1.0))
 	if terrain_mesh_instance != null and terrain_mesh_instance.material_override is ShaderMaterial:
 		var ground_mat := terrain_mesh_instance.material_override as ShaderMaterial
@@ -1966,21 +1971,25 @@ func apply_light_palette(palette: Dictionary) -> void:
 
 
 func _rebuild_water() -> void:
-	# The Director: G1 shoreline water. One plane, cheap waves, foam at the
-	# island edge. Interior is discarded so the playable slab stays grass.
+	# The Director: G1 shoreline water. A disk, not a square, so far zoom
+	# never shows a diamond cut-out. Interior discarded; foam at the slab.
 	if water_root == null or map_size == Vector2i.ZERO:
 		return
 	if water_mesh_instance != null:
 		water_mesh_instance.queue_free()
 		water_mesh_instance = null
 	var span := Vector2(map_size) * ScaleProfile.LOGICAL_CELL_METRES
-	var plane := PlaneMesh.new()
-	plane.size = Vector2(span.x + WATER_PAD_METRES * 2.0, span.y + WATER_PAD_METRES * 2.0)
-	plane.subdivide_width = 20 if water_detail >= 0.7 else 8
-	plane.subdivide_depth = 20 if water_detail >= 0.7 else 8
+	var radius := span.length() * 0.5 + WATER_PAD_METRES
+	var disk := CylinderMesh.new()
+	disk.top_radius = radius
+	disk.bottom_radius = radius
+	disk.height = 0.08
+	disk.radial_segments = 32 if water_detail >= 0.7 else 16
+	disk.rings = 4 if water_detail >= 0.7 else 2
+	disk.cap_bottom = false
 	water_mesh_instance = MeshInstance3D.new()
 	water_mesh_instance.name = "IslandWater"
-	water_mesh_instance.mesh = plane
+	water_mesh_instance.mesh = disk
 	var center := ScaleProfile.tile_to_flat_world(Vector2(map_size - Vector2i.ONE) * 0.5, map_size)
 	water_mesh_instance.position = Vector3(center.x, WATER_Y, center.z)
 	water_mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -1990,14 +1999,14 @@ func _rebuild_water() -> void:
 	water_material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
 	water_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
 	water_material.set_shader_parameter("atmosphere", _atmosphere_scale)
-	water_material.set_shader_parameter("wave", 0.04 * water_detail)
-	water_material.set_shader_parameter("foam_metres", 5.0)
+	water_material.set_shader_parameter("wave", 0.05 * water_detail)
+	water_material.set_shader_parameter("foam_metres", 14.0)
 	water_mesh_instance.material_override = water_material
 	water_root.add_child(water_mesh_instance)
 
 
 func _rebuild_world_rim(force: bool) -> void:
-	# Explored edge only. Unexplored sides stay fog until the tile reveals (#47).
+	# Full slab rim. Fog still hides unrevealed coast tiles (#47).
 	if simulation == null or terrain_root == null or map_size == Vector2i.ZERO:
 		return
 	var signature := "%d:%d" % [int(simulation.revealed_tiles.size()), terrain_height_signature]
@@ -2091,8 +2100,8 @@ func _rebuild_horizon() -> void:
 		child.free()
 	var center := ScaleProfile.tile_to_flat_world(Vector2(map_size - Vector2i.ONE) * 0.5, map_size)
 	var rings := [
-		{"count": 18, "radius": float(maxi(map_size.x, map_size.y)) * ScaleProfile.LOGICAL_CELL_METRES * 0.5 + 22.0, "h": 6.4, "w": 22.0},
-		{"count": 14, "radius": HORIZON_RADIUS_METRES, "h": 11.0, "w": 42.0},
+		{"count": 14, "radius": float(maxi(map_size.x, map_size.y)) * ScaleProfile.LOGICAL_CELL_METRES * 0.5 + 28.0, "h": 4.8, "w": 16.0},
+		{"count": 12, "radius": HORIZON_RADIUS_METRES, "h": 7.5, "w": 28.0},
 	]
 	var hill_index := 0
 	for ring_value in rings:
@@ -2103,20 +2112,22 @@ func _rebuild_horizon() -> void:
 			var radius := float(ring["radius"]) + float((visual_seed + hill_index * 13) % 16)
 			var hill := MeshInstance3D.new()
 			hill.name = "HorizonHill_%d" % hill_index
-			var mesh := PrismMesh.new()
-			var width := float(ring["w"]) + float((index * 7 + visual_seed) % 14)
-			var height := float(ring["h"]) + float((index * 11 + visual_seed) % 7)
-			mesh.size = Vector3(width, height, 11.0 + float(index % 4) * 1.2)
+			var mesh := SphereMesh.new()
+			var width := float(ring["w"]) + float((index * 7 + visual_seed) % 10)
+			var height := float(ring["h"]) + float((index * 11 + visual_seed) % 5)
+			mesh.radius = width * 0.55
+			mesh.height = height
+			mesh.radial_segments = 8
+			mesh.rings = 4
 			hill.mesh = mesh
-			hill.position = Vector3(center.x + cos(angle) * radius, WATER_Y + height * 0.40, center.z + sin(angle) * radius)
-			hill.rotation.y = -angle + PI * 0.5
+			hill.position = Vector3(center.x + cos(angle) * radius, WATER_Y + height * 0.28, center.z + sin(angle) * radius)
+			hill.scale = Vector3(1.35, 0.42, 1.10)
 			hill.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			hill.extra_cull_margin = 180.0
-			var material := ShaderMaterial.new()
-			material.shader = HorizonShader
-			var tone := Color("#3A4A38") if hill_index % 3 != 0 else Color("#2E3A40")
-			material.set_shader_parameter("albedo_color", Vector3(tone.r, tone.g, tone.b))
-			material.set_shader_parameter("atmosphere", _atmosphere_scale)
+			var material := StandardMaterial3D.new()
+			material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			var tone := Color("#243028") if hill_index % 3 != 0 else Color("#1E282C")
+			material.albedo_color = tone * clampf(_atmosphere_scale, 0.35, 1.0)
 			hill.material_override = material
 			horizon_root.add_child(hill)
 			hill_index += 1
