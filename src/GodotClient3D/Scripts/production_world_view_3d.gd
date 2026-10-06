@@ -2066,7 +2066,8 @@ func _add_rim_face(surface: SurfaceTool, tile: Vector2i, outward: Vector2i) -> i
 			var sample := tile + Vector2i(ox, oy)
 			if simulation.is_inside_map(sample) and String(simulation.get_tile(sample)) == Defs.TILE_ROCK:
 				rock_weight += 1
-	var cliff := rock_weight >= 3 or simulation.get_height(tile) >= 2 or (_tile_hash(tile, 21 + outward.x * 3 + outward.y * 7) % 3 == 0 and (outward.y < 0 or outward.x < 0))
+	var height_units := int(simulation.get_height(tile))
+	var cliff: bool = rock_weight >= 3 or height_units >= 2 or (_tile_hash(tile, 21 + outward.x * 3 + outward.y * 7) % 3 == 0 and (outward.y < 0 or outward.x < 0))
 	var color := Color("#6A6054") if cliff else Color("#C4A878")
 	color = color.darkened(0.08 + float(_tile_hash(tile, 33) % 12) / 100.0)
 	var normal := Vector3(float(outward.x), 0.22 if cliff else 0.55, float(outward.y)).normalized()

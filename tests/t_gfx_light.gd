@@ -161,7 +161,7 @@ func _run() -> void:
 	_check(game.world_view.water_mesh_instance != null and game.world_view.water_material != null, "island water plane is live")
 	_check(game.world_view.find_child("OuterWildernessFloor", true, false) == null, "teal wilderness floor is gone")
 	_check(game.world_view.horizon_root != null and game.world_view.horizon_root.get_child_count() >= 12, "distant horizon hills are instanced")
-	var fog := game.world_view.fog_configuration()
+	var fog: Dictionary = game.world_view.fog_configuration()
 	_check(bool(fog.get("exterior_opaque", false)), "unexplored off-map fog stays opaque")
 	_check(float(fog.get("shore_fade_metres", 0.0)) >= 8.0, "explored edges open a short shore band")
 	_check(HaloCatalog.authored_for("SAWMILL").size() >= 4, "sawmill halo table is authored")
