@@ -8,6 +8,7 @@ const RaidTuning = preload("res://src/GodotClient/Scripts/one_shard_raid_tuning.
 const SaveStore = preload("one_shard_save_store.gd")
 const Intentions = preload("one_shard_intentions.gd")
 const PlaytestLog = preload("one_shard_playtest_log.gd")
+const Scout = preload("one_shard_scout.gd")
 
 const SAVE_PATH := "user://one_shard_save.json"
 const AUTOSAVE_PATH := "user://one_shard_autosave.json"
@@ -120,6 +121,7 @@ var objectives: Array = []
 var intention_completed: Dictionary = {}
 var intention_flags: Dictionary = {}
 var playtest_log := PlaytestLog.new()
+var map_markers: Array = []
 var stats: Dictionary = {}
 var diagnostics_enabled := true
 
@@ -290,6 +292,7 @@ func start_new_run(width: int = MAP_WIDTH, height: int = MAP_HEIGHT, seed_value:
 	}
 	intention_completed = {}
 	intention_flags = {}
+	map_markers = []
 	playtest_log.configure()
 	objectives = [
 		{"id": "found", "text": "Choose a clear site and build the Town Hall", "complete": false},
@@ -1531,6 +1534,64 @@ func request_worker_order(worker_id: int, tile: Vector2i) -> Dictionary:
 	return _failure("Order", "Choose open ground, a tree, or a stone deposit.")
 
 
+func is_patrol_scout(worker: Dictionary) -> bool:
+	return String(worker.get("type", "")) == "guard" and int(worker.get("building_id", 0)) == 0 and int(worker.get("hp", 0)) > 0
+
+
+func request_scout_direction(worker_id: int, target_tile: Vector2i) -> Dictionary:
+	var worker: Dictionary = _find_worker_by_id(worker_id)
+	if worker.is_empty() or not is_patrol_scout(worker):
+		return _failure("Scout", "Select a free patrol soldier to scout.")
+	if int(worker.get("assault_target_id", 0)) > 0:
+		return _failure("Scout", "That soldier is already on an assault.")
+	if worker.has("scout_mission"):
+		return _failure("Scout", "%s is already scouting." % Scout.display_name(worker, rng_seed))
+	if not is_inside_map(target_tile):
+		return _failure("Scout", "Click a direction on the map.")
+	if int(central_inventory.get(Defs.RESOURCE_BREAD, 0)) < Scout.FOOD_COST:
+		return _failure("Food", "Scouting costs %d Bread. Bake or store food first." % Scout.FOOD_COST)
+	central_inventory[Defs.RESOURCE_BREAD] = int(central_inventory.get(Defs.RESOURCE_BREAD, 0)) - Scout.FOOD_COST
+	var home: Vector2i = _town_hall_entrance_tile()
+	var origin: Vector2i = worker["position"]
+	var bearing := Vector2(target_tile - origin)
+	if bearing.length_squared() < 0.01:
+		bearing = Vector2(target_tile - home)
+	if bearing.length_squared() < 0.01:
+		bearing = Vector2.RIGHT
+	bearing = bearing.normalized()
+	worker["display_name"] = Scout.display_name(worker, rng_seed)
+	worker["scout_mission"] = {
+		"home": home,
+		"target": target_tile,
+		"direction": {"x": bearing.x, "y": bearing.y},
+		"depth_limit": Scout.DEPTH_LIMIT,
+		"returning": false,
+		"return_reason": "",
+		"tiles_at_start": revealed_tiles.size()
+	}
+	worker["manual_order"] = true
+	worker["state"] = "Scouting"
+	worker["arrival_state"] = "Scouting"
+	_assign_scout_leg(worker)
+	last_message = "%s scouts toward the fog." % String(worker["display_name"])
+	_add_log(last_message)
+	_record_event("scout_order", last_message, {"worker_id": worker_id, "target": _vector_to_data(target_tile)})
+	return _success(last_message)
+
+
+func get_map_markers() -> Array:
+	return map_markers.duplicate(true)
+
+
+func add_map_marker(kind: String, tile: Vector2i, title: String, until_elapsed: float = 0.0) -> void:
+	map_markers.append({
+		"kind": kind,
+		"position": tile,
+		"title": title,
+		"until": until_elapsed
+	})
+
+
 func cancel_worker_order(worker_id: int) -> Dictionary:
 	var worker: Dictionary = _find_worker_by_id(worker_id)
 	if worker.is_empty():
@@ -1548,6 +1609,7 @@ func cancel_worker_order(worker_id: int) -> Dictionary:
 	worker["manual_order"] = false
 	worker.erase("clear_target")
 	worker.erase("work_position")
+	worker.erase("scout_mission")
 	last_message = "Order cancelled."
 	return _success(last_message)
 
@@ -3948,7 +4010,8 @@ func _create_patrol_worker(slot: int, role_key: String) -> Dictionary:
 		"shelter_position": Vector2i(-1, -1),
 		"hp": WORKER_MAX_HP + 10,
 		"max_hp": WORKER_MAX_HP + 10,
-		"hungry": false
+		"hungry": false,
+		"display_name": Scout.display_name({"id": next_worker_id}, rng_seed)
 	}
 	next_worker_id += 1
 	return worker
@@ -4188,6 +4251,9 @@ func _worker_home_tile(building: Dictionary) -> Vector2i:
 
 
 func _update_patrol_worker(worker: Dictionary, delta: float) -> void:
+	if worker.has("scout_mission"):
+		_update_scout_worker(worker, delta)
+		return
 	# Do not walk away during a committed strike, against a raider or Outpost.
 	if float(worker.get("attack_flash", 0.0)) > 0.0:
 		return
@@ -4234,6 +4300,167 @@ func _update_patrol_worker(worker: Dictionary, delta: float) -> void:
 	worker["activity_timer"] = 1.0
 
 
+func _update_scout_worker(worker: Dictionary, delta: float) -> void:
+	_expire_map_markers()
+	var reason := _scout_return_reason(worker)
+	if reason != "" and not bool(worker["scout_mission"].get("returning", false)):
+		_begin_scout_return(worker, reason)
+	if not worker["path"].is_empty():
+		_advance_production_worker(worker, delta)
+		return
+	var mission: Dictionary = worker.get("scout_mission", {})
+	if bool(mission.get("returning", false)):
+		var home: Vector2i = mission.get("home", _town_hall_entrance_tile())
+		if worker["position"] == home or _manhattan(worker["position"], home) <= 1:
+			_finish_scout(worker)
+			return
+		worker["path"] = _find_worker_path(worker["position"], home)
+		if worker["path"].is_empty():
+			_finish_scout(worker)
+		return
+	_assign_scout_leg(worker)
+
+
+func _scout_return_reason(worker: Dictionary) -> String:
+	var mission: Dictionary = worker.get("scout_mission", {})
+	var home: Vector2i = mission.get("home", _town_hall_entrance_tile())
+	var hp := int(worker.get("hp", 1))
+	var max_hp := maxi(1, int(worker.get("max_hp", hp)))
+	if float(hp) / float(max_hp) <= Scout.RETURN_HP_RATIO:
+		return Scout.REASON_HEALTH
+	if _scout_sees_danger(worker):
+		return Scout.REASON_ENEMY
+	if int(central_inventory.get(Defs.RESOURCE_BREAD, 0)) <= 0:
+		return Scout.REASON_FOOD
+	if is_night or (not is_night and float(DAY_LENGTH_SECONDS) - float(phase_time) <= Scout.DUSK_RETURN_SECONDS):
+		return Scout.REASON_DUSK
+	if _manhattan(worker["position"], home) >= int(mission.get("depth_limit", Scout.DEPTH_LIMIT)):
+		return Scout.REASON_DEPTH
+	return ""
+
+
+func _scout_sees_danger(worker: Dictionary) -> bool:
+	var origin: Vector2i = worker["position"]
+	var seen := 0
+	for enemy in enemies:
+		if int(enemy.get("hp", 0)) <= 0:
+			continue
+		if _manhattan(origin, enemy["position"]) <= VISION_SOLDIER:
+			seen += 1
+			worker["scout_last_enemy"] = enemy["position"]
+	for camp in enemy_camps:
+		if bool(camp.get("destroyed", false)):
+			continue
+		var camp_tile: Vector2i = camp.get("position", Vector2i.ZERO)
+		if _manhattan(origin, camp_tile) <= VISION_SOLDIER:
+			worker["scout_last_enemy"] = camp_tile
+			return true
+	return seen >= 1
+
+
+func _assign_scout_leg(worker: Dictionary) -> void:
+	var waypoint := _pick_scout_waypoint(worker)
+	if waypoint.x < 0:
+		_begin_scout_return(worker, Scout.REASON_DONE)
+		return
+	var path := _find_worker_path(worker["position"], waypoint)
+	if path.is_empty():
+		_begin_scout_return(worker, Scout.REASON_DONE)
+		return
+	worker["path"] = path
+	worker["state"] = "Scouting"
+	worker["arrival_state"] = "Scouting"
+	worker["activity_timer"] = 0.4
+
+
+func _pick_scout_waypoint(worker: Dictionary) -> Vector2i:
+	var mission: Dictionary = worker.get("scout_mission", {})
+	var home: Vector2i = mission.get("home", _town_hall_entrance_tile())
+	var dir_data: Dictionary = mission.get("direction", {"x": 1.0, "y": 0.0})
+	var direction := Vector2(float(dir_data.get("x", 1.0)), float(dir_data.get("y", 0.0)))
+	var origin: Vector2i = worker["position"]
+	var best := Vector2i(-1, -1)
+	var best_score := -INF
+	for sample in range(18):
+		var step := Scout.LEG_LENGTH + (sample % 3) - 1
+		var angle := float(sample - 9) * 0.18
+		var rotated := direction.rotated(angle)
+		var candidate := origin + Vector2i(roundi(rotated.x * float(step)), roundi(rotated.y * float(step)))
+		if not is_inside_map(candidate) or candidate == origin:
+			continue
+		if not get_building_at_tile(candidate).is_empty() and String(get_building_at_tile(candidate).get("type", "")) != Defs.BUILDING_ROAD:
+			continue
+		var unexplored := 0
+		for offset in _radius_offsets(VISION_SOLDIER):
+			var tile: Vector2i = candidate + offset
+			if is_inside_map(tile) and not is_revealed(tile):
+				unexplored += 1
+		var toward := Vector2(candidate - origin).normalized().dot(direction)
+		var risk := 0.0
+		for enemy in enemies:
+			if int(enemy.get("hp", 0)) > 0 and _manhattan(candidate, enemy["position"]) <= 4:
+				risk += 1.0
+		var score := Scout.score_waypoint(unexplored, toward, float(_manhattan(candidate, home)), risk)
+		if score > best_score:
+			best_score = score
+			best = candidate
+	return best
+
+
+func _begin_scout_return(worker: Dictionary, reason: String) -> void:
+	if not worker.has("scout_mission"):
+		return
+	var mission: Dictionary = worker["scout_mission"]
+	if bool(mission.get("returning", false)) and String(mission.get("return_reason", "")) != "":
+		return
+	mission["returning"] = true
+	mission["return_reason"] = reason
+	worker["scout_mission"] = mission
+	var name_text := Scout.display_name(worker, rng_seed)
+	last_message = Scout.return_message(reason, name_text)
+	if reason == Scout.REASON_ENEMY:
+		var seen: Vector2i = worker.get("scout_last_enemy", worker["position"])
+		add_map_marker("enemy", seen, "Enemy last seen", elapsed_seconds + 120.0)
+		_add_log(last_message)
+	worker["path"] = _find_worker_path(worker["position"], mission.get("home", _town_hall_entrance_tile()))
+	worker["state"] = "Returning from scout"
+	worker["arrival_state"] = "Patrolling"
+
+
+func _finish_scout(worker: Dictionary) -> void:
+	var mission: Dictionary = worker.get("scout_mission", {})
+	var gained := revealed_tiles.size() - int(mission.get("tiles_at_start", revealed_tiles.size()))
+	if gained >= 8:
+		intention_flags["scouted_frontier"] = true
+	worker.erase("scout_mission")
+	worker["manual_order"] = false
+	worker["path"] = []
+	worker["state"] = "Patrolling"
+	worker["arrival_state"] = "Patrolling"
+	if last_message == "" or String(last_message).begins_with(Scout.display_name(worker, rng_seed)):
+		last_message = "%s has returned to town." % Scout.display_name(worker, rng_seed)
+
+
+func _mark_scout_lost(worker: Dictionary) -> void:
+	var name_text := Scout.display_name(worker, rng_seed)
+	var tile: Vector2i = worker.get("position", _town_hall_entrance_tile())
+	add_map_marker("skull", tile, "Scout lost", elapsed_seconds + 240.0)
+	last_message = "SCOUT LOST — %s did not return from the woods." % name_text
+	_add_log(last_message)
+	_record_event("scout_lost", last_message, {"worker_id": int(worker.get("id", 0)), "tile": _vector_to_data(tile)})
+	if revealed_tiles.size() - int(Dictionary(worker.get("scout_mission", {})).get("tiles_at_start", 0)) >= 8:
+		intention_flags["scouted_frontier"] = true
+
+
+func _expire_map_markers() -> void:
+	var kept: Array = []
+	for marker in map_markers:
+		var until := float(marker.get("until", 0.0))
+		if until <= 0.0 or until > elapsed_seconds:
+			kept.append(marker)
+	map_markers = kept
+
+
 func _wall_perimeter_is_closed() -> bool:
 	if connected_walls.size() < 8:
 		return false
@@ -4266,6 +4493,9 @@ func _send_workers_to_shelter() -> void:
 	var sent := 0
 	for worker in workers:
 		if String(worker.get("type", "")) == "guard":
+			if worker.has("scout_mission"):
+				_begin_scout_return(worker, Scout.REASON_DUSK)
+				continue
 			worker["state"] = "Guarding"
 			worker["path"] = []
 			continue
@@ -4325,6 +4555,9 @@ func _wake_workers_at_dawn() -> void:
 		worker["shelter_position"] = Vector2i(-1, -1)
 		var worker_type := String(worker.get("type", ""))
 		if worker_type == "guard":
+			if worker.has("scout_mission"):
+				_begin_scout_return(worker, Scout.REASON_DUSK)
+				continue
 			worker["state"] = "Patrolling" if int(worker.get("building_id", 0)) == 0 else "Guarding"
 			worker["path"] = []
 			continue
@@ -6119,6 +6352,8 @@ func _damage_worker(worker_id: int, amount: int, attacker_position: Vector2i = V
 			last_message = "%s is under attack." % String(worker.get("type", "Settler")).capitalize()
 			return
 		var worker_type := String(worker.get("type", "settler"))
+		if worker.has("scout_mission"):
+			_mark_scout_lost(worker)
 		if worker_type == "carrier":
 			_release_worker_claim(worker)
 		elif worker_type == "guard":
@@ -7717,6 +7952,26 @@ func _register_wyrd_features() -> void:
 		_register_feature("wyrd_spring", Vector2i(site.get("position", Vector2i.ZERO)), "A Wyrd spring pulses in the wilds.")
 
 
+func _serialize_map_markers() -> Array:
+	var saved := []
+	for marker in map_markers:
+		var item: Dictionary = marker.duplicate(true)
+		item["position"] = _vector_to_data(marker.get("position", Vector2i.ZERO))
+		saved.append(item)
+	return saved
+
+
+func _restore_map_markers(saved: Array) -> Array:
+	var restored := []
+	for item in saved:
+		if typeof(item) != TYPE_DICTIONARY:
+			continue
+		var marker: Dictionary = Dictionary(item).duplicate(true)
+		marker["position"] = _vector_from_data(marker.get("position", {}), Vector2i.ZERO)
+		restored.append(marker)
+	return restored
+
+
 func _serialize_world_features() -> Array:
 	var saved := []
 	for feature in world_features:
@@ -7807,6 +8062,7 @@ func _serialize_state() -> Dictionary:
 		"objectives": objectives,
 		"intention_completed": intention_completed,
 		"intention_flags": intention_flags,
+		"map_markers": _serialize_map_markers(),
 		"stats": stats,
 		"next_building_id": next_building_id,
 		"next_worker_id": next_worker_id,
@@ -7890,6 +8146,7 @@ func _restore_state(data: Dictionary) -> void:
 	objectives = data.get("objectives", objectives)
 	intention_completed = data.get("intention_completed", {})
 	intention_flags = data.get("intention_flags", {})
+	map_markers = _restore_map_markers(data.get("map_markers", []))
 	stats = data.get("stats", stats)
 	if not stats.has("workers_lost"):
 		stats["workers_lost"] = 0
@@ -8074,6 +8331,13 @@ func _serialize_workers() -> Array:
 			path.append(_vector_to_data(tile))
 		item["path"] = path
 		item.erase("last_vision_tile")
+		if worker.has("scout_mission"):
+			var mission: Dictionary = Dictionary(worker.get("scout_mission", {})).duplicate(true)
+			mission["home"] = _vector_to_data(mission.get("home", Vector2i.ZERO))
+			mission["target"] = _vector_to_data(mission.get("target", Vector2i.ZERO))
+			item["scout_mission"] = mission
+		if worker.has("scout_last_enemy"):
+			item["scout_last_enemy"] = _vector_to_data(worker.get("scout_last_enemy", Vector2i.ZERO))
 		saved.append(item)
 	return saved
 
@@ -8108,6 +8372,13 @@ func _restore_workers(saved: Array) -> Array:
 			path.append(_vector_from_data(tile_data, Vector2i.ZERO))
 		worker["path"] = path
 		worker.erase("last_vision_tile")
+		if worker.has("scout_mission"):
+			var mission: Dictionary = Dictionary(worker.get("scout_mission", {})).duplicate(true)
+			mission["home"] = _vector_from_data(mission.get("home", {}), Vector2i.ZERO)
+			mission["target"] = _vector_from_data(mission.get("target", {}), Vector2i.ZERO)
+			worker["scout_mission"] = mission
+		if worker.has("scout_last_enemy"):
+			worker["scout_last_enemy"] = _vector_from_data(worker.get("scout_last_enemy", {}), Vector2i.ZERO)
 		restored.append(worker)
 	return restored
 
