@@ -10,6 +10,7 @@ const Intentions = preload("one_shard_intentions.gd")
 const PlaytestLog = preload("one_shard_playtest_log.gd")
 const Scout = preload("one_shard_scout.gd")
 const Discoveries = preload("one_shard_discoveries.gd")
+const Economy = preload("one_shard_economy.gd")
 
 const SAVE_PATH := "user://one_shard_save.json"
 const AUTOSAVE_PATH := "user://one_shard_autosave.json"
@@ -660,6 +661,7 @@ func advance_tick() -> void:
 	_profile_finish("production_worker_updates", stamp)
 	stamp = _profile_stamp()
 	_update_production(TICK_SECONDS)
+	_refresh_economy_stalls()
 	_emit_routine_notices()
 	_profile_finish("building_production_updates", stamp)
 	stamp = _profile_stamp()
@@ -2284,6 +2286,40 @@ func get_current_intention() -> Dictionary:
 	return Intentions.current(self)
 
 
+func diagnose_building_dict(building: Dictionary) -> Dictionary:
+	return Economy.diagnose(building, elapsed_seconds)
+
+
+func diagnose_building(building_id: int) -> Dictionary:
+	return diagnose_building_dict(_find_building_by_id(building_id))
+
+
+func get_stall_reports() -> Array:
+	var reports: Array = []
+	for building in buildings:
+		var report := Economy.diagnose(building, elapsed_seconds)
+		if bool(report.get("stalled", false)):
+			report["id"] = int(building.get("id", 0))
+			report["position"] = building.get("position", Vector2i.ZERO)
+			reports.append(report)
+	return reports
+
+
+func _refresh_economy_stalls() -> void:
+	for building in buildings:
+		var report := Economy.diagnose(building, elapsed_seconds)
+		var kind := String(report.get("kind", Economy.KIND_OK))
+		var previous := String(building.get("last_stall_kind", ""))
+		if kind == previous:
+			continue
+		building["last_stall_kind"] = kind
+		if not bool(report.get("stalled", false)):
+			continue
+		var detail := "%s: %s" % [String(report.get("title", "")), String(report.get("line", ""))]
+		playtest_log.note(self, "resource_blocked", detail)
+		last_message = "%s — %s." % [String(report.get("title", "BUILDING")).capitalize(), String(report.get("line", "stalled"))]
+
+
 func note_player_command(event_type: String, detail: String = "") -> void:
 	playtest_log.note_command(self, event_type, detail)
 
@@ -3481,7 +3517,10 @@ func _create_building(building_type: String, tile: Vector2i) -> Dictionary:
 		"damage_flash": 0.0,
 		"status": "Ready.",
 		"site_clearing": false,
-		"clear_tiles": []
+		"clear_tiles": [],
+		"last_delivery_elapsed": -1.0,
+		"last_production_elapsed": -1.0,
+		"last_stall_kind": ""
 	}
 
 
@@ -4967,6 +5006,7 @@ func _carrier_dropoff(worker: Dictionary) -> bool:
 			destination["materials_delivered"][resource_type] = int(destination["materials_delivered"].get(resource_type, 0)) + amount
 			_reduce_construction_transit(int(destination["id"]), resource_type, amount)
 			destination["status"] = "Materials delivered."
+			destination["last_delivery_elapsed"] = elapsed_seconds
 			_record_event("delivery", "Construction materials delivered.", {
 				"building_id": int(destination["id"]),
 				"resource": resource_type,
@@ -4975,6 +5015,7 @@ func _carrier_dropoff(worker: Dictionary) -> bool:
 		else:
 			destination["local_inventory"][resource_type] = int(destination["local_inventory"].get(resource_type, 0)) + amount
 			destination["status"] = "Inputs delivered."
+			destination["last_delivery_elapsed"] = elapsed_seconds
 			_record_event("delivery", "Processor input delivered.", {
 				"building_id": int(destination["id"]),
 				"resource": resource_type,
@@ -5457,6 +5498,7 @@ func _record_production(building: Dictionary, output: String, output_amount: int
 	if input_resource != "":
 		details["input"] = input_resource
 		details["input_amount"] = input_amount
+	building["last_production_elapsed"] = elapsed_seconds
 	_record_event("production", "Local production completed.", details)
 	match output:
 		Defs.RESOURCE_WOOD:
