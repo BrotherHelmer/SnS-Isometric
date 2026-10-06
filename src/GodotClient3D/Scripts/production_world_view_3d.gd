@@ -2087,13 +2087,13 @@ func _add_rim_face(surface: SurfaceTool, tile: Vector2i, outward: Vector2i) -> i
 				rock_weight += 1
 	var height_units := int(simulation.get_height(tile))
 	var jut_len := jut_a.length()
-	var cliff: bool = rock_weight >= 3 or height_units >= 2 or jut_len >= 6.2
-	var color := Color("#5C564C") if cliff else Color("#A8906C")
-	color = color.darkened(0.06 + float(_tile_hash(tile, 33) % 14) / 110.0)
-	var normal := Vector3(float(outward.x), 0.18 if cliff else 0.48, float(outward.y)).normalized()
+	var cliff: bool = rock_weight >= 3 or height_units >= 2 or jut_len >= 14.0
+	var color := Color("#4A4840") if cliff else Color("#6A5E4C")
+	color = color.darkened(0.04 + float(_tile_hash(tile, 33) % 14) / 130.0)
+	var normal := Vector3(float(outward.x), 0.16 if cliff else 0.42, float(outward.y)).normalized()
 	_add_quad(surface, lip_a, lip_b, down_b, down_a, normal, color)
-	var shelf := Color("#8A7A5C") if not cliff else Color("#4E5048")
-	_add_quad(surface, a, b, lip_b, lip_a, Vector3.UP, shelf.darkened(0.10))
+	if cliff:
+		_add_quad(surface, a, b, lip_b, lip_a, Vector3.UP, Color("#3E4038").darkened(0.08))
 	return 1
 
 
@@ -2103,8 +2103,8 @@ func _coast_offset(world_xz: Vector2, outward: Vector2, tangent: Vector2) -> Vec
 	var n1 := sin(world_xz.x * 0.11 + world_xz.y * 0.07 + seed)
 	var n2 := sin(world_xz.x * 0.031 - world_xz.y * 0.045 + seed * 1.7)
 	var n3 := sin((world_xz.x + world_xz.y) * 0.019 + seed * 0.4)
-	var jut := clampf(1.6 + n1 * 2.6 + n2 * 3.8 + n3 * 2.4, 0.55, 11.0)
-	var wobble := sin(world_xz.x * 0.21 + world_xz.y * 0.17 + seed) * 0.95
+	var jut := clampf(6.0 + n1 * 8.0 + n2 * 10.0 + n3 * 7.0, 1.2, 28.0)
+	var wobble := sin(world_xz.x * 0.21 + world_xz.y * 0.17 + seed) * 2.4
 	return Vector3(outward.x, 0.0, outward.y) * jut + Vector3(tangent.x, 0.0, tangent.y) * wobble
 
 
