@@ -1,7 +1,8 @@
 extends RefCounted
 
-## The Director: Scout Direction. The player chooses a bearing; the soldier
-## walks short legs, reveals on tile change, and comes home on his own.
+## The Director: Scout. Y / SCOUT sends a free patrol soldier into the nearest
+## fog; a map click can still pick a bearing. He reveals on tile change, can
+## be ambushed, and comes home on his own.
 
 const NAMES := ["Erik", "Sigrid", "Astrid", "Bjorn", "Ingrid", "Leif", "Tove", "Gunnar", "Kari", "Nils"]
 const DEPTH_LIMIT := 14

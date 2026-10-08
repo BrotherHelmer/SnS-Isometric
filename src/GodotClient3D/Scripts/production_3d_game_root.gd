@@ -505,22 +505,29 @@ func _handle_hud_hotkey(event: InputEventKey) -> bool:
 			_select_town_hall()
 			return true
 		KEY_Y:
-			if _begin_scout_aim():
+			if _order_selected_scout():
 				return true
 	return false
 
 
-func _begin_scout_aim() -> bool:
+func _order_selected_scout() -> bool:
+	# The Director: Y and the SCOUT button both send the selected guard into
+	# the nearest unexplored fog immediately. No aim-and-click step.
 	if simulation_host.simulation == null:
 		return false
 	var worker: Dictionary = simulation_host.simulation.get_worker_by_id(selected_worker_id) if selected_worker_id > 0 else {}
 	if worker.is_empty() or not simulation_host.simulation.is_patrol_scout(worker) or worker.has("scout_mission"):
 		_show_status("Select a free patrol soldier, then press Scout (Y).")
 		return false
-	scout_aiming = true
 	cancel_placement()
-	_show_status("Scout Direction — click into the fog. %s will walk there and return on his own." % String(worker.get("display_name", "The soldier")))
-	return true
+	scout_aiming = false
+	var result: Dictionary = simulation_host.simulation.request_scout_auto(selected_worker_id)
+	_show_command_result(result)
+	return bool(result.get("success", false))
+
+
+func _begin_scout_aim() -> bool:
+	return _order_selected_scout()
 
 
 func _commit_scout_click(screen_position: Vector2) -> void:
@@ -1571,9 +1578,9 @@ func _create_ui() -> void:
 	scout_button = Button.new()
 	scout_button.name = "ScoutDirection"
 	scout_button.text = "SCOUT (Y)"
-	scout_button.tooltip_text = "Scout Direction: click into the fog. The soldier walks short legs, reveals as he goes, and returns on his own."
+	scout_button.tooltip_text = "Send this soldier into the nearest fog. He reveals as he walks, can be ambushed, and returns on his own."
 	Identity.apply_button(scout_button)
-	scout_button.pressed.connect(_begin_scout_aim)
+	scout_button.pressed.connect(_order_selected_scout)
 	action_row.add_child(scout_button)
 	scout_button.visible = false
 	inspector_panel.visible = false
@@ -2759,6 +2766,10 @@ func _worker_player_status(raw_status: String) -> String:
 		return "Heading to shelter" if "going" in lower else "Resting in shelter"
 	if "work" in lower:
 		return "Working"
+	if "scout" in lower:
+		return "Scouting"
+	if "fight" in lower:
+		return "Fighting"
 	if "moving" in lower or "walk" in lower:
 		return "Travelling"
 	return raw_status.capitalize()

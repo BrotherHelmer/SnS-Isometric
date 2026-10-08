@@ -85,6 +85,11 @@ const VISION_BUILDING := 5
 const VISION_ROAD := 3
 const VISION_WORKER := 4
 const VISION_SOLDIER := 8
+# The Director: patrol soldiers leave the road to intercept hostiles and
+# defend yards under attack, then resume Night Patrol / Patrolling.
+const PATROL_AGGRO_RADIUS := 10
+const PATROL_DEFEND_RADIUS := 12
+const PATROL_MELEE_RADIUS := 2
 const TOWN_HALL_PROTECTION_RADIUS := 8.0
 const OUTPOST_PROTECTION_RADIUS := 5.0
 const TOWER_PROTECTION_RADIUS := 3.0
@@ -1591,6 +1596,38 @@ func request_scout_direction(worker_id: int, target_tile: Vector2i) -> Dictionar
 	_add_log(last_message)
 	_record_event("scout_order", last_message, {"worker_id": worker_id, "target": _vector_to_data(target_tile)})
 	return _success(last_message)
+
+
+func request_scout_auto(worker_id: int) -> Dictionary:
+	# The Director: Y and SCOUT send the selected free guard into the nearest
+	# unexplored fog. No second click. He reveals as he walks and can be killed.
+	var worker: Dictionary = _find_worker_by_id(worker_id)
+	if worker.is_empty() or not is_patrol_scout(worker):
+		return _failure("Scout", "Select a free patrol soldier to scout.")
+	if int(worker.get("assault_target_id", 0)) > 0:
+		return _failure("Scout", "That soldier is already on an assault.")
+	if worker.has("scout_mission"):
+		return _failure("Scout", "%s is already scouting." % Scout.display_name(worker, rng_seed))
+	var target := _nearest_scout_fog_tile(worker.get("position", _town_hall_entrance_tile()))
+	if not is_inside_map(target) or is_revealed(target):
+		return _failure("Scout", "No unexplored fog nearby.")
+	return request_scout_direction(worker_id, target)
+
+
+func _nearest_scout_fog_tile(origin: Vector2i) -> Vector2i:
+	var best := Vector2i(-1, -1)
+	var best_distance := 1000000
+	for y in range(map_size.y):
+		for x in range(map_size.x):
+			var tile := Vector2i(x, y)
+			if is_revealed(tile):
+				continue
+			var distance := _manhattan(origin, tile)
+			if distance <= 0 or distance >= best_distance:
+				continue
+			best = tile
+			best_distance = distance
+	return best
 
 
 func get_map_markers() -> Array:
@@ -4369,7 +4406,7 @@ func _update_patrol_worker(worker: Dictionary, delta: float) -> void:
 			worker["path"] = _find_worker_path(worker.position, _town_hall_entrance_tile())
 			worker["state"] = "Returning to town"
 			worker["arrival_state"] = "Patrolling"
-		elif not _find_enemy_for_guard(worker, 2).is_empty() or _outpost_distance(worker.position, target) <= 1:
+		elif not _find_enemy_for_guard(worker, PATROL_MELEE_RADIUS).is_empty() or _outpost_distance(worker.position, target) <= 1:
 			return
 		elif worker["path"].is_empty():
 			worker["activity_timer"] = float(worker.get("activity_timer", 0.0)) - delta
@@ -4381,6 +4418,10 @@ func _update_patrol_worker(worker: Dictionary, delta: float) -> void:
 			worker["state"] = "Marching to rival Outpost" if route.success else "Assault blocked — open a route"
 			worker["arrival_state"] = "Assaulting Outpost"
 			return
+	# The Director: Night Patrol must not override combat. Leave the road
+	# for any hostile in aggro range or a yard under attack, then resume.
+	if _pursue_patrol_threat(worker, delta):
+		return
 	if not worker["path"].is_empty():
 		_advance_production_worker(worker, delta)
 		return
@@ -4402,6 +4443,77 @@ func _update_patrol_worker(worker: Dictionary, delta: float) -> void:
 			worker["activity_timer"] = 1.2
 			return
 	worker["activity_timer"] = 1.0
+
+
+func _pursue_patrol_threat(worker: Dictionary, delta: float) -> bool:
+	var threat := _find_patrol_threat(worker)
+	if threat.is_empty():
+		return false
+	var dest: Vector2i = threat.get("position", worker.get("position", Vector2i.ZERO))
+	var close_enough := 1 if String(threat.get("kind", "")) == "enemy" else 2
+	if _manhattan(worker["position"], dest) <= close_enough:
+		worker["path"] = []
+		worker["state"] = "Fighting"
+		worker["arrival_state"] = "Fighting"
+		return true
+	if not worker["path"].is_empty():
+		var path_end: Vector2i = worker["path"][worker["path"].size() - 1]
+		if _manhattan(path_end, dest) <= 1:
+			_advance_production_worker(worker, delta)
+			worker["state"] = "Fighting"
+			worker["arrival_state"] = "Fighting"
+			return true
+	var path := _find_worker_path(worker["position"], dest)
+	if path.is_empty():
+		for neighbor in _neighbors(dest):
+			path = _find_worker_path(worker["position"], neighbor)
+			if not path.is_empty():
+				break
+	if path.is_empty():
+		return false
+	worker["path"] = path
+	worker["state"] = "Fighting"
+	worker["arrival_state"] = "Fighting"
+	_advance_production_worker(worker, delta)
+	return true
+
+
+func _find_patrol_threat(guard: Dictionary) -> Dictionary:
+	var enemy := _find_enemy_for_guard(guard, PATROL_AGGRO_RADIUS)
+	if not enemy.is_empty():
+		return {"kind": "enemy", "entity": enemy, "position": enemy.get("position", Vector2i.ZERO)}
+	var attacked_ids: Dictionary = {}
+	for hostile in enemies:
+		if int(hostile.get("hp", 0)) <= 0:
+			continue
+		if String(hostile.get("target_kind", "")) == "building" and int(hostile.get("target_id", 0)) > 0:
+			attacked_ids[int(hostile.get("target_id", 0))] = true
+	var best := {}
+	var best_distance := PATROL_DEFEND_RADIUS + 1
+	for building in buildings:
+		if bool(building.get("construction", false)):
+			continue
+		if String(building.get("type", "")) == Defs.BUILDING_ROAD:
+			continue
+		var building_id := int(building.get("id", 0))
+		var under_attack := float(building.get("damage_flash", 0.0)) > 0.0 or attacked_ids.has(building_id)
+		if not under_attack:
+			continue
+		var center: Vector2i = _footprint_center(building.get("position", Vector2i.ZERO), _building_footprint(building))
+		var distance := _tile_distance(guard.get("position", Vector2i.ZERO), center)
+		if distance > PATROL_DEFEND_RADIUS or distance >= best_distance:
+			continue
+		best_distance = distance
+		var dest := center
+		var access := _building_access_tiles(building)
+		if not access.is_empty():
+			dest = access[0]
+		else:
+			var perimeter := _footprint_perimeter(building.get("position", Vector2i.ZERO), _building_footprint(building))
+			if not perimeter.is_empty():
+				dest = perimeter[0]
+		best = {"kind": "building", "entity": building, "position": dest}
+	return best
 
 
 func _update_scout_worker(worker: Dictionary, delta: float) -> void:
@@ -4436,7 +4548,9 @@ func _scout_return_reason(worker: Dictionary) -> String:
 		return Scout.REASON_ENEMY
 	if int(central_inventory.get(Defs.RESOURCE_BREAD, 0)) <= 0:
 		return Scout.REASON_FOOD
-	if is_night or (not is_night and float(DAY_LENGTH_SECONDS) - float(phase_time) <= Scout.DUSK_RETURN_SECONDS):
+	# Dusk recall only. An explicit night scout (Y / SCOUT) stays out and
+	# can be ambushed; _send_workers_to_shelter still brings day scouts home.
+	if not is_night and float(DAY_LENGTH_SECONDS) - float(phase_time) <= Scout.DUSK_RETURN_SECONDS:
 		return Scout.REASON_DUSK
 	if _manhattan(worker["position"], home) >= int(mission.get("depth_limit", Scout.DEPTH_LIMIT)):
 		return Scout.REASON_DEPTH
@@ -6780,7 +6894,7 @@ func _update_patrol_combat(delta: float) -> void:
 					_emit_audio("attack")
 					_record_event("outpost_assault_hit", "A soldier struck the rival Outpost.", {"soldier_id": guard.id, "structure_id": target_outpost.id, "damage": GUARD_DAMAGE})
 				var target_enemy := _find_enemy_by_id(int(guard.get("combat_target_id", 0)))
-				if not target_enemy.is_empty() and _manhattan(guard["position"], target_enemy["position"]) <= 2:
+				if not target_enemy.is_empty() and _manhattan(guard["position"], target_enemy["position"]) <= PATROL_MELEE_RADIUS:
 					var dealt := _apply_enemy_incoming_damage(target_enemy, GUARD_DAMAGE)
 					target_enemy["hit_until"] = elapsed_seconds + 0.26
 					target_enemy["hit_direction"] = _vector_to_data(guard["position"])
@@ -6796,7 +6910,7 @@ func _update_patrol_combat(delta: float) -> void:
 			continue
 		if float(guard["attack_timer"]) > 0.0:
 			continue
-		var enemy := _find_enemy_for_guard(guard, 2)
+		var enemy := _find_enemy_for_guard(guard, PATROL_MELEE_RADIUS)
 		if enemy.is_empty():
 			var outpost := _assault_outpost(int(guard.get("assault_target_id", 0)))
 			if not outpost.is_empty() and _outpost_distance(guard.position, outpost) <= 1:
@@ -6808,7 +6922,7 @@ func _update_patrol_combat(delta: float) -> void:
 				guard["combat_target_position"] = _vector_to_data(outpost.position)
 				guard["state"] = "Fighting"
 				continue
-			if String(guard.get("state", "")) == "Fighting":
+			if String(guard.get("state", "")) == "Fighting" and _find_patrol_threat(guard).is_empty():
 				guard["state"] = "Night Watch" if is_night else "Patrolling"
 			continue
 		guard["attack_timer"] = 1.55
@@ -6827,11 +6941,23 @@ func _find_enemy_by_id(enemy_id: int) -> Dictionary:
 	return {}
 
 
+func _enemy_is_observable(tile: Vector2i) -> bool:
+	if is_revealed(tile):
+		return true
+	for y in range(-1, 2):
+		for x in range(-1, 2):
+			if x == 0 and y == 0:
+				continue
+			if is_revealed(tile + Vector2i(x, y)):
+				return true
+	return false
+
+
 func _find_enemy_for_guard(guard: Dictionary, radius: int) -> Dictionary:
 	var best := {}
 	var best_score := INF
 	for enemy in enemies:
-		if int(enemy.get("hp", 0)) <= 0 or not is_revealed(enemy.get("position", Vector2i.ZERO)):
+		if int(enemy.get("hp", 0)) <= 0 or not _enemy_is_observable(enemy.get("position", Vector2i.ZERO)):
 			continue
 		var distance := _tile_distance(guard.get("position", Vector2i.ZERO), enemy.get("position", Vector2i.ZERO))
 		if distance > radius:

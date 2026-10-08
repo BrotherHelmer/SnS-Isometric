@@ -13,6 +13,7 @@ var failures: Array[String] = []
 func _init() -> void:
 	_test_undefended()
 	_test_defended()
+	_test_night_patrol_hits_raider_before_farm()
 	print("T_RAID_COMBAT %s" % ("PASS" if failures.is_empty() else "FAIL"))
 	quit(0 if failures.is_empty() else 1)
 
@@ -69,6 +70,64 @@ func _test_defended() -> void:
 			destroyed += 1
 	_check(destroyed == 0 and int(sim.stats.get("buildings_destroyed", 0)) == 0, "defended raid destroys no building")
 	_check(sim._find_building_by_id(int(store.get("id", 0))).size() > 0, "Storehouse still stands after a defended raid")
+
+
+func _test_night_patrol_hits_raider_before_farm() -> void:
+	var sim: Simulation = Simulation.new(70, 70, 260821, false, true)
+	sim.day_count = 1
+	sim.is_night = true
+	sim.phase_time = 8.0
+	sim.central_inventory[Defs.RESOURCE_BREAD] = 20
+	sim._reveal_radius(sim.town_hall_position, 22)
+	sim._send_workers_to_shelter()
+	var farm_tile := sim.town_hall_position + Vector2i(8, 0)
+	for y in range(-2, 6):
+		for x in range(-2, 8):
+			sim._prepare_test_tile(farm_tile + Vector2i(x, y), Defs.TILE_GRASS)
+	var farm := sim._add_completed_building(Defs.BUILDING_FARM, farm_tile)
+	farm["connected"] = true
+	sim._rebuild_occupied_tiles()
+	sim.path_grid_dirty = true
+	sim._reveal_radius(farm_tile, 8)
+	sim._send_workers_to_shelter()
+	var guard: Dictionary = sim._create_patrol_worker(0, "night_patrol")
+	guard["position"] = farm_tile + Vector2i(2, 4)
+	guard["state"] = "Night Patrol"
+	guard["arrival_state"] = "Night Watch"
+	guard["path"] = [guard["position"] + Vector2i(0, 2), guard["position"] + Vector2i(-1, 3)]
+	sim.workers.append(guard)
+	sim._reveal_radius(guard["position"], 8)
+	var raider_tile := farm_tile + Vector2i(6, 4)
+	sim._prepare_test_tile(raider_tile, Defs.TILE_GRASS)
+	sim._reveal_radius(raider_tile, 3)
+	sim._spawn_enemy(raider_tile, 36, 4, 0.0, 0, sim.ENEMY_RAIDER, 0)
+	sim._begin_raid(1)
+	var farm_id := int(farm.get("id", 0))
+	var farm_hp_start := int(farm.get("hp", 0))
+	var raider_hp_start := int(sim.enemies[0].get("hp", 0))
+	var raider_hurt_first := false
+	var farm_hurt := false
+	var saw_fighting := false
+	for _tick in range(220):
+		sim.advance_tick()
+		var live_guard: Dictionary = sim.get_worker_by_id(int(guard.get("id", 0)))
+		if String(live_guard.get("state", "")) == "Fighting":
+			saw_fighting = true
+		var live_farm: Dictionary = sim._find_building_by_id(farm_id)
+		var live_raider: Dictionary = {} if sim.enemies.is_empty() else sim.enemies[0]
+		var farm_hp := 0 if live_farm.is_empty() else int(live_farm.get("hp", 0))
+		var raider_hp := 0 if live_raider.is_empty() else int(live_raider.get("hp", 0))
+		if raider_hp < raider_hp_start and farm_hp >= farm_hp_start:
+			raider_hurt_first = true
+			break
+		if farm_hp < farm_hp_start:
+			farm_hurt = true
+			break
+	print("RAID_NIGHT_PATROL fighting=%s raider_first=%s farm_hurt=%s hostiles=%d" % [
+		str(saw_fighting), str(raider_hurt_first), str(farm_hurt), sim.living_hostile_count()
+	])
+	_check(raider_hurt_first, "a night-patrol guard damages the raider before the farm is hit")
+	_check(saw_fighting or raider_hurt_first, "the night-patrol guard leaves Night Patrol to fight")
 
 
 func _yard(defended: bool) -> Simulation:
