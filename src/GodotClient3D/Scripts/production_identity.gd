@@ -40,8 +40,8 @@ const AUDIO_SETTINGS_PATH := "user://one_shard_audio.json"
 const PALETTE_NAVY := Color("#101A22")
 const PALETTE_NIGHT_TERRAIN := Color("#24383A")
 const PALETTE_FOREST := Color("#26372C")
-const PALETTE_MOSS := Color("#586746")
-const PALETTE_SUNLIT_GRASS := Color("#78815A")
+const PALETTE_MOSS := Color("#456038")
+const PALETTE_SUNLIT_GRASS := Color("#6A824E")
 const PALETTE_ROAD_CLAY := Color("#A88962")
 const PALETTE_DRY_EARTH := Color("#806347")
 const PALETTE_PLASTER := Color("#D6C6A4")
@@ -126,7 +126,7 @@ const LIGHTING := {
 		"terrain_lod_cheap": 0.0
 	},
 	"night": {
-		"ambient": 0.66,
+		"ambient": 0.74,
 		"ambient_color": PALETTE_NIGHT_TERRAIN,
 		"fog_density": 0.0006,
 		"fog_color": Color("#1C3034"),
@@ -140,18 +140,18 @@ const LIGHTING := {
 		"exposure": 1.0,
 		"brightness": 1.0,
 		"tonemap_white": 7.0,
-		"sun_energy": 0.48,
+		"sun_energy": 0.56,
 		"sun_color": PALETTE_MOON,
 		"sun_pitch": -48.0,
 		"sun_orbit": 300.0,
-		"fill_energy": 0.24,
+		"fill_energy": 0.32,
 		"fill_color": Color("#3A5058"),
 		"sky_top": PALETTE_NAVY,
 		"sky_horizon": PALETTE_NIGHT_TERRAIN,
 		"ground_bottom": PALETTE_NAVY,
 		"ground_horizon": PALETTE_NIGHT_TERRAIN,
-		"ground_tint": Color(0.90, 0.96, 1.02),
-		"ground_tint_floor": 0.10,
+		"ground_tint": Color(1.05, 1.10, 1.16),
+		"ground_tint_floor": 0.16,
 		"ground_wash_lo": 0.70,
 		"ground_wash_hi": 0.94,
 		"window_color": PALETTE_WINDOW,

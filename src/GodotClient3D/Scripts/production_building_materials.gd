@@ -1,8 +1,9 @@
 class_name ProductionBuildingMaterials
 extends RefCounted
 
-## GFX-07: roughness bands + instance hue/value + a cheap fresnel bevel.
-## Walks imported building meshes. Does not remodel.
+## GFX-07 roughness + GFX-B material remap.
+## Walks imported meshes. Does not remodel. Castle lifts toward pale
+## masonry and blue-grey slate; houses trade teal slate for terracotta.
 
 const BevelShader = preload("res://src/GodotClient3D/Shaders/settlement_bevel.gdshader")
 
@@ -15,14 +16,21 @@ const ROUGHNESS := {
 	"metal": 0.34,
 }
 
+const CASTLE_MASONRY := Color("#C8BAA0")
+const CASTLE_SLATE := Color("#3A4A58")
+const HALL_MASONRY := Color("#B8AC90")
+const HALL_SLATE := Color("#2E3A42")
+const CLAY_ROOF := Color("#8B5340")
+const KEEP_SLATE := Color("#3A4238")
+
 static var _bevel_by_kind: Dictionary = {}
 
 
-static func apply(root: Node, seed_id: int) -> void:
+static func apply(root: Node, seed_id: int, building_type: String = "") -> void:
 	if root == null:
 		return
 	var shift := _instance_shift(seed_id)
-	_walk(root, shift)
+	_walk(root, shift, building_type)
 
 
 static func classify(albedo: Color) -> String:
@@ -48,7 +56,32 @@ static func roughness_for(kind: String) -> float:
 	return float(ROUGHNESS.get(kind, 0.80))
 
 
-static func _walk(node: Node, shift: Vector3) -> void:
+# The Director: GFX-B cheap material north-star. Hue only — silhouettes stay.
+static func remap_albedo(kind: String, color: Color, building_type: String) -> Color:
+	var next := color
+	match building_type:
+		"CASTLE":
+			if kind == "plaster" or kind == "stone":
+				next = color.lerp(CASTLE_MASONRY, 0.42)
+			elif kind == "teal_roof":
+				next = color.lerp(CASTLE_SLATE, 0.62)
+		"TOWN_HALL":
+			if kind == "plaster" or kind == "stone":
+				next = color.lerp(HALL_MASONRY, 0.28)
+			elif kind == "teal_roof":
+				next = color.lerp(HALL_SLATE, 0.50)
+		"HOUSE", "FARM", "BAKERY":
+			if kind == "teal_roof":
+				next = color.lerp(CLAY_ROOF, 0.58)
+			elif kind == "plaster":
+				next = color.lerp(Color("#D6C6A4"), 0.18)
+		"WATCHTOWER", "BARRACKS":
+			if kind == "teal_roof":
+				next = color.lerp(KEEP_SLATE, 0.45)
+	return next
+
+
+static func _walk(node: Node, shift: Vector3, building_type: String) -> void:
 	if node is MeshInstance3D:
 		var instance := node as MeshInstance3D
 		if instance.mesh != null:
@@ -57,19 +90,19 @@ static func _walk(node: Node, shift: Vector3) -> void:
 				if original == null:
 					original = instance.mesh.surface_get_material(surface)
 				if original is StandardMaterial3D:
-					instance.set_surface_override_material(surface, _tune(original as StandardMaterial3D, shift))
+					instance.set_surface_override_material(surface, _tune(original as StandardMaterial3D, shift, building_type))
 		if instance.material_override is StandardMaterial3D:
-			instance.material_override = _tune(instance.material_override as StandardMaterial3D, shift)
+			instance.material_override = _tune(instance.material_override as StandardMaterial3D, shift, building_type)
 	for child in node.get_children():
-		_walk(child, shift)
+		_walk(child, shift, building_type)
 
 
-static func _tune(source: StandardMaterial3D, shift: Vector3) -> StandardMaterial3D:
+static func _tune(source: StandardMaterial3D, shift: Vector3, building_type: String) -> StandardMaterial3D:
 	var material := source.duplicate() as StandardMaterial3D
 	var kind := classify(material.albedo_color)
 	material.roughness = roughness_for(kind)
 	material.metallic = 0.42 if kind == "metal" else 0.0
-	var color := material.albedo_color
+	var color := remap_albedo(kind, material.albedo_color, building_type)
 	material.albedo_color = Color(
 		clampf(color.r * (1.0 + shift.x), 0.0, 1.0),
 		clampf(color.g * (1.0 + shift.y), 0.0, 1.0),
@@ -92,7 +125,7 @@ static func _bevel_material(kind: String) -> ShaderMaterial:
 			color = Color("#F0C090")
 			amount = 0.10
 		"teal_roof":
-			color = Color("#9BB8B0")
+			color = Color("#C4A080")
 			amount = 0.10
 		"timber":
 			color = Color("#C4A070")
