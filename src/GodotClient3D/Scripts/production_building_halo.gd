@@ -47,6 +47,8 @@ const TABLE := {
 		{"prop": "crate", "dx": -1, "dy": 2, "yaw": 8.0, "scale": 0.90},
 		{"prop": "garden", "dx": 3, "dy": 0, "yaw": 20.0, "scale": 0.95},
 		{"prop": "dirt_plot", "dx": 3, "dy": 1, "yaw": 8.0, "scale": 0.80},
+		{"prop": "cart", "dx": 3, "dy": 2, "yaw": -14.0, "scale": 0.68},
+		{"prop": "lantern", "dx": 1, "dy": -1, "yaw": 0.0, "scale": 0.95},
 	],
 	"QUARRY": [
 		{"prop": "stone_stack", "dx": -1, "dy": 1, "yaw": 10.0, "scale": 0.90},
@@ -64,6 +66,8 @@ const TABLE := {
 		{"prop": "wheelbarrow", "dx": 4, "dy": 3, "yaw": -20.0, "scale": 0.72},
 		{"prop": "dirt_plot", "dx": -1, "dy": 2, "yaw": 6.0, "scale": 0.90},
 		{"prop": "garden", "dx": 0, "dy": 2, "yaw": -12.0, "scale": 1.00},
+		{"prop": "cart", "dx": 4, "dy": 1, "yaw": 18.0, "scale": 0.70},
+		{"prop": "crate", "dx": 3, "dy": -1, "yaw": 8.0, "scale": 0.90},
 	],
 	"TOWN_HALL": [
 		{"prop": "cart", "dx": -1, "dy": 2, "yaw": 12.0, "scale": 0.78},
@@ -72,6 +76,9 @@ const TABLE := {
 		{"prop": "crate", "dx": -1, "dy": 1, "yaw": 8.0, "scale": 1.00},
 		{"prop": "lantern", "dx": 1, "dy": -1, "yaw": 0.0, "scale": 1.00},
 		{"prop": "crate", "dx": 2, "dy": -1, "yaw": 4.0, "scale": 0.95},
+		{"prop": "wood_stack", "dx": -1, "dy": 3, "yaw": 6.0, "scale": 0.82},
+		{"prop": "fence", "dx": 4, "dy": -1, "yaw": 0.0, "scale": 1.0},
+		{"prop": "fence", "dx": 5, "dy": -1, "yaw": 0.0, "scale": 1.0},
 	],
 	"CASTLE": [
 		{"prop": "weaponrack", "dx": -1, "dy": 1, "yaw": 90.0, "scale": 0.95},

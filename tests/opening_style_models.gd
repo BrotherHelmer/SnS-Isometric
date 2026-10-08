@@ -42,7 +42,7 @@ func run() -> void:
 			arms[Vector2i(roundi(part.position.x), roundi(part.position.z))] = true
 	check(arms.has(Vector2i(0, -1)) and arms.has(Vector2i(1, 0)) and arms.has(Vector2i(0, 1)) and arms.has(Vector2i(-1, 0)), "wall arms follow all four connection directions")
 	wall.queue_free()
-	for label in ["fir", "fir_tall", "spruce", "broadleaf", "oak", "birch", "fir_lod", "broadleaf_lod", "rocks", "fence", "lantern", "cart", "grass", "bush", "wheat"]:
+	for label in ["fir", "fir_tall", "spruce", "broadleaf", "oak", "birch", "fir_lod", "broadleaf_lod", "rocks", "fence", "lantern", "cart", "grass", "bush", "wheat", "flowers"]:
 		var packed := load("res://assets/settlement3d/runtime/opening_style/" + label + ".tscn") as PackedScene
 		var model := packed.instantiate()
 		check(model.get_child_count() == 1 and model.get_child(0) is MeshInstance3D, label + " single merged mesh compatible with nature instancing")

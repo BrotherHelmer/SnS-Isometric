@@ -3,10 +3,12 @@ extends Node3D
 
 const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_profile.gd")
 
-const CLOSE_ZOOM := 18.0
-const NORMAL_ZOOM := 38.0
+const CLOSE_ZOOM := 16.0
+const NORMAL_ZOOM := 26.0
 const STRATEGIC_ZOOM := 68.0
 const PREFERRED_YAW := -0.62
+# The Director: GFX-D default framing. 26 is ~32% closer than GFX-C's 38
+# so the founding meadow fills the camera instead of unused lawn.
 
 var camera: Camera3D
 var target_position := Vector3.ZERO
@@ -26,7 +28,7 @@ func _ready() -> void:
 	camera.size = NORMAL_ZOOM
 	camera.near = 0.2
 	camera.far = 8000.0
-	camera.position = Vector3(0.0, 38.0, 38.0)
+	camera.position = Vector3(0.0, 32.0, 32.0)
 	camera.current = true
 	add_child(camera)
 	camera.look_at(Vector3.ZERO, Vector3.UP)
