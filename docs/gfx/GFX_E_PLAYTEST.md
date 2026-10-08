@@ -105,7 +105,11 @@ software shots, and opening day is still one civic cottage.
 
 ### GPU_SHOTS
 
-A normal Windows export with `SNS_GFX_SHOTS=<dir>` (and
-`--user-data-dir` so APPDATA is untouched) writes the same cameras at
-1920×1080, pauses, and quits. See `docs/gfx/GPU_SHOTS.md`. That is the
-path for a 4070 GFX-E pass.
+A normal Windows export with `SNS_GFX_SHOTS=<dir>` writes the same
+cameras at 1920×1080, pauses, and quits. Godot ignores `--user-data-dir`;
+isolate `user://` with a temp `APPDATA` / `LOCALAPPDATA` (Windows) or
+`XDG_DATA_HOME` (Linux). Pass `--position -10000,-10000` so the window
+never appears. See `docs/gfx/GPU_SHOTS.md`. That is the path for a
+4070 GFX-E pass.
+
+CSV committed at `docs/gfx/gfx_e_playtest.csv`.

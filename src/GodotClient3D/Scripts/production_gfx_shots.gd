@@ -4,8 +4,9 @@ extends Node
 ## Active only when SNS_GFX_SHOTS=<dir> is set or --gfx-shots[=]<dir>
 ## is passed after `--`. Renders the GFX-D comparison cameras at 1920x1080,
 ## writes PNGs, and quits. Pauses the sim. Fog-edge is daytime.
-## Does not change default window chrome. Isolate user data with
-## --user-data-dir (see docs/gfx/GPU_SHOTS.md).
+## Parks the window off-screen from _init (before the first paint).
+## Isolate user:// with APPDATA/LOCALAPPDATA (Windows) or XDG_DATA_HOME
+## (Linux) — Godot ignores --user-data-dir. See docs/gfx/GPU_SHOTS.md.
 
 const Scene = preload("res://src/GodotClient3D/Scenes/production_3d.tscn")
 const Showcase = preload("res://src/GodotClient3D/Scripts/production_gfx_d_showcase.gd")
@@ -15,19 +16,42 @@ const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
 var dest := ""
 
 
+func _init() -> void:
+	# Window exists here, but the first frame has not painted. Park it
+	# before the export flashes on the 4070 desktop. Also honour
+	# --position if the user already shoved us off-screen.
+	if _resolve_dest() == "" and OS.get_environment("SNS_GFX_OFFSCREEN") == "":
+		return
+	_park_window_offscreen()
+
+
 func _ready() -> void:
 	dest = _resolve_dest()
 	if dest == "":
 		set_process(false)
 		return
 	DirAccess.make_dir_recursive_absolute(dest)
+	_park_window_offscreen()
+	print("GPU_SHOTS ready pos=%s screens=%d" % [str(DisplayServer.window_get_position(0)), DisplayServer.get_screen_count()])
+	_run.call_deferred()
+
+
+func _park_window_offscreen() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	# --position is applied by the engine before scripts; keep it if the
+	# window is already off the primary desktop. Otherwise park it.
+	var existing := DisplayServer.window_get_position(0)
+	if existing.x > -1000 or existing.y > -1000:
+		DisplayServer.window_set_position(Vector2i(-10000, -10000), 0)
+	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, true, 0)
+	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_NO_FOCUS, true, 0)
 	var win := get_window()
-	if DisplayServer.get_name() != "headless":
+	if win != null:
 		win.borderless = true
 		win.unresizable = true
 		win.position = Vector2i(-10000, -10000)
-	print("GPU_SHOTS ready pos=%s screens=%d" % [str(win.position), DisplayServer.get_screen_count()])
-	_run.call_deferred()
+		win.size = Vector2i(1920, 1080)
 
 
 func _resolve_dest() -> String:

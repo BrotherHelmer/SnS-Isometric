@@ -37,6 +37,15 @@ Master-volume change, no `.github/workflows` edits.
   code-referenced `res://` model paths so a stale catalog list cannot
   report `MISSING 0` while a clean export 404s those scenes.
 
+## Performance (4070 blocker)
+
+`5419e50` took ~8 s to start a new game and ~112 s for the first frame
+after the showcase village (GFX-D: <1 s / ~9 s). Road lookups and
+per-corner colour were O(buildings × tiles × 16). Terrain/grass updates
+are now batched: one lookup pass, one colour grid, occupation rebake
+without a collision remesh. See `docs/gfx/GFX_E_PERF.md` and
+`tests/t_gfx_e_perf.gd`.
+
 ## GPU shots
 
 See `docs/gfx/GPU_SHOTS.md`. Env `SNS_GFX_SHOTS=<dir>` on a normal

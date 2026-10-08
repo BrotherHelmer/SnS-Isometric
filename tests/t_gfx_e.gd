@@ -111,7 +111,11 @@ func _check_gpu_shots_script() -> void:
 	var fog_idx := shots.find("fog_edge")
 	var night_reset := shots.rfind("is_night = false", fog_idx)
 	_check(fog_idx > 0 and night_reset > 0 and night_reset < fog_idx, "fog_edge is forced to day")
+	_check(shots.contains("_park_window_offscreen") and shots.contains("func _init"), "GPU shots park the window from _init")
 	_check(not shots.contains("window/size/no_focus"), "GPU shots do not bake offscreen window defaults")
+	var docs := FileAccess.get_file_as_string("res://docs/gfx/GPU_SHOTS.md")
+	_check(docs.contains("APPDATA") and docs.contains("XDG_DATA_HOME"), "GPU_SHOTS.md isolates user:// via APPDATA / XDG")
+	_check(docs.contains("Godot **ignores** `--user-data-dir`") or docs.contains("Godot ignores `--user-data-dir`") or docs.contains("ignores `--user-data-dir`"), "GPU_SHOTS.md does not claim --user-data-dir isolates user://")
 
 
 func _check_live_scene() -> void:
@@ -144,6 +148,8 @@ func _check_live_scene() -> void:
 	_check(bool(showcase.get("ok", false)), "showcase stamps a village")
 	game._update_day_night_lighting()
 	game._sync_presentation()
+	_check(game.world_view.has_method("_rebake_terrain_occupation"), "terrain occupation is a batched rebake")
+	_check(game.world_view.has_method("_refresh_terrain_lookups"), "road lookups are cached for the frame")
 	game.queue_free()
 	await process_frame
 

@@ -128,6 +128,9 @@ var rival_activity_count := 0
 var presentation_paused := false
 var _terrain_yard_cache: Dictionary = {}
 var _terrain_occupied_cache: Dictionary = {}
+var _terrain_road_cache: Dictionary = {}
+var _terrain_color_grid: PackedColorArray = PackedColorArray()
+var _terrain_lookups_ready := false
 var _atmosphere_scale := 1.0
 var _ground_tint := Color(1.0, 1.0, 1.0)
 
@@ -203,6 +206,11 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 		halo_placements.clear()
 		last_revealed_count = -1
 		claim_overlay_signature = ""
+		_terrain_yard_cache.clear()
+		_terrain_occupied_cache.clear()
+		_terrain_road_cache.clear()
+		_terrain_color_grid = PackedColorArray()
+		_terrain_lookups_ready = false
 	simulation = simulation_value
 	map_size = Vector2i(world_snapshot.get("map_size", Vector2i.ZERO))
 	visual_seed = int(world_snapshot.get("seed", 1))
@@ -229,11 +237,20 @@ func bind_fog_overlay(_camera: Camera3D) -> void:
 
 
 func sync_frame(frame_snapshot: Dictionary) -> void:
+	# One lookup pass per frame. GFX-E corner averaging used to call
+	# _terrain_color ~16× per cell, and each call scanned every building
+	# for roads — that is the 8 s new-game / 112 s showcase first-frame.
+	_refresh_terrain_lookups()
 	var next_height_signature := _calculate_height_signature()
 	var next_occupation := _calculate_occupation_signature()
-	if next_height_signature != terrain_height_signature or next_occupation != terrain_occupation_signature:
+	if next_height_signature != terrain_height_signature:
 		_rebuild_terrain()
-	_sync_nature(false)
+	elif next_occupation != terrain_occupation_signature:
+		_rebake_terrain_occupation()
+	var revealed_count := int(frame_snapshot.get("revealed_count", simulation.revealed_tiles.size()))
+	var reveal_changed := revealed_count != last_revealed_count
+	# One nature rebuild even when both layout and FOW change (showcase).
+	_sync_nature(reveal_changed)
 	_sync_grass(false)
 	_sync_roads(frame_snapshot.get("roads", []))
 	_sync_buildings(frame_snapshot.get("buildings", []))
@@ -249,10 +266,8 @@ func sync_frame(frame_snapshot: Dictionary) -> void:
 	_update_shard_beacon(frame_snapshot.get("wyrdfall", {}))
 	_sync_wyrd_springs(frame_snapshot.get("wyrd_sites", []))
 	_sync_map_markers()
-	var revealed_count := int(frame_snapshot.get("revealed_count", simulation.revealed_tiles.size()))
-	if revealed_count != last_revealed_count:
+	if reveal_changed:
 		_sync_fog(false)
-		_sync_nature(true)
 		_rebuild_edge_forest(false)
 		_rebuild_world_rim(false)
 
@@ -505,22 +520,81 @@ func _named_root(root_name: String) -> Node3D:
 	return root
 
 
-func _rebuild_terrain() -> void:
-	if terrain_mesh_instance != null:
-		terrain_mesh_instance.queue_free()
-	if terrain_body != null:
-		terrain_body.queue_free()
+func _refresh_terrain_lookups() -> void:
+	# O(buildings + roads) once. _is_road_tile used to walk every building
+	# for every tile / corner sample.
 	_terrain_yard_cache = _yard_tiles(3)
 	_terrain_occupied_cache = _structure_tiles()
+	_terrain_road_cache.clear()
+	if simulation != null:
+		if simulation.connected_roads != null:
+			for key_value in simulation.connected_roads.keys():
+				_terrain_road_cache[String(key_value)] = true
+		for building_value in simulation.get_buildings():
+			var building: Dictionary = building_value
+			if String(building.get("type", "")) == Defs.BUILDING_ROAD:
+				_terrain_road_cache[_tile_key(Vector2i(building.get("position", Vector2i.ZERO)))] = true
+	_terrain_lookups_ready = true
+
+
+func _precompute_terrain_colors() -> void:
+	var count := map_size.x * map_size.y
+	_terrain_color_grid.resize(count)
+	for y in range(map_size.y):
+		for x in range(map_size.x):
+			_terrain_color_grid[y * map_size.x + x] = _compute_terrain_color(Vector2i(x, y))
+
+
+func _cached_terrain_color(tile: Vector2i) -> Color:
+	if map_size.x <= 0 or _terrain_color_grid.size() != map_size.x * map_size.y:
+		return _compute_terrain_color(tile)
+	if tile.x < 0 or tile.y < 0 or tile.x >= map_size.x or tile.y >= map_size.y:
+		return _compute_terrain_color(tile)
+	return _terrain_color_grid[tile.y * map_size.x + tile.x]
+
+
+func _rebuild_terrain() -> void:
+	_refresh_terrain_lookups()
+	_precompute_terrain_colors()
+	_commit_terrain_mesh(true)
+	_rebuild_beach_apron()
+
+
+func _rebake_terrain_occupation() -> void:
+	# Heights unchanged: recolor the slab, keep the picker collision.
+	# Showcase stamps 15 buildings + roads; a full remesh+concave rebuild
+	# after each occupation signature used to stall the first frame.
+	_refresh_terrain_lookups()
+	_precompute_terrain_colors()
+	_commit_terrain_mesh(false)
+
+
+func _commit_terrain_mesh(rebuild_collision: bool) -> void:
 	var surface := SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for y in range(map_size.y):
 		for x in range(map_size.x):
 			_add_terrain_cell(surface, Vector2i(x, y))
 	var mesh := surface.commit()
-	terrain_mesh_instance = MeshInstance3D.new()
-	terrain_mesh_instance.name = "ContinuousTerrain"
+	if terrain_mesh_instance == null or not is_instance_valid(terrain_mesh_instance):
+		if terrain_mesh_instance != null:
+			terrain_mesh_instance.queue_free()
+		terrain_mesh_instance = MeshInstance3D.new()
+		terrain_mesh_instance.name = "ContinuousTerrain"
+		terrain_mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_apply_ground_material(terrain_mesh_instance)
+		terrain_root.add_child(terrain_mesh_instance)
 	terrain_mesh_instance.mesh = mesh
+	if rebuild_collision:
+		_rebuild_terrain_collision(mesh)
+	# G1: the teal OuterWildernessFloor was the box-like void. Water + rim
+	# + horizon replace it. Unexplored still sits under #47 fog.
+	boundary_mist_material = null
+	terrain_height_signature = _calculate_height_signature()
+	terrain_occupation_signature = _calculate_occupation_signature()
+
+
+func _apply_ground_material(host: MeshInstance3D) -> void:
 	var material := ShaderMaterial.new()
 	material.shader = preload("res://src/GodotClient3D/Shaders/settlement_ground.gdshader")
 	material.set_shader_parameter("light_tint", Vector3(_ground_tint.r, _ground_tint.g, _ground_tint.b))
@@ -547,11 +621,12 @@ func _rebuild_terrain() -> void:
 	material.set_shader_parameter("beach_margin_metres", BEACH_MARGIN_METRES)
 	material.set_shader_parameter("coast_jut_metres", COAST_JUT_METRES)
 	material.set_shader_parameter("apron_mode", 0.0)
-	terrain_mesh_instance.material_override = material
-	# Self-shadow on the playable slab plus PSSM 2-split painted a moving
-	# diagonal seam. Buildings still cast onto the ground.
-	terrain_mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	terrain_root.add_child(terrain_mesh_instance)
+	host.material_override = material
+
+
+func _rebuild_terrain_collision(mesh: Mesh) -> void:
+	if terrain_body != null and is_instance_valid(terrain_body):
+		terrain_body.queue_free()
 	terrain_body = StaticBody3D.new()
 	terrain_body.name = "TerrainPicker"
 	terrain_body.set_meta("selection_kind", "terrain")
@@ -561,12 +636,6 @@ func _rebuild_terrain() -> void:
 	collision.shape = shape
 	terrain_body.add_child(collision)
 	terrain_root.add_child(terrain_body)
-	# G1: the teal OuterWildernessFloor was the box-like void. Water + rim
-	# + horizon replace it. Unexplored still sits under #47 fog.
-	boundary_mist_material = null
-	terrain_height_signature = _calculate_height_signature()
-	terrain_occupation_signature = _calculate_occupation_signature()
-	_rebuild_beach_apron()
 
 
 func _add_terrain_cell(surface: SurfaceTool, tile: Vector2i) -> void:
@@ -588,7 +657,7 @@ func _add_terrain_cell(surface: SurfaceTool, tile: Vector2i) -> void:
 		_corner_terrain_color(tile, Vector2i(0, 1)),
 	]
 	_add_quad_colored(surface, corners[0], corners[1], corners[2], corners[3], Vector3.UP, corner_colors[0], corner_colors[1], corner_colors[2], corner_colors[3])
-	var color := _terrain_color(tile)
+	var color := _cached_terrain_color(tile)
 	var directions: Array[Vector2i] = [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]
 	for direction_index in directions.size():
 		var neighbor: Vector2i = tile + directions[direction_index]
@@ -634,14 +703,18 @@ func _corner_terrain_color(tile: Vector2i, corner: Vector2i) -> Color:
 		for ox in [corner.x - 1, corner.x]:
 			var sample := tile + Vector2i(ox, oy)
 			if simulation != null and simulation.is_inside_map(sample):
-				acc += _terrain_color(sample)
+				acc += _cached_terrain_color(sample)
 				count += 1
 	if count <= 0:
-		return _terrain_color(tile)
+		return _cached_terrain_color(tile)
 	return acc / float(count)
 
 
 func _terrain_color(tile: Vector2i) -> Color:
+	return _cached_terrain_color(tile)
+
+
+func _compute_terrain_color(tile: Vector2i) -> Color:
 	var tree_weight := 0
 	var rock_weight := 0
 	for oy in range(-2, 3):
@@ -716,6 +789,8 @@ func _visual_path_weight(tile: Vector2i) -> float:
 
 
 func _is_road_tile(tile: Vector2i) -> bool:
+	if _terrain_lookups_ready:
+		return _terrain_road_cache.has(_tile_key(tile))
 	if simulation == null:
 		return false
 	if simulation.connected_roads.has(_tile_key(tile)):
@@ -869,6 +944,7 @@ func _sync_grass(force: bool) -> void:
 func _rebuild_grass_multimeshes() -> void:
 	if grass_root == null or simulation == null:
 		return
+	_refresh_terrain_lookups()
 	for child in grass_root.get_children():
 		grass_root.remove_child(child)
 		child.free()
