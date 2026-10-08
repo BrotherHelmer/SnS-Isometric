@@ -30,8 +30,8 @@ const HORIZON_RADIUS_METRES := 420.0
 const FOG_VOLUME_HEIGHT_METRES := 56.0
 const FOG_VOLUME_CENTER_Y := 18.0
 const FOG_DISPLAY_UPSAMPLE := 8
-const FOG_UNKNOWN_BASE := Vector3(0.090, 0.145, 0.176) # #17252D
-const FOG_MIST_BASE := Vector3(0.251, 0.329, 0.353) # #40545A
+const FOG_UNKNOWN_BASE := Vector3(0.090, 0.149, 0.165) # #17262A
+const FOG_MIST_BASE := Vector3(0.255, 0.333, 0.294) # #41554B
 
 var simulation
 var map_size := Vector2i.ZERO
@@ -227,6 +227,7 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 	_sync_grass(true)
 	_sync_fog(true)
 	_rebuild_edge_forest(true)
+	_rebuild_opening_dressing()
 	_rebuild_building_halos(true)
 	_create_shard_marker()
 
@@ -601,23 +602,26 @@ func _apply_ground_material(host: MeshInstance3D) -> void:
 	material.set_shader_parameter("tint_floor", 0.0)
 	# The Director: GFX-E meadow. Calm greens, world-space scales.
 	# Vertex colour is occupation only — no per-tile hue checkerboard.
-	material.set_shader_parameter("grass_sunlit", Vector3(0.510, 0.580, 0.365))
-	material.set_shader_parameter("grass_moss", Vector3(0.271, 0.373, 0.235))
-	material.set_shader_parameter("macro_metres", 18.0)
-	material.set_shader_parameter("patch_metres", 8.0)
-	material.set_shader_parameter("detail_metres", 0.85)
-	material.set_shader_parameter("macro_amount", 0.14)
-	material.set_shader_parameter("detail_amount", 0.045)
-	material.set_shader_parameter("dirt_amount", 0.22)
-	material.set_shader_parameter("flower_amount", 0.16)
-	material.set_shader_parameter("meadow_lush", Vector3(0.396, 0.478, 0.286))
-	material.set_shader_parameter("meadow_warm", Vector3(0.396, 0.455, 0.275))
-	material.set_shader_parameter("forest_floor", Vector3(0.243, 0.314, 0.227))
-	material.set_shader_parameter("dirt_color", Vector3(0.522, 0.416, 0.298))
-	material.set_shader_parameter("road_earth", Vector3(0.639, 0.525, 0.373))
+	material.set_shader_parameter("grass_sunlit", Vector3(0.447, 0.533, 0.302))
+	material.set_shader_parameter("grass_moss", Vector3(0.204, 0.302, 0.208))
+	material.set_shader_parameter("macro_metres", 16.0)
+	material.set_shader_parameter("patch_metres", 6.5)
+	material.set_shader_parameter("detail_metres", 1.10)
+	material.set_shader_parameter("macro_amount", 0.20)
+	material.set_shader_parameter("detail_amount", 0.070)
+	material.set_shader_parameter("dirt_amount", 0.34)
+	material.set_shader_parameter("flower_amount", 0.22)
+	material.set_shader_parameter("meadow_lush", Vector3(0.325, 0.420, 0.243))
+	material.set_shader_parameter("meadow_warm", Vector3(0.290, 0.384, 0.220))
+	material.set_shader_parameter("forest_floor", Vector3(0.188, 0.278, 0.208))
+	material.set_shader_parameter("dirt_color", Vector3(0.573, 0.443, 0.306))
+	material.set_shader_parameter("road_earth", Vector3(0.690, 0.573, 0.408))
 	material.set_shader_parameter("gravel_color", Vector3(0.522, 0.514, 0.451))
 	material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
 	material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
+	material.set_shader_parameter("beach_color", Vector3(0.204, 0.255, 0.216))
+	material.set_shader_parameter("rock_shore", Vector3(0.173, 0.196, 0.188))
+	material.set_shader_parameter("wet_sand", Vector3(0.145, 0.165, 0.157))
 	material.set_shader_parameter("beach_margin_metres", BEACH_MARGIN_METRES)
 	material.set_shader_parameter("coast_jut_metres", COAST_JUT_METRES)
 	material.set_shader_parameter("apron_mode", 0.0)
@@ -727,28 +731,27 @@ func _compute_terrain_color(tile: Vector2i) -> Color:
 			if tile_type == Defs.TILE_ROCK: rock_weight += 1
 	# Occupation only. Meadow hue lives in the world-space shader so a
 	# per-tile hash cannot reprint diagonal squares.
-	var base := Color(0.396, 0.478, 0.286, 0.0)
+	var base := Color(0.325, 0.420, 0.243, 0.0)
 	var litter := clampf(float(tree_weight) / 16.0, 0.0, 0.70)
 	if litter > 0.12:
-		base = base.lerp(Color(0.243, 0.314, 0.227, 0.28), litter * 0.55)
+		base = base.lerp(Color(0.188, 0.278, 0.208, 0.32), litter * 0.65)
 	var scree := clampf(float(rock_weight) / 16.0, 0.0, 0.55)
 	if scree > 0.12:
 		base = base.lerp(Color(0.522, 0.514, 0.451, 0.32), scree * 0.50)
 	var edge := mini(mini(tile.x, tile.y), mini(map_size.x - 1 - tile.x, map_size.y - 1 - tile.y))
 	if edge <= 1:
-		base = base.lerp(Color(0.620, 0.520, 0.380, 0.20) if rock_weight < 3 else Color(0.416, 0.376, 0.329, 0.24), 0.16)
+		base = base.lerp(Color(0.145, 0.196, 0.176, 0.20) if rock_weight < 3 else Color(0.416, 0.376, 0.329, 0.24), 0.22)
 	var path_w := _visual_path_weight(tile)
 	if path_w > 0.08:
-		base = base.lerp(Color(0.639, 0.525, 0.373, 0.55), clampf(path_w * 0.70, 0.0, 0.70))
+		base = base.lerp(Color(0.573, 0.443, 0.306, 0.62), clampf(path_w * 0.78, 0.0, 0.78))
 	if _is_road_tile(tile):
-		base = Color(0.639, 0.525, 0.373, 0.78)
+		base = Color(0.690, 0.573, 0.408, 0.82)
 	elif _is_road_shoulder(tile):
-		base = base.lerp(Color(0.522, 0.416, 0.298, 0.42), 0.55)
+		base = base.lerp(Color(0.573, 0.443, 0.306, 0.48), 0.60)
 	if _terrain_occupied_cache.has(_tile_key(tile)):
-		# Soft worn earth — not a dark board-game rectangle.
-		base = base.lerp(Color(0.522, 0.416, 0.298, 0.48), 0.58)
+		base = base.lerp(Color(0.573, 0.443, 0.306, 0.50), 0.58)
 	elif _terrain_yard_cache.has(_tile_key(tile)):
-		base = base.lerp(Color(0.522, 0.416, 0.298, 0.22), 0.32)
+		base = base.lerp(Color(0.573, 0.443, 0.306, 0.26), 0.36)
 	if String(simulation.get_tile(tile)) == Defs.TILE_SHARD:
 		base = Color(0.275, 0.349, 0.388, 0.40)
 	var impact := 0.0
@@ -971,21 +974,21 @@ func _rebuild_grass_multimeshes() -> void:
 			var path_w := _visual_path_weight(tile)
 			if path_w > 0.45:
 				continue
-			# GFX-E: fewer, larger clumps. Tiny dark strokes read as ants.
-			var patch := _tile_hash(tile, 19) % 7
+			# GFX-F: medium-scale clumps (~3–12 px at zoom 26). More of them.
+			var patch := _tile_hash(tile, 19) % 5
 			var tufts := 0
-			if (meadow > 0.22 or near_yard) and patch <= 1:
-				tufts = 1
-			elif forest_edge >= 2 and _tile_hash(tile, 23) % 6 == 0:
+			if (meadow > 0.16 or near_yard) and patch <= 2:
+				tufts = 2 if meadow > 0.40 else 1
+			elif forest_edge >= 2 and _tile_hash(tile, 23) % 4 == 0:
 				tufts = 1
 			if tufts == 0:
-				if meadow > 0.34 and _tile_hash(tile, 47) % 8 == 0 and Catalog.FLOWERS.size() > 0:
+				if meadow > 0.28 and _tile_hash(tile, 47) % 6 == 0 and Catalog.FLOWERS.size() > 0:
 					var lone_flower := String(Catalog.FLOWERS[_tile_hash(tile, 61) % Catalog.FLOWERS.size()])
-					_append_nature_transform(transforms_by_path, lone_flower, tile, 4, 0.55, 1.05, 0.35)
+					_append_nature_transform(transforms_by_path, lone_flower, tile, 4, 0.70, 1.15, 0.40)
 				continue
 			for index in tufts:
 				var grass_path := String(Catalog.GRASS[_tile_hash(tile, 83 + index) % Catalog.GRASS.size()])
-				_append_nature_transform(transforms_by_path, grass_path, tile, index, 0.70, 0.85, 0.55)
+				_append_nature_transform(transforms_by_path, grass_path, tile, index, 0.85, 1.25, 0.70)
 			if meadow > 0.26 and _tile_hash(tile, 47) % 7 == 0 and Catalog.FLOWERS.size() > 0:
 				var flower_path := String(Catalog.FLOWERS[_tile_hash(tile, 61) % Catalog.FLOWERS.size()])
 				_append_nature_transform(transforms_by_path, flower_path, tile, 4, 0.55, 1.00, 0.40)
@@ -1185,11 +1188,11 @@ func _grass_clump_mesh() -> ArrayMesh:
 	# GFX-E: 4 broad tapered leaves. Strategy-cam silhouette, not ant strokes.
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var colors := [Color("#587545"), Color("#78965A"), Color("#405C37"), Color("#6A8A50")]
+	var colors := [Color("#4A6A3C"), Color("#7A9658"), Color("#2E462C"), Color("#6A8A50")]
 	for i in 4:
 		var yaw := float(i) * 0.85 + 0.2
-		var h := 0.20 + float(i % 3) * 0.05
-		var w := 0.11 + float(i % 2) * 0.03
+		var h := 0.42 + float(i % 3) * 0.10
+		var w := 0.20 + float(i % 2) * 0.06
 		var ox := cos(yaw) * 0.08
 		var oz := sin(yaw) * 0.08
 		var tip := Vector3(ox, h, oz)
@@ -2002,7 +2005,7 @@ func _ensure_fog_volume() -> void:
 	# pan cannot look through unknown padding onto the settlement. Camera pan is
 	# clamped to revealed land so the isometric view cannot fill with fog.
 	var map_span := Vector2(map_size) * ScaleProfile.LOGICAL_CELL_METRES
-	var cover := Vector2(map_span.x + 160.0, map_span.y + 160.0)
+	var cover := Vector2(map_span.x + 720.0, map_span.y + 720.0)
 	var center := ScaleProfile.tile_to_flat_world(Vector2(map_size - Vector2i.ONE) * 0.5, map_size)
 	if fog_plane == null:
 		fog_plane = MeshInstance3D.new()
@@ -2031,7 +2034,7 @@ func _ensure_fog_skirts() -> void:
 			fog_skirts.append(skirt)
 	var skirt_material := StandardMaterial3D.new()
 	skirt_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	skirt_material.albedo_color = Color("#1a3330")
+	skirt_material.albedo_color = Color("#17262A")
 	skirt_material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	var min_xz := _fog_world_min_xz()
 	var size_xz := _fog_world_size_xz()
@@ -2054,7 +2057,7 @@ func _ensure_fog_skirts() -> void:
 		skirt.material_override = skirt_material
 		skirt.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		skirt.extra_cull_margin = 24.0
-		skirt.visible = false
+		skirt.visible = true
 
 
 func _hide_fog_screen() -> void:
@@ -2296,9 +2299,10 @@ func _rebuild_water() -> void:
 	water_material.set_shader_parameter("coast_jut_metres", COAST_JUT_METRES)
 	water_material.set_shader_parameter("fade_start", 70.0)
 	water_material.set_shader_parameter("fade_end", 380.0)
-	water_material.set_shader_parameter("horizon_color", Vector3(0.145, 0.250, 0.265))
-	water_material.set_shader_parameter("deep_color", Vector3(0.10, 0.34, 0.36))
-	water_material.set_shader_parameter("shallow_color", Vector3(0.16, 0.46, 0.42))
+	water_material.set_shader_parameter("horizon_color", Vector3(0.090, 0.149, 0.165))
+	water_material.set_shader_parameter("deep_color", Vector3(0.07, 0.14, 0.16))
+	water_material.set_shader_parameter("shallow_color", Vector3(0.10, 0.20, 0.20))
+	water_material.set_shader_parameter("foam_color", Vector3(0.28, 0.34, 0.32))
 	water_mesh_instance.material_override = water_material
 	water_root.add_child(water_mesh_instance)
 
@@ -2393,10 +2397,15 @@ func _rebuild_beach_apron() -> void:
 	material.set_shader_parameter("detail_metres", 0.85)
 	material.set_shader_parameter("macro_amount", 0.12)
 	material.set_shader_parameter("detail_amount", 0.045)
-	material.set_shader_parameter("dirt_amount", 0.18)
-	material.set_shader_parameter("grass_sunlit", Vector3(0.510, 0.580, 0.365))
-	material.set_shader_parameter("grass_moss", Vector3(0.271, 0.373, 0.235))
-	material.set_shader_parameter("meadow_lush", Vector3(0.396, 0.478, 0.286))
+	material.set_shader_parameter("dirt_amount", 0.28)
+	material.set_shader_parameter("grass_sunlit", Vector3(0.325, 0.396, 0.255))
+	material.set_shader_parameter("grass_moss", Vector3(0.145, 0.196, 0.165))
+	material.set_shader_parameter("meadow_lush", Vector3(0.204, 0.278, 0.196))
+	material.set_shader_parameter("meadow_warm", Vector3(0.176, 0.227, 0.176))
+	material.set_shader_parameter("forest_floor", Vector3(0.125, 0.176, 0.157))
+	material.set_shader_parameter("beach_color", Vector3(0.173, 0.208, 0.188))
+	material.set_shader_parameter("rock_shore", Vector3(0.145, 0.165, 0.157))
+	material.set_shader_parameter("wet_sand", Vector3(0.110, 0.133, 0.129))
 	material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
 	material.set_shader_parameter("world_size_xz", size_xz)
 	material.set_shader_parameter("beach_margin_metres", BEACH_MARGIN_METRES)
@@ -2520,7 +2529,7 @@ func _rebuild_horizon() -> void:
 			hill.extra_cull_margin = 180.0
 			var material := StandardMaterial3D.new()
 			material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-			var tone := Color("#3A4A42") if hill_index % 3 != 0 else Color("#354048")
+			var tone := Color("#17262A") if hill_index % 3 != 0 else Color("#1A2A2E")
 			material.albedo_color = tone * clampf(_atmosphere_scale, 0.45, 1.0)
 			hill.material_override = material
 			horizon_root.add_child(hill)
@@ -2599,6 +2608,55 @@ func _edge_tree_path(x: int, y: int, ring: int) -> String:
 	if n <= 0:
 		return String(Catalog.TREES[0])
 	return String(Catalog.EDGE_TREES[_tile_hash(Vector2i(x, y), 17 + ring) % n])
+
+
+func _rebuild_opening_dressing() -> void:
+	# Presentation-only wilderness frame around the founding hall. Does
+	# not consume TILE_GRASS or change simulation placement. The hall
+	# stays in a playable clearing; forest, a rock landmark and a worn
+	# approach path are camera dressing only.
+	if simulation == null or resource_visuals_root == null:
+		return
+	if not simulation.is_town_hall_founded():
+		return
+	var leftover := resource_visuals_root.get_node_or_null("OpeningDress")
+	if leftover != null:
+		leftover.queue_free()
+	var host := Node3D.new()
+	host.name = "OpeningDress"
+	resource_visuals_root.add_child(host)
+	var hall: Vector2i = simulation.town_hall_position
+	var transforms_by_path: Dictionary = {}
+	for oy in range(-16, 17):
+		for ox in range(-16, 17):
+			var tile := hall + Vector2i(ox, oy)
+			if not simulation.is_inside_map(tile):
+				continue
+			if String(simulation.get_tile(tile)) != Defs.TILE_GRASS:
+				continue
+			if _terrain_occupied_cache.has(_tile_key(tile)) or _is_road_tile(tile):
+				continue
+			if _visual_path_weight(tile) > 0.28:
+				continue
+			var dist := Vector2(float(ox), float(oy)).length()
+			if dist < 6.4 or dist > 15.0:
+				continue
+			# Heavier woodland on the camera-back / upper-left so the
+			# opening is a clearing in a forest, not a hall on a lawn.
+			var forest_bias := float(-ox) * 0.42 + float(-oy) * 0.28
+			var keep := 32 + int(forest_bias * 16.0)
+			if dist > 11.0:
+				keep += 18
+			if _tile_hash(tile, 77) % 100 > clampi(keep, 18, 88):
+				continue
+			var rock_landmark := ox >= 4 and oy >= 2 and ox <= 9 and oy <= 8
+			if rock_landmark and Catalog.ROCKS.size() > 0 and _tile_hash(tile, 81) % 3 != 0:
+				_append_nature_transform(transforms_by_path, String(Catalog.ROCKS[_tile_hash(tile, 83) % Catalog.ROCKS.size()]), tile, 3, 0.70, 0.85, 0.40)
+			elif _tile_hash(tile, 81) % 9 == 0 and Catalog.ROCKS.size() > 0:
+				_append_nature_transform(transforms_by_path, String(Catalog.ROCKS[_tile_hash(tile, 83) % Catalog.ROCKS.size()]), tile, 3, 0.55, 0.72, 0.28)
+			else:
+				_append_nature_transform(transforms_by_path, _tree_path_for_tile(tile, 0, 3), tile, 0, 0.70, 1.05, 0.42)
+	_spawn_nature_multimeshes(host, transforms_by_path)
 
 
 func _tree_path_for_tile(tile: Vector2i, index: int, neighbors: int) -> String:

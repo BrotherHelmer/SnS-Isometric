@@ -1,0 +1,7 @@
+elapsed,day,night,event,detail,wait_ms,frame_ms
+1.7,1,0,showcase_day,"15-building Filmic 0.78 / sat 1.10 benchmark",5391.72,364.656
+3.3,1,0,showcase_wide,"showcase at a concept-like establishing angle",4295.70,383.895
+1.7,1,0,opening_day,"normal opening day at the closer default zoom",4325.66,342.046
+3.3,1,0,scout_day,"guard scouting toward the west fog",6144.01,311.283
+4.9,1,1,night_raid,"night raid banner + raiders",3454.69,304.646
+6.5,1,0,fog_edge,"strategic zoom at the unknown edge (day)",3790.90,326.978

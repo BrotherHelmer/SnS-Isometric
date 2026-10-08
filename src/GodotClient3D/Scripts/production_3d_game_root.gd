@@ -730,20 +730,19 @@ func _create_lighting() -> void:
 	sky.sky_material = sky_material_value
 	environment.sky = sky
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color("#899DAA")
-	environment.ambient_light_energy = 0.45
-	# The Director: GFX-E Filmic. Neutral grade; warmth is the key only.
+	environment.ambient_light_color = Color("#8799AA")
+	environment.ambient_light_energy = 0.25
+	# The Director: GFX-F Filmic. Stronger key vs ambient; Filmic white 6.
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	environment.tonemap_exposure = 0.90
-	environment.tonemap_white = 7.4
+	environment.tonemap_exposure = 0.78
+	environment.tonemap_white = 6.0
 	environment.ssao_enabled = bool(quality_profile.get("ssao", quality_profile.get("shadows", true)))
-	# Foundations / timber only. ChatGPT GFX-E SSAO starting values.
-	environment.ssao_radius = 0.80
-	environment.ssao_intensity = 1.25
-	environment.ssao_power = 1.40
+	environment.ssao_radius = 0.75
+	environment.ssao_intensity = 1.50
+	environment.ssao_power = 1.50
 	environment.ssao_detail = 0.50
 	environment.ssao_horizon = 0.06
-	environment.ssao_sharpness = 0.35
+	environment.ssao_sharpness = 0.98
 	environment.ssao_light_affect = 0.10
 	environment.ssao_ao_channel_affect = 0.55
 	environment.ssil_enabled = bool(quality_profile.get("ssil", false))
@@ -764,8 +763,8 @@ func _create_lighting() -> void:
 	environment.set("glow_levels/6", 0.0)
 	environment.set("glow_levels/7", 0.0)
 	environment.adjustment_enabled = true
-	environment.adjustment_saturation = 0.95
-	environment.adjustment_contrast = 1.04
+	environment.adjustment_saturation = 1.10
+	environment.adjustment_contrast = 1.08
 	environment.adjustment_brightness = 1.0
 	environment.adjustment_color_correction = Identity.grade_lut_for("day")
 	environment.fog_enabled = true
@@ -3867,10 +3866,11 @@ func _apply_quality_features() -> void:
 	# The Director: night drops SSAO. Very-Low still left lavapipe 1 ms
 	# over the +15% GFX-1 guard; windows/moon carry night form instead.
 	environment_resource.ssao_enabled = want_ssao and not night
-	environment_resource.ssao_radius = 0.80
-	environment_resource.ssao_intensity = 1.25
+	environment_resource.ssao_radius = 0.75
+	environment_resource.ssao_intensity = 1.50
+	environment_resource.ssao_power = 1.50
 	environment_resource.ssao_detail = 0.50
-	environment_resource.ssao_sharpness = 0.35
+	environment_resource.ssao_sharpness = 0.98
 	environment_resource.ssao_light_affect = 0.10
 	var high_ssao := String(quality_profile.get("name", "recommended")) == "high"
 	RenderingServer.environment_set_ssao_quality(
@@ -3898,14 +3898,18 @@ func _apply_sun_shadow_settings(light: DirectionalLight3D) -> void:
 		light.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 	var high := String(quality_profile.get("name", "recommended")) == "high"
 	light.directional_shadow_blend_splits = high
-	light.directional_shadow_split_1 = 0.82
-	light.directional_shadow_max_distance = float(quality_profile.get("shadow_distance", 48.0))
-	light.directional_shadow_fade_start = 0.80
+	# Near cascade owns the settlement so Town Hall shadows stay sharp.
+	light.directional_shadow_split_1 = 0.14
+	light.directional_shadow_split_2 = 0.32
+	light.directional_shadow_split_3 = 0.58
+	light.directional_shadow_max_distance = float(quality_profile.get("shadow_distance", 56.0))
+	light.directional_shadow_fade_start = 0.85
 	light.directional_shadow_pancake_size = 4.0
-	light.shadow_bias = 0.04
+	light.shadow_bias = 0.06
 	light.shadow_normal_bias = 1.0
-	light.shadow_blur = float(quality_profile.get("shadow_blur", 1.0))
+	light.shadow_blur = float(quality_profile.get("shadow_blur", 0.8))
 	light.shadow_opacity = 1.0
+	light.light_angular_distance = 0.0
 	if RenderingServer.has_method("directional_shadow_atlas_set_size"):
 		RenderingServer.call("directional_shadow_atlas_set_size", 4096 if high else 2048, true)
 
