@@ -9,15 +9,15 @@ uniform vec3 light_tint : source_color = vec3(1.0);
 uniform float tint_floor = 0.0;
 uniform float tint_wash_lo = 0.70;
 uniform float tint_wash_hi = 0.94;
-uniform vec3 grass_sunlit : source_color = vec3(0.416, 0.510, 0.306); // #6A824E
-uniform vec3 grass_moss : source_color = vec3(0.271, 0.376, 0.220); // #456038
+uniform vec3 grass_sunlit : source_color = vec3(0.353, 0.545, 0.267); // #5A8B44
+uniform vec3 grass_moss : source_color = vec3(0.227, 0.408, 0.251); // #3A6840
 uniform vec3 dirt_color : source_color = vec3(0.502, 0.388, 0.278); // #806347
-uniform vec3 meadow_lush : source_color = vec3(0.360, 0.470, 0.275);
+uniform vec3 meadow_lush : source_color = vec3(0.310, 0.500, 0.255);
 uniform float macro_metres = 14.0;
 uniform float detail_metres = 1.2;
-uniform float macro_amount = 0.12;
-uniform float detail_amount = 0.052;
-uniform float dirt_amount = 0.36;
+uniform float macro_amount = 0.16;
+uniform float detail_amount = 0.064;
+uniform float dirt_amount = 0.30;
 // 1 at night / distant LOD: one-octave noise, no 4-tap detail normals.
 uniform float lod_cheap = 0.0;
 // G1: same noisy waterline as settlement_water.gdshader.
@@ -96,7 +96,7 @@ void fragment() {
 	vec3 grass = mix(grass_moss, grass_sunlit, clamp(macro * 0.7 + detail * 0.3, 0.0, 1.0));
 	// GFX-B: cheap meadow patches so far zoom is not one khaki oval.
 	float meadow = lod_cheap > 0.5 ? macro : noise2(world_pos.xz / 22.0 + vec2(3.1, 9.7));
-	grass = mix(grass, meadow_lush, smoothstep(0.58, 0.86, meadow) * 0.22);
+	grass = mix(grass, meadow_lush, smoothstep(0.52, 0.84, meadow) * 0.34);
 	// Vertex colour used to dominate (0.38), so the two-scale layer read as a
 	// flat board from the strategy camera. Prefer authored grass; keep dirt
 	// scarce so dusk gold cannot push warm-share over 0.50.

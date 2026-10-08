@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3]
 
-[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/fence.res" id="1_4u2nk"]
+[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/fence.res" id="1_bh1pq"]
 
-[node name="Fence" type="Node3D"]
+[node name="Fence" type="Node3D" unique_id=61403928]
 
-[node name="Model" type="MeshInstance3D" parent="."]
-mesh = ExtResource("1_4u2nk")
+[node name="Model" type="MeshInstance3D" parent="." unique_id=1496558848]
+mesh = ExtResource("1_bh1pq")

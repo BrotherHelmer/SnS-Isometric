@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3]
 
-[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/quarry.res" id="1_6b4y5"]
+[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/quarry.res" id="1_2rfr7"]
 
-[node name="Quarry" type="Node3D"]
+[node name="Quarry" type="Node3D" unique_id=979702851]
 
-[node name="Model" type="MeshInstance3D" parent="."]
-mesh = ExtResource("1_6b4y5")
+[node name="Model" type="MeshInstance3D" parent="." unique_id=1956199084]
+mesh = ExtResource("1_2rfr7")

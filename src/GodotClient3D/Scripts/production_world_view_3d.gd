@@ -522,13 +522,13 @@ func _rebuild_terrain() -> void:
 	material.set_shader_parameter("light_tint", Vector3(_ground_tint.r, _ground_tint.g, _ground_tint.b))
 	material.set_shader_parameter("tint_floor", 0.0)
 	# The Director: GFX-03 two-scale terrain + GFX-B meadow amount.
-	material.set_shader_parameter("grass_sunlit", Vector3(0.416, 0.510, 0.306))
-	material.set_shader_parameter("grass_moss", Vector3(0.271, 0.376, 0.220))
+	material.set_shader_parameter("grass_sunlit", Vector3(0.353, 0.545, 0.267))
+	material.set_shader_parameter("grass_moss", Vector3(0.227, 0.408, 0.251))
 	material.set_shader_parameter("macro_metres", 14.0)
 	material.set_shader_parameter("detail_metres", 1.2)
-	material.set_shader_parameter("macro_amount", 0.12)
-	material.set_shader_parameter("detail_amount", 0.052)
-	material.set_shader_parameter("dirt_amount", 0.36)
+	material.set_shader_parameter("macro_amount", 0.16)
+	material.set_shader_parameter("detail_amount", 0.064)
+	material.set_shader_parameter("dirt_amount", 0.30)
 	material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
 	material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
 	material.set_shader_parameter("beach_margin_metres", BEACH_MARGIN_METRES)
@@ -1922,7 +1922,7 @@ func apply_quality_profile(quality: Dictionary) -> void:
 	foliage_density = clampf(float(quality.get("foliage_density", foliage_density)), 0.25, 1.0)
 	water_detail = clampf(float(quality.get("water_detail", water_detail)), 0.2, 1.0)
 	if water_material != null:
-		water_material.set_shader_parameter("wave", 0.035 * water_detail)
+		water_material.set_shader_parameter("wave", 0.055 * water_detail)
 	if simulation == null:
 		return
 	_rebuild_edge_forest(true)
@@ -1946,7 +1946,7 @@ func apply_light_palette(palette: Dictionary) -> void:
 	if water_material != null:
 		water_material.set_shader_parameter("atmosphere", atmosphere)
 		water_material.set_shader_parameter("lod_cheap", float(palette.get("terrain_lod_cheap", 0.0)))
-		water_material.set_shader_parameter("wave", 0.035 * water_detail * (0.0 if float(palette.get("terrain_lod_cheap", 0.0)) > 0.5 else 1.0))
+		water_material.set_shader_parameter("wave", 0.055 * water_detail * (0.0 if float(palette.get("terrain_lod_cheap", 0.0)) > 0.5 else 1.0))
 		var horizon: Color = palette.get("ground_bottom", Color("#2A464A"))
 		water_material.set_shader_parameter("horizon_color", Vector3(horizon.r, horizon.g, horizon.b))
 	if horizon_root != null:
@@ -1978,7 +1978,7 @@ func apply_light_palette(palette: Dictionary) -> void:
 					(mat as ShaderMaterial).set_shader_parameter("atmosphere", atmosphere)
 				elif mat is StandardMaterial3D:
 					# Palette scale: day 1.0, dusk 0.55, night 0.35. Lit, not a cut-out.
-					(mat as StandardMaterial3D).albedo_color = Color("#1c332c") * atmosphere
+					(mat as StandardMaterial3D).albedo_color = Color("#2a4a34") * atmosphere
 	for view in building_views.values():
 		if view.has_method("apply_light_palette"):
 			view.apply_light_palette(window_color, torch_color, torch_range)
@@ -2014,15 +2014,15 @@ func _rebuild_water() -> void:
 	water_material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
 	water_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
 	water_material.set_shader_parameter("atmosphere", _atmosphere_scale)
-	water_material.set_shader_parameter("wave", 0.035 * water_detail)
-	water_material.set_shader_parameter("foam_metres", 4.8)
+	water_material.set_shader_parameter("wave", 0.055 * water_detail)
+	water_material.set_shader_parameter("foam_metres", 6.2)
 	water_material.set_shader_parameter("beach_margin_metres", BEACH_MARGIN_METRES)
 	water_material.set_shader_parameter("coast_jut_metres", COAST_JUT_METRES)
 	water_material.set_shader_parameter("fade_start", 70.0)
 	water_material.set_shader_parameter("fade_end", 380.0)
-	water_material.set_shader_parameter("horizon_color", Vector3(0.145, 0.240, 0.255))
-	water_material.set_shader_parameter("deep_color", Vector3(0.12, 0.28, 0.30))
-	water_material.set_shader_parameter("shallow_color", Vector3(0.18, 0.38, 0.36))
+	water_material.set_shader_parameter("horizon_color", Vector3(0.145, 0.250, 0.265))
+	water_material.set_shader_parameter("deep_color", Vector3(0.10, 0.34, 0.36))
+	water_material.set_shader_parameter("shallow_color", Vector3(0.16, 0.46, 0.42))
 	water_mesh_instance.material_override = water_material
 	water_root.add_child(water_mesh_instance)
 
@@ -2114,9 +2114,11 @@ func _rebuild_beach_apron() -> void:
 	material.set_shader_parameter("tint_floor", 0.0)
 	material.set_shader_parameter("macro_metres", 14.0)
 	material.set_shader_parameter("detail_metres", 1.2)
-	material.set_shader_parameter("macro_amount", 0.12)
-	material.set_shader_parameter("detail_amount", 0.052)
-	material.set_shader_parameter("dirt_amount", 0.22)
+	material.set_shader_parameter("macro_amount", 0.16)
+	material.set_shader_parameter("detail_amount", 0.064)
+	material.set_shader_parameter("dirt_amount", 0.20)
+	material.set_shader_parameter("grass_sunlit", Vector3(0.353, 0.545, 0.267))
+	material.set_shader_parameter("grass_moss", Vector3(0.227, 0.408, 0.251))
 	material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
 	material.set_shader_parameter("world_size_xz", size_xz)
 	material.set_shader_parameter("beach_margin_metres", BEACH_MARGIN_METRES)
@@ -2326,16 +2328,18 @@ func _edge_tree_path(x: int, y: int, ring: int) -> String:
 func _foliage_material(mesh: Mesh, path_value: String) -> ShaderMaterial:
 	var material := ShaderMaterial.new()
 	material.shader = FoliageShader
-	var tint := Color("#355544")
-	if String(path_value).contains("broadleaf") or String(path_value).contains("Tree_3"):
-		tint = Color("#4A5A30")
-	elif String(path_value).contains("Tree_4"):
-		tint = Color("#3A4A2C")
-	elif String(path_value).contains("Tree_2"):
-		tint = Color("#2E4A38")
+	var tint := Color("#5A8A48")
+	if String(path_value).contains("broadleaf") or String(path_value).contains("oak"):
+		tint = Color("#7A9A44")
+	elif String(path_value).contains("birch"):
+		tint = Color("#8AAA52")
+	elif String(path_value).contains("spruce") or String(path_value).contains("fir_tall"):
+		tint = Color("#4A7A40")
 	material.set_shader_parameter("albedo_color", Vector3(tint.r, tint.g, tint.b))
+	material.set_shader_parameter("trunk_color", Vector3(0.36, 0.24, 0.16))
+	material.set_shader_parameter("canopy_lift", 1.65)
 	material.set_shader_parameter("atmosphere", _atmosphere_scale)
-	material.set_shader_parameter("wind", 0.07)
+	material.set_shader_parameter("wind", 0.08)
 	if mesh != null and mesh.get_surface_count() > 0:
 		var source := mesh.surface_get_material(0)
 		if source is StandardMaterial3D and (source as StandardMaterial3D).albedo_texture != null:
@@ -2348,7 +2352,7 @@ func _edge_forest_material() -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
 	# The Director: firs take scene light and the period scale (1.0 / 0.55 / 0.35).
-	material.albedo_color = Color("#1c332c") * _atmosphere_scale
+	material.albedo_color = Color("#2a4a34") * _atmosphere_scale
 	material.roughness = 0.94
 	material.metallic = 0.0
 	material.emission_enabled = false

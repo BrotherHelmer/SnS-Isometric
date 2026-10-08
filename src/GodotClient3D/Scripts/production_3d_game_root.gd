@@ -754,9 +754,9 @@ func _create_lighting() -> void:
 	environment.ssil_sharpness = 0.96
 	environment.glow_enabled = bool(quality_profile.get("glow", false))
 	environment.glow_normalized = true
-	environment.glow_intensity = 0.22
-	environment.glow_strength = 0.85
-	environment.glow_bloom = 0.08
+	environment.glow_intensity = 0.16
+	environment.glow_strength = 0.72
+	environment.glow_bloom = 0.05
 	environment.set("glow_levels/1", 0.0)
 	environment.set("glow_levels/2", 1.0)
 	environment.set("glow_levels/3", 0.75)
@@ -3390,8 +3390,10 @@ func _create_start_menu(root: Control) -> void:
 	quality_select.name = "QualityProfile"
 	quality_select.add_item("Recommended", 0)
 	quality_select.set_item_metadata(0, "recommended")
-	quality_select.add_item("Scalable Low", 1)
-	quality_select.set_item_metadata(1, "scalable_low")
+	quality_select.add_item("High", 1)
+	quality_select.set_item_metadata(1, "high")
+	quality_select.add_item("Scalable Low", 2)
+	quality_select.set_item_metadata(2, "scalable_low")
 	quality_select.item_selected.connect(func(_index: int) -> void:
 		_apply_menu_quality()
 		_save_display_settings()
@@ -3896,6 +3898,7 @@ func _apply_sun_shadow_settings(light: DirectionalLight3D) -> void:
 	light.directional_shadow_pancake_size = 4.0
 	light.shadow_bias = 0.06
 	light.shadow_normal_bias = 1.6
+	light.shadow_blur = float(quality_profile.get("shadow_blur", 1.0))
 
 
 func sun_light_direction() -> Vector3:
@@ -4277,8 +4280,13 @@ func _restore_display_settings() -> void:
 	var settings := ConfigFile.new()
 	if settings.load(DISPLAY_SETTINGS_PATH) != OK:
 		return
-	var low := String(settings.get_value("display", "quality", "recommended")) == "scalable_low"
-	quality_select.select(1 if low else 0)
+	var wanted := String(settings.get_value("display", "quality", "recommended"))
+	var picked := 0
+	for i in quality_select.item_count:
+		if String(quality_select.get_item_metadata(i)) == wanted:
+			picked = i
+			break
+	quality_select.select(picked)
 	_apply_menu_quality()
 	fullscreen_check.set_pressed_no_signal(bool(settings.get_value("display", "fullscreen", false)))
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen_check.button_pressed else DisplayServer.WINDOW_MODE_WINDOWED)

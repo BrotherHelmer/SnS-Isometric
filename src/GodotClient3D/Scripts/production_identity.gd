@@ -40,8 +40,8 @@ const AUDIO_SETTINGS_PATH := "user://one_shard_audio.json"
 const PALETTE_NAVY := Color("#101A22")
 const PALETTE_NIGHT_TERRAIN := Color("#24383A")
 const PALETTE_FOREST := Color("#26372C")
-const PALETTE_MOSS := Color("#456038")
-const PALETTE_SUNLIT_GRASS := Color("#6A824E")
+const PALETTE_MOSS := Color("#3A6840")
+const PALETTE_SUNLIT_GRASS := Color("#5A8B44")
 const PALETTE_ROAD_CLAY := Color("#A88962")
 const PALETTE_DRY_EARTH := Color("#806347")
 const PALETTE_PLASTER := Color("#D6C6A4")
@@ -69,7 +69,7 @@ const LIGHTING := {
 		"brightness": 1.0,
 		"tonemap_white": 7.2,
 		"sun_energy": 1.50,
-		"sun_color": Color("#F2C888"),
+		"sun_color": Color("#F4CC90"),
 		"sun_pitch": -25.0,
 		"sun_orbit": 120.0,
 		"fill_energy": 0.16,

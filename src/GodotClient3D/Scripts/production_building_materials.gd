@@ -16,12 +16,12 @@ const ROUGHNESS := {
 	"metal": 0.34,
 }
 
-const CASTLE_MASONRY := Color("#C8BAA0")
-const CASTLE_SLATE := Color("#3A4A58")
-const HALL_MASONRY := Color("#B8AC90")
-const HALL_SLATE := Color("#2E3A42")
-const CLAY_ROOF := Color("#8B5340")
-const KEEP_SLATE := Color("#3A4238")
+const CASTLE_MASONRY := Color("#D8C8A8")
+const CASTLE_SLATE := Color("#5A6C7C")
+const HALL_MASONRY := Color("#E4D4B4")
+const HALL_SLATE := Color("#4E6070")
+const CLAY_ROOF := Color("#9A5840")
+const KEEP_SLATE := Color("#4A5A4C")
 
 static var _bevel_by_kind: Dictionary = {}
 
@@ -62,22 +62,24 @@ static func remap_albedo(kind: String, color: Color, building_type: String) -> C
 	match building_type:
 		"CASTLE":
 			if kind == "plaster" or kind == "stone":
-				next = color.lerp(CASTLE_MASONRY, 0.42)
-			elif kind == "teal_roof":
-				next = color.lerp(CASTLE_SLATE, 0.62)
+				next = color.lerp(CASTLE_MASONRY, 0.55)
+			elif kind == "teal_roof" or kind == "roof":
+				next = color.lerp(CASTLE_SLATE, 0.70)
 		"TOWN_HALL":
 			if kind == "plaster" or kind == "stone":
-				next = color.lerp(HALL_MASONRY, 0.28)
-			elif kind == "teal_roof":
-				next = color.lerp(HALL_SLATE, 0.50)
+				next = color.lerp(HALL_MASONRY, 0.40)
+			elif kind == "teal_roof" or kind == "roof":
+				next = color.lerp(HALL_SLATE, 0.62)
 		"HOUSE", "FARM", "BAKERY":
-			if kind == "teal_roof":
-				next = color.lerp(CLAY_ROOF, 0.58)
+			if kind == "teal_roof" or kind == "roof":
+				next = color.lerp(CLAY_ROOF, 0.48)
 			elif kind == "plaster":
-				next = color.lerp(Color("#D6C6A4"), 0.18)
+				next = color.lerp(Color("#E2D2B0"), 0.28)
 		"WATCHTOWER", "BARRACKS":
-			if kind == "teal_roof":
-				next = color.lerp(KEEP_SLATE, 0.45)
+			if kind == "teal_roof" or kind == "roof":
+				next = color.lerp(KEEP_SLATE, 0.55)
+			elif kind == "plaster" or kind == "stone":
+				next = color.lerp(CASTLE_MASONRY, 0.22)
 	return next
 
 
