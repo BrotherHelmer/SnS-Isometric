@@ -69,7 +69,7 @@ func _check_live_scene() -> void:
 	_check(game.environment_resource.ambient_light_energy <= 0.30, "live ambient is the low GFX-F fill")
 	_check(game.environment_resource.ssao_intensity >= 1.45, "SSAO intensity is 1.50")
 	_check(game.world_view.has_method("_rebuild_opening_dressing"), "opening dress exists")
-	var dress := game.world_view.resource_visuals_root.get_node_or_null("OpeningDress")
+	var dress: Node = game.world_view.resource_visuals_root.get_node_or_null("OpeningDress")
 	_check(dress != null and dress.get_child_count() > 0, "opening has a wilderness frame")
 	if game.world_view.terrain_mesh_instance != null and game.world_view.terrain_mesh_instance.material_override is ShaderMaterial:
 		var ground := game.world_view.terrain_mesh_instance.material_override as ShaderMaterial

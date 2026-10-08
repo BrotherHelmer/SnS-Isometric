@@ -72,7 +72,7 @@ func _run() -> void:
 	game._sync_presentation()
 	home = game.world_view.tile_to_world(Vector2(sim.town_hall_position) + Vector2(1.5, 1.5))
 	game.camera_rig.compose_view(home, CameraRig.NORMAL_ZOOM)
-	var dress := game.world_view.resource_visuals_root.get_node_or_null("OpeningDress")
+	var dress: Node = game.world_view.resource_visuals_root.get_node_or_null("OpeningDress")
 	_check(dress != null and dress.get_child_count() > 0, "opening has a wilderness frame")
 	await _sample(game, dest, "opening_day", "normal opening day at the closer default zoom")
 

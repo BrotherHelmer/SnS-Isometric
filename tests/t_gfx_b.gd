@@ -41,7 +41,7 @@ func _run() -> void:
 	print("GFX_B fog unknown=%.3f,%.3f,%.3f mist=%.3f,%.3f,%.3f" % [unknown.x, unknown.y, unknown.z, mist.x, mist.y, mist.z])
 	_check(unknown.z >= unknown.y - 0.005, "fog unknown is cool slate, not olive")
 	_check(unknown.y >= unknown.x, "fog unknown is not brown")
-	_check(mist.z >= mist.y - 0.02, "fog mist stays cool")
+	_check(mist.y >= mist.x and mist.z >= mist.x - 0.02, "fog mist is green-slate frontier, not peach")
 	_check(bool(fog.get("exterior_opaque", false)), "unexplored off-map fog stays opaque")
 	_check(float(fog.get("unknown_opacity", 0.0)) >= 0.99, "on-map unknown stays covering")
 
@@ -67,15 +67,15 @@ func _run() -> void:
 		var deep := Vector3(0.12, 0.28, 0.30)
 		if typeof(deep_value) == TYPE_VECTOR3:
 			deep = deep_value
-		_check(deep.y > deep.x + 0.08, "sea is teal-green, not pewter")
+		_check(deep.x < 0.22 and deep.y < 0.22 and deep.z < 0.22, "sea is dark wilderness slate, not a teal void")
 	else:
 		_check(false, "island water material is live")
 
 	_check(Identity.PALETTE_SUNLIT_GRASS.g > Identity.PALETTE_SUNLIT_GRASS.r, "identity sunlit grass is green")
 	var night_p := Identity.lighting_palette("night")
-	_check(float(night_p["sun_energy"]) >= 0.52, "night moon is lifted for readability")
-	_check(float(night_p["ambient"]) >= 0.70, "night ambient is lifted")
-	_check(float(night_p["fill_energy"]) >= 0.28, "night fill is lifted")
+	_check(float(night_p["sun_energy"]) >= 0.14 and float(night_p["sun_energy"]) <= 0.22, "night moon is the GFX-F 0.18 mood")
+	_check(float(night_p["ambient"]) >= 0.12 and float(night_p["ambient"]) <= 0.22, "night ambient is the GFX-F 0.16 mood")
+	_check(float(night_p["fill_energy"]) <= 0.14, "night fill is not a cyan wash")
 	_check(float(night_p["road_lift"]) <= 0.16, "night roads are not lifted into white")
 
 	var slate := Color("#304d44")

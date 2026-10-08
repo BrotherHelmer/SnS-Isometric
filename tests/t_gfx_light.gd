@@ -97,12 +97,12 @@ func _run() -> void:
 			if child is MultiMeshInstance3D:
 				stamp_batches += 1
 	_check(stamp_batches <= 3, "road detail is 2–3 batched stamps, not per-tile Decals")
-	_check(game.sun_light.directional_shadow_mode == DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS, "sun uses PSSM 2-split")
-	_check(game.sun_light.directional_shadow_split_1 >= 0.78 and game.sun_light.directional_shadow_split_1 <= 0.88, "PSSM split stays parked at 0.82")
-	_check(is_equal_approx(game.environment_resource.ssao_sharpness, 0.35), "SSAO sharpness stays 0.35")
+	_check(game.sun_light.directional_shadow_mode == DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS, "sun uses PSSM 4-split")
+	_check(game.sun_light.directional_shadow_split_1 >= 0.10 and game.sun_light.directional_shadow_split_1 <= 0.20, "near cascade owns the settlement")
+	_check(is_equal_approx(game.environment_resource.ssao_sharpness, 0.98), "SSAO sharpness is the GFX-F 0.98")
 	_check(game.world_view.terrain_mesh_instance != null and game.world_view.terrain_mesh_instance.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "terrain does not cast")
 	_check(is_zero_approx(game.sun_light.light_angular_distance), "sun angular distance is 0 (no PCSS)")
-	_check(game.sun_light.directional_shadow_max_distance <= 52.0, "shadow distance stays near the play volume")
+	_check(game.sun_light.directional_shadow_max_distance >= 54.0 and game.sun_light.directional_shadow_max_distance <= 60.0, "shadow distance covers the village")
 	var shadow_suns := 0
 	for child in game.lighting_rig.get_children():
 		if child is DirectionalLight3D and (child as DirectionalLight3D).shadow_enabled:
@@ -123,7 +123,7 @@ func _run() -> void:
 	_check(is_equal_approx(BuildingMaterials.roughness_for("stone"), 0.85), "stone roughness is 0.85")
 	_check(Catalog.TREES.size() >= 4 and Catalog.TREES.size() <= 8, "vegetation kit is 4–6 tree silhouettes")
 	_check(Catalog.EDGE_TREES.size() >= 4, "edge forest uses more than one cone")
-	_check(Identity.PALETTE_WINDOW.is_equal_approx(Color("#F2B56B")), "window/fire accent is #F2B56B")
+	_check(Identity.PALETTE_WINDOW.is_equal_approx(Color("#F5B36B")), "window/fire accent is #F5B36B")
 	_check(float(night_p["torch_range"]) <= 4.2, "night window pools stay short-range")
 
 	game.apply_quality_profile("recommended")
