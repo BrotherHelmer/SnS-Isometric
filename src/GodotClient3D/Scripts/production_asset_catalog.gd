@@ -83,17 +83,32 @@ const WORKYARD_PROPS := {
 	"long_crate": ROOT + "/buildings/crate_long_A.gltf",
 	"pitchfork": ROOT + "/farm/pitchfork.gltf",
 	"dirt_plot": ROOT + "/farm/dirt_plot.gltf",
-	"carrot": ROOT + "/opening_style/wheat.tscn",
-	"lettuce": ROOT + "/opening_style/wheat.tscn",
+	"carrot": ROOT + "/farm/carrot.gltf",
+	"lettuce": ROOT + "/farm/lettuce.gltf",
 	"wheelbarrow": ROOT + "/farm/wheelbarrow.gltf",
 	"work_axe": ROOT + "/tools/axe.gltf",
 	"weaponrack": ROOT + "/buildings/weaponrack.gltf",
 	"training_target": ROOT + "/buildings/target.gltf",
 }
 
-const TREES := [ROOT + "/opening_style/fir.tscn", ROOT + "/opening_style/broadleaf.tscn"]
+# The Director: GFX-08 — 6 tree silhouettes so the forest edge is not one cone.
+const TREES := [
+	ROOT + "/opening_style/fir.tscn",
+	ROOT + "/opening_style/broadleaf.tscn",
+	ROOT + "/nature/Tree_1_A_Color1.gltf",
+	ROOT + "/nature/Tree_2_A_Color1.gltf",
+	ROOT + "/nature/Tree_3_A_Color1.gltf",
+	ROOT + "/nature/Tree_4_A_Color1.gltf",
+]
 
-const EDGE_TREES := [ROOT + "/opening_style/fir.tscn"]
+const EDGE_TREES := [
+	ROOT + "/opening_style/fir.tscn",
+	ROOT + "/nature/Tree_1_A_Color1.gltf",
+	ROOT + "/nature/Tree_2_A_Color1.gltf",
+	ROOT + "/nature/Tree_3_A_Color1.gltf",
+	ROOT + "/opening_style/broadleaf.tscn",
+	ROOT + "/nature/Tree_4_A_Color1.gltf",
+]
 
 const ROCKS := [ROOT + "/opening_style/rocks.tscn"]
 
@@ -113,6 +128,8 @@ const HALO_PROPS := {
 	"fence": ROOT + "/opening_style/fence.tscn",
 	"lantern": ROOT + "/opening_style/lantern.tscn",
 	"wheat_crop": ROOT + "/opening_style/wheat.tscn",
+	"dirt_plot": ROOT + "/farm/dirt_plot.gltf",
+	"garden": ROOT + "/farm/lettuce.gltf",
 	"wheelbarrow": ROOT + "/farm/wheelbarrow.gltf",
 	"work_axe": ROOT + "/tools/axe.gltf",
 	"weaponrack": ROOT + "/buildings/weaponrack.gltf",

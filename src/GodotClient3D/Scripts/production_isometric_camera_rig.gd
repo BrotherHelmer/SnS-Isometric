@@ -29,6 +29,8 @@ func _ready() -> void:
 	camera.name = "IsometricCamera"
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 	camera.size = NORMAL_ZOOM
+	camera.near = 0.2
+	camera.far = 8000.0
 	camera.position = Vector3(0.0, 38.0, 38.0)
 	camera.current = true
 	add_child(camera)

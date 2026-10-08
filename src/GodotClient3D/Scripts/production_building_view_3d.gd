@@ -4,6 +4,7 @@ extends Node3D
 const Catalog = preload("res://src/GodotClient3D/Scripts/production_asset_catalog.gd")
 const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_profile.gd")
 const ContactAO = preload("res://src/GodotClient3D/Scripts/production_contact_ao.gd")
+const BuildingMaterials = preload("res://src/GodotClient3D/Scripts/production_building_materials.gd")
 
 var entity_id := 0
 var building_type := ""
@@ -145,6 +146,7 @@ func _rebuild() -> void:
 	else:
 		_create_completed_model()
 		_create_workyard()
+		_create_workyard_grounding()
 		_create_building_identity_markers()
 	_create_ownership_banner()
 	_create_contact_ao()
@@ -162,6 +164,8 @@ func _create_completed_model() -> void:
 	model_root.scale = Vector3.ONE * ScaleProfile.building_scale(building_type)
 	model_root.position.z = _model_offset_z()
 	add_child(model_root)
+	# The Director: GFX-07 roughness + fresnel bevel after the mesh is live.
+	BuildingMaterials.apply(model_root, entity_id)
 
 
 func _create_wall_model() -> void:
@@ -574,9 +578,13 @@ func _create_semantic_identity_geometry() -> void:
 			var oven_glow := OmniLight3D.new()
 			oven_glow.name = "OvenGlow"
 			oven_glow.position = Vector3(1.7, 0.85, 1.7)
-			oven_glow.light_color = Color("#ff9a52")
-			oven_glow.light_energy = 1.0
-			oven_glow.omni_range = 4.0
+			oven_glow.light_color = Color("#F2B56B")
+			oven_glow.light_energy = 0.32
+			oven_glow.omni_range = 2.8
+			oven_glow.shadow_enabled = false
+			oven_glow.distance_fade_enabled = true
+			oven_glow.distance_fade_begin = 7.0
+			oven_glow.distance_fade_length = 4.0
 			workyard_root.add_child(oven_glow)
 		"STOREHOUSE":
 			_add_prop("long_crate", Vector3(-2.3, 0.0, -0.8), Vector3.ONE * 2.0, "StorehouseSupplies")
@@ -606,6 +614,16 @@ func _create_semantic_identity_geometry() -> void:
 				flag.position = Vector3(side * 2.38, 2.05, -2.7)
 				flag.material_override = _material(Color("#6e2430") if faction == "rival" else Color("#355e6c"), 0.0)
 				workyard_root.add_child(flag)
+
+
+func _create_workyard_grounding() -> void:
+	# The Director: GFX-10 story-zone dirt so the yard occupies the grass.
+	if workyard_root == null or building_type in ["ROAD", "WALL"]:
+		return
+	var world_size := ScaleProfile.footprint_world_size(footprint)
+	var disc := ContactAO.make_instance("WorkyardDirt", Vector2(world_size.x + 2.4, world_size.y + 2.4), 0.16)
+	disc.position = Vector3(0.0, 0.012, 0.15)
+	workyard_root.add_child(disc)
 
 
 func _create_town_hall_civic_mass() -> void:
@@ -708,14 +726,16 @@ func _update_stall_icon(snapshot: Dictionary) -> void:
 func apply_light_palette(window_color: Color, torch_color: Color, torch_range: float) -> void:
 	if window_light != null:
 		window_light.light_color = window_color
-		window_light.omni_range = torch_range
+		window_light.omni_range = clampf(torch_range, 2.6, 4.4)
+		window_light.light_energy = 0.42 if building_type != "TOWN_HALL" else 0.58
 	if window_emission != null and window_emission.material_override is StandardMaterial3D:
 		var glow_material := window_emission.material_override as StandardMaterial3D
 		glow_material.emission = window_color
 		glow_material.albedo_color = window_color
+		glow_material.emission_energy_multiplier = 1.55
 	if lantern_light != null:
 		lantern_light.light_color = torch_color
-		lantern_light.omni_range = clampf(torch_range, 4.0, 7.0)
+		lantern_light.omni_range = clampf(torch_range, 2.6, 4.0)
 
 
 func _update_night_presentation(night: bool, occupants: int) -> void:
@@ -723,38 +743,34 @@ func _update_night_presentation(night: bool, occupants: int) -> void:
 		return
 	var inhabited := occupants > 0 if building_type == "HOUSE" else bool(last_snapshot.get("connected", false)) and (int(last_snapshot.get("assigned_staff", 0)) > 0 or int(last_snapshot.get("soldiers_assigned", 0)) > 0 or building_type in ["TOWN_HALL", "STOREHOUSE"])
 	if window_light == null:
+		# The Director: GFX-09 — one shadowless pool per inhabited building,
+		# not a circular halo. Windows are the bright pixels (#F2B56B).
 		window_light = OmniLight3D.new()
 		window_light.name = "InhabitedWindowGlow"
-		window_light.position = sockets["entrance"].position + Vector3(0.0, 1.25, -0.35)
-		window_light.light_color = Color("#FFB347")
-		window_light.light_energy = 1.05 if building_type != "TOWN_HALL" else 1.35
-		window_light.omni_range = 5.5 if building_type != "TOWN_HALL" else 6.5
+		window_light.position = sockets["entrance"].position + Vector3(0.0, 1.05, -0.28)
+		window_light.light_color = Color("#F2B56B")
+		window_light.light_energy = 0.42 if building_type != "TOWN_HALL" else 0.58
+		window_light.omni_range = 3.4 if building_type != "TOWN_HALL" else 4.2
 		window_light.shadow_enabled = false
+		window_light.distance_fade_enabled = true
+		window_light.distance_fade_begin = 8.0
+		window_light.distance_fade_length = 5.0
 		add_child(window_light)
 		window_emission = MeshInstance3D.new()
 		window_emission.name = "WarmWindowEmission"
-		var glow_mesh := BoxMesh.new()
-		glow_mesh.size = Vector3(0.72, 0.68, 0.08)
-		window_emission.mesh = glow_mesh
-		window_emission.position = sockets["entrance"].position + Vector3(0.0, 1.20, -0.12)
-		var glow_material := _material(Color("#ffc06a"), 0.0)
+		var pane := BoxMesh.new()
+		pane.size = Vector3(0.22, 0.28, 0.04)
+		window_emission.mesh = pane
+		window_emission.position = sockets["entrance"].position + Vector3(0.0, 1.15, -0.06)
+		var glow_material := _material(Color("#F2B56B"), 0.0)
 		glow_material.emission_enabled = true
-		glow_material.emission = Color("#FFB347")
-		glow_material.emission_energy_multiplier = 2.1
+		glow_material.emission = Color("#F2B56B")
+		glow_material.emission_energy_multiplier = 1.55
 		window_emission.material_override = glow_material
 		add_child(window_emission)
 	window_light.visible = night and inhabited
 	if window_emission != null:
 		window_emission.visible = night and inhabited
-	
-	if not night and inhabited and building_type not in ["TOWN_HALL", "STOREHOUSE"]:
-		if window_emission != null:
-			window_emission.visible = true
-			var daytime_material := _material(Color("#9fc6a5"), 0.0)
-			daytime_material.emission_enabled = true
-			daytime_material.emission = Color("#7da88a")
-			daytime_material.emission_energy_multiplier = 0.8
-			window_emission.material_override = daytime_material
 
 
 func _update_activity_presentation(active: bool, night: bool) -> void:
@@ -787,10 +803,13 @@ func _update_activity_presentation(active: bool, night: bool) -> void:
 		if lantern_light == null:
 			lantern_light = OmniLight3D.new()
 			lantern_light.name = "WatchtowerLantern"
-			lantern_light.light_color = Color("#FFC36B")
-			lantern_light.light_energy = 0.85
-			lantern_light.omni_range = 6.0
+			lantern_light.light_color = Color("#F2B56B")
+			lantern_light.light_energy = 0.38
+			lantern_light.omni_range = 3.2
 			lantern_light.shadow_enabled = false
+			lantern_light.distance_fade_enabled = true
+			lantern_light.distance_fade_begin = 8.0
+			lantern_light.distance_fade_length = 4.0
 			lantern_light.position = sockets["vfx"].position + Vector3(0.0, 0.4, 0.0)
 			add_child(lantern_light)
 		lantern_light.visible = night
@@ -917,7 +936,7 @@ func _update_inventory_indicators(inventory: Dictionary) -> void:
 func _material(color: Color, transparency: float) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
 	material.albedo_color = color
-	material.roughness = 0.92
+	material.roughness = BuildingMaterials.roughness_for(BuildingMaterials.classify(color))
 	if transparency > 0.0 or color.a < 1.0:
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	return material

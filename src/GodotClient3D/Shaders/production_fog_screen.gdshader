@@ -59,9 +59,7 @@ void fragment() {
 	float unknown = 1.0 - revealed;
 	float mist = value_noise(world_uv * 8.0 + vec2(-TIME * 0.004, TIME * 0.005));
 	ALBEDO = mix(unknown_color, mist_color, mist * 0.34);
-	ALPHA = mix(
-		unknown * clamp(unknown_opacity + (mist - 0.5) * 0.003, 0.0, 1.0),
-		1.0,
-		1.0 - inside
-	);
+	// Off-map stays clear so G1 water/horizon read. Unexplored on-map
+	// remains unknown (#47). This overlay is hidden in the live path.
+	ALPHA = unknown * clamp(unknown_opacity + (mist - 0.5) * 0.003, 0.0, 1.0) * inside;
 }

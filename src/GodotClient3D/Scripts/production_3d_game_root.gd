@@ -782,8 +782,8 @@ func _create_lighting() -> void:
 	sky_material = sky_material_value
 	sky_material_value.sky_top_color = Color("#3E5A68")
 	sky_material_value.sky_horizon_color = Color("#C4A882")
-	sky_material_value.ground_bottom_color = Color("#14241E")
-	sky_material_value.ground_horizon_color = Color("#2E4036")
+	sky_material_value.ground_bottom_color = Color("#2A464A")
+	sky_material_value.ground_horizon_color = Color("#4A6860")
 	sky.sky_material = sky_material_value
 	environment.sky = sky
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
