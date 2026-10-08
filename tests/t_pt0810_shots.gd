@@ -34,6 +34,12 @@ func _run() -> void:
 	simulation._sync_production_workers()
 	game._initialize_presentation()
 	game.simulation_host.paused = false
+	var method := String(RenderingServer.get_current_rendering_method())
+	print("PT0810_RENDERER method=%s" % method)
+	if method != "forward_plus":
+		push_error("PT0810_SHOTS requires Forward+/Vulkan (got %s)" % method)
+		quit(1)
+		return
 	await _shot_scout(game, dest_root)
 	await _shot_night_raid(game, dest_root)
 	print("PT0810_SHOTS PASS dir=%s" % dest_root)
@@ -45,25 +51,35 @@ func _shot_scout(game, dest_root: String) -> void:
 	var simulation = game.simulation_host.simulation
 	simulation.is_night = false
 	simulation.phase_time = 80.0
-	var guard := _first_patrol(simulation)
-	if guard.is_empty():
-		guard = simulation._create_patrol_worker(0, "pt0810_scout")
-		guard["position"] = simulation.town_hall_position + Vector2i(3, 2)
-		simulation.workers.append(guard)
-	simulation.request_scout_auto(int(guard.get("id", 0)))
-	simulation._simulate_seconds_for_test(10.0)
+	var guard := _ensure_patrol(simulation, Vector2i(simulation.town_hall_position) + Vector2i(3, 2))
+	game.select_worker(int(guard.get("id", 0)))
+	if not game._order_selected_scout():
+		simulation.request_scout_auto(int(guard.get("id", 0)))
+	simulation._simulate_seconds_for_test(18.0)
+	guard = simulation.get_worker_by_id(int(guard.get("id", 0)))
+	game.select_worker(int(guard.get("id", 0)))
+	game.simulation_host.paused = true
 	game._update_day_night_lighting()
 	game._sync_presentation()
 	game._update_ui()
-	var focus: Vector3 = game.world_view.tile_to_world(Vector2(guard.get("position", simulation.town_hall_position)))
+	var guard_tile: Vector2i = Vector2i(guard.get("position", simulation.town_hall_position))
+	var focus: Vector3 = game.world_view.tile_to_world(Vector2(guard_tile) + Vector2(0.4, 0.4))
 	game.camera_rig.compose_view(focus, 34.0)
+	print("PT0810_SCOUT state=%s tile=%s mission=%s" % [
+		String(guard.get("state", "")), str(guard_tile), str(guard.has("scout_mission"))
+	])
 	await _capture(dest_root, "after_day_scout.png")
+	game.simulation_host.paused = false
 
 
 func _shot_night_raid(game, dest_root: String) -> void:
 	var simulation = game.simulation_host.simulation
 	simulation.is_night = true
 	simulation.phase_time = 18.0
+	if not simulation.workers.is_empty():
+		var live_scout: Dictionary = _first_patrol(simulation)
+		if not live_scout.is_empty() and live_scout.has("scout_mission"):
+			simulation._finish_scout(live_scout)
 	simulation._send_workers_to_shelter()
 	var farm := {}
 	for building in simulation.buildings:
@@ -76,31 +92,49 @@ func _shot_night_raid(game, dest_root: String) -> void:
 		farm = simulation._add_completed_building(Defs.BUILDING_FARM, tile)
 		farm["connected"] = true
 	var farm_tile: Vector2i = Vector2i(farm.get("position", simulation.town_hall_position))
-	var guard := _first_patrol(simulation)
-	if guard.is_empty():
-		guard = simulation._create_patrol_worker(0, "pt0810_night")
-		simulation.workers.append(guard)
-	guard["position"] = farm_tile + Vector2i(3, 3)
+	var crop_tile: Vector2i = farm_tile + Vector2i(1, 1)
+	var guard := _ensure_patrol(simulation, farm_tile + Vector2i(3, 2))
 	guard["path"] = []
 	guard["state"] = "Night Patrol"
+	guard["arrival_state"] = "Night Watch"
 	simulation._reveal_radius(farm_tile, 8)
 	simulation._reveal_radius(guard["position"], 6)
-	var raider_tile: Vector2i = farm_tile + Vector2i(4, 2)
-	simulation._prepare_test_tile(raider_tile, Defs.TILE_GRASS)
-	simulation._reveal_radius(raider_tile, 3)
+	simulation._prepare_test_tile(crop_tile, Defs.TILE_GRASS)
+	simulation._reveal_radius(crop_tile, 3)
 	if simulation.enemies.is_empty():
-		simulation._spawn_enemy(raider_tile, 28, 4, 0.0, 0, simulation.ENEMY_RAIDER, 0)
+		simulation._spawn_enemy(crop_tile, 28, 4, 0.0, 0, simulation.ENEMY_RAIDER, 0)
 	else:
-		simulation.enemies[0]["position"] = raider_tile
-		simulation.enemies[0]["hp"] = maxi(8, int(simulation.enemies[0].get("hp", 20)))
+		simulation.enemies[0]["position"] = crop_tile
+		simulation.enemies[0]["hp"] = maxi(12, int(simulation.enemies[0].get("hp", 20)))
+		simulation.enemies[0]["target_kind"] = "building"
+		simulation.enemies[0]["target_id"] = int(farm.get("id", 0))
 	simulation._begin_raid(1)
-	simulation._simulate_seconds_for_test(3.2)
+	simulation._simulate_seconds_for_test(2.8)
+	guard = simulation.get_worker_by_id(int(guard.get("id", 0)))
+	game.select_worker(int(guard.get("id", 0)))
+	game.simulation_host.paused = true
 	game._update_day_night_lighting()
 	game._sync_presentation()
 	game._update_ui()
-	var focus: Vector3 = game.world_view.tile_to_world(Vector2(farm_tile) + Vector2(1.6, 1.2))
+	var focus: Vector3 = game.world_view.tile_to_world(Vector2(farm_tile) + Vector2(1.4, 1.1))
 	game.camera_rig.compose_view(focus, 34.0)
+	print("PT0810_NIGHT guard=%s raider=%s farm=%s" % [
+		String(guard.get("state", "")),
+		str(simulation.enemies[0].get("position", Vector2i.ZERO) if not simulation.enemies.is_empty() else Vector2i.ZERO),
+		str(farm_tile)
+	])
 	await _capture(dest_root, "after_night_raid.png")
+
+
+func _ensure_patrol(simulation, tile: Vector2i) -> Dictionary:
+	var guard := _first_patrol(simulation)
+	if guard.is_empty():
+		simulation.soldiers_total = maxi(1, simulation.soldiers_total)
+		guard = simulation._create_patrol_worker(0, "patrol:0")
+		simulation.workers.append(guard)
+	guard["position"] = tile
+	guard["path"] = []
+	return guard
 
 
 func _first_patrol(simulation) -> Dictionary:
