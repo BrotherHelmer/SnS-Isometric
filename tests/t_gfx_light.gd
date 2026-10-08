@@ -60,7 +60,7 @@ func _run() -> void:
 	game._update_day_night_lighting()
 	_check(absf(game.sun_light.light_energy - float(night_p["sun_energy"])) < 0.03, "night preset applies authored moon energy")
 	_check(game.environment_resource.tonemap_mode == Environment.TONE_MAPPER_FILMIC, "tonemap is Filmic")
-	_check(float(day_p["saturation"]) >= 0.90 and float(day_p["saturation"]) <= 1.00, "day sat is neutralized 0.90–1.00")
+	_check(float(day_p["saturation"]) >= 1.04 and float(day_p["saturation"]) <= 1.16, "day sat is GFX-F 1.04–1.16")
 	_check(float(dusk_p["saturation"]) >= 0.90 and float(dusk_p["saturation"]) <= 1.04, "dusk sat is 0.90–1.04")
 	_check(float(night_p["saturation"]) >= 0.86 and float(night_p["saturation"]) <= 0.96, "night sat is 0.86–0.96")
 	_check(float(day_p["contrast"]) <= 1.16 and float(dusk_p["contrast"]) <= 1.16 and float(day_p["contrast"]) < 1.40, "contrast is not crushed through B/C/S")

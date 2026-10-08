@@ -54,9 +54,11 @@ void fragment() {
 	// Cool slate + luminance troughs so the sheet reads as volume, not khaki paint.
 	vec3 cool = mix(unknown_color, mist_color, mist);
 	ALBEDO = cool * mix(0.74, 1.16, mist);
-	// #47: unexplored on-map stays unknown. Off-map is the G1 beach/sea.
+	// Off-map stays opaque wilderness. Multiplying alpha by `inside`
+	// used to punch a diamond hole onto the water / peach beach.
 	vec2 outside = max(world_min_xz - world_xz, world_xz - (world_min_xz + world_size_xz));
 	float dist_out = max(max(outside.x, outside.y), 0.0);
-	float lip = (1.0 - inside) * smoothstep(0.42, 0.74, visibility) * (1.0 - smoothstep(0.6, max(shore_fade_metres * 0.55, 2.5), dist_out)) * 0.22;
-	ALPHA = unknown * unknown_opacity * inside + lip;
+	float frontier = (1.0 - inside) * (1.0 - smoothstep(0.6, max(shore_fade_metres * 0.55, 2.5), dist_out));
+	ALBEDO = mix(ALBEDO, mist_color, frontier * 0.35);
+	ALPHA = mix(unknown_opacity, unknown * unknown_opacity, inside);
 }

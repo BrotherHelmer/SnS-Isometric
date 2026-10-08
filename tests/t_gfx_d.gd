@@ -27,11 +27,11 @@ func _run() -> void:
 	_check(CameraRig.NORMAL_ZOOM >= 38.0 * 0.58, "default zoom is at most 42% closer")
 
 	var day_p := Identity.lighting_palette("day")
-	_check(float(day_p["saturation"]) >= 0.90 and float(day_p["saturation"]) <= 1.00, "day saturation is neutralized 0.90–1.00")
-	_check(float(day_p["contrast"]) >= 1.02 and float(day_p["contrast"]) <= 1.08, "day contrast is 1.02–1.08")
+	_check(float(day_p["saturation"]) >= 1.04 and float(day_p["saturation"]) <= 1.16, "day saturation is GFX-F 1.04–1.16")
+	_check(float(day_p["contrast"]) >= 1.04 and float(day_p["contrast"]) <= 1.12, "day contrast is 1.04–1.12")
 	var sun: Color = day_p["sun_color"]
 	_check(sun.r > sun.b + 0.12 and sun.g > 0.70, "day key stays warm")
-	_check(float(day_p["sun_energy"]) >= 0.85 and float(day_p["sun_energy"]) <= 1.20, "day sun energy is 0.85–1.20")
+	_check(float(day_p["sun_energy"]) >= 1.10 and float(day_p["sun_energy"]) <= 1.30, "day sun energy is 1.10–1.30")
 	_check(float(day_p["sun_pitch"]) <= -30.0 and float(day_p["sun_pitch"]) >= -40.0, "day sun sits 30–40° above the horizon")
 	var fill: Color = day_p["fill_color"]
 	_check(fill.b > fill.r, "cool fill against the warm key")
@@ -39,7 +39,7 @@ func _run() -> void:
 	var rec := QualityProfile.get_profile("recommended")
 	var high := QualityProfile.get_profile("high")
 	_check(bool(rec.get("glow", true)) == false, "recommended keeps glow off")
-	_check(int(rec.get("shadow_splits", 4)) == 2, "recommended keeps 2 shadow splits")
+	_check(int(rec.get("shadow_splits", 2)) == 4, "recommended uses 4 shadow splits")
 	_check(bool(high.get("glow", false)) == true, "high quality enables subtle glow")
 	_check(int(high.get("shadow_splits", 2)) == 4, "high quality may use 4 shadow splits")
 	_check(float(rec.get("grass_density", 0.0)) >= 0.99, "recommended grass density is full")
@@ -112,7 +112,7 @@ func _run() -> void:
 	_check(game.sun_light.directional_shadow_mode == DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS, "high profile uses 4 shadow splits")
 	game.apply_quality_profile("recommended")
 	_check(not game.environment_resource.glow_enabled, "recommended turns glow back off")
-	_check(game.sun_light.directional_shadow_mode == DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS, "recommended stays on 2 splits")
+	_check(game.sun_light.directional_shadow_mode == DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS, "recommended keeps 4 shadow splits")
 	game.queue_free()
 	await process_frame
 	print("T_GFX_D %s" % ("PASS" if failures.is_empty() else "FAIL"))

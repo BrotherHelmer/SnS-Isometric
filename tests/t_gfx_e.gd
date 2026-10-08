@@ -34,19 +34,19 @@ func _run() -> void:
 func _check_grade() -> void:
 	var day_p := Identity.lighting_palette("day")
 	var night_p := Identity.lighting_palette("night")
-	_check(float(day_p["saturation"]) >= 0.90 and float(day_p["saturation"]) <= 1.00, "day saturation is neutralized 0.90–1.00")
-	_check(float(day_p["exposure"]) >= 0.86 and float(day_p["exposure"]) <= 0.94, "day exposure is ~0.90")
-	_check(float(day_p["sun_energy"]) >= 0.85 and float(day_p["sun_energy"]) <= 1.20, "day sun energy is 0.85–1.20")
+	_check(float(day_p["saturation"]) >= 1.04 and float(day_p["saturation"]) <= 1.16, "day saturation is GFX-F 1.04–1.16")
+	_check(float(day_p["exposure"]) >= 0.72 and float(day_p["exposure"]) <= 0.84, "day exposure is ~0.78")
+	_check(float(day_p["sun_energy"]) >= 1.10 and float(day_p["sun_energy"]) <= 1.30, "day sun energy is 1.10–1.30")
 	var tint: Color = day_p["ground_tint"]
 	_check(is_equal_approx(tint.r, 1.0) and is_equal_approx(tint.g, 1.0) and is_equal_approx(tint.b, 1.0), "day ground tint is neutral")
 	var sun: Color = day_p["sun_color"]
 	_check(sun.r > sun.b + 0.12 and sun.g > 0.70, "day key stays warm")
-	_check(float(night_p["sun_energy"]) >= 0.52, "night moon stays at the GFX-B floor")
-	_check(float(night_p["ambient"]) >= 0.70, "night ambient stays at the GFX-B floor")
-	_check(float(night_p["fill_energy"]) >= 0.28, "night fill stays at the GFX-B floor")
-	_check(Identity.PALETTE_WINDOW.is_equal_approx(Color("#F2B56B")), "window accent stays #F2B56B")
-	_check(Identity.PALETTE_MEADOW.is_equal_approx(Color("#657A49")), "meadow is ChatGPT #657A49")
-	_check(Identity.PALETTE_CONIFER_SHADOW.is_equal_approx(Color("#233E34")), "conifer shadow is dark #233E34")
+	_check(float(night_p["sun_energy"]) >= 0.14 and float(night_p["sun_energy"]) <= 0.24, "night moon is the GFX-F 0.18 mood")
+	_check(float(night_p["ambient"]) >= 0.12 and float(night_p["ambient"]) <= 0.22, "night ambient is the GFX-F 0.16 mood")
+	_check(float(night_p["fill_energy"]) <= 0.14, "night fill is not a cyan wash")
+	_check(Identity.PALETTE_WINDOW.is_equal_approx(Color("#F5B36B")), "window accent is #F5B36B")
+	_check(Identity.PALETTE_MEADOW.is_equal_approx(Color("#536B3E")), "meadow is ChatGPT #536B3E")
+	_check(Identity.PALETTE_CONIFER_SHADOW.is_equal_approx(Color("#1A3326")), "conifer shadow is dark #1A3326")
 
 
 func _check_kit() -> void:
@@ -71,7 +71,7 @@ func _check_kit() -> void:
 	var store_roof := BuildingMaterials.remap_albedo("teal_roof", Color("#304d44"), "STOREHOUSE")
 	_check(store_roof.r > store_roof.b, "storehouse roof rolls terracotta / clay")
 	var rec := QualityProfile.get_profile("recommended")
-	_check(int(rec.get("shadow_splits", 4)) == 2, "recommended keeps 2 shadow splits")
+	_check(int(rec.get("shadow_splits", 2)) == 4, "recommended uses 4 shadow splits")
 	_check(bool(rec.get("glow", true)) == false, "recommended keeps glow off")
 
 
@@ -129,8 +129,8 @@ func _check_live_scene() -> void:
 		await process_frame
 	_check(game.environment_resource.tonemap_mode == Environment.TONE_MAPPER_FILMIC, "tonemap is Filmic")
 	_check(game.sun_light.shadow_opacity >= 0.98, "day shadows are opacity 1")
-	_check(is_equal_approx(game.sun_light.shadow_bias, 0.04) or game.sun_light.shadow_bias <= 0.045, "shadow bias is tight")
-	_check(game.environment_resource.ssao_intensity >= 1.2, "SSAO intensity stays at the review preset")
+	_check(is_equal_approx(game.sun_light.shadow_bias, 0.06) or game.sun_light.shadow_bias <= 0.07, "shadow bias is the GFX-F 0.06")
+	_check(game.environment_resource.ssao_intensity >= 1.4, "SSAO intensity stays at the GFX-F preset")
 	if game.world_view.terrain_mesh_instance != null and game.world_view.terrain_mesh_instance.material_override is ShaderMaterial:
 		var ground := game.world_view.terrain_mesh_instance.material_override as ShaderMaterial
 		_check(float(ground.get_shader_parameter("patch_metres")) >= 6.0, "ground has a mid-scale patch layer")

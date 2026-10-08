@@ -7,10 +7,10 @@ render_mode unshaded, specular_disabled, cull_disabled, fog_disabled;
 // Colour fades into the sky-ground; the plane outruns max zoom.
 uniform vec2 world_min_xz;
 uniform vec2 world_size_xz;
-uniform vec3 deep_color : source_color = vec3(0.10, 0.34, 0.36);
-uniform vec3 shallow_color : source_color = vec3(0.16, 0.46, 0.42);
-uniform vec3 foam_color : source_color = vec3(0.62, 0.66, 0.58);
-uniform vec3 horizon_color : source_color = vec3(0.145, 0.250, 0.265);
+uniform vec3 deep_color : source_color = vec3(0.07, 0.14, 0.16);
+uniform vec3 shallow_color : source_color = vec3(0.10, 0.20, 0.20);
+uniform vec3 foam_color : source_color = vec3(0.28, 0.34, 0.32);
+uniform vec3 horizon_color : source_color = vec3(0.090, 0.149, 0.165);
 uniform float wave = 0.055;
 uniform float foam_metres = 6.2;
 uniform float beach_margin_metres = 5.0;

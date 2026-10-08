@@ -840,6 +840,8 @@ func _add_prop(prop_key: String, local_position: Vector3, prop_scale: Vector3, n
 	prop.rotation_degrees = rotation_degrees_value
 	workyard_root.add_child(prop)
 	prop.set_meta("base_scale", prop.scale)
+	if prop_key == "wheat_crop":
+		_tint_wheat(prop)
 	if resource_type != "":
 		prop.set_meta("inventory_resource", resource_type)
 		inventory_indicators.append(prop)
@@ -853,6 +855,19 @@ func _update_inventory_indicators(inventory: Dictionary) -> void:
 		var base_scale: Vector3 = indicator.get_meta("base_scale", indicator.scale)
 		var pile := clampf(0.88 + float(mini(amount, 14)) * 0.045, 0.88, 1.42)
 		indicator.scale = base_scale * pile
+
+
+func _tint_wheat(prop: Node) -> void:
+	# Opening-style wheat.res is a grey-green stem; force a ripe gold so
+	# farm fields do not read as sticks at gameplay zoom.
+	var gold := Color("#C9A24A")
+	for child in prop.find_children("*", "MeshInstance3D", true, false):
+		var mesh_i := child as MeshInstance3D
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = gold
+		mat.roughness = 0.78
+		mat.vertex_color_use_as_albedo = false
+		mesh_i.material_override = mat
 
 
 func _material(color: Color, transparency: float) -> StandardMaterial3D:

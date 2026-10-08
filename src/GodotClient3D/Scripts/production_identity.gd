@@ -32,42 +32,46 @@ const SIZE_WARNING := 16
 
 const AUDIO_SETTINGS_PATH := "user://one_shard_audio.json"
 
-# The Director: GFX-E neutralized day grade (ChatGPT GFX-D review).
-# Warmth lives in the key only — materials stay meadow-green. Sun orbit is
-# degrees around the camera view: 138 keeps day light upper-left (shadows
-# lower-right) and the 3D sun/camera angle ≥ 90°. Night uses 300 so the moon
-# sits opposite without lerping through the camera at dawn.
+# The Director: GFX-F Filmic baseline (ChatGPT GFX-E review). Stronger
+# key vs ambient so buildings cast readable shadows. Warmth lives on the
+# key; materials stay meadow-green. Sun orbit 138 keeps day light
+# upper-left (shadows lower-right) and the 3D sun/camera angle ≥ 90°.
+# Night uses 300 so the moon sits opposite without lerping through dawn.
 const PALETTE_NAVY := Color("#101A22")
-const PALETTE_NIGHT_TERRAIN := Color("#24383A")
-const PALETTE_FOREST := Color("#3E503A")
-const PALETTE_MOSS := Color("#455F3C")
-const PALETTE_SUNLIT_GRASS := Color("#82945D")
-const PALETTE_MEADOW := Color("#657A49")
-const PALETTE_ROAD_CLAY := Color("#A3865F")
-const PALETTE_DRY_EARTH := Color("#856A4C")
+const PALETTE_NIGHT_TERRAIN := Color("#17262A")
+const PALETTE_FOREST := Color("#304735")
+const PALETTE_MOSS := Color("#344D35")
+const PALETTE_SUNLIT_GRASS := Color("#72884D")
+const PALETTE_MEADOW := Color("#536B3E")
+const PALETTE_ROAD_CLAY := Color("#92714E")
+const PALETTE_DRY_EARTH := Color("#B09268")
 const PALETTE_PLASTER := Color("#D9C49B")
 const PALETTE_TIMBER := Color("#57402B")
 const PALETTE_RUST := Color("#A75D39")
 const PALETTE_TEAL := Color("#426F6A")
 const PALETTE_GOLD := Color("#D2A64C")
-const PALETTE_WINDOW := Color("#F2B56B")
-const PALETTE_MOON := Color("#A1B8D4")
+const PALETTE_WINDOW := Color("#F5B36B")
+const PALETTE_MOON := Color("#9CACC8")
 const PALETTE_STONE := Color("#858373")
-const PALETTE_CONIFER := Color("#345B48")
-const PALETTE_CONIFER_SHADOW := Color("#233E34")
-const PALETTE_CONIFER_SUN := Color("#537860")
+const PALETTE_CONIFER := Color("#294A37")
+const PALETTE_CONIFER_SHADOW := Color("#1A3326")
+const PALETTE_CONIFER_SUN := Color("#53735A")
 const PALETTE_BROADLEAF := Color("#5B784C")
 const PALETTE_BROADLEAF_SUN := Color("#809A67")
 const PALETTE_UNDERGROWTH := Color("#344C36")
-const PALETTE_GRASS_TUFT := Color("#587545")
-const PALETTE_GRASS_TUFT_LIT := Color("#78965A")
-const PALETTE_GRASS_TUFT_DARK := Color("#405C37")
+const PALETTE_GRASS_TUFT := Color("#4A6A3C")
+const PALETTE_GRASS_TUFT_LIT := Color("#7A9658")
+const PALETTE_GRASS_TUFT_DARK := Color("#2E462C")
 const PALETTE_TORCH := Color("#FFB36B")
+const PALETTE_FOG_UNKNOWN := Color("#17262A")
+const PALETTE_FOG_REMEMBERED := Color("#25363B")
+const PALETTE_FOG_FRONTIER := Color("#41554B")
+const PALETTE_WHEAT := Color("#C9A24A")
 
 const LIGHTING := {
 	"day": {
-		"ambient": 0.45,
-		"ambient_color": Color("#899DAA"),
+		"ambient": 0.25,
+		"ambient_color": Color("#8799AA"),
 		"fog_density": 0.00028,
 		"fog_color": Color("#B8C0C4"),
 		"fog_energy": 0.38,
@@ -75,21 +79,21 @@ const LIGHTING := {
 		"fog_end": 70.0,
 		"fog_aerial": 0.40,
 		"fog_sun_scatter": 0.12,
-		"saturation": 0.95,
-		"contrast": 1.04,
-		"exposure": 0.90,
+		"saturation": 1.10,
+		"contrast": 1.08,
+		"exposure": 0.78,
 		"brightness": 1.0,
-		"tonemap_white": 7.4,
-		"sun_energy": 0.95,
-		"sun_color": Color("#FFE1BD"),
+		"tonemap_white": 6.0,
+		"sun_energy": 1.20,
+		"sun_color": Color("#FFF0DE"),
 		"sun_pitch": -35.0,
 		"sun_orbit": 138.0,
-		"fill_energy": 0.16,
-		"fill_color": Color("#899DAA"),
-		"sky_top": Color("#5A7380"),
-		"sky_horizon": Color("#C8C4B4"),
-		"ground_bottom": Color("#2A3A32"),
-		"ground_horizon": Color("#4A5C48"),
+		"fill_energy": 0.08,
+		"fill_color": Color("#8799AA"),
+		"sky_top": Color("#4A6574"),
+		"sky_horizon": Color("#C4B8A4"),
+		"ground_bottom": Color("#1E2E26"),
+		"ground_horizon": Color("#3A4C3A"),
 		"ground_tint": Color(1.0, 1.0, 1.0),
 		"ground_tint_floor": 0.0,
 		"ground_wash_lo": 0.62,
@@ -102,31 +106,31 @@ const LIGHTING := {
 		"terrain_lod_cheap": 0.0
 	},
 	"dusk": {
-		"ambient": 0.48,
-		"ambient_color": Color("#6A88A0"),
+		"ambient": 0.22,
+		"ambient_color": Color("#6A7A8C"),
 		"fog_density": 0.0004,
-		"fog_color": Color("#A89880"),
-		"fog_energy": 0.46,
+		"fog_color": Color("#6A7068"),
+		"fog_energy": 0.40,
 		"fog_begin": 24.0,
 		"fog_end": 58.0,
-		"fog_aerial": 0.38,
-		"fog_sun_scatter": 0.18,
-		"saturation": 0.96,
-		"contrast": 1.04,
-		"exposure": 0.92,
+		"fog_aerial": 0.34,
+		"fog_sun_scatter": 0.10,
+		"saturation": 0.98,
+		"contrast": 1.06,
+		"exposure": 0.72,
 		"brightness": 1.0,
-		"tonemap_white": 7.0,
-		"sun_energy": 0.88,
+		"tonemap_white": 6.0,
+		"sun_energy": 0.62,
 		"sun_color": Color("#F0C090"),
 		"sun_pitch": -16.0,
 		"sun_orbit": 120.0,
-		"fill_energy": 0.24,
-		"fill_color": Color("#6A88A0"),
+		"fill_energy": 0.10,
+		"fill_color": Color("#6A7A8C"),
 		"sky_top": Color("#2E3A58"),
 		"sky_horizon": Color("#C09070"),
-		"ground_bottom": Color("#243028"),
-		"ground_horizon": Color("#4A4A40"),
-		"ground_tint": Color(1.02, 0.98, 0.94),
+		"ground_bottom": Color("#1A2420"),
+		"ground_horizon": Color("#2E3830"),
+		"ground_tint": Color(1.0, 1.0, 1.0),
 		"ground_tint_floor": 0.0,
 		"ground_wash_lo": 0.50,
 		"ground_wash_hi": 0.88,
@@ -134,30 +138,30 @@ const LIGHTING := {
 		"torch_color": PALETTE_TORCH,
 		"torch_range": 3.6,
 		"road_lift": 0.03,
-		"atmosphere_scale": 0.55,
+		"atmosphere_scale": 0.48,
 		"terrain_lod_cheap": 0.0
 	},
 	"night": {
-		"ambient": 0.72,
-		"ambient_color": Color("#7089A8"),
+		"ambient": 0.16,
+		"ambient_color": Color("#52647C"),
 		"fog_density": 0.00055,
-		"fog_color": Color("#1C3038"),
-		"fog_energy": 0.36,
+		"fog_color": Color("#17262A"),
+		"fog_energy": 0.42,
 		"fog_begin": 20.0,
 		"fog_end": 52.0,
 		"fog_aerial": 0.30,
-		"fog_sun_scatter": 0.08,
-		"saturation": 0.88,
+		"fog_sun_scatter": 0.06,
+		"saturation": 0.95,
 		"contrast": 1.06,
-		"exposure": 0.90,
+		"exposure": 0.67,
 		"brightness": 1.0,
-		"tonemap_white": 7.0,
-		"sun_energy": 0.56,
+		"tonemap_white": 6.0,
+		"sun_energy": 0.18,
 		"sun_color": PALETTE_MOON,
 		"sun_pitch": -48.0,
 		"sun_orbit": 300.0,
-		"fill_energy": 0.30,
-		"fill_color": Color("#3A5058"),
+		"fill_energy": 0.08,
+		"fill_color": Color("#3A4A5C"),
 		"sky_top": PALETTE_NAVY,
 		"sky_horizon": PALETTE_NIGHT_TERRAIN,
 		"ground_bottom": PALETTE_NAVY,
@@ -168,9 +172,9 @@ const LIGHTING := {
 		"ground_wash_hi": 0.94,
 		"window_color": PALETTE_WINDOW,
 		"torch_color": PALETTE_TORCH,
-		"torch_range": 3.8,
-		"road_lift": 0.10,
-		"atmosphere_scale": 0.38,
+		"torch_range": 4.2,
+		"road_lift": 0.08,
+		"atmosphere_scale": 0.32,
 		"terrain_lod_cheap": 1.0
 	},
 	"reckoning": {
@@ -359,35 +363,36 @@ static func cycle_period_name(simulation, menu_visible := false) -> String:
 	return "day"
 
 
-# The Director: GFX-D golden-hour LUTs. Shadows stay cool; highlights warm.
-# Saturation now lives in the day preset (1.05–1.12), so chroma can hold.
+# The Director: GFX-F LUT. Cooler, deeper shadows; midtones pulled down
+# toward the concept's luma ~85; highlights stay gently warm. Chroma is
+# a last-mile nudge after Filmic 0.78 / sat 1.10 — not a second grade.
 const LUT_SIZE := 17
 static var _lut_cache: Dictionary = {}
 
 const GRADE := {
 	"day": {
-		"knots": [Vector2(0.0, 0.05), Vector2(0.18, 0.16), Vector2(0.45, 0.48), Vector2(0.72, 0.88), Vector2(1.0, 0.98)],
-		"shadow": Color("#2A3A44"),
-		"highlight": Color("#F6D8A8"),
-		"shadow_w": 0.08,
-		"highlight_w": 0.10,
-		"chroma": 0.98
+		"knots": [Vector2(0.0, 0.03), Vector2(0.18, 0.13), Vector2(0.45, 0.38), Vector2(0.72, 0.74), Vector2(1.0, 0.96)],
+		"shadow": Color("#24383C"),
+		"highlight": Color("#F4D4A4"),
+		"shadow_w": 0.12,
+		"highlight_w": 0.08,
+		"chroma": 1.02
 	},
 	"dusk": {
-		"knots": [Vector2(0.0, 0.05), Vector2(0.18, 0.16), Vector2(0.45, 0.48), Vector2(0.72, 0.82), Vector2(1.0, 0.96)],
-		"shadow": Color("#3A4A58"),
+		"knots": [Vector2(0.0, 0.03), Vector2(0.18, 0.13), Vector2(0.45, 0.38), Vector2(0.72, 0.72), Vector2(1.0, 0.94)],
+		"shadow": Color("#2A3A44"),
 		"highlight": Color("#F2C090"),
-		"shadow_w": 0.12,
-		"highlight_w": 0.10,
-		"chroma": 0.94
+		"shadow_w": 0.14,
+		"highlight_w": 0.08,
+		"chroma": 0.96
 	},
 	"night": {
-		"knots": [Vector2(0.0, 0.05), Vector2(0.18, 0.16), Vector2(0.45, 0.46), Vector2(0.72, 0.74), Vector2(1.0, 0.90)],
+		"knots": [Vector2(0.0, 0.02), Vector2(0.18, 0.10), Vector2(0.45, 0.32), Vector2(0.72, 0.58), Vector2(1.0, 0.80)],
 		"shadow": PALETTE_NIGHT_TERRAIN,
 		"highlight": PALETTE_MOON,
-		"shadow_w": 0.12,
-		"highlight_w": 0.05,
-		"chroma": 0.78
+		"shadow_w": 0.16,
+		"highlight_w": 0.04,
+		"chroma": 0.82
 	},
 	"reckoning": {
 		"knots": [Vector2(0.0, 0.05), Vector2(0.18, 0.18), Vector2(0.45, 0.44), Vector2(0.72, 0.70), Vector2(1.0, 0.88)],
