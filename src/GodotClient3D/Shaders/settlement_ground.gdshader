@@ -109,9 +109,15 @@ void fragment() {
 		vec3 blossom = mix(flower_warm, flower_cool, step(0.5, noise2(world_pos.xz * 0.37)));
 		grass = mix(grass, mix(grass, blossom, 0.70), patch * flower_amount);
 	}
-	// COLOR.a is the occupation splat (road / apron / yard / litter).
-	// RGB difference used to wash roads back into the lawn.
+	// COLOR.a is the occupation splat. Some backends drop vertex alpha
+	// to 1; then brown RGB (r > g) still marks roads / aprons.
 	float occupy = clamp(COLOR.a, 0.0, 1.0);
+	if (occupy > 0.98) {
+		occupy = max(
+			smoothstep(0.05, 0.18, length(COLOR.rgb - grass)),
+			smoothstep(0.0, 0.10, COLOR.r - COLOR.g)
+		);
+	}
 	vec3 occupy_albedo = COLOR.rgb;
 	vec3 ground = mix(grass, occupy_albedo, occupy);
 	ground = mix(ground, dirt_color, dirt_mask * dirt_amount * (1.0 - occupy * 0.70));

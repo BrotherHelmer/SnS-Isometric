@@ -94,6 +94,7 @@ var halo_placements: Array = []
 var selected_building_id := 0
 var selected_worker_id := 0
 var terrain_height_signature := 0
+var terrain_occupation_signature := 0
 var real_worker_count := 0
 var active_worker_count := 0
 var animated_civilian_count := 0
@@ -229,7 +230,8 @@ func bind_fog_overlay(_camera: Camera3D) -> void:
 
 func sync_frame(frame_snapshot: Dictionary) -> void:
 	var next_height_signature := _calculate_height_signature()
-	if next_height_signature != terrain_height_signature:
+	var next_occupation := _calculate_occupation_signature()
+	if next_height_signature != terrain_height_signature or next_occupation != terrain_occupation_signature:
 		_rebuild_terrain()
 	_sync_nature(false)
 	_sync_grass(false)
@@ -558,6 +560,7 @@ func _rebuild_terrain() -> void:
 	# + horizon replace it. Unexplored still sits under #47 fog.
 	boundary_mist_material = null
 	terrain_height_signature = _calculate_height_signature()
+	terrain_occupation_signature = _calculate_occupation_signature()
 	_rebuild_beach_apron()
 
 
@@ -712,6 +715,24 @@ func _calculate_height_signature() -> int:
 	for y in range(map_size.y):
 		for x in range(map_size.x):
 			value = int((value * 31 + simulation.get_height(Vector2i(x, y))) & 0x7fffffff)
+	return value
+
+
+func _calculate_occupation_signature() -> int:
+	# The Director: roads and yards must rebake the ground splat even when
+	# height stays flat, otherwise the showcase village sits on a lawn.
+	var value := 19
+	if simulation == null:
+		return value
+	if simulation.connected_roads != null:
+		var road_keys: Array = simulation.connected_roads.keys()
+		road_keys.sort()
+		for key_value in road_keys:
+			value = int((value * 31 + String(key_value).hash()) & 0x7fffffff)
+	for building_value in simulation.get_buildings():
+		var building: Dictionary = building_value
+		var tile: Vector2i = building.get("position", Vector2i.ZERO)
+		value = int((value * 31 + int(building.get("id", 0)) * 11 + tile.x * 13 + tile.y * 17 + int(bool(building.get("construction", false)))) & 0x7fffffff)
 	return value
 
 
