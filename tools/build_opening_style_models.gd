@@ -20,8 +20,8 @@ func build() -> void:
 		"slate": "426f6a", "slate_light": "548882", "slate_dark": "2f5450",
 		"clay": "a75d39", "clay_light": "c2744c", "clay_dark": "7a4030",
 		"iron": "30383a", "glass": "f1b76a",
-		"pine": "4a7a44", "pine_dark": "3a6238",
-		"leaf": "6a8e3c", "leaf_light": "88a44c", "leaf_spring": "7a9848",
+		"pine": "345b48", "pine_dark": "233e34",
+		"leaf": "5b784c", "leaf_light": "809a67", "leaf_spring": "537860",
 		"grain": "bd9855",
 		"flower_warm": "c86a46", "flower_cool": "8a5a7a", "flower_gold": "d2a64c"
 	}
@@ -267,7 +267,9 @@ func shed(lumber: bool) -> void:
 	for i in 13:
 		box(Vector3(-1.5 + i * 0.25, 1.35, -1.25), Vector3(0.23, 2.1, 0.12), "plank")
 	box(Vector3(0, 2.5, 0), Vector3(3.4, 0.18, 2.8), "wood")
-	roof(Vector3(0, 2.52, 0), 3.9, 3.3, 1.45, true)
+	roof(Vector3(0, 2.52, 0), 3.9, 3.3, 1.45, lumber, not lumber)
+	if not lumber:
+		chimney(Vector3(1.15, 2.10, -0.70))
 	if lumber:
 		for i in 7:
 			cylinder(Vector3(-0.9 + (i % 3) * 0.42, 0.48 + (i / 3) * 0.4, -0.35), 0.21, 0.21, 2.0, "plank", 8, Vector3(PI / 2.0, 0, 0))
@@ -511,11 +513,15 @@ func extended_building(kind: String) -> void:
 		_: cottage(kind)
 
 func grass() -> void:
-	for i in 7:
+	# GFX-E: 3–5 broad tapered leaves, not hairline strokes.
+	var count := 3 + rng.randi() % 3
+	for i in count:
 		var blade := PrismMesh.new()
-		var h := rng.randf_range(0.22, 0.48)
-		blade.size = Vector3(0.055, h, 0.025)
-		add(blade, Vector3(rng.randf_range(-0.14, 0.14), h * 0.5, rng.randf_range(-0.14, 0.14)), "leaf" if i % 2 == 0 else "leaf_light", Vector3(0, rng.randf() * TAU, rng.randf_range(-0.35, 0.35)))
+		var h := rng.randf_range(0.16, 0.34)
+		var w := rng.randf_range(0.10, 0.16)
+		blade.size = Vector3(w, h, 0.035)
+		var key := "leaf_light" if i % 2 == 0 else "leaf"
+		add(blade, Vector3(rng.randf_range(-0.12, 0.12), h * 0.5, rng.randf_range(-0.12, 0.12)), key, Vector3(0, rng.randf() * TAU, rng.randf_range(-0.25, 0.25)))
 
 
 func flowers() -> void:

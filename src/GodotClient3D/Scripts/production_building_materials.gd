@@ -81,7 +81,7 @@ static func remap_albedo(kind: String, color: Color, building_type: String) -> C
 				next = color.lerp(HALL_SLATE, 0.78)
 			elif kind == "timber":
 				next = color.lerp(DARK_TIMBER, 0.60)
-		"HOUSE", "FARM", "BAKERY":
+		"HOUSE", "FARM", "BAKERY", "STOREHOUSE":
 			if kind == "teal_roof" or kind == "roof":
 				next = color.lerp(CLAY_ROOF, 0.70)
 			elif kind == "plaster":
@@ -90,6 +90,20 @@ static func remap_albedo(kind: String, color: Color, building_type: String) -> C
 				next = color.lerp(DARK_TIMBER, 0.50)
 			elif kind == "stone":
 				next = color.lerp(WEATHERED_STONE, 0.35)
+		"LUMBER_CAMP", "SAWMILL":
+			if kind == "teal_roof" or kind == "roof":
+				next = color.lerp(CLAY_ROOF, 0.45)
+			elif kind == "plaster":
+				next = color.lerp(WARM_PLASTER, 0.40)
+			elif kind == "timber":
+				next = color.lerp(DARK_TIMBER, 0.55)
+			elif kind == "stone":
+				next = color.lerp(WEATHERED_STONE, 0.30)
+		"QUARRY":
+			if kind == "stone" or kind == "plaster":
+				next = color.lerp(WEATHERED_STONE, 0.50).lerp(CASTLE_MASONRY, 0.22)
+			elif kind == "teal_roof" or kind == "roof":
+				next = color.lerp(CLAY_ROOF, 0.40)
 		"WATCHTOWER", "BARRACKS":
 			if kind == "teal_roof" or kind == "roof":
 				next = color.lerp(KEEP_SLATE, 0.55)

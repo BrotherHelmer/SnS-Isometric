@@ -1,27 +1,30 @@
 shader_type spatial;
 render_mode diffuse_burley, specular_disabled;
 
-// The Director: GFX-D designed ground. Vertex colour carries occupation
-// (roads / aprons / forest floor). Shader adds meadow, flower tint and
-// gravel without the black speckle that made GFX-C look like a prototype.
+// The Director: GFX-E designed ground. Vertex colour carries occupation
+// only (roads / aprons). Meadow colour is world-space multi-scale noise so
+// 2.5 m tiles cannot print a checkerboard. Palette from the GFX-D review.
 uniform vec3 light_tint : source_color = vec3(1.0);
 uniform float tint_floor = 0.0;
 uniform float tint_wash_lo = 0.70;
 uniform float tint_wash_hi = 0.94;
-uniform vec3 grass_sunlit : source_color = vec3(0.353, 0.545, 0.267); // #5A8B44
-uniform vec3 grass_moss : source_color = vec3(0.227, 0.408, 0.251); // #3A6840
-uniform vec3 dirt_color : source_color = vec3(0.502, 0.388, 0.278); // #806347
-uniform vec3 meadow_lush : source_color = vec3(0.420, 0.600, 0.280);
-uniform vec3 meadow_warm : source_color = vec3(0.520, 0.580, 0.250);
-uniform vec3 flower_warm : source_color = vec3(0.780, 0.420, 0.280);
-uniform vec3 flower_cool : source_color = vec3(0.620, 0.380, 0.560);
-uniform vec3 gravel_color : source_color = vec3(0.420, 0.400, 0.360);
-uniform float macro_metres = 14.0;
-uniform float detail_metres = 1.2;
-uniform float macro_amount = 0.28;
-uniform float detail_amount = 0.062;
-uniform float dirt_amount = 0.42;
-uniform float flower_amount = 0.38;
+uniform vec3 grass_sunlit : source_color = vec3(0.510, 0.580, 0.365); // #82945D
+uniform vec3 grass_moss : source_color = vec3(0.271, 0.373, 0.235); // #455F3C
+uniform vec3 dirt_color : source_color = vec3(0.522, 0.416, 0.298); // #856A4C
+uniform vec3 meadow_lush : source_color = vec3(0.396, 0.478, 0.286); // #657A49
+uniform vec3 meadow_warm : source_color = vec3(0.396, 0.455, 0.275); // calm olive, not yellow
+uniform vec3 flower_warm : source_color = vec3(0.620, 0.400, 0.300);
+uniform vec3 flower_cool : source_color = vec3(0.500, 0.380, 0.480);
+uniform vec3 gravel_color : source_color = vec3(0.522, 0.514, 0.451); // #858373
+uniform vec3 forest_floor : source_color = vec3(0.243, 0.314, 0.227); // #3E503A
+uniform vec3 road_earth : source_color = vec3(0.639, 0.525, 0.373); // #A3865F
+uniform float macro_metres = 18.0;
+uniform float patch_metres = 8.0;
+uniform float detail_metres = 0.85;
+uniform float macro_amount = 0.14;
+uniform float detail_amount = 0.045;
+uniform float dirt_amount = 0.22;
+uniform float flower_amount = 0.16;
 // 1 at night / distant LOD: one-octave noise, no 4-tap detail normals.
 uniform float lod_cheap = 0.0;
 // G1: same noisy waterline as settlement_water.gdshader.
@@ -89,25 +92,25 @@ void fragment() {
 		}
 	}
 	float beach = 1.0 - smoothstep(0.0, beach_margin_metres + 1.8, max(land, 0.0));
-	vec2 macro_uv = world_pos.xz / max(macro_metres, 1.0);
+	// Broad 20–40 m, medium 5–12 m, fine < 1 m. World-space so tile
+	// vertices cannot reprint a diagonal checkerboard.
+	vec2 broad_uv = world_pos.xz / max(macro_metres, 16.0);
+	vec2 patch_uv = world_pos.xz / max(patch_metres, 5.0) + vec2(3.7, 11.2);
 	vec2 detail_uv = world_pos.xz / max(detail_metres, 0.4) + vec2(8.2, 3.7);
-	float macro = lod_cheap > 0.5 ? noise2(macro_uv) : fbm(macro_uv);
-	// Night LOD: skip the 0.8–2 m octave. Strategy cam barely reads it
-	// and the extra noise2 is the last lavapipe millisecond we can spare.
+	float broad = lod_cheap > 0.5 ? noise2(broad_uv) : fbm(broad_uv);
+	float patch = lod_cheap > 0.5 ? noise2(patch_uv) : fbm(patch_uv);
 	float detail = lod_cheap > 0.5 ? 0.5 : fbm(detail_uv);
-	float dirt_noise = lod_cheap > 0.5 ? macro : fbm(world_pos.xz / (macro_metres * 1.35) + vec2(4.8, 21.0));
-	float dirt_mask = smoothstep(0.46, 0.82, dirt_noise);
-	vec3 grass = mix(grass_moss, grass_sunlit, clamp(macro * 0.62 + detail * 0.38, 0.0, 1.0));
-	float meadow = lod_cheap > 0.5 ? macro : noise2(world_pos.xz / 14.0 + vec2(3.1, 9.7));
-	float meadow_b = lod_cheap > 0.5 ? macro : noise2(world_pos.xz / 22.0 + vec2(11.4, 2.2));
-	grass = mix(grass, meadow_lush, smoothstep(0.38, 0.78, meadow) * 0.72);
-	grass = mix(grass, meadow_warm, smoothstep(0.50, 0.88, meadow_b) * 0.42);
-	// Flower tint is a hue lift, never a dark speck.
+	float dirt_noise = lod_cheap > 0.5 ? broad : fbm(world_pos.xz / (macro_metres * 1.15) + vec2(4.8, 21.0));
+	float dirt_mask = smoothstep(0.62, 0.90, dirt_noise);
+	vec3 grass = mix(grass_moss, meadow_lush, clamp(broad * 0.55 + patch * 0.45, 0.0, 1.0));
+	grass = mix(grass, grass_sunlit, smoothstep(0.58, 0.92, patch) * 0.38);
+	grass = mix(grass, meadow_warm, smoothstep(0.72, 0.96, broad) * 0.16);
+	grass = mix(grass, forest_floor, smoothstep(0.08, 0.42, 1.0 - patch) * 0.22);
 	if (lod_cheap < 0.5) {
-		float bloom = noise2(world_pos.xz / 3.4 + vec2(17.0, 5.0));
-		float patch = smoothstep(0.68, 0.90, meadow) * smoothstep(0.62, 0.88, bloom);
+		float bloom = noise2(world_pos.xz / 4.2 + vec2(17.0, 5.0));
+		float blossom_w = smoothstep(0.78, 0.94, patch) * smoothstep(0.70, 0.92, bloom);
 		vec3 blossom = mix(flower_warm, flower_cool, step(0.5, noise2(world_pos.xz * 0.37)));
-		grass = mix(grass, mix(grass, blossom, 0.70), patch * flower_amount);
+		grass = mix(grass, mix(grass, blossom, 0.45), blossom_w * flower_amount);
 	}
 	// COLOR.a is the occupation splat. Some backends drop vertex alpha
 	// to 1; then brown RGB (r > g) still marks roads / aprons.
@@ -118,25 +121,28 @@ void fragment() {
 			smoothstep(0.0, 0.10, COLOR.r - COLOR.g)
 		);
 	}
-	vec3 occupy_albedo = COLOR.rgb;
+	// Irregular chewed edge so footprints are not board-game rectangles.
+	float chew = lod_cheap > 0.5 ? 0.5 : noise2(world_pos.xz * 1.65 + vec2(2.4, 9.1));
+	occupy *= clamp(0.72 + (chew - 0.5) * 0.55, 0.20, 1.0);
+	vec3 occupy_albedo = mix(dirt_color, road_earth, smoothstep(0.35, 0.80, COLOR.r));
+	occupy_albedo = mix(occupy_albedo, COLOR.rgb, 0.55);
 	vec3 ground = mix(grass, occupy_albedo, occupy);
 	ground = mix(ground, dirt_color, dirt_mask * dirt_amount * (1.0 - occupy * 0.70));
-	float gravel_n = lod_cheap > 0.5 ? 0.0 : smoothstep(0.70, 0.92, noise2(world_pos.xz / 8.0 + vec2(2.2, 14.0)));
-	ground = mix(ground, gravel_color, gravel_n * 0.28 * (0.20 + occupy));
-	float macro_var = mix(1.0 - macro_amount, 1.0 + macro_amount, macro);
+	float gravel_n = lod_cheap > 0.5 ? 0.0 : smoothstep(0.76, 0.94, noise2(world_pos.xz / 9.0 + vec2(2.2, 14.0)));
+	ground = mix(ground, gravel_color, gravel_n * 0.22 * (0.18 + occupy));
+	float macro_var = mix(1.0 - macro_amount, 1.0 + macro_amount, broad);
 	float detail_var = mix(1.0 - detail_amount * 0.55, 1.0 + detail_amount, detail);
-	float wash = smoothstep(tint_wash_lo, max(tint_wash_lo + 0.02, tint_wash_hi), macro);
+	float wash = smoothstep(tint_wash_lo, max(tint_wash_lo + 0.02, tint_wash_hi), broad);
 	vec3 albedo = ground * mix(vec3(1.0), light_tint, mix(tint_floor, 1.0, wash)) * macro_var * detail_var;
-	vec3 shore = mix(beach_color, rock_shore, clamp(dirt_mask * 0.65 + macro * 0.35, 0.0, 1.0));
+	vec3 shore = mix(beach_color, rock_shore, clamp(dirt_mask * 0.65 + broad * 0.35, 0.0, 1.0));
 	albedo = mix(albedo, shore, beach * (apron_mode > 0.5 ? 0.92 : 0.22));
 	if (apron_mode > 0.5) {
 		float wet = 1.0 - smoothstep(0.0, 3.2, max(land, 0.0));
 		albedo = mix(albedo, wet_sand, wet * 0.55);
 	}
 	ALBEDO = albedo;
-	// Flat world-up normals. The 4-tap bump plus half-res SSAO painted
-	// diagonal stripes that crawled when the camera panned. Colour breakup
-	// above still reads from the strategy camera.
+	// Flat world-up normals. Colour breakup above still reads from the
+	// strategy camera without a crawling bump.
 	NORMAL = normalize((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
 	ROUGHNESS = mix(0.96, 0.88, dirt_mask);
 }

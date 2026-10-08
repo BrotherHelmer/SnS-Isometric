@@ -33,6 +33,7 @@ ASSET_CATALOG_GROUPS = {
         "res://assets/settlement3d/runtime/opening_style/house.tscn",
         "res://assets/settlement3d/runtime/opening_style/lumber_camp.tscn",
         "res://assets/settlement3d/runtime/opening_style/quarry.tscn",
+        "res://assets/settlement3d/runtime/opening_style/farm.tscn",
         "res://assets/settlement3d/runtime/opening_style/bakery.tscn",
         "res://assets/settlement3d/runtime/opening_style/storehouse.tscn",
         "res://assets/settlement3d/runtime/opening_style/watchtower.tscn",
@@ -76,17 +77,25 @@ ASSET_CATALOG_GROUPS = {
     ],
     "TREES": [
         "res://assets/settlement3d/runtime/opening_style/fir.tscn",
+        "res://assets/settlement3d/runtime/opening_style/fir_tall.tscn",
+        "res://assets/settlement3d/runtime/opening_style/spruce.tscn",
         "res://assets/settlement3d/runtime/opening_style/broadleaf.tscn",
+        "res://assets/settlement3d/runtime/opening_style/oak.tscn",
+        "res://assets/settlement3d/runtime/opening_style/birch.tscn",
+        "res://assets/settlement3d/runtime/opening_style/fir_lod.tscn",
+        "res://assets/settlement3d/runtime/opening_style/broadleaf_lod.tscn",
     ],
     "ROCKS": [
         "res://assets/settlement3d/runtime/opening_style/rocks.tscn",
     ],
     "UNDERSTORY": [
         "res://assets/settlement3d/runtime/opening_style/bush.tscn",
-        "res://assets/settlement3d/runtime/opening_style/grass.tscn",
     ],
     "GRASS": [
         "res://assets/settlement3d/runtime/opening_style/grass.tscn",
+    ],
+    "FLOWERS": [
+        "res://assets/settlement3d/runtime/opening_style/flowers.tscn",
     ],
 }
 
@@ -166,6 +175,66 @@ def file_exists(res_path):
     return os.path.exists(local_path)
 
 
+RUNTIME_ROOT = "res://assets/settlement3d/runtime"
+MODEL_EXT = (".tscn", ".res", ".gltf", ".glb")
+LITERAL_MODEL_RE = re.compile(r'res://[A-Za-z0-9_./-]+\.(?:tscn|res|gltf|glb)')
+ROOT_CONCAT_RE = re.compile(
+    r'(?:ROOT|Catalog\.ROOT)\s*\+\s*["\']([^"\']+\.(?:tscn|res|gltf|glb))["\']'
+)
+FRAGMENT_RE = re.compile(
+    r'["\'](/(?:opening_style|buildings|nature|farm|characters|resources|tools|animations)/'
+    r'[^"\']+\.(?:tscn|res|gltf|glb))["\']'
+)
+NAME_LIST_RE = re.compile(r'\[\s*((?:"[a-z][a-z0-9_]*"(?:\s*,\s*)+)+"[a-z][a-z0-9_]*")\s*\]')
+OPENING_CONCAT_RE = re.compile(r'opening_style/"\s*\+')
+
+
+def companion_res(path):
+    """PackedScene .tscn files keep their mesh in a sibling .res."""
+    if path.endswith(".tscn"):
+        return path[:-5] + ".res"
+    return ""
+
+
+def scan_code_model_paths():
+    """GFX-E: catch models loaded by string, not only the stale catalog lists.
+
+    export_filter=\"resources\" does not follow load(\"res://...\") string
+    paths, so birch / fir_tall / farm were missing from #61 while the audit
+    still printed MISSING 0.
+    """
+    paths = set()
+    src_root = Path("src")
+    if not src_root.exists():
+        return []
+    for gd_path in src_root.rglob("*.gd"):
+        text = gd_path.read_text(encoding="utf-8")
+        for match in LITERAL_MODEL_RE.findall(text):
+            if match.startswith("res://assets/settlement3d/"):
+                paths.add(match)
+        for frag in ROOT_CONCAT_RE.findall(text):
+            paths.add(RUNTIME_ROOT + (frag if frag.startswith("/") else "/" + frag))
+        for frag in FRAGMENT_RE.findall(text):
+            paths.add(RUNTIME_ROOT + frag)
+        if OPENING_CONCAT_RE.search(text):
+            for name in re.findall(r'"([a-z][a-z0-9_]*)"', text):
+                candidate = f"{RUNTIME_ROOT}/opening_style/{name}.tscn"
+                if file_exists(candidate):
+                    paths.add(candidate)
+        for name_blob in NAME_LIST_RE.findall(text):
+            for name in re.findall(r'"([a-z][a-z0-9_]*)"', name_blob):
+                candidate = f"{RUNTIME_ROOT}/opening_style/{name}.tscn"
+                if file_exists(candidate):
+                    paths.add(candidate)
+    resolved = set()
+    for path in paths:
+        resolved.add(path)
+        sibling = companion_res(path)
+        if sibling and file_exists(sibling):
+            resolved.add(sibling)
+    return sorted(resolved)
+
+
 def preload_targets(export_files):
     """T-SNS-UI Look lift: preload("res://...") targets of exported scripts.
 
@@ -204,7 +273,9 @@ def main():
     
     preloads = preload_targets(export_files)
     print(f"Preloads in exported scripts: {len(preloads)}")
-    runtime_paths = sorted(set(runtime_paths) | set(preloads))
+    code_models = scan_code_model_paths()
+    print(f"Code-referenced model paths: {len(code_models)}")
+    runtime_paths = sorted(set(runtime_paths) | set(preloads) | set(code_models))
 
     # Find missing paths
     export_set = set(export_files)

@@ -22,6 +22,10 @@ config/custom_user_dir_name="ShardAndSovereign/Playtest"
 run/main_scene="res://src/GodotClient3D/Scenes/production_3d.tscn"
 config/features=PackedStringArray("4.7")
 
+[autoload]
+
+GfxShots="*res://src/GodotClient3D/Scripts/production_gfx_shots.gd"
+
 [display]
 
 window/size/viewport_width=1280

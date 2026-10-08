@@ -30,8 +30,8 @@ const HORIZON_RADIUS_METRES := 420.0
 const FOG_VOLUME_HEIGHT_METRES := 56.0
 const FOG_VOLUME_CENTER_Y := 18.0
 const FOG_DISPLAY_UPSAMPLE := 8
-const FOG_UNKNOWN_BASE := Vector3(0.10, 0.13, 0.16)
-const FOG_MIST_BASE := Vector3(0.16, 0.19, 0.22)
+const FOG_UNKNOWN_BASE := Vector3(0.090, 0.145, 0.176) # #17252D
+const FOG_MIST_BASE := Vector3(0.251, 0.329, 0.353) # #40545A
 
 var simulation
 var map_size := Vector2i.ZERO
@@ -128,6 +128,9 @@ var rival_activity_count := 0
 var presentation_paused := false
 var _terrain_yard_cache: Dictionary = {}
 var _terrain_occupied_cache: Dictionary = {}
+var _terrain_road_cache: Dictionary = {}
+var _terrain_color_grid: PackedColorArray = PackedColorArray()
+var _terrain_lookups_ready := false
 var _atmosphere_scale := 1.0
 var _ground_tint := Color(1.0, 1.0, 1.0)
 
@@ -203,6 +206,11 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 		halo_placements.clear()
 		last_revealed_count = -1
 		claim_overlay_signature = ""
+		_terrain_yard_cache.clear()
+		_terrain_occupied_cache.clear()
+		_terrain_road_cache.clear()
+		_terrain_color_grid = PackedColorArray()
+		_terrain_lookups_ready = false
 	simulation = simulation_value
 	map_size = Vector2i(world_snapshot.get("map_size", Vector2i.ZERO))
 	visual_seed = int(world_snapshot.get("seed", 1))
@@ -229,11 +237,20 @@ func bind_fog_overlay(_camera: Camera3D) -> void:
 
 
 func sync_frame(frame_snapshot: Dictionary) -> void:
+	# One lookup pass per frame. GFX-E corner averaging used to call
+	# _terrain_color ~16× per cell, and each call scanned every building
+	# for roads — that is the 8 s new-game / 112 s showcase first-frame.
+	_refresh_terrain_lookups()
 	var next_height_signature := _calculate_height_signature()
 	var next_occupation := _calculate_occupation_signature()
-	if next_height_signature != terrain_height_signature or next_occupation != terrain_occupation_signature:
+	if next_height_signature != terrain_height_signature:
 		_rebuild_terrain()
-	_sync_nature(false)
+	elif next_occupation != terrain_occupation_signature:
+		_rebake_terrain_occupation()
+	var revealed_count := int(frame_snapshot.get("revealed_count", simulation.revealed_tiles.size()))
+	var reveal_changed := revealed_count != last_revealed_count
+	# One nature rebuild even when both layout and FOW change (showcase).
+	_sync_nature(reveal_changed)
 	_sync_grass(false)
 	_sync_roads(frame_snapshot.get("roads", []))
 	_sync_buildings(frame_snapshot.get("buildings", []))
@@ -249,10 +266,8 @@ func sync_frame(frame_snapshot: Dictionary) -> void:
 	_update_shard_beacon(frame_snapshot.get("wyrdfall", {}))
 	_sync_wyrd_springs(frame_snapshot.get("wyrd_sites", []))
 	_sync_map_markers()
-	var revealed_count := int(frame_snapshot.get("revealed_count", simulation.revealed_tiles.size()))
-	if revealed_count != last_revealed_count:
+	if reveal_changed:
 		_sync_fog(false)
-		_sync_nature(true)
 		_rebuild_edge_forest(false)
 		_rebuild_world_rim(false)
 
@@ -505,48 +520,113 @@ func _named_root(root_name: String) -> Node3D:
 	return root
 
 
-func _rebuild_terrain() -> void:
-	if terrain_mesh_instance != null:
-		terrain_mesh_instance.queue_free()
-	if terrain_body != null:
-		terrain_body.queue_free()
+func _refresh_terrain_lookups() -> void:
+	# O(buildings + roads) once. _is_road_tile used to walk every building
+	# for every tile / corner sample.
 	_terrain_yard_cache = _yard_tiles(3)
 	_terrain_occupied_cache = _structure_tiles()
+	_terrain_road_cache.clear()
+	if simulation != null:
+		if simulation.connected_roads != null:
+			for key_value in simulation.connected_roads.keys():
+				_terrain_road_cache[String(key_value)] = true
+		for building_value in simulation.get_buildings():
+			var building: Dictionary = building_value
+			if String(building.get("type", "")) == Defs.BUILDING_ROAD:
+				_terrain_road_cache[_tile_key(Vector2i(building.get("position", Vector2i.ZERO)))] = true
+	_terrain_lookups_ready = true
+
+
+func _precompute_terrain_colors() -> void:
+	var count := map_size.x * map_size.y
+	_terrain_color_grid.resize(count)
+	for y in range(map_size.y):
+		for x in range(map_size.x):
+			_terrain_color_grid[y * map_size.x + x] = _compute_terrain_color(Vector2i(x, y))
+
+
+func _cached_terrain_color(tile: Vector2i) -> Color:
+	if map_size.x <= 0 or _terrain_color_grid.size() != map_size.x * map_size.y:
+		return _compute_terrain_color(tile)
+	if tile.x < 0 or tile.y < 0 or tile.x >= map_size.x or tile.y >= map_size.y:
+		return _compute_terrain_color(tile)
+	return _terrain_color_grid[tile.y * map_size.x + tile.x]
+
+
+func _rebuild_terrain() -> void:
+	_refresh_terrain_lookups()
+	_precompute_terrain_colors()
+	_commit_terrain_mesh(true)
+	_rebuild_beach_apron()
+
+
+func _rebake_terrain_occupation() -> void:
+	# Heights unchanged: recolor the slab, keep the picker collision.
+	# Showcase stamps 15 buildings + roads; a full remesh+concave rebuild
+	# after each occupation signature used to stall the first frame.
+	_refresh_terrain_lookups()
+	_precompute_terrain_colors()
+	_commit_terrain_mesh(false)
+
+
+func _commit_terrain_mesh(rebuild_collision: bool) -> void:
 	var surface := SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for y in range(map_size.y):
 		for x in range(map_size.x):
 			_add_terrain_cell(surface, Vector2i(x, y))
 	var mesh := surface.commit()
-	terrain_mesh_instance = MeshInstance3D.new()
-	terrain_mesh_instance.name = "ContinuousTerrain"
+	if terrain_mesh_instance == null or not is_instance_valid(terrain_mesh_instance):
+		if terrain_mesh_instance != null:
+			terrain_mesh_instance.queue_free()
+		terrain_mesh_instance = MeshInstance3D.new()
+		terrain_mesh_instance.name = "ContinuousTerrain"
+		terrain_mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_apply_ground_material(terrain_mesh_instance)
+		terrain_root.add_child(terrain_mesh_instance)
 	terrain_mesh_instance.mesh = mesh
+	if rebuild_collision:
+		_rebuild_terrain_collision(mesh)
+	# G1: the teal OuterWildernessFloor was the box-like void. Water + rim
+	# + horizon replace it. Unexplored still sits under #47 fog.
+	boundary_mist_material = null
+	terrain_height_signature = _calculate_height_signature()
+	terrain_occupation_signature = _calculate_occupation_signature()
+
+
+func _apply_ground_material(host: MeshInstance3D) -> void:
 	var material := ShaderMaterial.new()
 	material.shader = preload("res://src/GodotClient3D/Shaders/settlement_ground.gdshader")
 	material.set_shader_parameter("light_tint", Vector3(_ground_tint.r, _ground_tint.g, _ground_tint.b))
 	material.set_shader_parameter("tint_floor", 0.0)
-	# The Director: GFX-D designed meadow. Stronger sunlit / moss / dirt
-	# breakup so occupation and patches read from the strategy camera.
-	material.set_shader_parameter("grass_sunlit", Vector3(0.400, 0.580, 0.230))
-	material.set_shader_parameter("grass_moss", Vector3(0.200, 0.380, 0.210))
-	material.set_shader_parameter("macro_metres", 14.0)
-	material.set_shader_parameter("detail_metres", 1.2)
-	material.set_shader_parameter("macro_amount", 0.28)
-	material.set_shader_parameter("detail_amount", 0.062)
-	material.set_shader_parameter("dirt_amount", 0.42)
-	material.set_shader_parameter("flower_amount", 0.38)
-	material.set_shader_parameter("meadow_lush", Vector3(0.380, 0.620, 0.220))
-	material.set_shader_parameter("meadow_warm", Vector3(0.560, 0.580, 0.220))
+	# The Director: GFX-E meadow. Calm greens, world-space scales.
+	# Vertex colour is occupation only — no per-tile hue checkerboard.
+	material.set_shader_parameter("grass_sunlit", Vector3(0.510, 0.580, 0.365))
+	material.set_shader_parameter("grass_moss", Vector3(0.271, 0.373, 0.235))
+	material.set_shader_parameter("macro_metres", 18.0)
+	material.set_shader_parameter("patch_metres", 8.0)
+	material.set_shader_parameter("detail_metres", 0.85)
+	material.set_shader_parameter("macro_amount", 0.14)
+	material.set_shader_parameter("detail_amount", 0.045)
+	material.set_shader_parameter("dirt_amount", 0.22)
+	material.set_shader_parameter("flower_amount", 0.16)
+	material.set_shader_parameter("meadow_lush", Vector3(0.396, 0.478, 0.286))
+	material.set_shader_parameter("meadow_warm", Vector3(0.396, 0.455, 0.275))
+	material.set_shader_parameter("forest_floor", Vector3(0.243, 0.314, 0.227))
+	material.set_shader_parameter("dirt_color", Vector3(0.522, 0.416, 0.298))
+	material.set_shader_parameter("road_earth", Vector3(0.639, 0.525, 0.373))
+	material.set_shader_parameter("gravel_color", Vector3(0.522, 0.514, 0.451))
 	material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
 	material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
 	material.set_shader_parameter("beach_margin_metres", BEACH_MARGIN_METRES)
 	material.set_shader_parameter("coast_jut_metres", COAST_JUT_METRES)
 	material.set_shader_parameter("apron_mode", 0.0)
-	terrain_mesh_instance.material_override = material
-	# Self-shadow on the playable slab plus PSSM 2-split painted a moving
-	# diagonal seam. Buildings still cast onto the ground.
-	terrain_mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	terrain_root.add_child(terrain_mesh_instance)
+	host.material_override = material
+
+
+func _rebuild_terrain_collision(mesh: Mesh) -> void:
+	if terrain_body != null and is_instance_valid(terrain_body):
+		terrain_body.queue_free()
 	terrain_body = StaticBody3D.new()
 	terrain_body.name = "TerrainPicker"
 	terrain_body.set_meta("selection_kind", "terrain")
@@ -556,26 +636,28 @@ func _rebuild_terrain() -> void:
 	collision.shape = shape
 	terrain_body.add_child(collision)
 	terrain_root.add_child(terrain_body)
-	# G1: the teal OuterWildernessFloor was the box-like void. Water + rim
-	# + horizon replace it. Unexplored still sits under #47 fog.
-	boundary_mist_material = null
-	terrain_height_signature = _calculate_height_signature()
-	terrain_occupation_signature = _calculate_occupation_signature()
-	_rebuild_beach_apron()
 
 
 func _add_terrain_cell(surface: SurfaceTool, tile: Vector2i) -> void:
 	var center := ScaleProfile.tile_to_flat_world(Vector2(tile), map_size)
 	var half := ScaleProfile.LOGICAL_CELL_METRES * 0.5
 	var top_y := float(simulation.get_height(tile)) * ScaleProfile.TERRAIN_ELEVATION_UNIT_METRES
-	var color := _terrain_color(tile)
 	var corners := [
 		Vector3(center.x - half, top_y, center.z - half),
 		Vector3(center.x + half, top_y, center.z - half),
 		Vector3(center.x + half, top_y, center.z + half),
 		Vector3(center.x - half, top_y, center.z + half),
 	]
-	_add_quad(surface, corners[0], corners[1], corners[2], corners[3], Vector3.UP, color)
+	# Shared-corner colours so adjacent tiles cannot print a diamond
+	# checkerboard from the isometric camera.
+	var corner_colors := [
+		_corner_terrain_color(tile, Vector2i(0, 0)),
+		_corner_terrain_color(tile, Vector2i(1, 0)),
+		_corner_terrain_color(tile, Vector2i(1, 1)),
+		_corner_terrain_color(tile, Vector2i(0, 1)),
+	]
+	_add_quad_colored(surface, corners[0], corners[1], corners[2], corners[3], Vector3.UP, corner_colors[0], corner_colors[1], corner_colors[2], corner_colors[3])
+	var color := _cached_terrain_color(tile)
 	var directions: Array[Vector2i] = [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]
 	for direction_index in directions.size():
 		var neighbor: Vector2i = tile + directions[direction_index]
@@ -602,13 +684,37 @@ func _add_terrain_cell(surface: SurfaceTool, tile: Vector2i) -> void:
 
 
 func _add_quad(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, normal: Vector3, color: Color) -> void:
-	for vertex in [a, b, c, a, c, d]:
+	_add_quad_colored(surface, a, b, c, d, normal, color, color, color, color)
+
+
+func _add_quad_colored(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, normal: Vector3, ca: Color, cb: Color, cc: Color, cd: Color) -> void:
+	var verts := [a, b, c, a, c, d]
+	var cols := [ca, cb, cc, ca, cc, cd]
+	for i in verts.size():
 		surface.set_normal(normal)
-		surface.set_color(color.srgb_to_linear())
-		surface.add_vertex(vertex)
+		surface.set_color((cols[i] as Color).srgb_to_linear())
+		surface.add_vertex(verts[i])
+
+
+func _corner_terrain_color(tile: Vector2i, corner: Vector2i) -> Color:
+	var acc := Color(0, 0, 0, 0)
+	var count := 0
+	for oy in [corner.y - 1, corner.y]:
+		for ox in [corner.x - 1, corner.x]:
+			var sample := tile + Vector2i(ox, oy)
+			if simulation != null and simulation.is_inside_map(sample):
+				acc += _cached_terrain_color(sample)
+				count += 1
+	if count <= 0:
+		return _cached_terrain_color(tile)
+	return acc / float(count)
 
 
 func _terrain_color(tile: Vector2i) -> Color:
+	return _cached_terrain_color(tile)
+
+
+func _compute_terrain_color(tile: Vector2i) -> Color:
 	var tree_weight := 0
 	var rock_weight := 0
 	for oy in range(-2, 3):
@@ -619,41 +725,32 @@ func _terrain_color(tile: Vector2i) -> Color:
 			var tile_type := String(simulation.get_tile(sample))
 			if tile_type == Defs.TILE_TREE: tree_weight += 1
 			if tile_type == Defs.TILE_ROCK: rock_weight += 1
-	var hash_a := float(_tile_hash(tile, 7) % 100) / 100.0
-	var hash_b := float(_tile_hash(tile, 13) % 100) / 100.0
-	# The Director: GFX-D occupation masks. Alpha is the splat weight the
-	# ground shader trusts; RGB is worn earth / litter / meadow tint.
-	var base := Color(0.306, 0.471, 0.267, 0.0)
-	base = base.lerp(Color(0.416, 0.604, 0.290, 0.08), hash_a * 0.55)
-	base = base.lerp(Color(0.227, 0.408, 0.251, 0.06), hash_b * 0.40)
-	var meadow := _meadow_weight(tile)
-	if meadow > 0.12:
-		var meadow_c := Color(0.430, 0.604, 0.282, clampf(meadow * 0.18, 0.0, 0.18))
-		base = base.lerp(meadow_c, clampf(meadow, 0.0, 1.0))
-		base = base.lerp(Color(0.541, 0.604, 0.251, 0.16), meadow * hash_a * 0.35)
-	var litter := clampf(float(tree_weight) / 14.0, 0.0, 0.70)
-	if litter > 0.08:
-		base = base.lerp(Color(0.165, 0.267, 0.204, 0.42), litter)
+	# Occupation only. Meadow hue lives in the world-space shader so a
+	# per-tile hash cannot reprint diagonal squares.
+	var base := Color(0.396, 0.478, 0.286, 0.0)
+	var litter := clampf(float(tree_weight) / 16.0, 0.0, 0.70)
+	if litter > 0.12:
+		base = base.lerp(Color(0.243, 0.314, 0.227, 0.28), litter * 0.55)
 	var scree := clampf(float(rock_weight) / 16.0, 0.0, 0.55)
-	if scree > 0.08:
-		base = base.lerp(Color(0.353, 0.345, 0.298, 0.40), scree)
+	if scree > 0.12:
+		base = base.lerp(Color(0.522, 0.514, 0.451, 0.32), scree * 0.50)
 	var edge := mini(mini(tile.x, tile.y), mini(map_size.x - 1 - tile.x, map_size.y - 1 - tile.y))
 	if edge <= 1:
-		base = base.lerp(Color(0.769, 0.659, 0.471, 0.28) if rock_weight < 3 else Color(0.416, 0.376, 0.329, 0.34), 0.22)
+		base = base.lerp(Color(0.620, 0.520, 0.380, 0.20) if rock_weight < 3 else Color(0.416, 0.376, 0.329, 0.24), 0.16)
 	var path_w := _visual_path_weight(tile)
-	if path_w > 0.04:
-		base = base.lerp(Color(0.541, 0.416, 0.282, 0.78), clampf(path_w, 0.0, 0.92))
-		base = base.lerp(Color(0.416, 0.325, 0.251, 0.70), clampf(path_w * 0.40, 0.0, 0.40))
+	if path_w > 0.08:
+		base = base.lerp(Color(0.639, 0.525, 0.373, 0.55), clampf(path_w * 0.70, 0.0, 0.70))
 	if _is_road_tile(tile):
-		base = Color(0.541, 0.439, 0.298, 0.92).lerp(Color(0.416, 0.325, 0.251, 0.92), hash_a * 0.40)
+		base = Color(0.639, 0.525, 0.373, 0.78)
 	elif _is_road_shoulder(tile):
-		base = base.lerp(Color(0.478, 0.384, 0.267, 0.70), 0.78)
+		base = base.lerp(Color(0.522, 0.416, 0.298, 0.42), 0.55)
 	if _terrain_occupied_cache.has(_tile_key(tile)):
-		base = base.lerp(Color(0.416, 0.325, 0.251, 0.88), 0.86)
+		# Soft worn earth — not a dark board-game rectangle.
+		base = base.lerp(Color(0.522, 0.416, 0.298, 0.48), 0.58)
 	elif _terrain_yard_cache.has(_tile_key(tile)):
-		base = base.lerp(Color(0.478, 0.408, 0.267, 0.58), 0.62)
+		base = base.lerp(Color(0.522, 0.416, 0.298, 0.22), 0.32)
 	if String(simulation.get_tile(tile)) == Defs.TILE_SHARD:
-		base = Color(0.275, 0.349, 0.388, 0.55)
+		base = Color(0.275, 0.349, 0.388, 0.40)
 	var impact := 0.0
 	if simulation.has_method("impact_factor"):
 		impact = float(simulation.impact_factor(tile))
@@ -692,6 +789,8 @@ func _visual_path_weight(tile: Vector2i) -> float:
 
 
 func _is_road_tile(tile: Vector2i) -> bool:
+	if _terrain_lookups_ready:
+		return _terrain_road_cache.has(_tile_key(tile))
 	if simulation == null:
 		return false
 	if simulation.connected_roads.has(_tile_key(tile)):
@@ -794,12 +893,13 @@ func _rebuild_nature_multimeshes() -> void:
 			if _nature_suppressed_near_activity(tile):
 				continue
 			var neighbors := _same_type_neighbors(tile, Defs.TILE_TREE)
-			var visual_count := 2 if stage >= 2 and neighbors >= 6 and foliage_density >= 0.75 and _tile_hash(tile, 19) % 2 == 0 else 1
+			var visual_count := 2 if stage >= 1 and neighbors >= 3 and foliage_density >= 0.75 and _tile_hash(tile, 19) % 3 != 0 else 1
 			if foliage_density < 0.50 and _tile_hash(tile, 91) % 3 == 0:
 				visual_count = 0
 			for index in visual_count:
-				var path_value := String(Catalog.TREES[_tile_hash(tile, 17 + index) % Catalog.TREES.size()])
-				_append_nature_transform(transforms_by_path, path_value, tile, index, 0.72, 0.58 + float(stage) * 0.10, 0.24)
+				var path_value := _tree_path_for_tile(tile, index, neighbors)
+				# 0.8–1.4× archetype so the woodland has stacked heights.
+				_append_nature_transform(transforms_by_path, path_value, tile, index, 0.55, 0.82 + float(stage) * 0.06, 0.58)
 			if stage >= 2 and neighbors >= 3 and foliage_density >= 0.75:
 				var understory_path := String(Catalog.UNDERSTORY[_tile_hash(tile, 71) % Catalog.UNDERSTORY.size()])
 				_append_nature_transform(transforms_by_path, understory_path, tile, 5, 0.84, 0.66, 0.18)
@@ -817,6 +917,16 @@ func _rebuild_nature_multimeshes() -> void:
 	# Off-map decorative trees used to poke under the old FOW sheet. The fog
 	# volume now owns the exterior, so extra silhouettes are not needed.
 	_spawn_nature_multimeshes(resource_visuals_root, transforms_by_path)
+	var tree_floors: Array = []
+	for path_value in transforms_by_path:
+		if not _is_tree_path(String(path_value)):
+			continue
+		var batch: Array = transforms_by_path[path_value]
+		for index in batch.size():
+			if index % 2 != 0:
+				continue
+			tree_floors.append(ContactAO.flatten_transform(batch[index], 1.7))
+	ContactAO.spawn_multimesh(resource_visuals_root, tree_floors, 0.22)
 
 
 func _sync_grass(force: bool) -> void:
@@ -834,6 +944,7 @@ func _sync_grass(force: bool) -> void:
 func _rebuild_grass_multimeshes() -> void:
 	if grass_root == null or simulation == null:
 		return
+	_refresh_terrain_lookups()
 	for child in grass_root.get_children():
 		grass_root.remove_child(child)
 		child.free()
@@ -860,33 +971,33 @@ func _rebuild_grass_multimeshes() -> void:
 			var path_w := _visual_path_weight(tile)
 			if path_w > 0.45:
 				continue
-			# Sparse 1-tuft grass reads as black speckle from the strategy
-			# camera. Keep clustered meadow / forest-edge tufts only.
+			# GFX-E: fewer, larger clumps. Tiny dark strokes read as ants.
+			var patch := _tile_hash(tile, 19) % 7
 			var tufts := 0
-			if meadow > 0.28 or near_yard:
-				tufts = 2 if _tile_hash(tile, 19) % 3 != 0 else 1
-			elif forest_edge >= 2 and _tile_hash(tile, 23) % 2 == 0:
-				tufts = 2
+			if (meadow > 0.22 or near_yard) and patch <= 1:
+				tufts = 1
+			elif forest_edge >= 2 and _tile_hash(tile, 23) % 6 == 0:
+				tufts = 1
 			if tufts == 0:
-				if meadow > 0.36 and _tile_hash(tile, 47) % 3 == 0 and Catalog.FLOWERS.size() > 0:
+				if meadow > 0.34 and _tile_hash(tile, 47) % 8 == 0 and Catalog.FLOWERS.size() > 0:
 					var lone_flower := String(Catalog.FLOWERS[_tile_hash(tile, 61) % Catalog.FLOWERS.size()])
-					_append_nature_transform(transforms_by_path, lone_flower, tile, 4, 0.70, 1.20, 0.28)
+					_append_nature_transform(transforms_by_path, lone_flower, tile, 4, 0.55, 1.05, 0.35)
 				continue
 			for index in tufts:
 				var grass_path := String(Catalog.GRASS[_tile_hash(tile, 83 + index) % Catalog.GRASS.size()])
-				_append_nature_transform(transforms_by_path, grass_path, tile, index, 0.95, 1.35, 0.28)
-			if meadow > 0.28 and _tile_hash(tile, 47) % 2 == 0 and Catalog.FLOWERS.size() > 0:
+				_append_nature_transform(transforms_by_path, grass_path, tile, index, 0.70, 0.85, 0.55)
+			if meadow > 0.26 and _tile_hash(tile, 47) % 7 == 0 and Catalog.FLOWERS.size() > 0:
 				var flower_path := String(Catalog.FLOWERS[_tile_hash(tile, 61) % Catalog.FLOWERS.size()])
-				_append_nature_transform(transforms_by_path, flower_path, tile, 4, 0.70, 1.25, 0.26)
+				_append_nature_transform(transforms_by_path, flower_path, tile, 4, 0.55, 1.00, 0.40)
 			# Presentation-only meadow shrubs — not TILE_TREE, so the founding
 			# apron stays buildable while the camera still sees a composed yard.
-			if meadow > 0.30 and forest_edge == 0 and _tile_hash(tile, 59) % 5 == 0 and Catalog.UNDERSTORY.size() > 0:
+			if meadow > 0.24 and forest_edge == 0 and _tile_hash(tile, 59) % 8 == 0 and Catalog.UNDERSTORY.size() > 0:
 				var meadow_bush := String(Catalog.UNDERSTORY[_tile_hash(tile, 73) % Catalog.UNDERSTORY.size()])
-				_append_nature_transform(transforms_by_path, meadow_bush, tile, 8, 0.70, 0.88, 0.20)
-			if forest_edge >= 2 and _tile_hash(tile, 53) % 2 == 0 and Catalog.UNDERSTORY.size() > 0:
+				_append_nature_transform(transforms_by_path, meadow_bush, tile, 8, 0.55, 0.92, 0.28)
+			if forest_edge >= 2 and _tile_hash(tile, 53) % 3 == 0 and Catalog.UNDERSTORY.size() > 0:
 				var bush_path := String(Catalog.UNDERSTORY[_tile_hash(tile, 71) % Catalog.UNDERSTORY.size()])
-				_append_nature_transform(transforms_by_path, bush_path, tile, 6, 0.80, 0.92, 0.22)
-			if (forest_edge >= 1 or meadow > 0.45) and _tile_hash(tile, 101) % 4 == 0 and Catalog.ROCKS.size() > 0:
+				_append_nature_transform(transforms_by_path, bush_path, tile, 6, 0.50, 0.88, 0.30)
+			if (forest_edge >= 1 or meadow > 0.45) and _tile_hash(tile, 101) % 5 == 0 and Catalog.ROCKS.size() > 0:
 				var rock_path := String(Catalog.ROCKS[_tile_hash(tile, 109) % Catalog.ROCKS.size()])
 				_append_nature_transform(transforms_by_path, rock_path, tile, 7, 0.55, 0.46, 0.18)
 	_spawn_nature_multimeshes(grass_root, transforms_by_path)
@@ -949,7 +1060,9 @@ func _spawn_nature_multimeshes(host: Node3D, transforms_by_path: Dictionary) -> 
 		var instance := MultiMeshInstance3D.new()
 		instance.name = "Composed_%s" % String(path_value).get_file().get_basename()
 		instance.multimesh = multimesh
-		instance.material_override = _foliage_material(mesh, path_value)
+		var foliage := _foliage_material(mesh, path_value)
+		if foliage != null:
+			instance.material_override = foliage
 		host.add_child(instance)
 
 
@@ -1053,6 +1166,10 @@ func _append_boundary_instance(groups: Dictionary, logical_position: Vector2, in
 func _mesh_for_nature_path(path_value: String) -> Mesh:
 	if nature_mesh_cache.has(path_value):
 		return nature_mesh_cache[path_value]
+	if path_value.get_file().get_basename() == "grass":
+		var clump := _grass_clump_mesh()
+		nature_mesh_cache[path_value] = clump
+		return clump
 	var packed := load(path_value) as PackedScene
 	if packed == null:
 		return null
@@ -1062,6 +1179,35 @@ func _mesh_for_nature_path(path_value: String) -> Mesh:
 	nature_mesh_cache[path_value] = mesh
 	instance.free()
 	return mesh
+
+
+func _grass_clump_mesh() -> ArrayMesh:
+	# GFX-E: 4 broad tapered leaves. Strategy-cam silhouette, not ant strokes.
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var colors := [Color("#587545"), Color("#78965A"), Color("#405C37"), Color("#6A8A50")]
+	for i in 4:
+		var yaw := float(i) * 0.85 + 0.2
+		var h := 0.20 + float(i % 3) * 0.05
+		var w := 0.11 + float(i % 2) * 0.03
+		var ox := cos(yaw) * 0.08
+		var oz := sin(yaw) * 0.08
+		var tip := Vector3(ox, h, oz)
+		var left := Vector3(ox + cos(yaw + 1.2) * w, 0.0, oz + sin(yaw + 1.2) * w)
+		var right := Vector3(ox + cos(yaw - 1.2) * w, 0.0, oz + sin(yaw - 1.2) * w)
+		var normal := (right - left).cross(tip - left).normalized()
+		st.set_color(colors[i])
+		st.set_normal(normal)
+		st.add_vertex(left)
+		st.add_vertex(tip)
+		st.add_vertex(right)
+	var mat := StandardMaterial3D.new()
+	mat.vertex_color_use_as_albedo = true
+	mat.roughness = 0.92
+	mat.metallic = 0.0
+	st.set_material(mat)
+	st.index()
+	return st.commit()
 
 
 func _find_mesh_instance(node: Node) -> MeshInstance3D:
@@ -2041,13 +2187,20 @@ func _same_type_neighbors(tile: Vector2i, tile_type: String) -> int:
 
 
 func apply_quality_profile(quality: Dictionary) -> void:
-	foliage_density = clampf(float(quality.get("foliage_density", foliage_density)), 0.25, 1.0)
-	grass_density = clampf(float(quality.get("grass_density", quality.get("foliage_density", grass_density))), 0.25, 1.0)
-	water_detail = clampf(float(quality.get("water_detail", water_detail)), 0.2, 1.0)
+	var next_foliage := clampf(float(quality.get("foliage_density", foliage_density)), 0.25, 1.0)
+	var next_grass := clampf(float(quality.get("grass_density", quality.get("foliage_density", grass_density))), 0.25, 1.0)
+	var next_water := clampf(float(quality.get("water_detail", water_detail)), 0.2, 1.0)
+	var density_changed := not is_equal_approx(next_foliage, foliage_density) or not is_equal_approx(next_grass, grass_density)
+	foliage_density = next_foliage
+	grass_density = next_grass
+	water_detail = next_water
 	if water_material != null:
 		water_material.set_shader_parameter("wave", 0.055 * water_detail)
-	if simulation == null:
+	if simulation == null or not density_changed:
 		return
+	# Recommended and High share 1.0 foliage. Rebuilding the edge forest
+	# and every grass clump on a no-op density change hung lavapipe after
+	# the showcase village (~5 min, never finished).
 	_rebuild_edge_forest(true)
 	_rebuild_grass_multimeshes()
 
@@ -2235,13 +2388,15 @@ func _rebuild_beach_apron() -> void:
 	material.shader = preload("res://src/GodotClient3D/Shaders/settlement_ground.gdshader")
 	material.set_shader_parameter("light_tint", Vector3(_ground_tint.r, _ground_tint.g, _ground_tint.b))
 	material.set_shader_parameter("tint_floor", 0.0)
-	material.set_shader_parameter("macro_metres", 14.0)
-	material.set_shader_parameter("detail_metres", 1.2)
-	material.set_shader_parameter("macro_amount", 0.16)
-	material.set_shader_parameter("detail_amount", 0.064)
-	material.set_shader_parameter("dirt_amount", 0.20)
-	material.set_shader_parameter("grass_sunlit", Vector3(0.353, 0.545, 0.267))
-	material.set_shader_parameter("grass_moss", Vector3(0.227, 0.408, 0.251))
+	material.set_shader_parameter("macro_metres", 18.0)
+	material.set_shader_parameter("patch_metres", 8.0)
+	material.set_shader_parameter("detail_metres", 0.85)
+	material.set_shader_parameter("macro_amount", 0.12)
+	material.set_shader_parameter("detail_amount", 0.045)
+	material.set_shader_parameter("dirt_amount", 0.18)
+	material.set_shader_parameter("grass_sunlit", Vector3(0.510, 0.580, 0.365))
+	material.set_shader_parameter("grass_moss", Vector3(0.271, 0.373, 0.235))
+	material.set_shader_parameter("meadow_lush", Vector3(0.396, 0.478, 0.286))
 	material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
 	material.set_shader_parameter("world_size_xz", size_xz)
 	material.set_shader_parameter("beach_margin_metres", BEACH_MARGIN_METRES)
@@ -2395,9 +2550,7 @@ func _rebuild_edge_forest(force: bool) -> void:
 			_append_edge_tree(transforms_by_path, _edge_tree_path(-ring, y, ring), Vector2(float(-ring), float(y)), ring)
 			_append_edge_tree(transforms_by_path, _edge_tree_path(map_size.x - 1 + ring, y, ring), Vector2(float(map_size.x - 1 + ring), float(y)), ring)
 	_spawn_nature_multimeshes(edge_forest_root, transforms_by_path)
-	for child in edge_forest_root.get_children():
-		if child is MultiMeshInstance3D:
-			(child as MultiMeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# Trees keep directional shadows. Grass/flowers stay shadowless.
 	# Darker forest floor under every fourth canopy. One MultiMesh, not Decals.
 	for path_value in transforms_by_path:
 		var batch: Array = transforms_by_path[path_value]
@@ -2448,19 +2601,53 @@ func _edge_tree_path(x: int, y: int, ring: int) -> String:
 	return String(Catalog.EDGE_TREES[_tile_hash(Vector2i(x, y), 17 + ring) % n])
 
 
-func _foliage_material(mesh: Mesh, path_value: String) -> ShaderMaterial:
+func _tree_path_for_tile(tile: Vector2i, index: int, neighbors: int) -> String:
+	# Clustered woodland: 55% conifer / 30% broadleaf / 15% small LOD.
+	var roll := _tile_hash(tile, 17 + index) % 100
+	if neighbors >= 2:
+		if roll < 55 and Catalog.CONIFERS.size() > 0:
+			return String(Catalog.CONIFERS[_tile_hash(tile, 31 + index) % Catalog.CONIFERS.size()])
+		if roll < 85 and Catalog.DECIDUOUS.size() > 0:
+			return String(Catalog.DECIDUOUS[_tile_hash(tile, 41 + index) % Catalog.DECIDUOUS.size()])
+		if Catalog.EDGE_TREES.size() > 0:
+			return String(Catalog.EDGE_TREES[_tile_hash(tile, 51 + index) % Catalog.EDGE_TREES.size()])
+	return String(Catalog.TREES[_tile_hash(tile, 17 + index) % Catalog.TREES.size()])
+
+
+func _is_tree_path(path_value: String) -> bool:
+	var name := path_value.get_file().get_basename()
+	return name in ["fir", "fir_tall", "spruce", "broadleaf", "oak", "birch", "fir_lod", "broadleaf_lod"]
+
+
+func _is_scatter_path(path_value: String) -> bool:
+	var name := path_value.get_file().get_basename()
+	return name in ["grass", "flowers", "bush"]
+
+
+func _foliage_material(mesh: Mesh, path_value: String) -> Material:
+	if _is_scatter_path(path_value):
+		# Keep authored tuft / blossom colours. The tree shader paints short
+		# blades as trunk-brown, which is the black-ant read.
+		return null
 	var material := ShaderMaterial.new()
 	material.shader = FoliageShader
-	var tint := Color("#5A8A48")
-	if String(path_value).contains("broadleaf") or String(path_value).contains("oak"):
-		tint = Color("#7A9A44")
+	var tint := Color("#345B48")
+	var lift := 1.12
+	if String(path_value).contains("spruce") or String(path_value).contains("fir_tall"):
+		tint = Color("#233E34")
+		lift = 1.08
+	elif String(path_value).contains("fir"):
+		tint = Color("#345B48")
+		lift = 1.10
 	elif String(path_value).contains("birch"):
-		tint = Color("#8AAA52")
-	elif String(path_value).contains("spruce") or String(path_value).contains("fir_tall"):
-		tint = Color("#4A7A40")
+		tint = Color("#809A67")
+		lift = 1.16
+	elif String(path_value).contains("broadleaf") or String(path_value).contains("oak"):
+		tint = Color("#5B784C")
+		lift = 1.14
 	material.set_shader_parameter("albedo_color", Vector3(tint.r, tint.g, tint.b))
-	material.set_shader_parameter("trunk_color", Vector3(0.36, 0.24, 0.16))
-	material.set_shader_parameter("canopy_lift", 1.65)
+	material.set_shader_parameter("trunk_color", Vector3(0.28, 0.20, 0.14))
+	material.set_shader_parameter("canopy_lift", lift)
 	material.set_shader_parameter("atmosphere", _atmosphere_scale)
 	material.set_shader_parameter("wind", 0.08)
 	if mesh != null and mesh.get_surface_count() > 0:

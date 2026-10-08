@@ -3,9 +3,9 @@ render_mode diffuse_lambert, specular_disabled, cull_disabled, blend_mix;
 
 // The Director: GFX-06 roads as terrain. Compacted clay centre, darker dirt
 // edges, noisy smoothstep into the grass. No uniform bright shoulder.
-uniform vec4 road_color : source_color = vec4(0.659, 0.537, 0.384, 1.0); // #A88962
-uniform vec3 clay_color : source_color = vec3(0.659, 0.537, 0.384); // #A88962
-uniform vec3 dirt_edge : source_color = vec3(0.502, 0.388, 0.278); // #806347
+uniform vec4 road_color : source_color = vec4(0.639, 0.525, 0.373, 1.0); // #A3865F
+uniform vec3 clay_color : source_color = vec3(0.639, 0.525, 0.373); // #A3865F
+uniform vec3 dirt_edge : source_color = vec3(0.522, 0.416, 0.298); // #856A4C
 uniform vec3 light_tint : source_color = vec3(1.0);
 uniform float value_lift = 0.06;
 uniform float worn_darken = 0.10;
@@ -31,8 +31,8 @@ void vertex() {
 
 void fragment() {
 	float across = abs(UV.x - 0.5) * 2.0;
-	float chew = noise2(world_pos.xz * 2.7 + vec2(9.0, 4.0));
-	float edge = smoothstep(0.32 + chew * 0.16, 0.88 + chew * 0.10, across);
+	float chew = noise2(world_pos.xz * 2.1 + vec2(9.0, 4.0));
+	float edge = smoothstep(0.26 + chew * 0.22, 0.90 + chew * 0.14, across);
 	vec3 clay = mix(road_color.rgb, clay_color, 0.62) * (1.0 - worn_darken * (1.0 - edge));
 	vec3 dirt = mix(road_color.rgb, dirt_edge, 0.78);
 	// shoulder_lift stays 0 — pale graphic borders were the board-game read.

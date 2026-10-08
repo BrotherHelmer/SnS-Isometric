@@ -32,95 +32,106 @@ const SIZE_WARNING := 16
 
 const AUDIO_SETTINGS_PATH := "user://one_shard_audio.json"
 
-# The Director: GFX-D golden-hour grade. Filmic + warm key / cool fill.
-# Contrast lives in the key and LUT, not crushed B/C/S. Sun orbit is degrees
-# around the camera view: 138 keeps day light upper-left (shadows
+# The Director: GFX-E neutralized day grade (ChatGPT GFX-D review).
+# Warmth lives in the key only — materials stay meadow-green. Sun orbit is
+# degrees around the camera view: 138 keeps day light upper-left (shadows
 # lower-right) and the 3D sun/camera angle ≥ 90°. Night uses 300 so the moon
 # sits opposite without lerping through the camera at dawn.
 const PALETTE_NAVY := Color("#101A22")
 const PALETTE_NIGHT_TERRAIN := Color("#24383A")
-const PALETTE_FOREST := Color("#26372C")
-const PALETTE_MOSS := Color("#3A6840")
-const PALETTE_SUNLIT_GRASS := Color("#5A8B44")
-const PALETTE_ROAD_CLAY := Color("#A88962")
-const PALETTE_DRY_EARTH := Color("#806347")
+const PALETTE_FOREST := Color("#3E503A")
+const PALETTE_MOSS := Color("#455F3C")
+const PALETTE_SUNLIT_GRASS := Color("#82945D")
+const PALETTE_MEADOW := Color("#657A49")
+const PALETTE_ROAD_CLAY := Color("#A3865F")
+const PALETTE_DRY_EARTH := Color("#856A4C")
 const PALETTE_PLASTER := Color("#D9C49B")
 const PALETTE_TIMBER := Color("#57402B")
 const PALETTE_RUST := Color("#A75D39")
 const PALETTE_TEAL := Color("#426F6A")
 const PALETTE_GOLD := Color("#D2A64C")
 const PALETTE_WINDOW := Color("#F2B56B")
-const PALETTE_MOON := Color("#8FAAD4")
-const PALETTE_STONE := Color("#888779")
+const PALETTE_MOON := Color("#A1B8D4")
+const PALETTE_STONE := Color("#858373")
+const PALETTE_CONIFER := Color("#345B48")
+const PALETTE_CONIFER_SHADOW := Color("#233E34")
+const PALETTE_CONIFER_SUN := Color("#537860")
+const PALETTE_BROADLEAF := Color("#5B784C")
+const PALETTE_BROADLEAF_SUN := Color("#809A67")
+const PALETTE_UNDERGROWTH := Color("#344C36")
+const PALETTE_GRASS_TUFT := Color("#587545")
+const PALETTE_GRASS_TUFT_LIT := Color("#78965A")
+const PALETTE_GRASS_TUFT_DARK := Color("#405C37")
+const PALETTE_TORCH := Color("#FFB36B")
 
 const LIGHTING := {
 	"day": {
-		"ambient": 0.38,
-		"ambient_color": Color("#7A93A6"),
+		"ambient": 0.45,
+		"ambient_color": Color("#899DAA"),
 		"fog_density": 0.00028,
-		"fog_color": Color("#C4B090"),
-		"fog_energy": 0.42,
+		"fog_color": Color("#B8C0C4"),
+		"fog_energy": 0.38,
 		"fog_begin": 30.0,
 		"fog_end": 70.0,
-		"fog_aerial": 0.46,
-		"fog_sun_scatter": 0.22,
-		"saturation": 1.08,
-		"contrast": 1.06,
-		"exposure": 1.06,
+		"fog_aerial": 0.40,
+		"fog_sun_scatter": 0.12,
+		"saturation": 0.95,
+		"contrast": 1.04,
+		"exposure": 0.90,
 		"brightness": 1.0,
 		"tonemap_white": 7.4,
-		"sun_energy": 1.45,
-		"sun_color": Color("#FFD5A3"),
-		"sun_pitch": -34.0,
+		"sun_energy": 0.95,
+		"sun_color": Color("#FFE1BD"),
+		"sun_pitch": -35.0,
 		"sun_orbit": 138.0,
-		"fill_energy": 0.18,
-		"fill_color": Color("#7A93A6"),
-		"sky_top": Color("#4A6A7A"),
-		"sky_horizon": Color("#E0C090"),
-		"ground_bottom": Color("#2A464A"),
-		"ground_horizon": Color("#5A7860"),
-		"ground_tint": Color(1.14, 1.04, 0.84),
-		"ground_tint_floor": 0.08,
-		"ground_wash_lo": 0.48,
-		"ground_wash_hi": 0.88,
+		"fill_energy": 0.16,
+		"fill_color": Color("#899DAA"),
+		"sky_top": Color("#5A7380"),
+		"sky_horizon": Color("#C8C4B4"),
+		"ground_bottom": Color("#2A3A32"),
+		"ground_horizon": Color("#4A5C48"),
+		"ground_tint": Color(1.0, 1.0, 1.0),
+		"ground_tint_floor": 0.0,
+		"ground_wash_lo": 0.62,
+		"ground_wash_hi": 0.94,
 		"window_color": PALETTE_WINDOW,
-		"torch_color": PALETTE_WINDOW,
+		"torch_color": PALETTE_TORCH,
 		"torch_range": 3.2,
 		"road_lift": 0.02,
 		"atmosphere_scale": 1.0,
 		"terrain_lod_cheap": 0.0
 	},
 	"dusk": {
-		"ambient": 0.52,
+		"ambient": 0.48,
 		"ambient_color": Color("#6A88A0"),
 		"fog_density": 0.0004,
-		"fog_color": Color("#C49868"),
-		"fog_energy": 0.50,
+		"fog_color": Color("#A89880"),
+		"fog_energy": 0.46,
 		"fog_begin": 24.0,
 		"fog_end": 58.0,
-		"fog_aerial": 0.42,
-		"fog_sun_scatter": 0.30,
-		"saturation": 1.06,
-		"contrast": 1.05,
-		"exposure": 1.08,
+		"fog_aerial": 0.38,
+		"fog_sun_scatter": 0.18,
+		"saturation": 0.96,
+		"contrast": 1.04,
+		"exposure": 0.92,
 		"brightness": 1.0,
 		"tonemap_white": 7.0,
-		"sun_energy": 1.22,
-		"sun_color": Color("#F0A868"),
+		"sun_energy": 0.88,
+		"sun_color": Color("#F0C090"),
 		"sun_pitch": -16.0,
 		"sun_orbit": 120.0,
-		"fill_energy": 0.28,
+		"fill_energy": 0.24,
 		"fill_color": Color("#6A88A0"),
 		"sky_top": Color("#2E3A58"),
-		"sky_horizon": Color("#D09060"),
-		"ground_bottom": Color("#243038"),
-		"ground_horizon": Color("#5A4A40"),
-		"ground_tint": Color(1.22, 0.90, 0.58),
+		"sky_horizon": Color("#C09070"),
+		"ground_bottom": Color("#243028"),
+		"ground_horizon": Color("#4A4A40"),
+		"ground_tint": Color(1.02, 0.98, 0.94),
 		"ground_tint_floor": 0.0,
-		"ground_wash_lo": 0.42,
-		"ground_wash_hi": 0.78,
+		"ground_wash_lo": 0.50,
+		"ground_wash_hi": 0.88,
 		"window_color": PALETTE_WINDOW,
-		"torch_color": PALETTE_WINDOW,
+		"torch_color": PALETTE_TORCH,
 		"torch_range": 3.6,
 		"road_lift": 0.03,
 		"atmosphere_scale": 0.55,
@@ -128,7 +139,7 @@ const LIGHTING := {
 	},
 	"night": {
 		"ambient": 0.72,
-		"ambient_color": Color("#2A3C48"),
+		"ambient_color": Color("#7089A8"),
 		"fog_density": 0.00055,
 		"fog_color": Color("#1C3038"),
 		"fog_energy": 0.36,
@@ -136,9 +147,9 @@ const LIGHTING := {
 		"fog_end": 52.0,
 		"fog_aerial": 0.30,
 		"fog_sun_scatter": 0.08,
-		"saturation": 0.94,
-		"contrast": 1.02,
-		"exposure": 1.0,
+		"saturation": 0.88,
+		"contrast": 1.06,
+		"exposure": 0.90,
 		"brightness": 1.0,
 		"tonemap_white": 7.0,
 		"sun_energy": 0.56,
@@ -151,12 +162,12 @@ const LIGHTING := {
 		"sky_horizon": PALETTE_NIGHT_TERRAIN,
 		"ground_bottom": PALETTE_NAVY,
 		"ground_horizon": PALETTE_NIGHT_TERRAIN,
-		"ground_tint": Color(1.02, 1.08, 1.16),
-		"ground_tint_floor": 0.14,
+		"ground_tint": Color(1.0, 1.0, 1.0),
+		"ground_tint_floor": 0.0,
 		"ground_wash_lo": 0.70,
 		"ground_wash_hi": 0.94,
 		"window_color": PALETTE_WINDOW,
-		"torch_color": PALETTE_WINDOW,
+		"torch_color": PALETTE_TORCH,
 		"torch_range": 3.8,
 		"road_lift": 0.10,
 		"atmosphere_scale": 0.38,

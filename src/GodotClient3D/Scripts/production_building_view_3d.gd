@@ -621,7 +621,7 @@ func _create_workyard_grounding() -> void:
 	if workyard_root == null or building_type in ["ROAD", "WALL"]:
 		return
 	var world_size := ScaleProfile.footprint_world_size(footprint)
-	var disc := ContactAO.make_instance("WorkyardDirt", Vector2(world_size.x + 2.4, world_size.y + 2.4), 0.16)
+	var disc := ContactAO.make_instance("WorkyardDirt", Vector2(world_size.x + 3.2, world_size.y + 3.2), 0.10)
 	disc.position = Vector3(0.0, 0.012, 0.15)
 	workyard_root.add_child(disc)
 
@@ -963,7 +963,7 @@ func _create_contact_ao() -> void:
 	var visual := _visual_size()
 	var width := maxf(world_size.x, visual.x) * 1.08
 	var depth := maxf(world_size.y, visual.z) * 1.08
-	var intensity := 0.28 if building_type == "WALL" else 0.42
+	var intensity := 0.22 if building_type == "WALL" else 0.28
 	var disc := ContactAO.make_instance("ContactAO", Vector2(width, depth), intensity)
 	disc.position = Vector3(0.0, 0.018, _model_offset_z())
 	add_child(disc)
