@@ -46,6 +46,7 @@ var selection_ring: MeshInstance3D
 var selection_area: Area3D
 var faction_marker: MeshInstance3D
 var damage_marker: MeshInstance3D
+var hostile_silhouette: MeshInstance3D
 var alert_light: OmniLight3D
 var target_position := Vector3.ZERO
 var target_facing := Vector2.DOWN
@@ -258,6 +259,7 @@ func set_faction(faction: String) -> void:
 	if cloak != null:
 		cloak.visible = faction == "rival"
 		cloak.material_override = material
+	_refresh_hostile_readability()
 
 
 func set_damage_state(hp: int, max_hp: int) -> void:
@@ -275,13 +277,59 @@ func set_damage_state(hp: int, max_hp: int) -> void:
 	var fraction := clampf(float(hp) / float(maxi(1, max_hp)), 0.0, 1.0)
 	var material := StandardMaterial3D.new()
 	if current_faction == "hostile":
-		material.albedo_color = Color(0.82, 0.14, 0.10, 0.78).lerp(Color(0.96, 0.42, 0.16, 0.78), fraction)
+		material.albedo_color = Color(0.82, 0.14, 0.10, 0.88).lerp(Color(0.96, 0.42, 0.16, 0.86), fraction)
+		material.no_depth_test = true
+		material.render_priority = 16
+		material.emission_enabled = true
+		material.emission = Color(0.70, 0.10, 0.06)
+		material.emission_energy_multiplier = 0.35
 	else:
 		material.albedo_color = Color(0.95, 0.22, 0.12, 0.80).lerp(Color(0.96, 0.68, 0.18, 0.76), fraction)
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	damage_marker.material_override = material
 	damage_marker.visible = hp > 0 and (current_faction == "hostile" or hp < max_hp)
+	_refresh_hostile_readability()
+
+
+func is_hostile_readable() -> bool:
+	# The Director: raiders must stay readable over wheat and houses at night.
+	if current_faction != "hostile":
+		return false
+	if damage_marker == null or not damage_marker.visible:
+		return false
+	var ring_material := damage_marker.material_override as StandardMaterial3D
+	if ring_material == null or not ring_material.no_depth_test:
+		return false
+	return hostile_silhouette != null and hostile_silhouette.visible
+
+
+func _refresh_hostile_readability() -> void:
+	if current_faction != "hostile":
+		if hostile_silhouette != null:
+			hostile_silhouette.visible = false
+		return
+	if hostile_silhouette == null:
+		hostile_silhouette = MeshInstance3D.new()
+		hostile_silhouette.name = "HostileSilhouette"
+		var capsule := CapsuleMesh.new()
+		capsule.radius = 0.40
+		capsule.height = 1.82
+		hostile_silhouette.mesh = capsule
+		hostile_silhouette.position.y = 1.02
+		var silhouette := StandardMaterial3D.new()
+		silhouette.albedo_color = Color(0.78, 0.12, 0.08, 0.34)
+		silhouette.emission_enabled = true
+		silhouette.emission = Color(0.68, 0.08, 0.06)
+		silhouette.emission_energy_multiplier = 0.42
+		silhouette.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		silhouette.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		silhouette.no_depth_test = true
+		silhouette.render_priority = 18
+		silhouette.cull_mode = BaseMaterial3D.CULL_DISABLED
+		hostile_silhouette.material_override = silhouette
+		add_child(hostile_silhouette)
+	hostile_silhouette.visible = true
 
 
 func set_alert(value: bool) -> void:

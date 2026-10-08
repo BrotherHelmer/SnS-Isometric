@@ -805,6 +805,8 @@ func _spawn_nature_multimeshes(host: Node3D, transforms_by_path: Dictionary) -> 
 		instance.name = "Composed_%s" % String(path_value).get_file().get_basename()
 		instance.multimesh = multimesh
 		host.add_child(instance)
+		if "wheat" in String(path_value):
+			BuildingView.apply_non_occluding_crop(instance)
 
 
 func _append_nature_transform(groups: Dictionary, path_value: String, tile: Vector2i, index: int, radius: float, base_scale: float, scale_range: float) -> void:

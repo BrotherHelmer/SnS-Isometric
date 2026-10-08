@@ -17,6 +17,7 @@ func _init() -> void:
 
 func _run() -> void:
 	_test_order_and_return()
+	_test_auto_scout_reveals_fog()
 	_test_low_health_and_death()
 	_test_waypoint_score()
 
@@ -39,6 +40,22 @@ func _test_order_and_return() -> void:
 	sim._simulate_seconds_for_test(40.0)
 	_check(not guard.has("scout_mission") or String(guard.get("state", "")) == "Patrolling", "the scout resumes patrol after returning")
 	_check(bool(sim.intention_flags.get("scouted_frontier", false)) or sim.revealed_tiles.size() > revealed_before, "frontier reveal can complete the scout intention")
+
+
+func _test_auto_scout_reveals_fog() -> void:
+	var sim := _ready_scout()
+	var guard: Dictionary = _patrol(sim)
+	var bread_before := int(sim.central_inventory.get(Defs.RESOURCE_BREAD, 0))
+	var revealed_before := sim.revealed_tiles.size()
+	var result: Dictionary = sim.request_scout_auto(int(guard["id"]))
+	_check(bool(result.get("success", false)), "Y / SCOUT auto-scouts without a map click")
+	_check(int(sim.central_inventory.get(Defs.RESOURCE_BREAD, 0)) == bread_before - Scout.FOOD_COST, "auto scout still costs 1 bread")
+	_check(guard.has("scout_mission"), "auto scout stores a mission")
+	_check(String(guard.get("state", "")) == "Scouting", "auto scout shows the Scouting state")
+	var target: Vector2i = Dictionary(guard.get("scout_mission", {})).get("target", Vector2i.ZERO)
+	_check(sim.is_inside_map(target) and not sim.is_revealed(target), "auto scout aims at the nearest fog tile")
+	sim._simulate_seconds_for_test(28.0)
+	_check(sim.revealed_tiles.size() > revealed_before, "auto scout reveals fog cells over time")
 
 
 func _test_low_health_and_death() -> void:

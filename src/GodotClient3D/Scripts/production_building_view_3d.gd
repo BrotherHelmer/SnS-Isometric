@@ -821,9 +821,87 @@ func _add_prop(prop_key: String, local_position: Vector3, prop_scale: Vector3, n
 	prop.rotation_degrees = rotation_degrees_value
 	workyard_root.add_child(prop)
 	prop.set_meta("base_scale", prop.scale)
+	if prop_key == "wheat_crop":
+		apply_non_occluding_crop(prop)
 	if resource_type != "":
 		prop.set_meta("inventory_resource", resource_type)
 		inventory_indicators.append(prop)
+
+
+static func apply_non_occluding_crop(node: Node) -> void:
+	# The Director: wheat is scenery. It must not hide soldiers or raiders.
+	if node == null:
+		return
+	if node is MeshInstance3D:
+		_apply_non_occluding_crop_mesh(node as MeshInstance3D)
+	elif node is MultiMeshInstance3D:
+		_apply_non_occluding_crop_multimesh(node as MultiMeshInstance3D)
+	for child in node.get_children():
+		apply_non_occluding_crop(child)
+
+
+static func crops_do_not_occlude(node: Node) -> bool:
+	if node == null:
+		return false
+	var found := false
+	if node is MeshInstance3D:
+		found = true
+		if not _material_skips_depth((node as MeshInstance3D).material_override):
+			return false
+	elif node is MultiMeshInstance3D:
+		found = true
+		if not _material_skips_depth((node as MultiMeshInstance3D).material_override):
+			return false
+	for child in node.get_children():
+		var child_found := _crop_mesh_present(child)
+		if child_found and not crops_do_not_occlude(child):
+			return false
+		found = found or child_found
+	return found
+
+
+static func _crop_mesh_present(node: Node) -> bool:
+	if node is MeshInstance3D or node is MultiMeshInstance3D:
+		return true
+	for child in node.get_children():
+		if _crop_mesh_present(child):
+			return true
+	return false
+
+
+static func _apply_non_occluding_crop_mesh(instance: MeshInstance3D) -> void:
+	var material := _non_occluding_crop_material(instance.material_override)
+	if material == null and instance.mesh != null and instance.mesh.get_surface_count() > 0:
+		material = _non_occluding_crop_material(instance.get_active_material(0))
+	if material == null:
+		material = _non_occluding_crop_material(null)
+	instance.material_override = material
+
+
+static func _apply_non_occluding_crop_multimesh(instance: MultiMeshInstance3D) -> void:
+	var material := _non_occluding_crop_material(instance.material_override)
+	if material == null and instance.multimesh != null and instance.multimesh.mesh != null and instance.multimesh.mesh.get_surface_count() > 0:
+		material = _non_occluding_crop_material(instance.multimesh.mesh.surface_get_material(0))
+	if material == null:
+		material = _non_occluding_crop_material(null)
+	instance.material_override = material
+
+
+static func _non_occluding_crop_material(source: Material) -> StandardMaterial3D:
+	var material: StandardMaterial3D
+	if source is StandardMaterial3D:
+		material = (source as StandardMaterial3D).duplicate()
+	else:
+		material = StandardMaterial3D.new()
+		material.albedo_color = Color("#c4a45a")
+	material.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
+	material.render_priority = mini(material.render_priority, -2)
+	return material
+
+
+static func _material_skips_depth(material: Material) -> bool:
+	var standard := material as StandardMaterial3D
+	return standard != null and standard.depth_draw_mode == BaseMaterial3D.DEPTH_DRAW_DISABLED
 
 
 func _update_inventory_indicators(inventory: Dictionary) -> void:
