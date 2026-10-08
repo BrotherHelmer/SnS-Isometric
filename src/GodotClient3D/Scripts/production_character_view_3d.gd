@@ -344,22 +344,43 @@ func _build_character() -> void:
 	set_cargo(current_cargo, current_cargo_amount)
 
 
+func _role_rim() -> Color:
+	match worker_type:
+		"guard", "ranger":
+			return Color(0.48, 0.72, 0.94)
+		"enemy_raider", "enemy_skitterer", "enemy_brute", "enemy_hexer":
+			return Color(0.94, 0.32, 0.20)
+		_:
+			if current_faction == "hostile":
+				return Color(0.94, 0.32, 0.20)
+			if current_faction == "player_military":
+				return Color(0.48, 0.72, 0.94)
+			return Color(0.94, 0.84, 0.64)
+
+
 func _apply_settlement_materials(node: Node) -> void:
 	if node is MeshInstance3D:
 		var instance := node as MeshInstance3D
-		for surface in instance.mesh.get_surface_count():
-			var original := instance.get_active_material(surface) as StandardMaterial3D
-			if original == null: continue
-			var key: Material = original
-			if not _cloth_materials.has(key):
-				var material := ShaderMaterial.new()
-				material.shader = preload("res://src/GodotClient3D/Shaders/settlement_character.gdshader")
-				material.set_shader_parameter("base_color", original.albedo_color)
-				material.set_shader_parameter("has_texture", original.albedo_texture != null)
-				if original.albedo_texture != null:
-					material.set_shader_parameter("palette_texture", original.albedo_texture)
-				_cloth_materials[key] = material
-			instance.set_surface_override_material(surface, _cloth_materials[key])
+		if instance.mesh == null:
+			pass
+		else:
+			var rim := _role_rim()
+			var rim_amount := 0.22 if current_faction == "hostile" or worker_type.begins_with("enemy") else 0.15
+			for surface in instance.mesh.get_surface_count():
+				var original := instance.get_active_material(surface) as StandardMaterial3D
+				if original == null: continue
+				var key := "%s:%s:%.2f" % [str(original.get_rid()), worker_type, rim_amount]
+				if not _cloth_materials.has(key):
+					var material := ShaderMaterial.new()
+					material.shader = preload("res://src/GodotClient3D/Shaders/settlement_character.gdshader")
+					material.set_shader_parameter("base_color", original.albedo_color)
+					material.set_shader_parameter("has_texture", original.albedo_texture != null)
+					material.set_shader_parameter("rim_color", Vector3(rim.r, rim.g, rim.b))
+					material.set_shader_parameter("rim_amount", rim_amount)
+					if original.albedo_texture != null:
+						material.set_shader_parameter("palette_texture", original.albedo_texture)
+					_cloth_materials[key] = material
+				instance.set_surface_override_material(surface, _cloth_materials[key])
 	for child in node.get_children():
 		_apply_settlement_materials(child)
 

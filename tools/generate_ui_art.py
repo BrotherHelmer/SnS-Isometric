@@ -149,7 +149,7 @@ def navy_frame(name, size, outer_inset, inner_inset, seed, ornaments=True, alpha
     d = ImageDraw.Draw(img)
     d.rounded_rectangle([0, 0, w - 1, h - 1], radius=radius * SS, outline=EDGE + (255,), width=SS)
     o = outer_inset * SS
-    d.rounded_rectangle([o, o, w - 1 - o, h - 1 - o], radius=max(0, radius - outer_inset) * SS, outline=hair + (255,), width=SS)
+    d.rounded_rectangle([o, o, w - 1 - o, h - 1 - o], radius=max(0, radius - outer_inset) * SS, outline=hair + (255,), width=2 * SS)
     if inner_inset > 0:
         i = inner_inset * SS
         d.rounded_rectangle([i, i, w - 1 - i, h - 1 - i], radius=max(0, radius - inner_inset) * SS, outline=hair_dim + (255,), width=SS)
@@ -438,13 +438,13 @@ def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     # T-SNS-UI Look lift (30/9 2026): navy + gold-hairline frames replace the
     # stone set (the stone generators above are kept for reference/rollback).
-    navy_frame("frame_panel", 64, 2, 5, 11)
-    navy_frame("frame_console", 96, 3, 7, 23, alpha=242)
-    navy_frame("frame_bar", 64, 1, 4, 31, ornaments=False, alpha=240)
-    navy_frame("frame_slot", 48, 1, 0, 41, ornaments=False, alpha=228, hair=HAIR_DIM)
-    navy_frame("frame_toast", 64, 1, 4, 53, ornaments=False, alpha=240)
-    navy_frame("frame_capsule", 32, 1, 0, 57, ornaments=False, alpha=225, top=(14, 22, 28), bottom=(8, 13, 17), hair=HAIR_DIM, radius=5)
-    navy_frame("frame_alert", 64, 2, 5, 59, alpha=246, top=(92, 22, 18), bottom=(40, 10, 9), hair=(214, 110, 86), hair_dim=(120, 40, 30))
+    navy_frame("frame_panel", 64, 2, 5, 11, alpha=246)
+    navy_frame("frame_console", 96, 3, 7, 23, alpha=252)
+    navy_frame("frame_bar", 64, 1, 4, 31, ornaments=False, alpha=248)
+    navy_frame("frame_slot", 48, 1, 0, 41, ornaments=False, alpha=236, hair=HAIR_DIM)
+    navy_frame("frame_toast", 64, 1, 4, 53, ornaments=False, alpha=246)
+    navy_frame("frame_capsule", 32, 1, 0, 57, ornaments=False, alpha=232, top=(14, 22, 28), bottom=(8, 13, 17), hair=HAIR_DIM, radius=5)
+    navy_frame("frame_alert", 64, 2, 5, 59, alpha=250, top=(92, 22, 18), bottom=(40, 10, 9), hair=(214, 110, 86), hair_dim=(120, 40, 30))
     navy_button("btn_normal", (30, 43, 51), (17, 26, 32), HAIR_DIM, 61)
     navy_button("btn_hover", (44, 60, 70), (25, 36, 44), HAIR_HI, 62, glow=True)
     navy_button("btn_pressed", (12, 19, 24), (22, 32, 39), HAIR, 63)

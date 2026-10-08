@@ -7,12 +7,12 @@ render_mode unshaded, specular_disabled, cull_disabled, fog_disabled;
 // Colour fades into the sky-ground; the plane outruns max zoom.
 uniform vec2 world_min_xz;
 uniform vec2 world_size_xz;
-uniform vec3 deep_color : source_color = vec3(0.12, 0.28, 0.30);
-uniform vec3 shallow_color : source_color = vec3(0.18, 0.38, 0.36);
-uniform vec3 foam_color : source_color = vec3(0.40, 0.38, 0.32);
-uniform vec3 horizon_color : source_color = vec3(0.145, 0.240, 0.255);
-uniform float wave = 0.04;
-uniform float foam_metres = 4.8;
+uniform vec3 deep_color : source_color = vec3(0.10, 0.34, 0.36);
+uniform vec3 shallow_color : source_color = vec3(0.16, 0.46, 0.42);
+uniform vec3 foam_color : source_color = vec3(0.62, 0.66, 0.58);
+uniform vec3 horizon_color : source_color = vec3(0.145, 0.250, 0.265);
+uniform float wave = 0.055;
+uniform float foam_metres = 6.2;
 uniform float beach_margin_metres = 5.0;
 uniform float coast_jut_metres = 12.0;
 uniform float fade_start = 70.0;
@@ -59,10 +59,11 @@ void fragment() {
 	vec2 outside = max(world_min_xz - world_pos.xz, world_pos.xz - (world_min_xz + world_size_xz));
 	float dist_out = max(max(outside.x, outside.y), 0.0);
 	float from_shore = max(-land, 0.0);
-	float foam = 1.0 - smoothstep(0.35, foam_metres, from_shore);
-	float ripple = lod_cheap > 0.5 ? 0.5 : (sin(world_pos.x * 1.35 + world_pos.z * 1.05 + TIME * 0.28) * 0.5 + 0.5);
-	vec3 water = mix(deep_color, shallow_color, clamp(foam * 0.34 + ripple * 0.06, 0.0, 1.0));
-	water = mix(water, foam_color, foam * 0.28);
+	float foam = 1.0 - smoothstep(0.22, foam_metres, from_shore);
+	float ripple = lod_cheap > 0.5 ? 0.5 : (sin(world_pos.x * 1.45 + world_pos.z * 1.12 + TIME * 0.42) * 0.5 + 0.5);
+	float sparkle = lod_cheap > 0.5 ? 0.0 : (sin(world_pos.x * 3.1 - world_pos.z * 2.4 + TIME * 0.85) * 0.5 + 0.5);
+	vec3 water = mix(deep_color, shallow_color, clamp(foam * 0.42 + ripple * 0.10, 0.0, 1.0));
+	water = mix(water, foam_color, foam * (0.38 + sparkle * 0.10));
 	float fade = smoothstep(fade_start, fade_end, dist_out);
 	ALBEDO = mix(water, horizon_color, fade) * mix(0.50, 0.82, atmosphere);
 }

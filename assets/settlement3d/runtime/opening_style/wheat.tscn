@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3]
 
-[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/wheat.res" id="1_bw7qw"]
+[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/wheat.res" id="1_ikjds"]
 
-[node name="Wheat" type="Node3D"]
+[node name="Wheat" type="Node3D" unique_id=93636215]
 
-[node name="Model" type="MeshInstance3D" parent="."]
-mesh = ExtResource("1_bw7qw")
+[node name="Model" type="MeshInstance3D" parent="." unique_id=398565517]
+mesh = ExtResource("1_ikjds")

@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3]
 
-[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/storehouse.res" id="1_t53xl"]
+[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/storehouse.res" id="1_lyw31"]
 
-[node name="Storehouse" type="Node3D"]
+[node name="Storehouse" type="Node3D" unique_id=379339754]
 
-[node name="Model" type="MeshInstance3D" parent="."]
-mesh = ExtResource("1_t53xl")
+[node name="Model" type="MeshInstance3D" parent="." unique_id=839148108]
+mesh = ExtResource("1_lyw31")

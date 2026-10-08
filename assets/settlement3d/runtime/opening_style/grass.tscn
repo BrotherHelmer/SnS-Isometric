@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3]
 
-[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/grass.res" id="1_7hey0"]
+[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/grass.res" id="1_nh0hc"]
 
-[node name="Grass" type="Node3D"]
+[node name="Grass" type="Node3D" unique_id=532782019]
 
-[node name="Model" type="MeshInstance3D" parent="."]
-mesh = ExtResource("1_7hey0")
+[node name="Model" type="MeshInstance3D" parent="." unique_id=1084441703]
+mesh = ExtResource("1_nh0hc")

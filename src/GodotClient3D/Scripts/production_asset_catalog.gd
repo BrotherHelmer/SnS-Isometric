@@ -42,7 +42,7 @@ const BUILDINGS := {
 	"LUMBER_CAMP": ROOT + "/opening_style/lumber_camp.tscn",
 	"SAWMILL": ROOT + "/opening_style/lumber_camp.tscn",
 	"QUARRY": ROOT + "/opening_style/quarry.tscn",
-	"FARM": ROOT + "/opening_style/house.tscn",
+	"FARM": ROOT + "/opening_style/farm.tscn",
 	"BAKERY": ROOT + "/opening_style/bakery.tscn",
 	"STOREHOUSE": ROOT + "/opening_style/storehouse.tscn",
 	"WATCHTOWER": ROOT + "/opening_style/watchtower.tscn",
@@ -91,23 +91,23 @@ const WORKYARD_PROPS := {
 	"training_target": ROOT + "/buildings/target.gltf",
 }
 
-# The Director: GFX-08 — 6 tree silhouettes so the forest edge is not one cone.
+# The Director: GFX-C — authored conifer/deciduous kit. KayKit cones retired.
 const TREES := [
 	ROOT + "/opening_style/fir.tscn",
+	ROOT + "/opening_style/fir_tall.tscn",
+	ROOT + "/opening_style/spruce.tscn",
 	ROOT + "/opening_style/broadleaf.tscn",
-	ROOT + "/nature/Tree_1_A_Color1.gltf",
-	ROOT + "/nature/Tree_2_A_Color1.gltf",
-	ROOT + "/nature/Tree_3_A_Color1.gltf",
-	ROOT + "/nature/Tree_4_A_Color1.gltf",
+	ROOT + "/opening_style/oak.tscn",
+	ROOT + "/opening_style/birch.tscn",
 ]
 
 const EDGE_TREES := [
+	ROOT + "/opening_style/fir_lod.tscn",
+	ROOT + "/opening_style/spruce.tscn",
+	ROOT + "/opening_style/broadleaf_lod.tscn",
+	ROOT + "/opening_style/birch.tscn",
+	ROOT + "/opening_style/oak.tscn",
 	ROOT + "/opening_style/fir.tscn",
-	ROOT + "/nature/Tree_1_A_Color1.gltf",
-	ROOT + "/nature/Tree_2_A_Color1.gltf",
-	ROOT + "/nature/Tree_3_A_Color1.gltf",
-	ROOT + "/opening_style/broadleaf.tscn",
-	ROOT + "/nature/Tree_4_A_Color1.gltf",
 ]
 
 const ROCKS := [ROOT + "/opening_style/rocks.tscn"]

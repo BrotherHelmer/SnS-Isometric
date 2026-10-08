@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/fir_tall.res" id="1_1w4r0"]
+
+[node name="FirTall" type="Node3D" unique_id=1622186167]
+
+[node name="Model" type="MeshInstance3D" parent="." unique_id=1927054279]
+mesh = ExtResource("1_1w4r0")

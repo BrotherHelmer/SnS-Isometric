@@ -70,6 +70,14 @@ The animation files contain 43 root-position tracks across the libraries. Phase 
 
 ## Evidence
 
+### GFX-C opening-style remesh — 2026-10-08
+
+`tools/build_opening_style_models.gd` now emits pale masonry / steep
+slate and terracotta roofs, a distinct farm barn, and an authored 6+2
+tree kit (fir, fir_tall, spruce, broadleaf, oak, birch, plus LOD pair).
+AABBs remain the `BUILDING_UNIT_SIZE` contract. Licence: CC0, project-
+authored. See `ASSETS/credits.md` and `docs/gfx/GFX_C_REPORT.md`.
+
 ### Opening-style playable geometry — 2026-09-26
 
 `assets/settlement3d/runtime/opening_style/` contains twelve project-authored 3D models adapted from the pre-generated AI reference sheet in `assets/art_direction/opening_style_v1/`. These are native Godot mesh resources and scenes, built reproducibly by `tools/build_opening_style_models.gd`; they are not extracted KayKit meshes or automatic image-to-3D reconstructions. The set contains town hall, house, storehouse, lumber camp, bakery, watchtower, fir, broadleaf, rocks, fence, lantern and cart. Building geometry is normalized to the presentation profile; gameplay footprints and saves retain their existing meanings. Related roles reuse appropriate models (farm/house, sawmill/lumber camp, Outpost/watchtower).

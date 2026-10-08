@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3]
 
-[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/lantern.res" id="1_anyng"]
+[ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/lantern.res" id="1_cgavc"]
 
-[node name="Lantern" type="Node3D"]
+[node name="Lantern" type="Node3D" unique_id=625946318]
 
-[node name="Model" type="MeshInstance3D" parent="."]
-mesh = ExtResource("1_anyng")
+[node name="Model" type="MeshInstance3D" parent="." unique_id=1635178261]
+mesh = ExtResource("1_cgavc")

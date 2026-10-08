@@ -1,6 +1,7 @@
 extends SceneTree
-## Reproducible, authored geometry adapted from opening_style_v1 references.
-## Meshes are merged by material and saved; no procedural cost during play.
+## GFX-C: concept-closer authored geometry. Pale masonry, steep roofs,
+## half-timber, fuller tree crowns. AABB still normalized to BUILDING_UNIT_SIZE.
+## The Director: silhouettes and materials only — footprints stay put.
 const OUT := "res://assets/settlement3d/runtime/opening_style"
 const Profile = preload("res://src/GodotClient3D/Scripts/production_scale_profile.gd")
 var surfaces: Dictionary = {}
@@ -13,7 +14,16 @@ func _init() -> void:
 
 func build() -> void:
 	DirAccess.make_dir_recursive_absolute(OUT)
-	var palette := {"stone": "a99d81", "stone_light": "b4a88c", "stone_dark": "827e70", "plaster": "c3b591", "wood": "46362b", "plank": "76563e", "slate": "304d44", "slate_light": "3b564b", "slate_dark": "29443c", "iron": "30383a", "glass": "e4a34e", "pine": "254b40", "leaf": "626d3b", "leaf_light": "7a8044", "grain": "bd9855"}
+	var palette := {
+		"stone": "d2c4a8", "stone_light": "e4d6bc", "stone_dark": "9a8e78",
+		"plaster": "efe0c4", "wood": "3a2820", "plank": "6b4a32",
+		"slate": "5a6c7c", "slate_light": "6e8294", "slate_dark": "465868",
+		"clay": "9a5840", "clay_light": "b46a4a", "clay_dark": "7a4030",
+		"iron": "30383a", "glass": "e4a34e",
+		"pine": "4a7a44", "pine_dark": "3a6238",
+		"leaf": "6a8e3c", "leaf_light": "88a44c", "leaf_spring": "7a9848",
+		"grain": "bd9855"
+	}
 	for key in palette:
 		var mat := StandardMaterial3D.new()
 		mat.albedo_color = Color(palette[key])
@@ -23,7 +33,7 @@ func build() -> void:
 			mat.emission = Color("e9a34b")
 			mat.emission_energy_multiplier = 0.55
 		materials[key] = mat
-	for kind in ["TOWN_HALL", "CASTLE", "HOUSE", "STOREHOUSE", "LUMBER_CAMP", "BAKERY", "WATCHTOWER", "QUARRY", "BARRACKS", "LUMEN_PILLAR", "ENEMY_CAMP"]:
+	for kind in ["TOWN_HALL", "CASTLE", "HOUSE", "STOREHOUSE", "LUMBER_CAMP", "BAKERY", "WATCHTOWER", "QUARRY", "BARRACKS", "LUMEN_PILLAR", "ENEMY_CAMP", "FARM"]:
 		surfaces.clear()
 		rng.seed = 526
 		if kind == "STOREHOUSE" or kind == "LUMBER_CAMP":
@@ -32,32 +42,41 @@ func build() -> void:
 			tower()
 		elif kind == "CASTLE":
 			castle()
+		elif kind == "FARM":
+			farm()
 		else:
 			extended_building(kind)
 		save_model(kind.to_lower(), Profile.BUILDING_UNIT_SIZE[kind])
-	for kind in ["fir", "broadleaf", "rocks", "fence", "lantern", "cart", "grass", "bush", "wheat"]:
+	for kind in ["fir", "fir_tall", "spruce", "broadleaf", "oak", "birch", "fir_lod", "broadleaf_lod", "rocks", "fence", "lantern", "cart", "grass", "bush", "wheat"]:
 		surfaces.clear()
-		rng.seed = 907
+		rng.seed = 907 + kind.hash()
 		match kind:
 			"fir":
-				cylinder(Vector3(0, 1.4, 0), 0.17, 0.12, 2.8, "wood")
-				for i in 4:
-					cylinder(Vector3(0, 1.7 + i * 0.72, 0), 1.22 - i * 0.23, 0.02, 1.85, "pine", 9)
+				conifer(6, 1.0, "pine")
+			"fir_tall":
+				conifer(8, 1.18, "pine_dark")
+			"spruce":
+				conifer(7, 0.92, "pine_dark")
 			"broadleaf":
-				cylinder(Vector3(0, 1.1, 0), 0.23, 0.12, 2.2, "wood")
-				for i in 9:
-					var angle := i * 2.4
-					var p := Vector3(cos(angle) * 0.8, 2.5 + sin(i * 1.7) * 0.5, sin(angle) * 0.8)
-					beam(Vector3(0, 1.1, 0), p, 0.16, "wood")
-					blob(p, Vector3(1.0, 1.15, 0.95), "leaf" if i % 2 == 0 else "leaf_light")
+				deciduous(14, 1.05, "leaf", "leaf_light")
+			"oak":
+				deciduous(18, 1.28, "leaf", "leaf_spring")
+			"birch":
+				deciduous(12, 0.88, "leaf_light", "leaf_spring")
+			"fir_lod":
+				conifer(4, 0.95, "pine")
+			"broadleaf_lod":
+				deciduous(7, 1.0, "leaf", "leaf_light")
 			"rocks":
-				for i in 5:
-					blob(Vector3(rng.randf_range(-0.7, 0.7), 0.42, rng.randf_range(-0.5, 0.5)), Vector3(0.65, rng.randf_range(0.5, 1.1), 0.6), "stone_dark" if i % 2 == 0 else "stone")
+				for i in 7:
+					blob(Vector3(rng.randf_range(-0.8, 0.8), 0.38, rng.randf_range(-0.6, 0.6)), Vector3(rng.randf_range(0.45, 0.85), rng.randf_range(0.4, 1.15), rng.randf_range(0.4, 0.75)), "stone_dark" if i % 2 == 0 else "stone")
 			"fence": fence(Vector3.ZERO)
 			"lantern": lantern()
 			"cart": cart()
 			"grass": grass()
-			"bush": blob(Vector3(0, 0.45, 0), Vector3(0.65, 0.5, 0.6), "leaf")
+			"bush":
+				blob(Vector3(0, 0.42, 0), Vector3(0.72, 0.55, 0.68), "leaf")
+				blob(Vector3(0.22, 0.38, 0.12), Vector3(0.42, 0.36, 0.4), "leaf_light")
 			"wheat": wheat()
 		save_model(kind)
 	var file := FileAccess.open(OUT + "/model_manifest.json", FileAccess.WRITE)
@@ -139,20 +158,25 @@ func masonry(center: Vector3, size: Vector3, courses: int) -> void:
 			for col in 5:
 				box(center + Vector3(side * (size.x * 0.5 + 0.018), -size.y * 0.5 + (row + 0.5) * h, -size.z * 0.5 + (col + 0.5) * size.z / 5.0), Vector3(0.09, h - 0.025, size.z / 5.0 - 0.025), "stone")
 
-func roof(center: Vector3, width: float, depth: float, rise: float, wood_roof := false) -> void:
+func roof(center: Vector3, width: float, depth: float, rise: float, wood_roof := false, clay_roof := false) -> void:
 	var half := width * 0.5
 	var slope := atan2(rise, half)
 	var length := sqrt(half * half + rise * rise)
+	var keys: Array = ["slate", "slate_light", "slate_dark"]
+	if wood_roof:
+		keys = ["plank", "plank", "wood"]
+	elif clay_roof:
+		keys = ["clay", "clay_light", "clay_dark"]
 	for side in [-1, 1]:
 		box(center + Vector3(side * half * 0.5, rise * 0.5, 0), Vector3(length, 0.12, depth), "wood", Vector3(0, 0, -side * slope))
-		for row in 6:
-			var t := (row + 0.5) / 6.0
+		for row in 7:
+			var t := (row + 0.5) / 7.0
 			for col in 9:
-				var key: String = "plank" if wood_roof else ["slate", "slate_light", "slate_dark"][(row * 7 + col * 3 + col / 3) % 3]
-				box(center + Vector3(side * half * t, rise * (1.0 - t) + 0.09 + float(6 - row) * 0.012, -depth * 0.5 + (col + 0.5) * depth / 9.0), Vector3(length / 6.0 + 0.045, 0.075, depth / 9.0 - 0.015), key, Vector3(0, 0, -side * slope))
+				var key: String = String(keys[(row * 7 + col * 3 + col / 3) % 3])
+				box(center + Vector3(side * half * t, rise * (1.0 - t) + 0.09 + float(7 - row) * 0.012, -depth * 0.5 + (col + 0.5) * depth / 9.0), Vector3(length / 7.0 + 0.05, 0.08, depth / 9.0 - 0.012), key, Vector3(0, 0, -side * slope))
 		for z in [-depth * 0.5, depth * 0.5]:
-			beam(center + Vector3(0, rise + 0.08, z), center + Vector3(side * half, 0.05, z), 0.13, "wood")
-	box(center + Vector3(0, rise + 0.14, 0), Vector3(0.15, 0.14, depth + 0.12), "wood")
+			beam(center + Vector3(0, rise + 0.08, z), center + Vector3(side * half, 0.05, z), 0.14, "wood")
+	box(center + Vector3(0, rise + 0.16, 0), Vector3(0.16, 0.16, depth + 0.14), "wood")
 
 func window(p: Vector3) -> void:
 	box(p, Vector3(0.55, 0.74, 0.10), "wood")
@@ -162,52 +186,53 @@ func window(p: Vector3) -> void:
 	box(p + Vector3(0, -0.40, 0.10), Vector3(0.7, 0.09, 0.26), "plank")
 
 func cottage(kind: String) -> void:
-	var w := 4.2 if kind == "TOWN_HALL" else 3.2
-	var d := 3.0 if kind == "TOWN_HALL" else 2.8
-	masonry(Vector3(0, 0.34, 0), Vector3(w, 0.68, d), 2)
-	box(Vector3(0, 1.63, 0), Vector3(w - 0.1, 1.9, d - 0.1), "plaster")
-	for x in [-w * 0.5 + 0.06, 0.0, w * 0.5 - 0.06]:
+	var civic := kind == "TOWN_HALL"
+	var w := 4.4 if civic else 3.2
+	var d := 3.15 if civic else 2.8
+	var clay := not civic
+	masonry(Vector3(0, 0.36, 0), Vector3(w, 0.72, d), 2)
+	box(Vector3(0, 1.68, 0), Vector3(w - 0.08, 2.0, d - 0.08), "plaster")
+	# The Director: thicker half-timber so frames read at isometric zoom.
+	for x in [-w * 0.5 + 0.05, 0.0, w * 0.5 - 0.05]:
 		for z in [-d * 0.5, d * 0.5]:
-			box(Vector3(x, 1.6, z), Vector3(0.15, 2.0, 0.15), "wood")
-	for y in [0.75, 2.5]:
-		box(Vector3(0, y, 0), Vector3(w + 0.12, 0.16, d + 0.12), "wood")
-	# Side elevations are visible when the player rotates a building.
+			box(Vector3(x, 1.66, z), Vector3(0.20, 2.15, 0.20), "wood")
+	for y in [0.78, 2.62]:
+		box(Vector3(0, y, 0), Vector3(w + 0.16, 0.18, d + 0.16), "wood")
 	for side in [-1, 1]:
-		for z in [-0.75, 0.75]:
-			box(Vector3(side * w * 0.5, 1.62, z), Vector3(0.12, 1.7, 0.13), "wood")
-			box(Vector3(side * (w * 0.5 + 0.035), 1.7, z + 0.28), Vector3(0.1, 0.68, 0.46), "wood")
-			box(Vector3(side * (w * 0.5 + 0.095), 1.7, z + 0.28), Vector3(0.03, 0.54, 0.34), "glass")
-			box(Vector3(side * (w * 0.5 + 0.12), 1.7, z + 0.28), Vector3(0.04, 0.60, 0.04), "wood")
-			box(Vector3(side * (w * 0.5 + 0.12), 1.7, z + 0.28), Vector3(0.04, 0.04, 0.4), "wood")
+		for z in [-0.78, 0.78]:
+			box(Vector3(side * w * 0.5, 1.66, z), Vector3(0.16, 1.85, 0.16), "wood")
+			box(Vector3(side * (w * 0.5 + 0.04), 1.78, z + 0.28), Vector3(0.12, 0.72, 0.50), "wood")
+			box(Vector3(side * (w * 0.5 + 0.10), 1.78, z + 0.28), Vector3(0.03, 0.56, 0.36), "glass")
+			box(Vector3(side * (w * 0.5 + 0.13), 1.78, z + 0.28), Vector3(0.045, 0.64, 0.045), "wood")
+			box(Vector3(side * (w * 0.5 + 0.13), 1.78, z + 0.28), Vector3(0.045, 0.045, 0.42), "wood")
 	for x in [-1, 1]:
-		beam(Vector3(x * (w * 0.5 - 0.1), 0.85, d * 0.5 + 0.05), Vector3(x * 0.55, 2.4, d * 0.5 + 0.05), 0.10, "wood")
-		window(Vector3(x * w * 0.31, 1.65, d * 0.5 + 0.09))
-	box(Vector3(0, 1.05, d * 0.5 + 0.10), Vector3(0.85, 1.65, 0.16), "wood")
+		beam(Vector3(x * (w * 0.5 - 0.08), 0.88, d * 0.5 + 0.05), Vector3(x * 0.5, 2.55, d * 0.5 + 0.05), 0.12, "wood")
+		window(Vector3(x * w * 0.30, 1.70, d * 0.5 + 0.10))
+	box(Vector3(0, 1.08, d * 0.5 + 0.11), Vector3(0.92, 1.72, 0.18), "wood")
 	for i in 5:
-		box(Vector3(-0.34 + i * 0.17, 1.04, d * 0.5 + 0.21), Vector3(0.14, 1.52, 0.07), "plank")
-	for y in [0.68, 1.35]:
-		box(Vector3(0, y, d * 0.5 + 0.24), Vector3(0.68, 0.055, 0.04), "iron")
+		box(Vector3(-0.36 + i * 0.18, 1.08, d * 0.5 + 0.22), Vector3(0.15, 1.58, 0.07), "plank")
+	for y in [0.70, 1.40]:
+		box(Vector3(0, y, d * 0.5 + 0.26), Vector3(0.72, 0.06, 0.04), "iron")
 	for i in 3:
-		box(Vector3(0, 0.10 + i * 0.13, d * 0.5 + 0.62 - i * 0.17), Vector3(1.08, 0.2, 0.35), "stone")
-	# Solid triangular gable under the shingle slopes.
+		box(Vector3(0, 0.10 + i * 0.13, d * 0.5 + 0.64 - i * 0.17), Vector3(1.12, 0.2, 0.36), "stone")
+	var rise := 2.05 if clay else 1.90
 	var prism := PrismMesh.new()
-	prism.size = Vector3(w, 1.42, d)
-	add(prism, Vector3(0, 3.21, 0), "plaster")
-	roof(Vector3(0, 2.52, 0), w + 0.5, d + 0.5, 1.5)
-	beam(Vector3(0, 2.55, d * 0.5 + 0.04), Vector3(0, 3.92, d * 0.5 + 0.04), 0.13, "wood")
-	if kind == "TOWN_HALL":
-		masonry(Vector3(0, 4.2, -0.65), Vector3(1.45, 3.9, 1.45), 10)
-		window(Vector3(0, 4.9, 0.08))
-		window(Vector3(0, 3.4, 0.08))
-		cylinder(Vector3(0, 6.8, -0.65), 1.35, 0.06, 2.2, "slate", 4, Vector3(0, PI / 4.0, 0))
-		box(Vector3(0, 8.15, -0.65), Vector3(0.09, 0.9, 0.09), "wood")
-		box(Vector3(0.42, 8.35, -0.65), Vector3(0.8, 0.48, 0.045), "slate_light")
+	prism.size = Vector3(w, rise * 0.92, d)
+	add(prism, Vector3(0, 2.68 + rise * 0.46, 0), "plaster")
+	roof(Vector3(0, 2.58, 0), w + 0.55, d + 0.55, rise, false, clay)
+	beam(Vector3(0, 2.60, d * 0.5 + 0.04), Vector3(0, 2.58 + rise, d * 0.5 + 0.04), 0.14, "wood")
+	if civic:
+		# Wide squat keep — a tall spike loses the hall after AABB normalize.
+		masonry(Vector3(-0.85, 3.55, -0.35), Vector3(2.35, 2.85, 2.25), 8)
+		window(Vector3(-0.85, 3.85, 0.80))
+		window(Vector3(-0.85, 2.85, 0.80))
+		roof(Vector3(-0.85, 4.85, -0.35), 2.75, 2.65, 1.35)
+		box(Vector3(-0.85, 6.35, -0.35), Vector3(0.10, 0.72, 0.10), "wood")
+		box(Vector3(-0.35, 6.52, -0.35), Vector3(0.82, 0.40, 0.05), "slate_light")
 		for side in [-1, 1]:
-			box(Vector3(side * 0.55, 7.85, -0.65), Vector3(0.22, 0.42, 0.22), "stone_dark")
+			box(Vector3(-0.85 + side * 1.05, 3.4, 0.78), Vector3(0.10, 1.15, 0.10), "wood")
 	else:
-		masonry(Vector3(1.05, 2.5, -0.5), Vector3(0.5, 4.3, 0.55), 12)
-		box(Vector3(1.05, 4.68, -0.5), Vector3(0.67, 0.17, 0.7), "stone_dark")
-		box(Vector3(1.05, 4.78, -0.5), Vector3(0.36, 0.03, 0.39), "iron")
+		chimney(Vector3(1.08, 2.55, -0.55))
 	if kind == "BAKERY":
 		masonry(Vector3(1.9, 0.65, 0.6), Vector3(1.1, 1.3, 1.15), 4)
 		box(Vector3(1.9, 0.65, 1.21), Vector3(0.63, 0.66, 0.05), "iron")
@@ -217,21 +242,25 @@ func cottage(kind: String) -> void:
 			box(Vector3(x, 0.4, 1.9), Vector3(0.12, 0.8, 0.12), "wood")
 		for i in 3:
 			blob(Vector3(-1.4 + i * 0.3, 0.99, 1.9), Vector3(0.17, 0.10, 0.13), "glass")
-		box(Vector3(-1.2, 3.95, -0.9), Vector3(0.48, 1.6, 0.48), "stone")
-		for i in 3:
-			box(Vector3(-1.2, 4.88 + i * 0.14, -0.9), Vector3(0.56 - i * 0.038, 0.11, 0.56 - i * 0.038), "stone_dark")
+		chimney(Vector3(-1.2, 3.2, -0.9))
 		cylinder(Vector3(-1.2, 4.35, -0.9), 0.30, 0.30, 0.19, "iron")
+
+func chimney(p: Vector3) -> void:
+	masonry(p, Vector3(0.52, 3.4, 0.56), 10)
+	box(p + Vector3(0, 1.78, 0), Vector3(0.70, 0.16, 0.74), "stone_dark")
+	box(p + Vector3(0, 1.90, 0), Vector3(0.38, 0.04, 0.42), "iron")
+
 
 func shed(lumber: bool) -> void:
 	masonry(Vector3(0, 0.17, 0), Vector3(3.4, 0.34, 2.8), 1)
 	for x in [-1.5, 1.5]:
 		for z in [-1.2, 1.2]:
-			box(Vector3(x, 1.35, z), Vector3(0.23, 2.4, 0.23), "wood")
-			beam(Vector3(x, 1.55, z), Vector3(x * 0.62, 2.5, z), 0.14, "wood")
+			box(Vector3(x, 1.35, z), Vector3(0.26, 2.4, 0.26), "wood")
+			beam(Vector3(x, 1.55, z), Vector3(x * 0.62, 2.5, z), 0.15, "wood")
 	for i in 13:
 		box(Vector3(-1.5 + i * 0.25, 1.35, -1.25), Vector3(0.23, 2.1, 0.12), "plank")
 	box(Vector3(0, 2.5, 0), Vector3(3.4, 0.18, 2.8), "wood")
-	roof(Vector3(0, 2.52, 0), 3.9, 3.3, 1.25, true)
+	roof(Vector3(0, 2.52, 0), 3.9, 3.3, 1.45, true)
 	if lumber:
 		for i in 7:
 			cylinder(Vector3(-0.9 + (i % 3) * 0.42, 0.48 + (i / 3) * 0.4, -0.35), 0.21, 0.21, 2.0, "plank", 8, Vector3(PI / 2.0, 0, 0))
@@ -248,65 +277,80 @@ func shed(lumber: bool) -> void:
 			box(Vector3(-0.85 + (i % 3) * 0.78, 0.65 + (i / 3) * 0.7, 0.12), Vector3(0.07, 0.63, 0.07), "wood")
 
 func tower() -> void:
-	masonry(Vector3(0, 1.65, 0), Vector3(1.7, 3.3, 1.7), 9)
-	box(Vector3(0, 3.4, 0), Vector3(2.5, 0.22, 2.5), "wood")
-	for x in [-1, 1]:
-		for z in [-1, 1]:
-			box(Vector3(x, 4.1, z), Vector3(0.18, 1.6, 0.18), "wood")
-		box(Vector3(0, 3.7, x * 1.1), Vector3(2.35, 0.45, 0.13), "plank")
-		box(Vector3(x * 1.1, 3.7, 0), Vector3(0.13, 0.45, 2.35), "plank")
-	roof(Vector3(0, 4.8, 0), 2.9, 2.9, 1.2)
-	window(Vector3(0, 2.5, 0.91))
-	box(Vector3(0, 0.7, 0.89), Vector3(0.65, 1.35, 0.1), "wood")
+	masonry(Vector3(0, 1.85, 0), Vector3(1.85, 3.7, 1.85), 11)
+	box(Vector3(0, 3.75, 0), Vector3(2.65, 0.24, 2.65), "stone_dark")
+	for x in [-1.05, 1.05]:
+		for z in [-1.05, 1.05]:
+			box(Vector3(x, 4.45, z), Vector3(0.22, 1.7, 0.22), "wood")
+		box(Vector3(0, 4.05, x * 1.18), Vector3(2.5, 0.48, 0.14), "plank")
+		box(Vector3(x * 1.18, 4.05, 0), Vector3(0.14, 0.48, 2.5), "plank")
+	roof(Vector3(0, 5.15, 0), 3.05, 3.05, 1.55)
+	window(Vector3(0, 2.75, 0.98))
+	window(Vector3(0, 1.55, 0.98))
+	box(Vector3(0, 0.75, 0.96), Vector3(0.70, 1.45, 0.12), "wood")
 
 func castle() -> void:
-	var base_h := 0.45
-	masonry(Vector3(0, base_h * 0.5, 0), Vector3(6.2, base_h, 5.0), 1)
-	for x in [-2.6, 2.6]:
-		for z in [-2.0, 2.0]:
-			masonry(Vector3(x, base_h + 0.08, z), Vector3(0.95, 0.16, 0.95), 1)
-	var curtain_h := 2.1
-	masonry(Vector3(0, base_h + curtain_h * 0.5, 0), Vector3(5.8, curtain_h, 0.28), 6)
-	masonry(Vector3(0, base_h + curtain_h * 0.5, 2.05), Vector3(5.0, curtain_h, 0.28), 6)
-	masonry(Vector3(0, base_h + curtain_h * 0.5, -2.05), Vector3(5.0, curtain_h, 0.28), 6)
-	masonry(Vector3(-2.6, base_h + curtain_h * 0.5, 0), Vector3(0.28, curtain_h, 3.6), 6)
-	masonry(Vector3(2.6, base_h + curtain_h * 0.5, 0), Vector3(0.28, curtain_h, 3.6), 6)
-	for i in 14:
-		var x := -2.5 + (i % 7) * 0.85
-		box(Vector3(x, base_h + curtain_h + 0.20, 2.12), Vector3(0.35, 0.40, 0.35), "stone_light")
-	for i in 14:
-		var x := -2.5 + (i % 7) * 0.85
-		box(Vector3(x, base_h + curtain_h + 0.20, -2.12), Vector3(0.35, 0.40, 0.35), "stone_light")
-	var keep_pos := Vector3(0.0, 0, -0.3)
-	cylinder(keep_pos + Vector3(0, base_h + 2.75, 0), 0.95, 0.88, 5.5, "stone", 14)
-	for level in 4:
-		window(keep_pos + Vector3(0, base_h + 1.3 + level * 0.95, 0.96))
-	cylinder(keep_pos + Vector3(0, base_h + 5.75, 0), 1.05, 1.05, 0.22, "stone_dark")
-	cylinder(keep_pos + Vector3(0, base_h + 6.95, 0), 0.92, 0.04, 2.5, "slate", 8)
-	box(keep_pos + Vector3(0, base_h + 8.38, 0), Vector3(0.09, 0.85, 0.09), "wood")
-	box(keep_pos + Vector3(0.45, base_h + 8.55, 0), Vector3(0.85, 0.48, 0.045), "slate_light")
+	var base_h := 0.42
+	masonry(Vector3(0, base_h * 0.5, 0), Vector3(6.4, base_h, 5.2), 1)
+	var curtain_h := 1.55
+	masonry(Vector3(0, base_h + curtain_h * 0.5, 2.10), Vector3(5.2, curtain_h, 0.34), 5)
+	masonry(Vector3(0, base_h + curtain_h * 0.5, -2.10), Vector3(5.2, curtain_h, 0.34), 5)
+	masonry(Vector3(-2.7, base_h + curtain_h * 0.5, 0), Vector3(0.34, curtain_h, 3.8), 5)
+	masonry(Vector3(2.7, base_h + curtain_h * 0.5, 0), Vector3(0.34, curtain_h, 3.8), 5)
+	for i in 8:
+		var x := -2.55 + i * 0.72
+		box(Vector3(x, base_h + curtain_h + 0.22, 2.18), Vector3(0.38, 0.44, 0.38), "stone_light")
+		box(Vector3(x, base_h + curtain_h + 0.22, -2.18), Vector3(0.38, 0.44, 0.38), "stone_light")
+	var keep_pos := Vector3(0.0, 0, -0.15)
+	cylinder(keep_pos + Vector3(0, base_h + 3.15, 0), 1.18, 1.08, 6.3, "stone", 16)
+	for level in 5:
+		window(keep_pos + Vector3(0, base_h + 1.15 + level * 0.95, 1.12))
+	cylinder(keep_pos + Vector3(0, base_h + 6.45, 0), 1.28, 1.28, 0.24, "stone_dark")
+	cylinder(keep_pos + Vector3(0, base_h + 7.85, 0), 1.12, 0.04, 2.85, "slate", 8)
+	box(keep_pos + Vector3(0, base_h + 9.45, 0), Vector3(0.10, 0.95, 0.10), "wood")
+	box(keep_pos + Vector3(0.52, base_h + 9.65, 0), Vector3(0.95, 0.52, 0.05), "slate_light")
 	for i in 4:
 		var angle := i * PI / 2.0
-		var p := keep_pos + Vector3(cos(angle) * 0.92, base_h + 5.88, sin(angle) * 0.92)
-		box(p, Vector3(0.32, 0.38, 0.32), "stone_light")
-	var corners := [Vector3(-2.6, 0, 2.0), Vector3(2.6, 0, 2.0), Vector3(-2.6, 0, -2.0), Vector3(2.6, 0, -2.0)]
+		var p := keep_pos + Vector3(cos(angle) * 1.12, base_h + 6.58, sin(angle) * 1.12)
+		box(p, Vector3(0.36, 0.42, 0.36), "stone_light")
+	var corners := [Vector3(-2.7, 0, 2.05), Vector3(2.7, 0, 2.05), Vector3(-2.7, 0, -2.05), Vector3(2.7, 0, -2.05)]
 	for corner in corners:
-		cylinder(corner + Vector3(0, base_h + 2.15, 0), 0.82, 0.76, 4.3, "stone_light", 12)
-		cylinder(corner + Vector3(0, base_h + 4.45, 0), 0.90, 0.90, 0.18, "stone_dark")
-		cylinder(corner + Vector3(0, base_h + 5.45, 0), 0.80, 0.04, 2.1, "slate_dark", 6)
-		box(corner + Vector3(0, base_h + 6.65, 0), Vector3(0.08, 0.65, 0.08), "wood")
-		box(corner + Vector3(0.35, base_h + 6.78, 0), Vector3(0.68, 0.40, 0.04), "slate_light")
+		cylinder(corner + Vector3(0, base_h + 2.45, 0), 0.92, 0.84, 4.9, "stone_light", 12)
+		cylinder(corner + Vector3(0, base_h + 5.05, 0), 1.00, 1.00, 0.20, "stone_dark")
+		cylinder(corner + Vector3(0, base_h + 6.15, 0), 0.90, 0.04, 2.25, "slate", 8)
+		box(corner + Vector3(0, base_h + 7.45, 0), Vector3(0.08, 0.72, 0.08), "wood")
+		box(corner + Vector3(0.38, base_h + 7.60, 0), Vector3(0.72, 0.42, 0.04), "slate_light")
 		for i in 4:
 			var angle := i * TAU / 4.0
-			var wp: Vector3 = corner + Vector3(cos(angle) * 0.72, base_h + 2.9, sin(angle) * 0.72)
-			box(wp + Vector3(0, 0, cos(angle) * 0.09), Vector3(0.46, 0.64, 0.09), "wood")
-			box(wp + Vector3(0, 0, cos(angle) * 0.14), Vector3(0.35, 0.48, 0.03), "glass")
-	masonry(Vector3(0, base_h + 0.85, 2.12), Vector3(1.35, 1.7, 0.28), 5)
-	box(Vector3(0, base_h + 0.85, 2.28), Vector3(0.72, 1.28, 0.09), "wood")
+			var wp: Vector3 = corner + Vector3(cos(angle) * 0.80, base_h + 3.15, sin(angle) * 0.80)
+			box(wp + Vector3(0, 0, cos(angle) * 0.09), Vector3(0.48, 0.66, 0.09), "wood")
+			box(wp + Vector3(0, 0, cos(angle) * 0.14), Vector3(0.36, 0.50, 0.03), "glass")
+	masonry(Vector3(0, base_h + 0.85, 2.18), Vector3(1.45, 1.7, 0.32), 5)
+	box(Vector3(0, base_h + 0.85, 2.36), Vector3(0.76, 1.32, 0.10), "wood")
 	for i in 5:
-		box(Vector3(-0.28 + i * 0.14, base_h + 0.85, 2.35), Vector3(0.12, 1.18, 0.06), "plank")
+		box(Vector3(-0.30 + i * 0.15, base_h + 0.85, 2.44), Vector3(0.13, 1.22, 0.06), "plank")
 	for y_val in [0.45, 1.10]:
-		box(Vector3(0, base_h + y_val, 2.42), Vector3(0.66, 0.06, 0.04), "iron")
+		box(Vector3(0, base_h + y_val, 2.50), Vector3(0.68, 0.06, 0.04), "iron")
+
+func farm() -> void:
+	# Barn + cottage within the house AABB so the farm reads as a homestead.
+	masonry(Vector3(-0.15, 0.32, 0.05), Vector3(3.6, 0.64, 2.7), 2)
+	box(Vector3(-0.15, 1.55, 0.05), Vector3(3.45, 1.85, 2.55), "plank")
+	for x in [-1.7, 1.4]:
+		for z in [-1.2, 1.3]:
+			box(Vector3(x, 1.55, z), Vector3(0.22, 2.0, 0.22), "wood")
+	for y in [0.72, 2.40]:
+		box(Vector3(-0.15, y, 0.05), Vector3(3.7, 0.16, 2.85), "wood")
+	box(Vector3(0.05, 1.15, 1.42), Vector3(1.15, 1.85, 0.12), "wood")
+	for i in 6:
+		box(Vector3(-0.42 + i * 0.16, 1.12, 1.50), Vector3(0.13, 1.72, 0.06), "plank")
+	var prism := PrismMesh.new()
+	prism.size = Vector3(3.6, 1.85, 2.7)
+	add(prism, Vector3(-0.15, 3.15, 0.05), "plank")
+	roof(Vector3(-0.15, 2.42, 0.05), 4.15, 3.2, 1.85, false, true)
+	chimney(Vector3(1.15, 2.15, -0.55))
+	window(Vector3(-1.05, 1.55, 1.42))
+	box(Vector3(-1.35, 0.55, 1.55), Vector3(0.85, 0.12, 0.55), "plank")
 
 func fence(p: Vector3) -> void:
 	for x in [-0.9, 0.9]:
@@ -468,3 +512,30 @@ func wheat() -> void:
 		var h := rng.randf_range(0.6, 0.85)
 		beam(p, p + Vector3(0, h, 0), 0.018, "grain")
 		blob(p + Vector3(0, h, 0), Vector3(0.055, 0.15, 0.045), "grain")
+
+func conifer(layers: int, scale_value: float, pine_key: String) -> void:
+	# The Director: layered living crowns, not one dark cone.
+	cylinder(Vector3(0, 1.15 * scale_value, 0), 0.16 * scale_value, 0.11 * scale_value, 2.3 * scale_value, "wood", 8)
+	for i in layers:
+		var t := float(i) / float(maxi(layers - 1, 1))
+		var y := (1.35 + i * 0.58) * scale_value
+		var r := (1.35 - t * 0.95) * scale_value
+		var h := (1.55 - t * 0.25) * scale_value
+		var key := pine_key if i % 2 == 0 else "pine"
+		cylinder(Vector3(0, y, 0), r, 0.04 * scale_value, h, key, 8)
+		if i < layers - 1:
+			var wobble := (0.28 + float(i % 3) * 0.06) * scale_value
+			blob(Vector3(cos(i * 1.7) * r * 0.62, y + 0.12, sin(i * 1.3) * r * 0.62), Vector3(wobble, wobble * 0.75, wobble), "leaf" if i % 2 == 0 else "leaf_light")
+			blob(Vector3(cos(i * 2.1 + 1.2) * r * 0.48, y + 0.22, sin(i * 1.9) * r * 0.48), Vector3(wobble * 0.85, wobble * 0.6, wobble * 0.85), key)
+
+func deciduous(clusters: int, spread: float, leaf_a: String, leaf_b: String) -> void:
+	cylinder(Vector3(0, 1.15 * spread, 0), 0.20 * spread, 0.12 * spread, 2.3 * spread, "wood", 8)
+	for i in clusters:
+		var angle := i * 2.15
+		var lift := 2.15 + sin(i * 1.3) * 0.55
+		var rad := (0.55 + float(i % 4) * 0.12) * spread
+		var p := Vector3(cos(angle) * rad, lift * spread, sin(angle) * rad)
+		beam(Vector3(0, 1.2 * spread, 0), p, 0.11 * spread, "wood")
+		var s := (0.72 + float(i % 3) * 0.12) * spread
+		blob(p, Vector3(s, s * 0.95, s * 0.9), leaf_a if i % 2 == 0 else leaf_b)
+	blob(Vector3(0, 2.85 * spread, 0), Vector3(0.95 * spread, 0.85 * spread, 0.9 * spread), leaf_a)
