@@ -78,6 +78,14 @@ func _init() -> void:
 	
 	var export_files: PackedStringArray = export_config.get_value("preset.0", "export_files", PackedStringArray())
 	print("Export files count: %d\n" % export_files.size())
+
+	# GFX-E: also scan production scripts for string-loaded models.
+	# export_filter="resources" does not follow load("res://...") by name.
+	var code_models := _scan_code_model_paths()
+	print("Code-referenced model paths: %d\n" % code_models.size())
+	for model_path in code_models:
+		if not all_runtime.has(model_path):
+			all_runtime.append(model_path)
 	
 	# Find missing paths
 	var missing: Array[String] = []
@@ -103,3 +111,69 @@ func _init() -> void:
 	
 	print("\n=== AUDIT COMPLETE ===\n")
 	quit(0 if exists_but_missing.is_empty() else 1)
+
+
+func _scan_code_model_paths() -> Array[String]:
+	var paths: Array[String] = []
+	var seen: Dictionary = {}
+	_walk_scripts("res://src", paths, seen)
+	return paths
+
+
+func _walk_scripts(dir_path: String, paths: Array[String], seen: Dictionary) -> void:
+	var dir := DirAccess.open(dir_path)
+	if dir == null:
+		return
+	dir.list_dir_begin()
+	var entry := dir.get_next()
+	while entry != "":
+		if entry.begins_with("."):
+			entry = dir.get_next()
+			continue
+		var child := dir_path.path_join(entry)
+		if dir.current_is_dir():
+			_walk_scripts(child, paths, seen)
+		elif entry.ends_with(".gd"):
+			_collect_script_models(child, paths, seen)
+		entry = dir.get_next()
+	dir.list_dir_end()
+
+
+func _collect_script_models(script_path: String, paths: Array[String], seen: Dictionary) -> void:
+	var file := FileAccess.open(script_path, FileAccess.READ)
+	if file == null:
+		return
+	var text := file.get_as_text()
+	file.close()
+	var regex := RegEx.new()
+	regex.compile("res://[A-Za-z0-9_./-]+\\.(?:tscn|res|gltf|glb)")
+	for match in regex.search_all(text):
+		var found := String(match.get_string())
+		if found.begins_with("res://assets/settlement3d/"):
+			_remember_model(found, paths, seen)
+	var concat := RegEx.new()
+	concat.compile("(?:ROOT|Catalog\\.ROOT)\\s*\\+\\s*\"([^\"]+\\.(?:tscn|res|gltf|glb))\"")
+	for match in concat.search_all(text):
+		var frag := String(match.get_string(1))
+		if not frag.begins_with("/"):
+			frag = "/" + frag
+		_remember_model("res://assets/settlement3d/runtime" + frag, paths, seen)
+	var names := RegEx.new()
+	names.compile("\"([a-z][a-z0-9_]*)\"")
+	if text.contains("opening_style/") or text.contains("_is_tree_path") or text.contains("_is_scatter_path"):
+		for match in names.search_all(text):
+			var candidate := "res://assets/settlement3d/runtime/opening_style/%s.tscn" % String(match.get_string(1))
+			if FileAccess.file_exists(candidate):
+				_remember_model(candidate, paths, seen)
+
+
+func _remember_model(path_value: String, paths: Array[String], seen: Dictionary) -> void:
+	if seen.has(path_value):
+		return
+	seen[path_value] = true
+	paths.append(path_value)
+	if path_value.ends_with(".tscn"):
+		var sibling := path_value.trim_suffix(".tscn") + ".res"
+		if FileAccess.file_exists(sibling) and not seen.has(sibling):
+			seen[sibling] = true
+			paths.append(sibling)

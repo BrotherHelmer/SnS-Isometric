@@ -730,23 +730,21 @@ func _create_lighting() -> void:
 	sky.sky_material = sky_material_value
 	environment.sky = sky
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color("#718FA3")
-	environment.ambient_light_energy = 0.62
-	# The Director: GFX-D Filmic + golden-hour grade. Contrast lives in
-	# the warm key; B/C/S stay near 1.0. Period LUTs keep cool shadows.
+	environment.ambient_light_color = Color("#899DAA")
+	environment.ambient_light_energy = 0.45
+	# The Director: GFX-E Filmic. Neutral grade; warmth is the key only.
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	environment.tonemap_exposure = 1.06
+	environment.tonemap_exposure = 0.90
 	environment.tonemap_white = 7.4
 	environment.ssao_enabled = bool(quality_profile.get("ssao", quality_profile.get("shadows", true)))
-	# The Director: GFX-D SSAO around foundations / timber. Conservative
-	# radius so the flats do not stripe when the camera pans.
-	environment.ssao_radius = 0.85
-	environment.ssao_intensity = 1.35
-	environment.ssao_power = 1.30
+	# Foundations / timber only. ChatGPT GFX-E SSAO starting values.
+	environment.ssao_radius = 0.80
+	environment.ssao_intensity = 1.25
+	environment.ssao_power = 1.40
 	environment.ssao_detail = 0.50
 	environment.ssao_horizon = 0.06
 	environment.ssao_sharpness = 0.35
-	environment.ssao_light_affect = 0.08
+	environment.ssao_light_affect = 0.10
 	environment.ssao_ao_channel_affect = 0.55
 	environment.ssil_enabled = bool(quality_profile.get("ssil", false))
 	environment.ssil_radius = 3.0
@@ -766,8 +764,8 @@ func _create_lighting() -> void:
 	environment.set("glow_levels/6", 0.0)
 	environment.set("glow_levels/7", 0.0)
 	environment.adjustment_enabled = true
-	environment.adjustment_saturation = 1.08
-	environment.adjustment_contrast = 1.06
+	environment.adjustment_saturation = 0.95
+	environment.adjustment_contrast = 1.04
 	environment.adjustment_brightness = 1.0
 	environment.adjustment_color_correction = Identity.grade_lut_for("day")
 	environment.fog_enabled = true
@@ -787,9 +785,9 @@ func _create_lighting() -> void:
 	var sun := DirectionalLight3D.new()
 	sun_light = sun
 	sun.name = "Sun"
-	sun.light_color = Color("#FFD5A3")
-	sun.light_energy = 1.45
-	sun.shadow_opacity = 0.90
+	sun.light_color = Color("#FFE1BD")
+	sun.light_energy = 0.95
+	sun.shadow_opacity = 1.0
 	# The Director: GFX-05 one key sun, PSSM 2-split, no PCSS softness.
 	sun.light_angular_distance = 0.0
 	sun.shadow_enabled = bool(quality_profile.get("shadows", true))
@@ -798,8 +796,8 @@ func _create_lighting() -> void:
 	var fill := DirectionalLight3D.new()
 	fill_light = fill
 	fill.name = "CoolFill"
-	fill.light_color = Color("#7A93A6")
-	fill.light_energy = 0.18
+	fill.light_color = Color("#899DAA")
+	fill.light_energy = 0.16
 	fill.shadow_enabled = false
 	lighting_rig.add_child(fill)
 	_apply_lighting_palette(Identity.lighting_palette("day"))
@@ -3869,11 +3867,11 @@ func _apply_quality_features() -> void:
 	# The Director: night drops SSAO. Very-Low still left lavapipe 1 ms
 	# over the +15% GFX-1 guard; windows/moon carry night form instead.
 	environment_resource.ssao_enabled = want_ssao and not night
-	environment_resource.ssao_radius = 0.85
-	environment_resource.ssao_intensity = 1.35
+	environment_resource.ssao_radius = 0.80
+	environment_resource.ssao_intensity = 1.25
 	environment_resource.ssao_detail = 0.50
 	environment_resource.ssao_sharpness = 0.35
-	environment_resource.ssao_light_affect = 0.08
+	environment_resource.ssao_light_affect = 0.10
 	var high_ssao := String(quality_profile.get("name", "recommended")) == "high"
 	RenderingServer.environment_set_ssao_quality(
 		RenderingServer.ENV_SSAO_QUALITY_MEDIUM if high_ssao else RenderingServer.ENV_SSAO_QUALITY_LOW,
@@ -3898,15 +3896,18 @@ func _apply_sun_shadow_settings(light: DirectionalLight3D) -> void:
 		light.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
 	else:
 		light.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
-	light.directional_shadow_blend_splits = true
+	var high := String(quality_profile.get("name", "recommended")) == "high"
+	light.directional_shadow_blend_splits = high
 	light.directional_shadow_split_1 = 0.82
 	light.directional_shadow_max_distance = float(quality_profile.get("shadow_distance", 48.0))
-	light.directional_shadow_fade_start = 0.86
+	light.directional_shadow_fade_start = 0.80
 	light.directional_shadow_pancake_size = 4.0
-	light.shadow_bias = 0.06
-	light.shadow_normal_bias = 1.6
+	light.shadow_bias = 0.04
+	light.shadow_normal_bias = 1.0
 	light.shadow_blur = float(quality_profile.get("shadow_blur", 1.0))
-	light.shadow_opacity = 0.90
+	light.shadow_opacity = 1.0
+	if RenderingServer.has_method("directional_shadow_atlas_set_size"):
+		RenderingServer.call("directional_shadow_atlas_set_size", 4096 if high else 2048, true)
 
 
 func sun_light_direction() -> Vector3:

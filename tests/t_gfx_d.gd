@@ -27,11 +27,11 @@ func _run() -> void:
 	_check(CameraRig.NORMAL_ZOOM >= 38.0 * 0.58, "default zoom is at most 42% closer")
 
 	var day_p := Identity.lighting_palette("day")
-	_check(float(day_p["saturation"]) >= 1.05 and float(day_p["saturation"]) <= 1.12, "day saturation is golden-hour 1.05–1.12")
-	_check(float(day_p["contrast"]) >= 1.04 and float(day_p["contrast"]) <= 1.08, "day contrast is 1.04–1.08")
+	_check(float(day_p["saturation"]) >= 0.90 and float(day_p["saturation"]) <= 1.00, "day saturation is neutralized 0.90–1.00")
+	_check(float(day_p["contrast"]) >= 1.02 and float(day_p["contrast"]) <= 1.08, "day contrast is 1.02–1.08")
 	var sun: Color = day_p["sun_color"]
-	_check(sun.r > sun.b + 0.12 and sun.g > 0.70, "day key is warm #FFD5A3-class")
-	_check(float(day_p["sun_energy"]) >= 1.2 and float(day_p["sun_energy"]) <= 1.6, "day sun energy is 1.2–1.6")
+	_check(sun.r > sun.b + 0.12 and sun.g > 0.70, "day key stays warm")
+	_check(float(day_p["sun_energy"]) >= 0.85 and float(day_p["sun_energy"]) <= 1.20, "day sun energy is 0.85–1.20")
 	_check(float(day_p["sun_pitch"]) <= -30.0 and float(day_p["sun_pitch"]) >= -40.0, "day sun sits 30–40° above the horizon")
 	var fill: Color = day_p["fill_color"]
 	_check(fill.b > fill.r, "cool fill against the warm key")

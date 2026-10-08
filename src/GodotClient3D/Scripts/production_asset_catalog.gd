@@ -91,7 +91,20 @@ const WORKYARD_PROPS := {
 	"training_target": ROOT + "/buildings/target.gltf",
 }
 
-# The Director: GFX-C — authored conifer/deciduous kit. KayKit cones retired.
+# The Director: GFX-E woodland kit. KayKit cones retired.
+# Composition target: ~55% conifer, 30% broadleaf, 15% small/LOD.
+const CONIFERS := [
+	ROOT + "/opening_style/fir.tscn",
+	ROOT + "/opening_style/fir_tall.tscn",
+	ROOT + "/opening_style/spruce.tscn",
+]
+
+const DECIDUOUS := [
+	ROOT + "/opening_style/broadleaf.tscn",
+	ROOT + "/opening_style/oak.tscn",
+	ROOT + "/opening_style/birch.tscn",
+]
+
 const TREES := [
 	ROOT + "/opening_style/fir.tscn",
 	ROOT + "/opening_style/fir_tall.tscn",
@@ -102,12 +115,12 @@ const TREES := [
 ]
 
 const EDGE_TREES := [
-	ROOT + "/opening_style/fir_lod.tscn",
-	ROOT + "/opening_style/spruce.tscn",
-	ROOT + "/opening_style/broadleaf_lod.tscn",
-	ROOT + "/opening_style/birch.tscn",
-	ROOT + "/opening_style/oak.tscn",
 	ROOT + "/opening_style/fir.tscn",
+	ROOT + "/opening_style/fir_tall.tscn",
+	ROOT + "/opening_style/spruce.tscn",
+	ROOT + "/opening_style/fir_lod.tscn",
+	ROOT + "/opening_style/broadleaf_lod.tscn",
+	ROOT + "/opening_style/oak.tscn",
 ]
 
 const ROCKS := [ROOT + "/opening_style/rocks.tscn"]
@@ -136,7 +149,7 @@ const HALO_PROPS := {
 	"training_target": ROOT + "/buildings/target.gltf",
 }
 
-const UNDERSTORY := [ROOT + "/opening_style/bush.tscn", ROOT + "/opening_style/grass.tscn"]
+const UNDERSTORY := [ROOT + "/opening_style/bush.tscn"]
 
 const GRASS := [ROOT + "/opening_style/grass.tscn"]
 
@@ -157,7 +170,7 @@ static func all_runtime_paths() -> Array[String]:
 		for path_value in group.values():
 			if not paths.has(String(path_value)):
 				paths.append(String(path_value))
-	for path_value in TREES + EDGE_TREES + ROCKS + UNDERSTORY + GRASS + FLOWERS:
+	for path_value in CONIFERS + DECIDUOUS + TREES + EDGE_TREES + ROCKS + UNDERSTORY + GRASS + FLOWERS:
 		if not paths.has(String(path_value)):
 			paths.append(String(path_value))
 	return paths
