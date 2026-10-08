@@ -1,10 +1,9 @@
 shader_type spatial;
 render_mode diffuse_burley, specular_disabled;
 
-// The Director: GFX-03 two-scale terrain + GFX-B living-green meadow.
-// Macro 8–20 m moisture/dirt plus a 0.8–2 m albedo breakup and cheap
-// meadow patches so far zoom is not a khaki oval. Dirt/crops stay.
-// Period tint still drives dusk gold. Triplanar stays off on the flats.
+// The Director: GFX-D designed ground. Vertex colour carries occupation
+// (roads / aprons / forest floor). Shader adds meadow, flower tint and
+// gravel without the black speckle that made GFX-C look like a prototype.
 uniform vec3 light_tint : source_color = vec3(1.0);
 uniform float tint_floor = 0.0;
 uniform float tint_wash_lo = 0.70;
@@ -12,12 +11,17 @@ uniform float tint_wash_hi = 0.94;
 uniform vec3 grass_sunlit : source_color = vec3(0.353, 0.545, 0.267); // #5A8B44
 uniform vec3 grass_moss : source_color = vec3(0.227, 0.408, 0.251); // #3A6840
 uniform vec3 dirt_color : source_color = vec3(0.502, 0.388, 0.278); // #806347
-uniform vec3 meadow_lush : source_color = vec3(0.310, 0.500, 0.255);
+uniform vec3 meadow_lush : source_color = vec3(0.420, 0.600, 0.280);
+uniform vec3 meadow_warm : source_color = vec3(0.520, 0.580, 0.250);
+uniform vec3 flower_warm : source_color = vec3(0.780, 0.420, 0.280);
+uniform vec3 flower_cool : source_color = vec3(0.620, 0.380, 0.560);
+uniform vec3 gravel_color : source_color = vec3(0.420, 0.400, 0.360);
 uniform float macro_metres = 14.0;
 uniform float detail_metres = 1.2;
-uniform float macro_amount = 0.16;
-uniform float detail_amount = 0.064;
-uniform float dirt_amount = 0.30;
+uniform float macro_amount = 0.28;
+uniform float detail_amount = 0.062;
+uniform float dirt_amount = 0.42;
+uniform float flower_amount = 0.38;
 // 1 at night / distant LOD: one-octave noise, no 4-tap detail normals.
 uniform float lod_cheap = 0.0;
 // G1: same noisy waterline as settlement_water.gdshader.
@@ -92,18 +96,35 @@ void fragment() {
 	// and the extra noise2 is the last lavapipe millisecond we can spare.
 	float detail = lod_cheap > 0.5 ? 0.5 : fbm(detail_uv);
 	float dirt_noise = lod_cheap > 0.5 ? macro : fbm(world_pos.xz / (macro_metres * 1.35) + vec2(4.8, 21.0));
-	float dirt_mask = smoothstep(0.52, 0.84, dirt_noise);
-	vec3 grass = mix(grass_moss, grass_sunlit, clamp(macro * 0.7 + detail * 0.3, 0.0, 1.0));
-	// GFX-B: cheap meadow patches so far zoom is not one khaki oval.
-	float meadow = lod_cheap > 0.5 ? macro : noise2(world_pos.xz / 22.0 + vec2(3.1, 9.7));
-	grass = mix(grass, meadow_lush, smoothstep(0.52, 0.84, meadow) * 0.34);
-	// Vertex colour used to dominate (0.38), so the two-scale layer read as a
-	// flat board from the strategy camera. Prefer authored grass; keep dirt
-	// scarce so dusk gold cannot push warm-share over 0.50.
-	vec3 ground = mix(COLOR.rgb, grass, 0.62);
-	ground = mix(ground, dirt_color, dirt_mask * dirt_amount);
+	float dirt_mask = smoothstep(0.46, 0.82, dirt_noise);
+	vec3 grass = mix(grass_moss, grass_sunlit, clamp(macro * 0.62 + detail * 0.38, 0.0, 1.0));
+	float meadow = lod_cheap > 0.5 ? macro : noise2(world_pos.xz / 14.0 + vec2(3.1, 9.7));
+	float meadow_b = lod_cheap > 0.5 ? macro : noise2(world_pos.xz / 22.0 + vec2(11.4, 2.2));
+	grass = mix(grass, meadow_lush, smoothstep(0.38, 0.78, meadow) * 0.72);
+	grass = mix(grass, meadow_warm, smoothstep(0.50, 0.88, meadow_b) * 0.42);
+	// Flower tint is a hue lift, never a dark speck.
+	if (lod_cheap < 0.5) {
+		float bloom = noise2(world_pos.xz / 3.4 + vec2(17.0, 5.0));
+		float patch = smoothstep(0.68, 0.90, meadow) * smoothstep(0.62, 0.88, bloom);
+		vec3 blossom = mix(flower_warm, flower_cool, step(0.5, noise2(world_pos.xz * 0.37)));
+		grass = mix(grass, mix(grass, blossom, 0.70), patch * flower_amount);
+	}
+	// COLOR.a is the occupation splat. Some backends drop vertex alpha
+	// to 1; then brown RGB (r > g) still marks roads / aprons.
+	float occupy = clamp(COLOR.a, 0.0, 1.0);
+	if (occupy > 0.98) {
+		occupy = max(
+			smoothstep(0.05, 0.18, length(COLOR.rgb - grass)),
+			smoothstep(0.0, 0.10, COLOR.r - COLOR.g)
+		);
+	}
+	vec3 occupy_albedo = COLOR.rgb;
+	vec3 ground = mix(grass, occupy_albedo, occupy);
+	ground = mix(ground, dirt_color, dirt_mask * dirt_amount * (1.0 - occupy * 0.70));
+	float gravel_n = lod_cheap > 0.5 ? 0.0 : smoothstep(0.70, 0.92, noise2(world_pos.xz / 8.0 + vec2(2.2, 14.0)));
+	ground = mix(ground, gravel_color, gravel_n * 0.28 * (0.20 + occupy));
 	float macro_var = mix(1.0 - macro_amount, 1.0 + macro_amount, macro);
-	float detail_var = mix(1.0 - detail_amount, 1.0 + detail_amount, detail);
+	float detail_var = mix(1.0 - detail_amount * 0.55, 1.0 + detail_amount, detail);
 	float wash = smoothstep(tint_wash_lo, max(tint_wash_lo + 0.02, tint_wash_hi), macro);
 	vec3 albedo = ground * mix(vec3(1.0), light_tint, mix(tint_floor, 1.0, wash)) * macro_var * detail_var;
 	vec3 shore = mix(beach_color, rock_shore, clamp(dirt_mask * 0.65 + macro * 0.35, 0.0, 1.0));

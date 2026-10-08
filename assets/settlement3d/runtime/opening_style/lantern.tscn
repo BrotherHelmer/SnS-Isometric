@@ -2,7 +2,7 @@
 
 [ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/lantern.res" id="1_cgavc"]
 
-[node name="Lantern" type="Node3D" unique_id=625946318]
+[node name="Lantern" type="Node3D" unique_id=721607552]
 
-[node name="Model" type="MeshInstance3D" parent="." unique_id=1635178261]
+[node name="Model" type="MeshInstance3D" parent="." unique_id=582054492]
 mesh = ExtResource("1_cgavc")

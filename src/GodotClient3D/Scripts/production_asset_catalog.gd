@@ -140,6 +140,8 @@ const UNDERSTORY := [ROOT + "/opening_style/bush.tscn", ROOT + "/opening_style/g
 
 const GRASS := [ROOT + "/opening_style/grass.tscn"]
 
+const FLOWERS := [ROOT + "/opening_style/flowers.tscn"]
+
 
 static func building_path(building_type: String) -> String:
 	return String(BUILDINGS.get(building_type, BUILDINGS["HOUSE"]))
@@ -155,7 +157,7 @@ static func all_runtime_paths() -> Array[String]:
 		for path_value in group.values():
 			if not paths.has(String(path_value)):
 				paths.append(String(path_value))
-	for path_value in TREES + EDGE_TREES + ROCKS + UNDERSTORY + GRASS:
+	for path_value in TREES + EDGE_TREES + ROCKS + UNDERSTORY + GRASS + FLOWERS:
 		if not paths.has(String(path_value)):
 			paths.append(String(path_value))
 	return paths

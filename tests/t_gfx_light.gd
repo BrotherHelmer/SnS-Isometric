@@ -59,9 +59,9 @@ func _run() -> void:
 	sim.phase_time = 20.0
 	game._update_day_night_lighting()
 	_check(absf(game.sun_light.light_energy - float(night_p["sun_energy"])) < 0.03, "night preset applies authored moon energy")
-	_check(game.environment_resource.tonemap_mode == Environment.TONE_MAPPER_AGX, "tonemap is AgX")
-	_check(float(day_p["saturation"]) >= 0.92 and float(day_p["saturation"]) <= 0.96, "day sat is 0.92–0.96")
-	_check(float(dusk_p["saturation"]) >= 0.92 and float(dusk_p["saturation"]) <= 0.96, "dusk sat is 0.92–0.96")
+	_check(game.environment_resource.tonemap_mode == Environment.TONE_MAPPER_FILMIC, "tonemap is Filmic")
+	_check(float(day_p["saturation"]) >= 1.05 and float(day_p["saturation"]) <= 1.12, "day sat is golden-hour 1.05–1.12")
+	_check(float(dusk_p["saturation"]) >= 1.04 and float(dusk_p["saturation"]) <= 1.12, "dusk sat is 1.04–1.12")
 	_check(float(night_p["saturation"]) >= 0.92 and float(night_p["saturation"]) <= 0.96, "night sat is 0.92–0.96")
 	_check(float(day_p["contrast"]) <= 1.16 and float(dusk_p["contrast"]) <= 1.16 and float(day_p["contrast"]) < 1.40, "contrast is not crushed through B/C/S")
 	_check(float(night_p["road_lift"]) <= 0.16, "night roads are not lifted into white")

@@ -15,14 +15,15 @@ func _init() -> void:
 func build() -> void:
 	DirAccess.make_dir_recursive_absolute(OUT)
 	var palette := {
-		"stone": "d2c4a8", "stone_light": "e4d6bc", "stone_dark": "9a8e78",
-		"plaster": "efe0c4", "wood": "3a2820", "plank": "6b4a32",
-		"slate": "5a6c7c", "slate_light": "6e8294", "slate_dark": "465868",
-		"clay": "9a5840", "clay_light": "b46a4a", "clay_dark": "7a4030",
-		"iron": "30383a", "glass": "e4a34e",
+		"stone": "888779", "stone_light": "d9c49b", "stone_dark": "6a6558",
+		"plaster": "d9c49b", "wood": "57402b", "plank": "6b4a32",
+		"slate": "426f6a", "slate_light": "548882", "slate_dark": "2f5450",
+		"clay": "a75d39", "clay_light": "c2744c", "clay_dark": "7a4030",
+		"iron": "30383a", "glass": "f1b76a",
 		"pine": "4a7a44", "pine_dark": "3a6238",
 		"leaf": "6a8e3c", "leaf_light": "88a44c", "leaf_spring": "7a9848",
-		"grain": "bd9855"
+		"grain": "bd9855",
+		"flower_warm": "c86a46", "flower_cool": "8a5a7a", "flower_gold": "d2a64c"
 	}
 	for key in palette:
 		var mat := StandardMaterial3D.new()
@@ -47,7 +48,7 @@ func build() -> void:
 		else:
 			extended_building(kind)
 		save_model(kind.to_lower(), Profile.BUILDING_UNIT_SIZE[kind])
-	for kind in ["fir", "fir_tall", "spruce", "broadleaf", "oak", "birch", "fir_lod", "broadleaf_lod", "rocks", "fence", "lantern", "cart", "grass", "bush", "wheat"]:
+	for kind in ["fir", "fir_tall", "spruce", "broadleaf", "oak", "birch", "fir_lod", "broadleaf_lod", "rocks", "fence", "lantern", "cart", "grass", "bush", "wheat", "flowers"]:
 		surfaces.clear()
 		rng.seed = 907 + kind.hash()
 		match kind:
@@ -78,6 +79,7 @@ func build() -> void:
 				blob(Vector3(0, 0.42, 0), Vector3(0.72, 0.55, 0.68), "leaf")
 				blob(Vector3(0.22, 0.38, 0.12), Vector3(0.42, 0.36, 0.4), "leaf_light")
 			"wheat": wheat()
+			"flowers": flowers()
 		save_model(kind)
 	var file := FileAccess.open(OUT + "/model_manifest.json", FileAccess.WRITE)
 	file.store_string(JSON.stringify(report, "\t"))
@@ -192,12 +194,16 @@ func cottage(kind: String) -> void:
 	var clay := not civic
 	masonry(Vector3(0, 0.36, 0), Vector3(w, 0.72, d), 2)
 	box(Vector3(0, 1.68, 0), Vector3(w - 0.08, 2.0, d - 0.08), "plaster")
-	# The Director: thicker half-timber so frames read at isometric zoom.
-	for x in [-w * 0.5 + 0.05, 0.0, w * 0.5 - 0.05]:
+	# The Director: GFX-D half-timber that reads at gameplay zoom — posts,
+	# plates and X-braces on every wall, not a grey box with a tint.
+	for x in [-w * 0.5 + 0.05, -w * 0.18, w * 0.18, w * 0.5 - 0.05]:
 		for z in [-d * 0.5, d * 0.5]:
-			box(Vector3(x, 1.66, z), Vector3(0.20, 2.15, 0.20), "wood")
-	for y in [0.78, 2.62]:
-		box(Vector3(0, y, 0), Vector3(w + 0.16, 0.18, d + 0.16), "wood")
+			box(Vector3(x, 1.66, z), Vector3(0.18, 2.15, 0.18), "wood")
+	for y in [0.78, 1.70, 2.62]:
+		box(Vector3(0, y, 0), Vector3(w + 0.16, 0.16, d + 0.16), "wood")
+	for x in [-1, 1]:
+		beam(Vector3(x * (w * 0.5 - 0.06), 0.92, d * 0.5 + 0.05), Vector3(x * 0.08, 2.52, d * 0.5 + 0.05), 0.11, "wood")
+		beam(Vector3(x * (w * 0.5 - 0.06), 2.52, d * 0.5 + 0.05), Vector3(x * 0.08, 0.92, d * 0.5 + 0.05), 0.11, "wood")
 	for side in [-1, 1]:
 		for z in [-0.78, 0.78]:
 			box(Vector3(side * w * 0.5, 1.66, z), Vector3(0.16, 1.85, 0.16), "wood")
@@ -206,7 +212,6 @@ func cottage(kind: String) -> void:
 			box(Vector3(side * (w * 0.5 + 0.13), 1.78, z + 0.28), Vector3(0.045, 0.64, 0.045), "wood")
 			box(Vector3(side * (w * 0.5 + 0.13), 1.78, z + 0.28), Vector3(0.045, 0.045, 0.42), "wood")
 	for x in [-1, 1]:
-		beam(Vector3(x * (w * 0.5 - 0.08), 0.88, d * 0.5 + 0.05), Vector3(x * 0.5, 2.55, d * 0.5 + 0.05), 0.12, "wood")
 		window(Vector3(x * w * 0.30, 1.70, d * 0.5 + 0.10))
 	box(Vector3(0, 1.08, d * 0.5 + 0.11), Vector3(0.92, 1.72, 0.18), "wood")
 	for i in 5:
@@ -231,8 +236,10 @@ func cottage(kind: String) -> void:
 		box(Vector3(-0.35, 6.52, -0.35), Vector3(0.82, 0.40, 0.05), "slate_light")
 		for side in [-1, 1]:
 			box(Vector3(-0.85 + side * 1.05, 3.4, 0.78), Vector3(0.10, 1.15, 0.10), "wood")
+		chimney(Vector3(1.35, 2.70, -0.70))
 	else:
 		chimney(Vector3(1.08, 2.55, -0.55))
+		box(Vector3(-1.15, 0.55, d * 0.5 + 0.55), Vector3(0.72, 0.10, 0.42), "plank")
 	if kind == "BAKERY":
 		masonry(Vector3(1.9, 0.65, 0.6), Vector3(1.1, 1.3, 1.15), 4)
 		box(Vector3(1.9, 0.65, 1.21), Vector3(0.63, 0.66, 0.05), "iron")
@@ -335,22 +342,26 @@ func castle() -> void:
 func farm() -> void:
 	# Barn + cottage within the house AABB so the farm reads as a homestead.
 	masonry(Vector3(-0.15, 0.32, 0.05), Vector3(3.6, 0.64, 2.7), 2)
-	box(Vector3(-0.15, 1.55, 0.05), Vector3(3.45, 1.85, 2.55), "plank")
-	for x in [-1.7, 1.4]:
+	box(Vector3(-0.15, 1.55, 0.05), Vector3(3.45, 1.85, 2.55), "plaster")
+	for x in [-1.7, 0.0, 1.4]:
 		for z in [-1.2, 1.3]:
-			box(Vector3(x, 1.55, z), Vector3(0.22, 2.0, 0.22), "wood")
-	for y in [0.72, 2.40]:
+			box(Vector3(x, 1.55, z), Vector3(0.20, 2.0, 0.20), "wood")
+	for y in [0.72, 1.55, 2.40]:
 		box(Vector3(-0.15, y, 0.05), Vector3(3.7, 0.16, 2.85), "wood")
+	for x in [-1, 1]:
+		beam(Vector3(x * 1.55, 0.80, 1.38), Vector3(x * 0.15, 2.35, 1.38), 0.10, "wood")
+		beam(Vector3(x * 1.55, 2.35, 1.38), Vector3(x * 0.15, 0.80, 1.38), 0.10, "wood")
 	box(Vector3(0.05, 1.15, 1.42), Vector3(1.15, 1.85, 0.12), "wood")
 	for i in 6:
 		box(Vector3(-0.42 + i * 0.16, 1.12, 1.50), Vector3(0.13, 1.72, 0.06), "plank")
 	var prism := PrismMesh.new()
 	prism.size = Vector3(3.6, 1.85, 2.7)
-	add(prism, Vector3(-0.15, 3.15, 0.05), "plank")
+	add(prism, Vector3(-0.15, 3.15, 0.05), "plaster")
 	roof(Vector3(-0.15, 2.42, 0.05), 4.15, 3.2, 1.85, false, true)
 	chimney(Vector3(1.15, 2.15, -0.55))
 	window(Vector3(-1.05, 1.55, 1.42))
 	box(Vector3(-1.35, 0.55, 1.55), Vector3(0.85, 0.12, 0.55), "plank")
+	box(Vector3(1.25, 0.42, 1.55), Vector3(0.55, 0.55, 0.42), "plank")
 
 func fence(p: Vector3) -> void:
 	for x in [-0.9, 0.9]:
@@ -500,11 +511,24 @@ func extended_building(kind: String) -> void:
 		_: cottage(kind)
 
 func grass() -> void:
-	for i in 5:
+	for i in 7:
 		var blade := PrismMesh.new()
-		var h := rng.randf_range(0.20, 0.42)
+		var h := rng.randf_range(0.22, 0.48)
 		blade.size = Vector3(0.055, h, 0.025)
-		add(blade, Vector3(rng.randf_range(-0.12, 0.12), h * 0.5, rng.randf_range(-0.12, 0.12)), "leaf", Vector3(0, rng.randf() * TAU, rng.randf_range(-0.35, 0.35)))
+		add(blade, Vector3(rng.randf_range(-0.14, 0.14), h * 0.5, rng.randf_range(-0.14, 0.14)), "leaf" if i % 2 == 0 else "leaf_light", Vector3(0, rng.randf() * TAU, rng.randf_range(-0.35, 0.35)))
+
+
+func flowers() -> void:
+	grass()
+	for i in 4:
+		var p := Vector3(rng.randf_range(-0.16, 0.16), 0.28, rng.randf_range(-0.16, 0.16))
+		var key := "flower_warm"
+		if i == 1:
+			key = "flower_cool"
+		elif i == 2:
+			key = "flower_gold"
+		blob(p, Vector3(0.07, 0.05, 0.07), key)
+		beam(p + Vector3(0, -0.22, 0), p, 0.012, "leaf")
 
 func wheat() -> void:
 	for i in 7:

@@ -16,12 +16,15 @@ const ROUGHNESS := {
 	"metal": 0.34,
 }
 
-const CASTLE_MASONRY := Color("#D8C8A8")
-const CASTLE_SLATE := Color("#5A6C7C")
-const HALL_MASONRY := Color("#E4D4B4")
-const HALL_SLATE := Color("#4E6070")
-const CLAY_ROOF := Color("#9A5840")
+const CASTLE_MASONRY := Color("#D9C49B")
+const CASTLE_SLATE := Color("#426F6A")
+const HALL_MASONRY := Color("#E2D0A8")
+const HALL_SLATE := Color("#426F6A")
+const CLAY_ROOF := Color("#A75D39")
 const KEEP_SLATE := Color("#4A5A4C")
+const WARM_PLASTER := Color("#D9C49B")
+const DARK_TIMBER := Color("#57402B")
+const WEATHERED_STONE := Color("#888779")
 
 static var _bevel_by_kind: Dictionary = {}
 
@@ -61,25 +64,37 @@ static func remap_albedo(kind: String, color: Color, building_type: String) -> C
 	var next := color
 	match building_type:
 		"CASTLE":
-			if kind == "plaster" or kind == "stone":
-				next = color.lerp(CASTLE_MASONRY, 0.55)
+			if kind == "plaster":
+				next = color.lerp(CASTLE_MASONRY, 0.72)
+			elif kind == "stone":
+				next = color.lerp(WEATHERED_STONE, 0.45).lerp(CASTLE_MASONRY, 0.28)
 			elif kind == "teal_roof" or kind == "roof":
-				next = color.lerp(CASTLE_SLATE, 0.70)
+				next = color.lerp(CASTLE_SLATE, 0.82)
+			elif kind == "timber":
+				next = color.lerp(DARK_TIMBER, 0.55)
 		"TOWN_HALL":
-			if kind == "plaster" or kind == "stone":
-				next = color.lerp(HALL_MASONRY, 0.40)
+			if kind == "plaster":
+				next = color.lerp(HALL_MASONRY, 0.68)
+			elif kind == "stone":
+				next = color.lerp(WEATHERED_STONE, 0.40).lerp(HALL_MASONRY, 0.25)
 			elif kind == "teal_roof" or kind == "roof":
-				next = color.lerp(HALL_SLATE, 0.62)
+				next = color.lerp(HALL_SLATE, 0.78)
+			elif kind == "timber":
+				next = color.lerp(DARK_TIMBER, 0.60)
 		"HOUSE", "FARM", "BAKERY":
 			if kind == "teal_roof" or kind == "roof":
-				next = color.lerp(CLAY_ROOF, 0.48)
+				next = color.lerp(CLAY_ROOF, 0.70)
 			elif kind == "plaster":
-				next = color.lerp(Color("#E2D2B0"), 0.28)
+				next = color.lerp(WARM_PLASTER, 0.55)
+			elif kind == "timber":
+				next = color.lerp(DARK_TIMBER, 0.50)
+			elif kind == "stone":
+				next = color.lerp(WEATHERED_STONE, 0.35)
 		"WATCHTOWER", "BARRACKS":
 			if kind == "teal_roof" or kind == "roof":
 				next = color.lerp(KEEP_SLATE, 0.55)
 			elif kind == "plaster" or kind == "stone":
-				next = color.lerp(CASTLE_MASONRY, 0.22)
+				next = color.lerp(CASTLE_MASONRY, 0.28)
 	return next
 
 

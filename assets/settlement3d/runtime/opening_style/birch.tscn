@@ -2,7 +2,7 @@
 
 [ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/birch.res" id="1_oo66q"]
 
-[node name="Birch" type="Node3D" unique_id=364761776]
+[node name="Birch" type="Node3D" unique_id=755580324]
 
-[node name="Model" type="MeshInstance3D" parent="." unique_id=890799445]
+[node name="Model" type="MeshInstance3D" parent="." unique_id=2133099150]
 mesh = ExtResource("1_oo66q")

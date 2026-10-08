@@ -2,7 +2,7 @@
 
 [ext_resource type="ArrayMesh" path="res://assets/settlement3d/runtime/opening_style/broadleaf.res" id="1_0gw6l"]
 
-[node name="Broadleaf" type="Node3D" unique_id=1314389828]
+[node name="Broadleaf" type="Node3D" unique_id=1739273703]
 
-[node name="Model" type="MeshInstance3D" parent="." unique_id=1555847857]
+[node name="Model" type="MeshInstance3D" parent="." unique_id=1979047983]
 mesh = ExtResource("1_0gw6l")

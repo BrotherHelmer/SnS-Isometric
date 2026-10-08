@@ -3250,6 +3250,8 @@ func _generate_map() -> void:
 	_place_resource_cluster(rival_center + Vector2i(-5, 14), Defs.TILE_ROCK, 20, 32)
 	_ensure_founding_apron(town_center)
 	_ensure_founding_apron(rival_center)
+	_compose_settlement_landscape(town_center)
+	_compose_settlement_landscape(rival_center)
 
 	_set_tile(shard_position, Defs.TILE_SHARD)
 	for offset in _radius_offsets(4):
@@ -3465,6 +3467,48 @@ func _ensure_founding_apron(center: Vector2i) -> void:
 	var side := Vector2i(1 if toward.x <= 0.0 else -1, 0)
 	_clear_area(center + side * 5, 3)
 	_clear_area(center + Vector2i(0, 4), 3)
+
+
+func _compose_settlement_landscape(center: Vector2i) -> void:
+	# The Director: GFX-D composition. Keep the founding meadow, then plant a
+	# forest crescent and a rock shoulder so NORMAL opening day frames like
+	# the concept instead of an empty lawn. Expansion toward the Shard stays
+	# clear. Resource amounts stay in the existing deposit range.
+	var toward := Vector2(shard_position - center)
+	if toward.length_squared() < 0.01:
+		toward = Vector2(1.0, -1.0)
+	toward = toward.normalized()
+	var back := -toward
+	for offset in _radius_offsets(10):
+		var tile: Vector2i = center + offset
+		if not is_inside_map(tile):
+			continue
+		var dist := _tile_distance(tile, center)
+		if dist < 6.2 or dist > 10.4:
+			continue
+		var dir := Vector2(tile - center)
+		if dir.length_squared() < 0.01:
+			continue
+		if dir.normalized().dot(back) < 0.12:
+			continue
+		if get_tile(tile) != Defs.TILE_GRASS:
+			continue
+		if rng.randf() < 0.88:
+			_set_tile(tile, Defs.TILE_TREE)
+			tree_deposits[_tile_key(tile)] = 6
+	var shoulder := center + Vector2i(
+		roundi(back.x * 8.0 + toward.y * 5.0),
+		roundi(back.y * 8.0 - toward.x * 5.0)
+	)
+	for i in 8:
+		var tile := shoulder + Vector2i(rng.randi_range(-2, 2), rng.randi_range(-2, 2))
+		if not is_inside_map(tile) or _tile_distance(tile, center) < 6.2:
+			continue
+		if get_tile(tile) != Defs.TILE_GRASS:
+			continue
+		_set_tile(tile, Defs.TILE_ROCK)
+		rock_deposits[_tile_key(tile)] = 22
+		tree_deposits.erase(_tile_key(tile))
 
 
 func _clear_corridor(start: Vector2i, finish: Vector2i, half_width: int) -> void:

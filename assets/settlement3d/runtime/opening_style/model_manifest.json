@@ -3,7 +3,7 @@
 		"size": "(0.7918, 0.93, 0.8536)",
 		"source": "Authored geometry adapted from opening_style_v1 image references",
 		"surfaces": 11,
-		"triangles": 9788
+		"triangles": 9860
 	},
 	"barracks": {
 		"size": "(1.44, 1.6401, 1.5661)",
@@ -51,13 +51,13 @@
 		"size": "(3.0, 3.7, 2.8)",
 		"source": "Authored geometry adapted from opening_style_v1 image references",
 		"surfaces": 11,
-		"triangles": 6788
+		"triangles": 9644
 	},
 	"farm": {
 		"size": "(0.7918, 0.93, 0.8536)",
 		"source": "Authored geometry adapted from opening_style_v1 image references",
-		"surfaces": 10,
-		"triangles": 5204
+		"surfaces": 11,
+		"triangles": 5300
 	},
 	"fence": {
 		"size": "(1.95, 1.2, 0.15)",
@@ -83,17 +83,23 @@
 		"surfaces": 5,
 		"triangles": 1216
 	},
-	"grass": {
-		"size": "(0.27947, 0.410756, 0.105315)",
+	"flowers": {
+		"size": "(0.395335, 0.44245, 0.343804)",
 		"source": "Authored geometry adapted from opening_style_v1 image references",
-		"surfaces": 1,
-		"triangles": 40
+		"surfaces": 5,
+		"triangles": 328
+	},
+	"grass": {
+		"size": "(0.32649, 0.467895, 0.227406)",
+		"source": "Authored geometry adapted from opening_style_v1 image references",
+		"surfaces": 2,
+		"triangles": 56
 	},
 	"house": {
 		"size": "(0.7918, 0.93, 0.8536)",
 		"source": "Authored geometry adapted from opening_style_v1 image references",
 		"surfaces": 11,
-		"triangles": 5600
+		"triangles": 5672
 	},
 	"lantern": {
 		"size": "(1.003, 2.26, 0.526)",
@@ -147,7 +153,7 @@
 		"size": "(3.0, 3.7, 2.8)",
 		"source": "Authored geometry adapted from opening_style_v1 image references",
 		"surfaces": 11,
-		"triangles": 6788
+		"triangles": 9644
 	},
 	"watchtower": {
 		"size": "(0.9933, 2.192, 1.1533)",
