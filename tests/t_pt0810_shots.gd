@@ -75,7 +75,7 @@ func _shot_night_raid(game, dest_root: String) -> void:
 		simulation._prepare_test_tile(tile, Defs.TILE_GRASS)
 		farm = simulation._add_completed_building(Defs.BUILDING_FARM, tile)
 		farm["connected"] = true
-	var farm_tile: Vector2i = farm.get("position", simulation.town_hall_position)
+	var farm_tile := Vector2i(farm.get("position", simulation.town_hall_position))
 	var guard := _first_patrol(simulation)
 	if guard.is_empty():
 		guard = simulation._create_patrol_worker(0, "pt0810_night")
