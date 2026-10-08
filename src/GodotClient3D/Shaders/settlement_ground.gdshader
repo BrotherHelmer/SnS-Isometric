@@ -18,10 +18,10 @@ uniform vec3 flower_cool : source_color = vec3(0.620, 0.380, 0.560);
 uniform vec3 gravel_color : source_color = vec3(0.420, 0.400, 0.360);
 uniform float macro_metres = 14.0;
 uniform float detail_metres = 1.2;
-uniform float macro_amount = 0.18;
-uniform float detail_amount = 0.048;
-uniform float dirt_amount = 0.22;
-uniform float flower_amount = 0.22;
+uniform float macro_amount = 0.28;
+uniform float detail_amount = 0.062;
+uniform float dirt_amount = 0.42;
+uniform float flower_amount = 0.38;
 // 1 at night / distant LOD: one-octave noise, no 4-tap detail normals.
 uniform float lod_cheap = 0.0;
 // G1: same noisy waterline as settlement_water.gdshader.
@@ -96,25 +96,27 @@ void fragment() {
 	// and the extra noise2 is the last lavapipe millisecond we can spare.
 	float detail = lod_cheap > 0.5 ? 0.5 : fbm(detail_uv);
 	float dirt_noise = lod_cheap > 0.5 ? macro : fbm(world_pos.xz / (macro_metres * 1.35) + vec2(4.8, 21.0));
-	float dirt_mask = smoothstep(0.58, 0.88, dirt_noise);
-	vec3 grass = mix(grass_moss, grass_sunlit, clamp(macro * 0.7 + detail * 0.3, 0.0, 1.0));
-	float meadow = lod_cheap > 0.5 ? macro : noise2(world_pos.xz / 18.0 + vec2(3.1, 9.7));
-	float meadow_b = lod_cheap > 0.5 ? macro : noise2(world_pos.xz / 28.0 + vec2(11.4, 2.2));
-	grass = mix(grass, meadow_lush, smoothstep(0.48, 0.82, meadow) * 0.55);
-	grass = mix(grass, meadow_warm, smoothstep(0.62, 0.90, meadow_b) * 0.28);
+	float dirt_mask = smoothstep(0.46, 0.82, dirt_noise);
+	vec3 grass = mix(grass_moss, grass_sunlit, clamp(macro * 0.62 + detail * 0.38, 0.0, 1.0));
+	float meadow = lod_cheap > 0.5 ? macro : noise2(world_pos.xz / 14.0 + vec2(3.1, 9.7));
+	float meadow_b = lod_cheap > 0.5 ? macro : noise2(world_pos.xz / 22.0 + vec2(11.4, 2.2));
+	grass = mix(grass, meadow_lush, smoothstep(0.38, 0.78, meadow) * 0.72);
+	grass = mix(grass, meadow_warm, smoothstep(0.50, 0.88, meadow_b) * 0.42);
 	// Flower tint is a hue lift, never a dark speck.
 	if (lod_cheap < 0.5) {
 		float bloom = noise2(world_pos.xz / 3.4 + vec2(17.0, 5.0));
-		float patch = smoothstep(0.78, 0.93, meadow) * smoothstep(0.72, 0.90, bloom);
+		float patch = smoothstep(0.68, 0.90, meadow) * smoothstep(0.62, 0.88, bloom);
 		vec3 blossom = mix(flower_warm, flower_cool, step(0.5, noise2(world_pos.xz * 0.37)));
-		grass = mix(grass, mix(grass, blossom, 0.55), patch * flower_amount);
+		grass = mix(grass, mix(grass, blossom, 0.70), patch * flower_amount);
 	}
-	// Occupation (roads, aprons, forest litter) arrives in vertex colour.
-	float occupy = clamp((length(COLOR.rgb - grass) - 0.04) * 1.8, 0.0, 1.0);
-	vec3 ground = mix(grass, COLOR.rgb, mix(0.28, 0.82, occupy));
-	ground = mix(ground, dirt_color, dirt_mask * dirt_amount * (1.0 - occupy * 0.45));
-	float gravel_n = lod_cheap > 0.5 ? 0.0 : smoothstep(0.78, 0.94, noise2(world_pos.xz / 9.5 + vec2(2.2, 14.0)));
-	ground = mix(ground, gravel_color, gravel_n * 0.18 * (0.35 + occupy));
+	// COLOR.a is the occupation splat (road / apron / yard / litter).
+	// RGB difference used to wash roads back into the lawn.
+	float occupy = clamp(COLOR.a, 0.0, 1.0);
+	vec3 occupy_albedo = COLOR.rgb;
+	vec3 ground = mix(grass, occupy_albedo, occupy);
+	ground = mix(ground, dirt_color, dirt_mask * dirt_amount * (1.0 - occupy * 0.70));
+	float gravel_n = lod_cheap > 0.5 ? 0.0 : smoothstep(0.70, 0.92, noise2(world_pos.xz / 8.0 + vec2(2.2, 14.0)));
+	ground = mix(ground, gravel_color, gravel_n * 0.28 * (0.20 + occupy));
 	float macro_var = mix(1.0 - macro_amount, 1.0 + macro_amount, macro);
 	float detail_var = mix(1.0 - detail_amount * 0.55, 1.0 + detail_amount, detail);
 	float wash = smoothstep(tint_wash_lo, max(tint_wash_lo + 0.02, tint_wash_hi), macro);

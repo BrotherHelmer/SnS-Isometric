@@ -34,7 +34,7 @@ const AUDIO_SETTINGS_PATH := "user://one_shard_audio.json"
 
 # The Director: GFX-D golden-hour grade. Filmic + warm key / cool fill.
 # Contrast lives in the key and LUT, not crushed B/C/S. Sun orbit is degrees
-# around the camera view: 120 keeps day/dusk light upper-left (shadows
+# around the camera view: 138 keeps day light upper-left (shadows
 # lower-right) and the 3D sun/camera angle ≥ 90°. Night uses 300 so the moon
 # sits opposite without lerping through the camera at dawn.
 const PALETTE_NAVY := Color("#101A22")
@@ -72,17 +72,17 @@ const LIGHTING := {
 		"sun_energy": 1.45,
 		"sun_color": Color("#FFD5A3"),
 		"sun_pitch": -34.0,
-		"sun_orbit": 120.0,
+		"sun_orbit": 138.0,
 		"fill_energy": 0.18,
 		"fill_color": Color("#7A93A6"),
 		"sky_top": Color("#4A6A7A"),
 		"sky_horizon": Color("#E0C090"),
 		"ground_bottom": Color("#2A464A"),
 		"ground_horizon": Color("#5A7860"),
-		"ground_tint": Color(1.06, 1.02, 0.92),
-		"ground_tint_floor": 0.04,
-		"ground_wash_lo": 0.62,
-		"ground_wash_hi": 0.92,
+		"ground_tint": Color(1.14, 1.04, 0.84),
+		"ground_tint_floor": 0.08,
+		"ground_wash_lo": 0.48,
+		"ground_wash_hi": 0.88,
 		"window_color": PALETTE_WINDOW,
 		"torch_color": PALETTE_WINDOW,
 		"torch_range": 3.2,
