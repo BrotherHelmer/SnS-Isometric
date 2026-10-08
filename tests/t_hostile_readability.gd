@@ -14,8 +14,8 @@ func _init() -> void:
 
 
 func _run() -> void:
-	_test_hostile_highlight()
-	_test_farm_crops_do_not_occlude()
+	await _test_hostile_highlight()
+	await _test_farm_crops_do_not_occlude()
 	for line in failures:
 		print("FAIL %s" % line)
 	print("T_HOSTILE_READABILITY %s" % ("PASS" if failures.is_empty() else "FAIL"))

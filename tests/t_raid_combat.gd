@@ -90,14 +90,15 @@ func _test_night_patrol_hits_raider_before_farm() -> void:
 	sim.path_grid_dirty = true
 	sim._reveal_radius(farm_tile, 8)
 	sim._send_workers_to_shelter()
-	var guard: Dictionary = sim._create_patrol_worker(0, "night_patrol")
-	guard["position"] = farm_tile + Vector2i(2, 4)
+	sim.soldiers_total = 1
+	var guard: Dictionary = sim._create_patrol_worker(0, "patrol:0")
+	guard["position"] = farm_tile + Vector2i(5, 4)
 	guard["state"] = "Night Patrol"
 	guard["arrival_state"] = "Night Watch"
 	guard["path"] = [guard["position"] + Vector2i(0, 2), guard["position"] + Vector2i(-1, 3)]
 	sim.workers.append(guard)
 	sim._reveal_radius(guard["position"], 8)
-	var raider_tile := farm_tile + Vector2i(6, 4)
+	var raider_tile := farm_tile + Vector2i(7, 4)
 	sim._prepare_test_tile(raider_tile, Defs.TILE_GRASS)
 	sim._reveal_radius(raider_tile, 3)
 	sim._spawn_enemy(raider_tile, 36, 4, 0.0, 0, sim.ENEMY_RAIDER, 0)
