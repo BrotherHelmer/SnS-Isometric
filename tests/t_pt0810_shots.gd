@@ -62,10 +62,10 @@ func _shot_scout(game, dest_root: String) -> void:
 	var staging: Vector2i = fog_tile + Vector2i(-7, 0)
 	if not simulation.is_inside_map(staging):
 		staging = hall + Vector2i(4, 1)
-	var guard := _ensure_patrol(simulation, staging)
+	var guard: Dictionary = _ensure_patrol(simulation, staging)
 	simulation.central_inventory[Defs.RESOURCE_BREAD] = maxi(8, int(simulation.central_inventory.get(Defs.RESOURCE_BREAD, 0)))
 	game.select_worker(int(guard.get("id", 0)))
-	var ordered := game._order_selected_scout()
+	var ordered: bool = bool(game._order_selected_scout())
 	var result: Dictionary = {}
 	if not ordered:
 		result = simulation.request_scout_auto(int(guard.get("id", 0)))
@@ -114,7 +114,7 @@ func _shot_night_raid(game, dest_root: String) -> void:
 		farm["connected"] = true
 	var farm_tile: Vector2i = Vector2i(farm.get("position", simulation.town_hall_position))
 	var crop_tile: Vector2i = farm_tile + Vector2i(1, 0)
-	var guard := _ensure_patrol(simulation, farm_tile + Vector2i(3, 1))
+	var guard: Dictionary = _ensure_patrol(simulation, farm_tile + Vector2i(3, 1))
 	guard["path"] = []
 	guard["state"] = "Night Patrol"
 	guard["arrival_state"] = "Night Watch"
@@ -164,14 +164,14 @@ func _carve_scout_frontier(simulation, origin: Vector2i) -> Vector2i:
 
 
 func _farm_wheat_focus(game, farm_tile: Vector2i) -> Vector3:
-	var wheat := _find_named(game, "WheatCrop")
+	var wheat: Node = _find_named(game, "WheatCrop")
 	if wheat is Node3D:
 		return (wheat as Node3D).global_position
 	return game.world_view.tile_to_world(Vector2(farm_tile) + Vector2(1.1, -0.8))
 
 
 func _ensure_patrol(simulation, tile: Vector2i) -> Dictionary:
-	var guard := _first_patrol(simulation)
+	var guard: Dictionary = _first_patrol(simulation)
 	if guard.is_empty():
 		simulation.soldiers_total = maxi(1, simulation.soldiers_total)
 		guard = simulation._create_patrol_worker(0, "patrol:0")
