@@ -1,7 +1,8 @@
 # GFX-D: art-direction pass (presentation only)
 
 Stacked on GFX-C (`cursor/gfx-c-visual-pass-b224`). North star:
-`concept_1.png`. Target: 6/10 against the concept.
+`concept_1.png`. Playtest score: **5/10** (target was 6/10). See
+`docs/gfx/GFX_D_PLAYTEST.md`.
 
 No RTS rewrite, no scout / night-guard / raider-outline gameplay, no
 Master-volume change, no `.github/workflows` edits.
@@ -32,5 +33,7 @@ Master-volume change, no `.github/workflows` edits.
 - Units remain KayKit rigs.
 - Coast is still the G1 rounded-rect.
 - True volumetrics / SSIL / SDFGI stay postponed.
-- Getting from ~6/10 to 8/10 needs more bespoke building silhouettes
-  and carved terrain.
+- Occupation splat and dirt roads are authored but do not separate on
+  lavapipe Forward+ frames — the lawn still reads as one plane.
+- Getting from 5/10 to 7–8/10 needs readable worn earth on hardware,
+  denser building yards, and silhouettes that escape the AABB lock.
