@@ -847,20 +847,25 @@ func _rebuild_grass_multimeshes() -> void:
 			elif forest_edge >= 2 and _tile_hash(tile, 23) % 2 == 0:
 				tufts = 2
 			if tufts == 0:
-				if meadow > 0.40 and _tile_hash(tile, 47) % 4 == 0 and Catalog.FLOWERS.size() > 0:
+				if meadow > 0.36 and _tile_hash(tile, 47) % 3 == 0 and Catalog.FLOWERS.size() > 0:
 					var lone_flower := String(Catalog.FLOWERS[_tile_hash(tile, 61) % Catalog.FLOWERS.size()])
-					_append_nature_transform(transforms_by_path, lone_flower, tile, 4, 0.70, 1.15, 0.28)
+					_append_nature_transform(transforms_by_path, lone_flower, tile, 4, 0.70, 1.20, 0.28)
 				continue
 			for index in tufts:
 				var grass_path := String(Catalog.GRASS[_tile_hash(tile, 83 + index) % Catalog.GRASS.size()])
 				_append_nature_transform(transforms_by_path, grass_path, tile, index, 0.95, 1.35, 0.28)
-			if meadow > 0.32 and _tile_hash(tile, 47) % 3 == 0 and Catalog.FLOWERS.size() > 0:
+			if meadow > 0.28 and _tile_hash(tile, 47) % 2 == 0 and Catalog.FLOWERS.size() > 0:
 				var flower_path := String(Catalog.FLOWERS[_tile_hash(tile, 61) % Catalog.FLOWERS.size()])
-				_append_nature_transform(transforms_by_path, flower_path, tile, 4, 0.70, 1.20, 0.26)
+				_append_nature_transform(transforms_by_path, flower_path, tile, 4, 0.70, 1.25, 0.26)
+			# Presentation-only meadow shrubs — not TILE_TREE, so the founding
+			# apron stays buildable while the camera still sees a composed yard.
+			if meadow > 0.30 and forest_edge == 0 and _tile_hash(tile, 59) % 5 == 0 and Catalog.UNDERSTORY.size() > 0:
+				var meadow_bush := String(Catalog.UNDERSTORY[_tile_hash(tile, 73) % Catalog.UNDERSTORY.size()])
+				_append_nature_transform(transforms_by_path, meadow_bush, tile, 8, 0.70, 0.88, 0.20)
 			if forest_edge >= 2 and _tile_hash(tile, 53) % 2 == 0 and Catalog.UNDERSTORY.size() > 0:
 				var bush_path := String(Catalog.UNDERSTORY[_tile_hash(tile, 71) % Catalog.UNDERSTORY.size()])
 				_append_nature_transform(transforms_by_path, bush_path, tile, 6, 0.80, 0.92, 0.22)
-			if forest_edge >= 1 and _tile_hash(tile, 101) % 4 == 0 and Catalog.ROCKS.size() > 0:
+			if (forest_edge >= 1 or meadow > 0.45) and _tile_hash(tile, 101) % 4 == 0 and Catalog.ROCKS.size() > 0:
 				var rock_path := String(Catalog.ROCKS[_tile_hash(tile, 109) % Catalog.ROCKS.size()])
 				_append_nature_transform(transforms_by_path, rock_path, tile, 7, 0.55, 0.46, 0.18)
 	_spawn_nature_multimeshes(grass_root, transforms_by_path)

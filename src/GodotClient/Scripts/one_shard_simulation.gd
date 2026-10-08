@@ -3484,25 +3484,25 @@ func _compose_settlement_landscape(center: Vector2i) -> void:
 		if not is_inside_map(tile):
 			continue
 		var dist := _tile_distance(tile, center)
-		if dist < 5.0 or dist > 9.8:
+		if dist < 6.2 or dist > 10.4:
 			continue
 		var dir := Vector2(tile - center)
 		if dir.length_squared() < 0.01:
 			continue
-		if dir.normalized().dot(back) < 0.10:
+		if dir.normalized().dot(back) < 0.12:
 			continue
 		if get_tile(tile) != Defs.TILE_GRASS:
 			continue
-		if rng.randf() < 0.90:
+		if rng.randf() < 0.88:
 			_set_tile(tile, Defs.TILE_TREE)
 			tree_deposits[_tile_key(tile)] = 6
 	var shoulder := center + Vector2i(
 		roundi(back.x * 8.0 + toward.y * 5.0),
-		roundi(back.y * 7.0 - toward.x * 4.5)
+		roundi(back.y * 8.0 - toward.x * 5.0)
 	)
-	for i in 10:
+	for i in 8:
 		var tile := shoulder + Vector2i(rng.randi_range(-2, 2), rng.randi_range(-2, 2))
-		if not is_inside_map(tile) or _tile_distance(tile, center) < 4.2:
+		if not is_inside_map(tile) or _tile_distance(tile, center) < 6.2:
 			continue
 		if get_tile(tile) != Defs.TILE_GRASS:
 			continue
