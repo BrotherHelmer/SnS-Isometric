@@ -73,7 +73,7 @@ func _shot_scout(game, dest_root: String) -> void:
 		str(ordered), str(bool(result.get("success", ordered))),
 		String(simulation.last_message), str(fog_tile)
 	])
-	guard = simulation.get_worker_by_id(int(guard.get("id", 0)))
+	guard = simulation._find_worker_by_id(int(guard.get("id", 0)))
 	if guard.has("scout_mission"):
 		var mission: Dictionary = guard["scout_mission"]
 		mission["depth_limit"] = 48
@@ -82,12 +82,13 @@ func _shot_scout(game, dest_root: String) -> void:
 		guard["state"] = "Scouting"
 		guard["arrival_state"] = "Scouting"
 	var start_tile: Vector2i = Vector2i(guard.get("position", staging))
+	var scout_id: int = int(guard.get("id", 0))
 	for _step in range(16):
 		simulation._simulate_seconds_for_test(0.45)
-		guard = simulation.get_worker_by_id(int(guard.get("id", 0)))
+		guard = simulation._find_worker_by_id(scout_id)
 		if String(guard.get("state", "")) == "Scouting" and simulation._manhattan(Vector2i(guard.get("position", start_tile)), start_tile) >= 2:
 			break
-	guard = simulation.get_worker_by_id(int(guard.get("id", 0)))
+	guard = simulation._find_worker_by_id(scout_id)
 	if String(guard.get("state", "")) != "Scouting" or not guard.has("scout_mission"):
 		guard["position"] = fog_tile + Vector2i(-2, 1)
 		guard["state"] = "Scouting"
@@ -103,7 +104,9 @@ func _shot_scout(game, dest_root: String) -> void:
 		}
 		_carve_scout_frontier(simulation, hall)
 		simulation._reveal_radius(Vector2i(guard["position"]), 3)
-	game.select_worker(int(guard.get("id", 0)))
+	guard["state"] = "Scouting"
+	guard["arrival_state"] = "Scouting"
+	game.select_worker(scout_id)
 	game.simulation_host.paused = true
 	game._update_day_night_lighting()
 	game._sync_presentation()
@@ -160,7 +163,7 @@ func _shot_night_raid(game, dest_root: String) -> void:
 	if not simulation.raid_active:
 		simulation._begin_raid(1)
 	simulation._simulate_seconds_for_test(2.4)
-	guard = simulation.get_worker_by_id(int(guard.get("id", 0)))
+	guard = simulation._find_worker_by_id(int(guard.get("id", 0)))
 	game.select_worker(int(guard.get("id", 0)))
 	game.simulation_host.paused = true
 	game._update_day_night_lighting()
@@ -205,10 +208,10 @@ func _farm_wheat_focus(game, farm_tile: Vector2i) -> Vector3:
 func _find_farm_view(node: Node) -> Node:
 	if node == null:
 		return null
-	if String(node.get("building_type")) == Defs.BUILDING_FARM:
+	if String(node.name).begins_with("FARM_"):
 		return node
 	for child in node.get_children():
-		var found := _find_farm_view(child)
+		var found: Node = _find_farm_view(child)
 		if found != null:
 			return found
 	return null

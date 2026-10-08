@@ -2807,6 +2807,8 @@ func _building_player_status(building: Dictionary, type_name: String) -> String:
 
 func _worker_player_status(raw_status: String) -> String:
 	var lower := raw_status.to_lower()
+	if "scout" in lower:
+		return "Scouting"
 	if "return" in lower:
 		return "Returning to camp"
 	if "pickup" in lower or "collect" in lower:
@@ -2817,8 +2819,6 @@ func _worker_player_status(raw_status: String) -> String:
 		return "Heading to shelter" if "going" in lower else "Resting in shelter"
 	if "work" in lower:
 		return "Working"
-	if "scout" in lower:
-		return "Scouting"
 	if "fight" in lower:
 		return "Fighting"
 	if "moving" in lower or "walk" in lower:
