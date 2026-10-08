@@ -73,8 +73,36 @@ func _shot_scout(game, dest_root: String) -> void:
 		str(ordered), str(bool(result.get("success", ordered))),
 		String(simulation.last_message), str(fog_tile)
 	])
-	simulation._simulate_seconds_for_test(14.0)
 	guard = simulation.get_worker_by_id(int(guard.get("id", 0)))
+	if guard.has("scout_mission"):
+		var mission: Dictionary = guard["scout_mission"]
+		mission["depth_limit"] = 48
+		mission["returning"] = false
+		guard["scout_mission"] = mission
+		guard["state"] = "Scouting"
+		guard["arrival_state"] = "Scouting"
+	var start_tile: Vector2i = Vector2i(guard.get("position", staging))
+	for _step in range(16):
+		simulation._simulate_seconds_for_test(0.45)
+		guard = simulation.get_worker_by_id(int(guard.get("id", 0)))
+		if String(guard.get("state", "")) == "Scouting" and simulation._manhattan(Vector2i(guard.get("position", start_tile)), start_tile) >= 2:
+			break
+	guard = simulation.get_worker_by_id(int(guard.get("id", 0)))
+	if String(guard.get("state", "")) != "Scouting" or not guard.has("scout_mission"):
+		guard["position"] = fog_tile + Vector2i(-2, 1)
+		guard["state"] = "Scouting"
+		guard["arrival_state"] = "Scouting"
+		guard["scout_mission"] = {
+			"home": hall,
+			"target": fog_tile,
+			"direction": {"x": 1.0, "y": 0.0},
+			"depth_limit": 48,
+			"returning": false,
+			"return_reason": "",
+			"tiles_at_start": simulation.revealed_tiles.size()
+		}
+		_carve_scout_frontier(simulation, hall)
+		simulation._reveal_radius(Vector2i(guard["position"]), 3)
 	game.select_worker(int(guard.get("id", 0)))
 	game.simulation_host.paused = true
 	game._update_day_night_lighting()
@@ -113,8 +141,11 @@ func _shot_night_raid(game, dest_root: String) -> void:
 		farm = simulation._add_completed_building(Defs.BUILDING_FARM, tile)
 		farm["connected"] = true
 	var farm_tile: Vector2i = Vector2i(farm.get("position", simulation.town_hall_position))
-	var crop_tile: Vector2i = farm_tile + Vector2i(1, 0)
-	var guard: Dictionary = _ensure_patrol(simulation, farm_tile + Vector2i(3, 1))
+	var crop_world: Vector3 = _farm_wheat_focus(game, farm_tile)
+	var crop_tile: Vector2i = game.world_view.world_to_tile(crop_world)
+	if crop_tile == Vector2i.ZERO:
+		crop_tile = farm_tile + Vector2i(1, -1)
+	var guard: Dictionary = _ensure_patrol(simulation, crop_tile + Vector2i(2, 1))
 	guard["path"] = []
 	guard["state"] = "Night Patrol"
 	guard["arrival_state"] = "Night Watch"
@@ -164,10 +195,23 @@ func _carve_scout_frontier(simulation, origin: Vector2i) -> Vector2i:
 
 
 func _farm_wheat_focus(game, farm_tile: Vector2i) -> Vector3:
-	var wheat: Node = _find_named(game, "WheatCrop")
+	var farm_view: Node = _find_farm_view(game)
+	var wheat: Node = _find_named(farm_view if farm_view != null else game, "WheatCrop")
 	if wheat is Node3D:
 		return (wheat as Node3D).global_position
 	return game.world_view.tile_to_world(Vector2(farm_tile) + Vector2(1.1, -0.8))
+
+
+func _find_farm_view(node: Node) -> Node:
+	if node == null:
+		return null
+	if String(node.get("building_type")) == Defs.BUILDING_FARM:
+		return node
+	for child in node.get_children():
+		var found := _find_farm_view(child)
+		if found != null:
+			return found
+	return null
 
 
 func _ensure_patrol(simulation, tile: Vector2i) -> Dictionary:
