@@ -522,6 +522,8 @@ func _rebuild_terrain() -> void:
 	material.set_shader_parameter("light_tint", Vector3(_ground_tint.r, _ground_tint.g, _ground_tint.b))
 	material.set_shader_parameter("tint_floor", 0.0)
 	# The Director: GFX-03 two-scale terrain + GFX-B meadow amount.
+	material.set_shader_parameter("grass_sunlit", Vector3(0.416, 0.510, 0.306))
+	material.set_shader_parameter("grass_moss", Vector3(0.271, 0.376, 0.220))
 	material.set_shader_parameter("macro_metres", 14.0)
 	material.set_shader_parameter("detail_metres", 1.2)
 	material.set_shader_parameter("macro_amount", 0.12)

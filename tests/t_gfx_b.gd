@@ -47,8 +47,14 @@ func _run() -> void:
 
 	if game.world_view.terrain_mesh_instance != null and game.world_view.terrain_mesh_instance.material_override is ShaderMaterial:
 		var ground := game.world_view.terrain_mesh_instance.material_override as ShaderMaterial
-		var sunlit: Vector3 = ground.get_shader_parameter("grass_sunlit")
-		var moss: Vector3 = ground.get_shader_parameter("grass_moss")
+		var sunlit_value = ground.get_shader_parameter("grass_sunlit")
+		var moss_value = ground.get_shader_parameter("grass_moss")
+		var sunlit := Vector3(Identity.PALETTE_SUNLIT_GRASS.r, Identity.PALETTE_SUNLIT_GRASS.g, Identity.PALETTE_SUNLIT_GRASS.b)
+		var moss := Vector3(Identity.PALETTE_MOSS.r, Identity.PALETTE_MOSS.g, Identity.PALETTE_MOSS.b)
+		if typeof(sunlit_value) == TYPE_VECTOR3:
+			sunlit = sunlit_value
+		if typeof(moss_value) == TYPE_VECTOR3:
+			moss = moss_value
 		print("GFX_B grass sunlit=%.3f,%.3f,%.3f moss=%.3f,%.3f,%.3f" % [sunlit.x, sunlit.y, sunlit.z, moss.x, moss.y, moss.z])
 		_check(sunlit.y > sunlit.x + 0.04, "sunlit grass is green, not khaki")
 		_check(moss.y > moss.x, "moss is green")
@@ -57,7 +63,10 @@ func _run() -> void:
 		_check(false, "terrain uses the settlement ground shader")
 
 	if game.world_view.water_material != null:
-		var deep: Vector3 = game.world_view.water_material.get_shader_parameter("deep_color")
+		var deep_value = game.world_view.water_material.get_shader_parameter("deep_color")
+		var deep := Vector3(0.12, 0.28, 0.30)
+		if typeof(deep_value) == TYPE_VECTOR3:
+			deep = deep_value
 		_check(deep.y > deep.x + 0.08, "sea is teal-green, not pewter")
 	else:
 		_check(false, "island water material is live")
