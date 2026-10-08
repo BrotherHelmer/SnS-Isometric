@@ -2111,13 +2111,20 @@ func _same_type_neighbors(tile: Vector2i, tile_type: String) -> int:
 
 
 func apply_quality_profile(quality: Dictionary) -> void:
-	foliage_density = clampf(float(quality.get("foliage_density", foliage_density)), 0.25, 1.0)
-	grass_density = clampf(float(quality.get("grass_density", quality.get("foliage_density", grass_density))), 0.25, 1.0)
-	water_detail = clampf(float(quality.get("water_detail", water_detail)), 0.2, 1.0)
+	var next_foliage := clampf(float(quality.get("foliage_density", foliage_density)), 0.25, 1.0)
+	var next_grass := clampf(float(quality.get("grass_density", quality.get("foliage_density", grass_density))), 0.25, 1.0)
+	var next_water := clampf(float(quality.get("water_detail", water_detail)), 0.2, 1.0)
+	var density_changed := not is_equal_approx(next_foliage, foliage_density) or not is_equal_approx(next_grass, grass_density)
+	foliage_density = next_foliage
+	grass_density = next_grass
+	water_detail = next_water
 	if water_material != null:
 		water_material.set_shader_parameter("wave", 0.055 * water_detail)
-	if simulation == null:
+	if simulation == null or not density_changed:
 		return
+	# Recommended and High share 1.0 foliage. Rebuilding the edge forest
+	# and every grass clump on a no-op density change hung lavapipe after
+	# the showcase village (~5 min, never finished).
 	_rebuild_edge_forest(true)
 	_rebuild_grass_multimeshes()
 

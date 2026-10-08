@@ -131,8 +131,8 @@ func _check_live_scene() -> void:
 		var ground := game.world_view.terrain_mesh_instance.material_override as ShaderMaterial
 		_check(float(ground.get_shader_parameter("patch_metres")) >= 6.0, "ground has a mid-scale patch layer")
 		_check(float(ground.get_shader_parameter("macro_amount")) >= 0.10, "macro breakup stays on")
-		var meadow_warm: Color = ground.get_shader_parameter("meadow_warm")
-		_check(meadow_warm.g >= meadow_warm.r and meadow_warm.r < 0.55, "meadow_warm is olive, not yellow")
+		var meadow_warm: Vector3 = ground.get_shader_parameter("meadow_warm")
+		_check(meadow_warm.y >= meadow_warm.x and meadow_warm.x < 0.55, "meadow_warm is olive, not yellow")
 	else:
 		_check(false, "terrain uses the settlement ground shader")
 	var clump: Mesh = game.world_view._grass_clump_mesh()
