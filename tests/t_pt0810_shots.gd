@@ -171,8 +171,11 @@ func _shot_night_raid(game, dest_root: String) -> void:
 	game._update_ui()
 	if game.tutorial_overlay != null:
 		game.tutorial_overlay.visible = false
-	var focus: Vector3 = _farm_wheat_focus(game, farm_tile)
-	game.camera_rig.compose_view(focus, 22.0)
+	var wheat_focus: Vector3 = _farm_wheat_focus(game, farm_tile)
+	var hall_tile: Vector2i = Vector2i(simulation.town_hall_position)
+	var town_focus: Vector3 = game.world_view.tile_to_world(Vector2(hall_tile) + Vector2(1.5, 2.2))
+	var focus: Vector3 = town_focus.lerp(wheat_focus, 0.55)
+	game.camera_rig.compose_view(focus, 34.0)
 	print("PT0810_NIGHT guard=%s raider=%s farm=%s" % [
 		String(guard.get("state", "")),
 		str(simulation.enemies[0].get("position", Vector2i.ZERO) if not simulation.enemies.is_empty() else Vector2i.ZERO),
