@@ -164,8 +164,8 @@ func _create_completed_model() -> void:
 	model_root.scale = Vector3.ONE * ScaleProfile.building_scale(building_type)
 	model_root.position.z = _model_offset_z()
 	add_child(model_root)
-	# The Director: GFX-07 roughness + fresnel bevel after the mesh is live.
-	BuildingMaterials.apply(model_root, entity_id)
+	# The Director: GFX-07 roughness + GFX-B castle/roof remap after the mesh is live.
+	BuildingMaterials.apply(model_root, entity_id, building_type)
 
 
 func _create_wall_model() -> void:

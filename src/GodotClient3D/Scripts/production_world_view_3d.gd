@@ -30,8 +30,8 @@ const HORIZON_RADIUS_METRES := 420.0
 const FOG_VOLUME_HEIGHT_METRES := 56.0
 const FOG_VOLUME_CENTER_Y := 18.0
 const FOG_DISPLAY_UPSAMPLE := 8
-const FOG_UNKNOWN_BASE := Vector3(0.09, 0.12, 0.08)
-const FOG_MIST_BASE := Vector3(0.12, 0.16, 0.10)
+const FOG_UNKNOWN_BASE := Vector3(0.10, 0.13, 0.16)
+const FOG_MIST_BASE := Vector3(0.16, 0.19, 0.22)
 
 var simulation
 var map_size := Vector2i.ZERO
@@ -396,8 +396,10 @@ func fog_configuration() -> Dictionary:
 		"uses_smoothed_texture": fog_visibility_texture != null,
 		"filter_linear": true,
 		"edge_feather_cells": 4,
-		"noise_strength": 0.18,
+		"noise_strength": 0.22,
 		"unknown_opacity": 1.0,
+		"unknown_color": FOG_UNKNOWN_BASE,
+		"mist_color": FOG_MIST_BASE,
 		"world_anchored": true,
 		"volume_mesh": fog_plane != null,
 		"exterior_opaque": true,
@@ -519,11 +521,13 @@ func _rebuild_terrain() -> void:
 	material.shader = preload("res://src/GodotClient3D/Shaders/settlement_ground.gdshader")
 	material.set_shader_parameter("light_tint", Vector3(_ground_tint.r, _ground_tint.g, _ground_tint.b))
 	material.set_shader_parameter("tint_floor", 0.0)
-	# The Director: GFX-03 two-scale terrain defaults (8–20 m macro, 0.8–2 m detail).
+	# The Director: GFX-03 two-scale terrain + GFX-B meadow amount.
+	material.set_shader_parameter("grass_sunlit", Vector3(0.416, 0.510, 0.306))
+	material.set_shader_parameter("grass_moss", Vector3(0.271, 0.376, 0.220))
 	material.set_shader_parameter("macro_metres", 14.0)
 	material.set_shader_parameter("detail_metres", 1.2)
-	material.set_shader_parameter("macro_amount", 0.078)
-	material.set_shader_parameter("detail_amount", 0.048)
+	material.set_shader_parameter("macro_amount", 0.12)
+	material.set_shader_parameter("detail_amount", 0.052)
 	material.set_shader_parameter("dirt_amount", 0.36)
 	material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
 	material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
@@ -608,9 +612,9 @@ func _terrain_color(tile: Vector2i) -> Color:
 			if tile_type == Defs.TILE_ROCK: rock_weight += 1
 	var hash_a := float(_tile_hash(tile, 7) % 100) / 100.0
 	var hash_b := float(_tile_hash(tile, 13) % 100) / 100.0
-	var base := Color("#5a7048")
-	base = base.lerp(Color("#5a6c48"), hash_a * 0.03)
-	base = base.lerp(Color("#445840"), hash_b * 0.02)
+	var base := Color("#4A6840")
+	base = base.lerp(Color("#567848"), hash_a * 0.04)
+	base = base.lerp(Color("#3A5840"), hash_b * 0.03)
 	base = base.lerp(Color("#2a4438"), clampf(float(tree_weight) / 28.0, 0.0, 0.22))
 	base = base.lerp(Color("#55574d"), clampf(float(rock_weight) / 32.0, 0.0, 0.18))
 	var edge := mini(mini(tile.x, tile.y), mini(map_size.x - 1 - tile.x, map_size.y - 1 - tile.y))
@@ -1719,8 +1723,8 @@ func _sync_fog(force: bool) -> void:
 		fog_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
 		fog_material.render_priority = 20
 	fog_material.set_shader_parameter("unknown_opacity", 1.0)
-	fog_material.set_shader_parameter("edge_softness", 0.45)
-	fog_material.set_shader_parameter("noise_strength", 0.18)
+	fog_material.set_shader_parameter("edge_softness", 0.48)
+	fog_material.set_shader_parameter("noise_strength", 0.22)
 	fog_material.set_shader_parameter("shore_fade_metres", SHORE_FADE_METRES)
 	_ensure_fog_volume()
 
@@ -2017,6 +2021,8 @@ func _rebuild_water() -> void:
 	water_material.set_shader_parameter("fade_start", 70.0)
 	water_material.set_shader_parameter("fade_end", 380.0)
 	water_material.set_shader_parameter("horizon_color", Vector3(0.145, 0.240, 0.255))
+	water_material.set_shader_parameter("deep_color", Vector3(0.12, 0.28, 0.30))
+	water_material.set_shader_parameter("shallow_color", Vector3(0.18, 0.38, 0.36))
 	water_mesh_instance.material_override = water_material
 	water_root.add_child(water_mesh_instance)
 
@@ -2108,8 +2114,8 @@ func _rebuild_beach_apron() -> void:
 	material.set_shader_parameter("tint_floor", 0.0)
 	material.set_shader_parameter("macro_metres", 14.0)
 	material.set_shader_parameter("detail_metres", 1.2)
-	material.set_shader_parameter("macro_amount", 0.078)
-	material.set_shader_parameter("detail_amount", 0.048)
+	material.set_shader_parameter("macro_amount", 0.12)
+	material.set_shader_parameter("detail_amount", 0.052)
 	material.set_shader_parameter("dirt_amount", 0.22)
 	material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
 	material.set_shader_parameter("world_size_xz", size_xz)
@@ -2320,13 +2326,13 @@ func _edge_tree_path(x: int, y: int, ring: int) -> String:
 func _foliage_material(mesh: Mesh, path_value: String) -> ShaderMaterial:
 	var material := ShaderMaterial.new()
 	material.shader = FoliageShader
-	var tint := Color("#2A3C30")
+	var tint := Color("#355544")
 	if String(path_value).contains("broadleaf") or String(path_value).contains("Tree_3"):
-		tint = Color("#3A4A28")
+		tint = Color("#4A5A30")
 	elif String(path_value).contains("Tree_4"):
-		tint = Color("#2E3824")
+		tint = Color("#3A4A2C")
 	elif String(path_value).contains("Tree_2"):
-		tint = Color("#243830")
+		tint = Color("#2E4A38")
 	material.set_shader_parameter("albedo_color", Vector3(tint.r, tint.g, tint.b))
 	material.set_shader_parameter("atmosphere", _atmosphere_scale)
 	material.set_shader_parameter("wind", 0.07)
