@@ -38,7 +38,7 @@ uniform vec2 world_min_xz = vec2(-87.5, -87.5);
 uniform vec2 world_size_xz = vec2(175.0, 175.0);
 // GFX-G/H: shore dissolves into the wilderness shroud so zoom 42/68
 // cannot print a diamond island or a dark beach rim.
-uniform vec3 beach_color : source_color = vec3(0.090, 0.149, 0.165); // #17262A
+uniform vec3 beach_color : source_color = vec3(0.090, 0.153, 0.165); // #17272A
 uniform vec3 rock_shore : source_color = vec3(0.078, 0.125, 0.141); // #142024
 uniform vec3 wet_sand : source_color = vec3(0.070, 0.110, 0.125); // #121C20
 uniform float beach_margin_metres = 5.0;

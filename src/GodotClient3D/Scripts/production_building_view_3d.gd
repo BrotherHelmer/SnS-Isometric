@@ -164,8 +164,9 @@ func _create_completed_model() -> void:
 	model_root.scale = Vector3.ONE * ScaleProfile.building_scale(building_type)
 	model_root.position.z = _model_offset_z()
 	add_child(model_root)
-	# The Director: GFX-07 roughness + GFX-B castle/roof remap after the mesh is live.
+	# The Director: GFX-I trim-sheet remap after the mesh is live.
 	BuildingMaterials.apply(model_root, entity_id, building_type)
+	_apply_principal_trim()
 
 
 func _create_wall_model() -> void:
@@ -885,6 +886,81 @@ func _material(color: Color, transparency: float) -> StandardMaterial3D:
 	return material
 
 
+func _apply_principal_trim() -> void:
+	# GFX-I: plaster / timber / roof / stone read at default zoom on the
+	# three principal archetypes. Geometry stays KayKit; trim is shared
+	# boxes so Town Hall, house and bakery get character without a remodel.
+	if building_type != "TOWN_HALL" and building_type != "CASTLE" and building_type != "HOUSE" and building_type != "BAKERY":
+		return
+	var plaster := _material(BuildingMaterials.WARM_PLASTER, 0.0)
+	var timber := _material(BuildingMaterials.DARK_TIMBER, 0.0)
+	var roof := _material(BuildingMaterials.HALL_SLATE if building_type == "TOWN_HALL" or building_type == "CASTLE" else BuildingMaterials.CLAY_ROOF, 0.0)
+	var stone := _material(BuildingMaterials.WEATHERED_STONE, 0.0)
+	var visual := _visual_size()
+	var width := maxf(visual.x, 3.2)
+	var depth := maxf(visual.z, 3.2)
+	var wall_h := maxf(visual.y * 0.42, 1.55)
+	# Weathered stone plinth so the hall cannot sink to near-black.
+	var plinth := MeshInstance3D.new()
+	plinth.name = "TrimPlinth"
+	var plinth_mesh := BoxMesh.new()
+	plinth_mesh.size = Vector3(width * 1.02, 0.38, depth * 1.02)
+	plinth.mesh = plinth_mesh
+	plinth.position = Vector3(0.0, 0.19, _model_offset_z())
+	plinth.material_override = stone
+	add_child(plinth)
+	# Timber posts at the four corners.
+	for index in 4:
+		var post := MeshInstance3D.new()
+		post.name = "TrimTimber_%d" % index
+		var post_mesh := BoxMesh.new()
+		post_mesh.size = Vector3(0.16, wall_h, 0.16)
+		post.mesh = post_mesh
+		var sx := -1.0 if index < 2 else 1.0
+		var sz := -1.0 if index % 2 == 0 else 1.0
+		post.position = Vector3(sx * width * 0.46, wall_h * 0.52, _model_offset_z() + sz * depth * 0.44)
+		post.material_override = timber
+		add_child(post)
+	# Mid-wall timber plate.
+	var plate := MeshInstance3D.new()
+	plate.name = "TrimPlate"
+	var plate_mesh := BoxMesh.new()
+	plate_mesh.size = Vector3(width * 0.92, 0.12, 0.10)
+	plate.mesh = plate_mesh
+	plate.position = Vector3(0.0, wall_h * 0.62, _model_offset_z() + depth * 0.48)
+	plate.material_override = timber
+	add_child(plate)
+	# Roof-edge fascia.
+	var fascia := MeshInstance3D.new()
+	fascia.name = "TrimFascia"
+	var fascia_mesh := BoxMesh.new()
+	fascia_mesh.size = Vector3(width * 1.04, 0.10, 0.14)
+	fascia.mesh = fascia_mesh
+	fascia.position = Vector3(0.0, wall_h + 0.22, _model_offset_z() + depth * 0.50)
+	fascia.material_override = roof
+	add_child(fascia)
+	if building_type == "TOWN_HALL" or building_type == "CASTLE":
+		var band := MeshInstance3D.new()
+		band.name = "TrimHallBand"
+		var band_mesh := BoxMesh.new()
+		band_mesh.size = Vector3(width * 0.88, 0.28, 0.08)
+		band.mesh = band_mesh
+		band.position = Vector3(0.0, wall_h * 0.38, _model_offset_z() + depth * 0.49)
+		band.material_override = plaster
+		add_child(band)
+		_create_chimney_marker(Vector3(width * 0.28, wall_h + 1.05, _model_offset_z() - depth * 0.12))
+	if building_type == "HOUSE" or building_type == "BAKERY":
+		var awning := MeshInstance3D.new()
+		awning.name = "TrimAwning"
+		var awning_mesh := BoxMesh.new()
+		awning_mesh.size = Vector3(width * 0.42, 0.06, 0.55)
+		awning.mesh = awning_mesh
+		awning.position = Vector3(0.0, wall_h * 0.72, _model_offset_z() + depth * 0.58)
+		awning.rotation.x = -0.28
+		awning.material_override = timber
+		add_child(awning)
+
+
 func _create_building_identity_markers() -> void:
 	if building_type == "CONSTRUCTION_SITE" or building_type == "ROAD" or building_type == "WALL":
 		return
@@ -944,7 +1020,7 @@ func _create_chimney_marker(position: Vector3) -> void:
 	cylinder.bottom_radius = 0.18
 	chimney.mesh = cylinder
 	chimney.position = position
-	chimney.material_override = _material(Color("#3a2a2a"), 0.0)
+	chimney.material_override = _material(BuildingMaterials.WEATHERED_STONE, 0.0)
 	add_child(chimney)
 
 

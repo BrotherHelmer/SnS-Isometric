@@ -74,7 +74,7 @@ func _run() -> void:
 	_check(game.environment_resource.tonemap_mode == Environment.TONE_MAPPER_FILMIC, "tonemap is Filmic")
 	_check(is_equal_approx(game.camera_rig.target_zoom, CameraRig.NORMAL_ZOOM), "new game opens at the closer default zoom")
 	_check(game.sun_light.shadow_opacity >= 0.84, "day shadows are strong")
-	_check(game.environment_resource.ssao_intensity >= 1.2, "SSAO intensity is at the golden-hour preset")
+	_check(game.environment_resource.ssao_intensity >= 1.05, "SSAO intensity is at the GFX-I preset")
 	if game.world_view.terrain_mesh_instance != null and game.world_view.terrain_mesh_instance.material_override is ShaderMaterial:
 		var ground := game.world_view.terrain_mesh_instance.material_override as ShaderMaterial
 		_check(float(ground.get_shader_parameter("flower_amount")) >= 0.15, "ground shader has flower tint")

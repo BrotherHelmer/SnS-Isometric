@@ -27,13 +27,17 @@ const BEACH_MARGIN_TILES := 2
 const BEACH_MARGIN_METRES := 5.0
 const COAST_JUT_METRES := 14.0
 const BEACH_APRON_PAD_METRES := 20.0
-const SHORE_FADE_METRES := 42.0
+const SHORE_FADE_METRES := 4.0
 const HORIZON_RADIUS_METRES := 420.0
 const FOG_VOLUME_HEIGHT_METRES := 56.0
 const FOG_VOLUME_CENTER_Y := 18.0
 const FOG_DISPLAY_UPSAMPLE := 8
-const FOG_UNKNOWN_BASE := Vector3(0.090, 0.149, 0.165) # #17262A
-const FOG_MIST_BASE := Vector3(0.220, 0.260, 0.310) # #38434F
+const FOG_UNKNOWN_BASE := Vector3(0.090, 0.153, 0.165) # #17272A
+const FOG_MIST_BASE := Vector3(0.090, 0.153, 0.165) # #17272A
+const FOG_VISIBLE := 0
+const FOG_EXPLORED := 140
+const FOG_UNEXPLORED := 255
+const GROUND_PATCH_CHUNK_METRES := 40.0
 
 var simulation
 var map_size := Vector2i.ZERO
@@ -50,6 +54,7 @@ var buildings_root: Node3D
 var characters_root: Node3D
 var resource_visuals_root: Node3D
 var grass_root: Node3D
+var ground_patch_root: Node3D
 var edge_forest_root: Node3D
 var halo_root: Node3D
 var environment_root: Node3D
@@ -103,6 +108,7 @@ var animated_civilian_count := 0
 var carriers_with_cargo := 0
 var construction_activity_count := 0
 var last_revealed_count := -1
+var last_fog_signature := ""
 var fog_visibility_texture: ImageTexture
 var fog_mask_bytes := PackedByteArray()
 var fog_mask_size := Vector2i.ZERO
@@ -158,6 +164,7 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 		characters_root = null
 		resource_visuals_root = null
 		grass_root = null
+		ground_patch_root = null
 		edge_forest_root = null
 		halo_root = null
 		environment_root = null
@@ -172,6 +179,7 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 		fog_mask_bytes.clear()
 		fog_mask_size = Vector2i.ZERO
 		fog_material = null
+		last_fog_signature = ""
 		rival_roads_root = null
 		rivalry_structures_root = null
 		combatants_root = null
@@ -229,6 +237,7 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 	_rebuild_horizon()
 	_sync_nature(true)
 	_sync_grass(true)
+	_rebuild_ground_patches()
 	_sync_fog(true)
 	_rebuild_edge_forest(true)
 	_rebuild_opening_dressing()
@@ -257,6 +266,7 @@ func sync_frame(frame_snapshot: Dictionary) -> void:
 	# One nature rebuild even when both layout and FOW change (showcase).
 	_sync_nature(reveal_changed)
 	_sync_grass(false)
+	_sync_fog(false)
 	_sync_roads(frame_snapshot.get("roads", []))
 	_sync_buildings(frame_snapshot.get("buildings", []))
 	_rebuild_building_halos(false)
@@ -272,9 +282,9 @@ func sync_frame(frame_snapshot: Dictionary) -> void:
 	_sync_wyrd_springs(frame_snapshot.get("wyrd_sites", []))
 	_sync_map_markers()
 	if reveal_changed:
-		_sync_fog(false)
 		_rebuild_edge_forest(false)
 		_rebuild_world_rim(false)
+		_rebuild_ground_patches()
 
 
 func tile_to_world(tile_position: Vector2) -> Vector3:
@@ -419,11 +429,15 @@ func fog_configuration() -> Dictionary:
 	return {
 		"uses_smoothed_texture": fog_visibility_texture != null,
 		"filter_linear": true,
-		"edge_feather_cells": 4,
-		"noise_strength": 0.22,
+		"edge_feather_cells": 1.6,
+		"noise_strength": 0.55,
 		"unknown_opacity": 1.0,
+		"visible_alpha": 0.0,
+		"explored_alpha": 0.55,
+		"unexplored_alpha": 1.0,
 		"unknown_color": FOG_UNKNOWN_BASE,
 		"mist_color": FOG_MIST_BASE,
+		"haze_reverted": true,
 		"world_anchored": true,
 		"volume_mesh": fog_plane != null,
 		"exterior_opaque": true,
@@ -477,7 +491,9 @@ func fog_mask_sample_for_tile(tile: Vector2i) -> float:
 	var mask_tile := Vector2i(tile.x / FOG_MASK_DIVISOR, tile.y / FOG_MASK_DIVISOR)
 	if mask_tile.x < 0 or mask_tile.y < 0 or mask_tile.x >= fog_mask_size.x or mask_tile.y >= fog_mask_size.y:
 		return 0.0
-	return float(fog_mask_bytes[mask_tile.y * fog_mask_size.x + mask_tile.x]) / 255.0
+	# Texture stores shroud (0 visible / 0.55 explored / 1 unexplored).
+	# Callers still want visibility, so invert.
+	return 1.0 - float(fog_mask_bytes[mask_tile.y * fog_mask_size.x + mask_tile.x]) / 255.0
 
 
 func _fog_world_min_xz() -> Vector2:
@@ -502,6 +518,7 @@ func _create_roots() -> void:
 	characters_root = _named_root("Characters")
 	resource_visuals_root = _named_root("ResourceVisuals")
 	grass_root = _named_root("GrassCover")
+	ground_patch_root = _named_root("GroundPatches")
 	edge_forest_root = _named_root("EdgeForest")
 	horizon_root = _named_root("Horizon")
 	halo_root = _named_root("BuildingHalos")
@@ -628,7 +645,7 @@ func _apply_ground_material(host: MeshInstance3D) -> void:
 	material.set_shader_parameter("gravel_color", Vector3(0.522, 0.514, 0.451))
 	material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
 	material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
-	material.set_shader_parameter("beach_color", Vector3(0.090, 0.149, 0.165))
+	material.set_shader_parameter("beach_color", Vector3(0.090, 0.153, 0.165))
 	material.set_shader_parameter("rock_shore", Vector3(0.078, 0.125, 0.141))
 	material.set_shader_parameter("wet_sand", Vector3(0.070, 0.110, 0.125))
 	material.set_shader_parameter("beach_margin_metres", BEACH_MARGIN_METRES)
@@ -1053,6 +1070,7 @@ func _rebuild_grass_multimeshes() -> void:
 	for child in grass_root.get_children():
 		if child is GeometryInstance3D:
 			(child as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_rebuild_ground_patches()
 
 
 func _structure_tiles() -> Dictionary:
@@ -1113,6 +1131,137 @@ func _spawn_nature_multimeshes(host: Node3D, transforms_by_path: Dictionary) -> 
 		if foliage != null:
 			instance.material_override = foliage
 		host.add_child(instance)
+
+
+func _rebuild_ground_patches() -> void:
+	# GFX-I medium-scale meadow clumps. Darker grass / soil / flowers /
+	# stones in 40 m MultiMesh chunks so instances frustum-cull. Not
+	# another generic vegetation scatter — patch sizes track road width.
+	if ground_patch_root == null or simulation == null:
+		return
+	_refresh_terrain_lookups()
+	for child in ground_patch_root.get_children():
+		ground_patch_root.remove_child(child)
+		child.free()
+	var occupied := _structure_tiles()
+	var road_w := ScaleProfile.LOGICAL_CELL_METRES * ScaleProfile.ROAD_WIDTH_SCALE
+	var grass_path := String(Catalog.GRASS[0]) if Catalog.GRASS.size() > 0 else ""
+	var flower_path := String(Catalog.FLOWERS[0]) if Catalog.FLOWERS.size() > 0 else ""
+	var rock_path := String(Catalog.ROCKS[0]) if Catalog.ROCKS.size() > 0 else ""
+	var chunk_buckets: Dictionary = {}
+	for y in range(map_size.y):
+		for x in range(map_size.x):
+			var tile := Vector2i(x, y)
+			if String(simulation.get_tile(tile)) != Defs.TILE_GRASS:
+				continue
+			if occupied.has(_tile_key(tile)) or _is_road_tile(tile) or _is_farm_field_tile(tile):
+				continue
+			if not simulation.is_revealed(tile):
+				continue
+			if _visual_path_weight(tile) > 0.40 or _hamlet_path_weight(tile) > 0.40:
+				continue
+			var world := tile_to_world(Vector2(tile))
+			var chunk := Vector2i(int(floor(world.x / GROUND_PATCH_CHUNK_METRES)), int(floor(world.z / GROUND_PATCH_CHUNK_METRES)))
+			var seed_h := _tile_hash(tile, 29)
+			# Darker grass patches 1–3 road widths, one seed every ~5 tiles.
+			if seed_h % 5 == 0 and grass_path != "":
+				_bucket_patch(chunk_buckets, chunk, "dark_grass", _patch_transform(tile, 3, road_w * (1.15 + float(seed_h % 40) / 50.0), 0.04))
+				if seed_h % 2 == 0:
+					_bucket_patch(chunk_buckets, chunk, "dark_grass", _patch_transform(tile, 4, road_w * 0.85, 0.04))
+			# Exposed soil, smaller than the grass patches.
+			if seed_h % 11 == 0:
+				_bucket_patch(chunk_buckets, chunk, "soil", _patch_transform(tile, 5, road_w * (0.55 + float(seed_h % 20) / 80.0), 0.03))
+			# Decorative clusters 0.2–0.5 road widths.
+			if seed_h % 7 == 0 and flower_path != "":
+				_bucket_patch(chunk_buckets, chunk, "flowers", _nature_transform_at(tile, 6, flower_path, 0.35, 0.85, 0.35))
+			if seed_h % 9 == 0 and rock_path != "":
+				_bucket_patch(chunk_buckets, chunk, "stones", _nature_transform_at(tile, 7, rock_path, 0.28, 0.32, 0.14))
+	for chunk_key in chunk_buckets:
+		var kinds: Dictionary = chunk_buckets[chunk_key]
+		for kind in kinds:
+			var transforms: Array = kinds[kind]
+			if transforms.is_empty():
+				continue
+			var mesh := _ground_patch_mesh(String(kind), grass_path, flower_path, rock_path)
+			if mesh == null:
+				continue
+			var multimesh := MultiMesh.new()
+			multimesh.transform_format = MultiMesh.TRANSFORM_3D
+			multimesh.mesh = mesh
+			multimesh.instance_count = transforms.size()
+			for index in transforms.size():
+				multimesh.set_instance_transform(index, transforms[index])
+			var instance := MultiMeshInstance3D.new()
+			instance.name = "Patch_%s_%s" % [String(chunk_key), String(kind)]
+			instance.multimesh = multimesh
+			instance.material_override = _ground_patch_material(String(kind))
+			instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			ground_patch_root.add_child(instance)
+
+
+func _bucket_patch(buckets: Dictionary, chunk: Vector2i, kind: String, xf: Transform3D) -> void:
+	var chunk_key := "%d_%d" % [chunk.x, chunk.y]
+	if not buckets.has(chunk_key):
+		buckets[chunk_key] = {}
+	var kinds: Dictionary = buckets[chunk_key]
+	if not kinds.has(kind):
+		kinds[kind] = []
+	(kinds[kind] as Array).append(xf)
+
+
+func _patch_transform(tile: Vector2i, index: int, width: float, y: float) -> Transform3D:
+	var world := tile_to_world(Vector2(tile))
+	var jitter := _deterministic_offset(tile, index, 0.55)
+	world += Vector3(jitter.x, y, jitter.y)
+	var yaw := float(_tile_hash(tile, 53 + index) % 628) / 100.0
+	var basis := Basis(Vector3.UP, yaw).scaled(Vector3(width, 1.0, width * 0.72))
+	return Transform3D(basis, world)
+
+
+func _nature_transform_at(tile: Vector2i, index: int, path_value: String, radius: float, base_scale: float, scale_range: float) -> Transform3D:
+	var world := tile_to_world(Vector2(tile))
+	var offset := _deterministic_offset(tile, index, radius)
+	world += Vector3(offset.x, 0.0, offset.y)
+	var scale_value := (base_scale + float(_tile_hash(tile, 41 + index) % 100) / 100.0 * scale_range) * ScaleProfile.nature_model_scale(path_value)
+	var yaw := float(_tile_hash(tile, 53 + index) % 628) / 100.0
+	return Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * scale_value), world)
+
+
+func _ground_patch_mesh(kind: String, grass_path: String, flower_path: String, rock_path: String) -> Mesh:
+	if kind == "dark_grass" or kind == "soil":
+		var disk := CylinderMesh.new()
+		disk.top_radius = 0.50
+		disk.bottom_radius = 0.50
+		disk.height = 0.04
+		disk.radial_segments = 10
+		disk.rings = 1
+		return disk
+	if kind == "flowers" and flower_path != "":
+		return _mesh_for_nature_path(flower_path)
+	if kind == "stones" and rock_path != "":
+		return _mesh_for_nature_path(rock_path)
+	if grass_path != "":
+		return _mesh_for_nature_path(grass_path)
+	return null
+
+
+func _ground_patch_material(kind: String) -> Material:
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+	material.roughness = 0.94
+	material.metallic = 0.0
+	match kind:
+		"dark_grass":
+			material.albedo_color = Color("#3A4A22")
+		"soil":
+			material.albedo_color = Color("#6B5340")
+		"flowers":
+			return null
+		"stones":
+			material.albedo_color = Color("#A39A85")
+		_:
+			material.albedo_color = Color("#3E4E28")
+	return material
 
 
 func _append_nature_transform(groups: Dictionary, path_value: String, tile: Vector2i, index: int, radius: float, base_scale: float, scale_range: float, y_override := NAN) -> void:
@@ -1982,42 +2131,29 @@ func _sync_fog(force: bool) -> void:
 	if simulation == null or fog_root == null:
 		return
 	var revealed_count: int = int(simulation.revealed_tiles.size())
-	if not force and revealed_count == last_revealed_count:
+	var fog_signature := _fog_vision_signature(revealed_count)
+	if not force and fog_signature == last_fog_signature:
 		return
+	last_fog_signature = fog_signature
 	last_revealed_count = revealed_count
-	if revealed_count >= map_size.x * map_size.y:
-		if fog_plane != null:
-			fog_plane.visible = false
-		if fog_screen != null:
-			fog_screen.visible = false
-		if fog_root != null:
-			var under: Node = fog_root.get_node_or_null("FogUnderSheet")
-			if under != null:
-				under.visible = false
-		for skirt in fog_skirts:
-			if skirt != null:
-				skirt.visible = false
-		return
-	# One texel owns one authoritative tile. A display copy is upsampled and
-	# feathered so the isometric edge reads as mist instead of a sawtooth.
+	# Always keep the shroud. Fully-revealed maps still need the off-map
+	# #17272A wall so zoom-out cannot read a diamond board.
+	var visible_tiles := _paint_current_vision()
 	var mask_size := Vector2i(ceili(float(map_size.x) / FOG_MASK_DIVISOR), ceili(float(map_size.y) / FOG_MASK_DIVISOR))
 	var mask_bytes := PackedByteArray()
 	mask_bytes.resize(mask_size.x * mask_size.y)
 	for mask_y in mask_size.y:
 		for mask_x in mask_size.x:
-			var revealed_samples := 0
-			var valid_samples := 0
-			for offset_y in FOG_MASK_DIVISOR:
-				for offset_x in FOG_MASK_DIVISOR:
-					var sample := Vector2i(mask_x * FOG_MASK_DIVISOR + offset_x, mask_y * FOG_MASK_DIVISOR + offset_y)
-					if simulation.is_inside_map(sample):
-						valid_samples += 1
-						if simulation.is_revealed(sample):
-							revealed_samples += 1
-			mask_bytes[mask_y * mask_size.x + mask_x] = roundi(255.0 * float(revealed_samples) / maxf(1.0, float(valid_samples)))
+			var sample := Vector2i(mask_x * FOG_MASK_DIVISOR, mask_y * FOG_MASK_DIVISOR)
+			var shroud := FOG_UNEXPLORED
+			if simulation.is_inside_map(sample):
+				if visible_tiles.has(_tile_key(sample)):
+					shroud = FOG_VISIBLE
+				elif simulation.is_revealed(sample):
+					shroud = FOG_EXPLORED
+			mask_bytes[mask_y * mask_size.x + mask_x] = shroud
 	var display_size := mask_size * FOG_DISPLAY_UPSAMPLE
-	# Cubic reconstruction softens diagonal tile steps without expanding the
-	# authoritative reveal set. Nature/entities still use simulation visibility.
+	# Cubic upsample plus shader jitter = irregular 1–2 cell feather.
 	var mask := Image.create_from_data(mask_size.x, mask_size.y, false, Image.FORMAT_L8, mask_bytes)
 	mask.resize(display_size.x, display_size.y, Image.INTERPOLATE_CUBIC)
 	fog_mask_bytes = mask_bytes
@@ -2040,10 +2176,68 @@ func _sync_fog(force: bool) -> void:
 		fog_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
 		fog_material.render_priority = 20
 	fog_material.set_shader_parameter("unknown_opacity", 1.0)
-	fog_material.set_shader_parameter("edge_softness", 0.58)
-	fog_material.set_shader_parameter("noise_strength", 0.26)
+	fog_material.set_shader_parameter("explored_opacity", 0.55)
+	fog_material.set_shader_parameter("cell_metres", ScaleProfile.LOGICAL_CELL_METRES)
+	fog_material.set_shader_parameter("feather_cells", 1.6)
+	fog_material.set_shader_parameter("noise_strength", 0.55)
 	fog_material.set_shader_parameter("shore_fade_metres", SHORE_FADE_METRES)
 	_ensure_fog_volume()
+
+
+func _fog_vision_signature(revealed_count: int) -> String:
+	var value := revealed_count * 31
+	if simulation == null:
+		return "0"
+	if simulation.is_town_hall_founded():
+		var hall: Vector2i = simulation.town_hall_position
+		value = int((value + hall.x * 13 + hall.y * 17) & 0x7fffffff)
+	for worker_value in simulation.workers:
+		var worker: Dictionary = worker_value
+		if int(worker.get("hp", 1)) <= 0:
+			continue
+		var tile: Vector2i = simulation._unit_tile(worker)
+		value = int((value * 31 + tile.x * 13 + tile.y * 17 + int(worker.get("id", 0))) & 0x7fffffff)
+	return "%d:%d" % [value, int(simulation.get_buildings().size())]
+
+
+func _paint_current_vision() -> Dictionary:
+	var visible: Dictionary = {}
+	if simulation == null:
+		return visible
+	if simulation.is_town_hall_founded():
+		var hall_fp := Defs.building_footprint(Defs.BUILDING_TOWN_HALL)
+		var hall_center: Vector2i = simulation._footprint_center(simulation.town_hall_position, hall_fp)
+		_paint_vision_disk(visible, hall_center, simulation.building_vision_radius(Defs.BUILDING_TOWN_HALL))
+	for building_value in simulation.get_buildings():
+		var building: Dictionary = building_value
+		if bool(building.get("construction", false)):
+			continue
+		var building_type := String(building.get("type", ""))
+		if building_type == Defs.BUILDING_TOWN_HALL:
+			continue
+		var center: Vector2i = building.get("position", Vector2i.ZERO)
+		if building_type != Defs.BUILDING_ROAD:
+			center = simulation._footprint_center(center, _building_footprint_for_visual(building, building_type))
+		_paint_vision_disk(visible, center, simulation.building_vision_radius(building_type))
+	for worker_value in simulation.workers:
+		var worker: Dictionary = worker_value
+		if int(worker.get("hp", 1)) <= 0:
+			continue
+		var tile: Vector2i = simulation._unit_tile(worker)
+		_paint_vision_disk(visible, tile, simulation.unit_vision_radius(String(worker.get("type", ""))))
+	return visible
+
+
+func _paint_vision_disk(visible: Dictionary, center: Vector2i, radius: int) -> void:
+	if radius <= 0:
+		return
+	for oy in range(-radius, radius + 1):
+		for ox in range(-radius, radius + 1):
+			if absi(ox) + absi(oy) > radius:
+				continue
+			var tile := center + Vector2i(ox, oy)
+			if simulation != null and simulation.is_inside_map(tile):
+				visible[_tile_key(tile)] = true
 
 
 func _ensure_fog_volume() -> void:
@@ -2080,7 +2274,7 @@ func _ensure_fog_skirts() -> void:
 			fog_skirts.append(skirt)
 	var skirt_material := StandardMaterial3D.new()
 	skirt_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	skirt_material.albedo_color = Color("#17262A")
+	skirt_material.albedo_color = Color("#17272A")
 	skirt_material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	var min_xz := _fog_world_min_xz()
 	var size_xz := _fog_world_size_xz()
@@ -2261,11 +2455,11 @@ func apply_light_palette(palette: Dictionary) -> void:
 	var atmosphere := clampf(float(palette.get("atmosphere_scale", 1.0)), 0.15, 1.0)
 	_atmosphere_scale = atmosphere
 	if fog_material != null:
-		fog_material.set_shader_parameter("unknown_color", FOG_UNKNOWN_BASE * atmosphere)
-		fog_material.set_shader_parameter("mist_color", FOG_MIST_BASE * atmosphere)
+		fog_material.set_shader_parameter("unknown_color", FOG_UNKNOWN_BASE)
+		fog_material.set_shader_parameter("mist_color", FOG_MIST_BASE)
 	if fog_screen_material != null:
-		fog_screen_material.set_shader_parameter("unknown_color", FOG_UNKNOWN_BASE * atmosphere)
-		fog_screen_material.set_shader_parameter("mist_color", FOG_MIST_BASE * atmosphere)
+		fog_screen_material.set_shader_parameter("unknown_color", FOG_UNKNOWN_BASE)
+		fog_screen_material.set_shader_parameter("mist_color", FOG_MIST_BASE)
 	if boundary_mist_material != null:
 		boundary_mist_material.set_shader_parameter("color_scale", atmosphere)
 	if water_material != null:
@@ -2450,7 +2644,7 @@ func _rebuild_beach_apron() -> void:
 	material.set_shader_parameter("meadow_lush", Vector3(0.090, 0.149, 0.165))
 	material.set_shader_parameter("meadow_warm", Vector3(0.078, 0.125, 0.141))
 	material.set_shader_parameter("forest_floor", Vector3(0.070, 0.110, 0.125))
-	material.set_shader_parameter("beach_color", Vector3(0.090, 0.149, 0.165))
+	material.set_shader_parameter("beach_color", Vector3(0.090, 0.153, 0.165))
 	material.set_shader_parameter("rock_shore", Vector3(0.078, 0.125, 0.141))
 	material.set_shader_parameter("wet_sand", Vector3(0.070, 0.110, 0.125))
 	material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
@@ -2760,6 +2954,8 @@ func _opening_hamlet_tiles(hall: Vector2i) -> Dictionary:
 				reserved[_tile_key(hall + Vector2i(int(spec["ox"]) + ox, int(spec["oy"]) + oy))] = true
 	for pad in [Vector2i(-1, -2), Vector2i(4, -1), Vector2i(-1, 4), Vector2i(2, 5)]:
 		reserved[_tile_key(hall + pad)] = true
+	for spec_value in _opening_ridge_tiles(hall):
+		reserved[_tile_key(spec_value)] = true
 	return reserved
 
 
@@ -2809,9 +3005,78 @@ func _spawn_opening_hamlet(host: Node3D, hall: Vector2i, reserved: Dictionary) -
 	_spawn_dress_pond(host, hall + Vector2i(-5, -3), Vector2(5.4, 3.6), "DressPond")
 	_spawn_dress_prop(host, "stone_stack", hall + Vector2i(-5, -2), 22.0, 0.70, "DressPondStoneA", Vector3(1.6, 0.0, 0.8))
 	_spawn_dress_prop(host, "fence", hall + Vector2i(-6, -4), 0.0, 0.92, "DressPondFence")
+	_spawn_opening_ridge(host, hall)
 	host.set_meta("hamlet_cottages", cottages)
 	host.set_meta("hamlet_reserved", reserved.size())
 	host.set_meta("hamlet_pond", 1)
+	host.set_meta("hamlet_ridge", 1)
+
+
+func _opening_ridge_tiles(hall: Vector2i) -> Array[Vector2i]:
+	# One geological landmark, 1–2 Town Hall widths, west of the pond.
+	return [
+		hall + Vector2i(-8, -1),
+		hall + Vector2i(-8, 0),
+		hall + Vector2i(-8, 1),
+		hall + Vector2i(-7, 0),
+		hall + Vector2i(-7, 1),
+		hall + Vector2i(-7, 2),
+		hall + Vector2i(-6, 1),
+	]
+
+
+func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
+	# Rocky ridge plus a creek that feeds the millpond. Presentation only.
+	var ridge := Node3D.new()
+	ridge.name = "DressRidge"
+	host.add_child(ridge)
+	var stone := StandardMaterial3D.new()
+	stone.albedo_color = BuildingMaterials.WEATHERED_STONE
+	stone.roughness = 0.92
+	var cliff := StandardMaterial3D.new()
+	cliff.albedo_color = Color("#6E6758")
+	cliff.roughness = 0.88
+	var tiles := _opening_ridge_tiles(hall)
+	var index := 0
+	for tile in tiles:
+		if not simulation.is_inside_map(tile):
+			continue
+		var block := MeshInstance3D.new()
+		block.name = "RidgeRock_%d" % index
+		var mesh := BoxMesh.new()
+		var tall := 1.15 + float(index % 3) * 0.45
+		mesh.size = Vector3(2.35, tall, 2.05)
+		block.mesh = mesh
+		var world := tile_to_world(Vector2(tile))
+		block.position = world + Vector3(float(index % 2) * 0.35, tall * 0.42, float((index + 1) % 2) * -0.25)
+		block.rotation.y = float(index) * 0.31
+		block.material_override = stone if index % 2 == 0 else cliff
+		ridge.add_child(block)
+		if Catalog.ROCKS.size() > 0:
+			_spawn_dress_prop(ridge, "stone_stack", tile, float(index * 18), 0.82, "RidgeStack_%d" % index, Vector3(0.4, 0.0, -0.3))
+		index += 1
+	var creek := MeshInstance3D.new()
+	creek.name = "DressCreek"
+	var creek_mesh := PlaneMesh.new()
+	creek_mesh.size = Vector2(7.2, 1.55)
+	creek.mesh = creek_mesh
+	var pond := hall + Vector2i(-5, -3)
+	var ridge_end := hall + Vector2i(-7, 1)
+	var mid := (Vector2(pond) + Vector2(ridge_end)) * 0.5
+	creek.position = tile_to_world(mid) + Vector3(0.0, 0.05, 0.0)
+	creek.rotation.y = atan2(float(pond.x - ridge_end.x), float(pond.y - ridge_end.y))
+	var water := StandardMaterial3D.new()
+	water.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+	water.albedo_color = Color(0.16, 0.30, 0.34, 0.88)
+	water.roughness = 0.10
+	water.metallic = 0.22
+	water.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	water.emission_enabled = true
+	water.emission = Color(0.08, 0.16, 0.20)
+	water.emission_energy_multiplier = 0.16
+	creek.material_override = water
+	creek.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	ridge.add_child(creek)
 
 
 func _spawn_opening_crops(host: Node3D, origin: Vector2i) -> void:
@@ -2880,6 +3145,7 @@ func _spawn_dress_cottage(host: Node3D, kind: String, tile: Vector2i, width: int
 	wrap.add_child(model)
 	BuildingMaterials.apply(model, tile.x * 31 + tile.y, kind)
 	_force_cast_shadows(model)
+	_dress_cottage_trim(wrap, kind, width, height)
 	var footprint := Vector2i(width, height)
 	var world_size := ScaleProfile.footprint_world_size(footprint)
 	var disc := ContactAO.make_instance("ContactAO", Vector2(world_size.x * 1.08, world_size.y * 1.08), 0.24)
@@ -2910,6 +3176,57 @@ func _spawn_dress_cottage(host: Node3D, kind: String, tile: Vector2i, width: int
 	wrap.add_child(pane)
 	host.add_child(wrap)
 	return true
+
+
+func _dress_cottage_trim(wrap: Node3D, kind: String, width: int, height: int) -> void:
+	var plaster := StandardMaterial3D.new()
+	plaster.albedo_color = BuildingMaterials.WARM_PLASTER
+	plaster.roughness = 0.80
+	var timber := StandardMaterial3D.new()
+	timber.albedo_color = BuildingMaterials.DARK_TIMBER
+	timber.roughness = 0.70
+	var stone := StandardMaterial3D.new()
+	stone.albedo_color = BuildingMaterials.WEATHERED_STONE
+	stone.roughness = 0.85
+	var w := float(width) * ScaleProfile.LOGICAL_CELL_METRES * 0.42
+	var d := float(height) * ScaleProfile.LOGICAL_CELL_METRES * 0.42
+	var plinth := MeshInstance3D.new()
+	plinth.name = "DressTrimPlinth"
+	var plinth_mesh := BoxMesh.new()
+	plinth_mesh.size = Vector3(w * 2.05, 0.28, d * 2.05)
+	plinth.mesh = plinth_mesh
+	plinth.position = Vector3(0.0, 0.14, 0.0)
+	plinth.material_override = stone
+	wrap.add_child(plinth)
+	for index in 4:
+		var post := MeshInstance3D.new()
+		post.name = "DressTrimTimber_%d" % index
+		var post_mesh := BoxMesh.new()
+		post_mesh.size = Vector3(0.12, 1.35, 0.12)
+		post.mesh = post_mesh
+		var sx := -1.0 if index < 2 else 1.0
+		var sz := -1.0 if index % 2 == 0 else 1.0
+		post.position = Vector3(sx * w * 0.92, 0.78, sz * d * 0.88)
+		post.material_override = timber
+		wrap.add_child(post)
+	if kind == "HOUSE" or kind == "BAKERY":
+		var awning := MeshInstance3D.new()
+		awning.name = "DressTrimAwning"
+		var awning_mesh := BoxMesh.new()
+		awning_mesh.size = Vector3(w * 0.9, 0.06, 0.42)
+		awning.mesh = awning_mesh
+		awning.position = Vector3(0.0, 1.15, d * 1.05)
+		awning.rotation.x = -0.26
+		awning.material_override = timber
+		wrap.add_child(awning)
+	var band := MeshInstance3D.new()
+	band.name = "DressTrimPlaster"
+	var band_mesh := BoxMesh.new()
+	band_mesh.size = Vector3(w * 1.6, 0.22, 0.07)
+	band.mesh = band_mesh
+	band.position = Vector3(0.0, 0.72, d * 0.98)
+	band.material_override = plaster
+	wrap.add_child(band)
 
 
 func _spawn_dress_prop(host: Node3D, prop_key: String, tile: Vector2i, yaw_deg: float, scale_mul: float, node_name: String, nudge := Vector3.ZERO) -> void:
