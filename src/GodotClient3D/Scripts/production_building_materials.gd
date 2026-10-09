@@ -150,26 +150,26 @@ static func _bevel_material(kind: String) -> ShaderMaterial:
 	var material := ShaderMaterial.new()
 	material.shader = BevelShader
 	var color := Color("#D6C6A4")
-	var amount := 0.12
+	var amount := 0.18
 	match kind:
 		"roof":
 			color = Color("#F0C090")
-			amount = 0.10
+			amount = 0.16
 		"teal_roof":
 			color = Color("#C4A080")
-			amount = 0.10
+			amount = 0.16
 		"timber":
 			color = Color("#C4A070")
-			amount = 0.09
+			amount = 0.14
 		"stone":
 			color = Color("#D8D0C0")
-			amount = 0.08
+			amount = 0.13
 		"metal":
 			color = Color("#F2E6C8")
-			amount = 0.18
+			amount = 0.24
 		_:
 			color = Color("#F0E2C4")
-			amount = 0.13
+			amount = 0.20
 	material.set_shader_parameter("bevel_color", Vector3(color.r, color.g, color.b))
 	material.set_shader_parameter("bevel_amount", amount)
 	_bevel_by_kind[kind] = material

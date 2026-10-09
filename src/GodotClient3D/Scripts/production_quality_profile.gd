@@ -8,7 +8,7 @@ const PROFILES := {
 		"grass_density": 1.0,
 		"shadows": true,
 		"shadow_distance": 56.0,
-		"shadow_blur": 0.5,
+		"shadow_blur": 0.32,
 		"shadow_splits": 4,
 		"water_detail": 1.0,
 		"vfx_density": 1.0,

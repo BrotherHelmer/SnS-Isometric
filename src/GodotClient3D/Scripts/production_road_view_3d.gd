@@ -33,7 +33,7 @@ func _rebuild() -> void:
 		remove_child(child)
 		child.queue_free()
 	var edge_color := Color(0.32, 0.28, 0.22, 0.42) if planned else Color(0.50, 0.39, 0.28, 0.55)
-	var road_color := Color(0.62, 0.58, 0.50, 0.78) if planned else Color("#A88962")
+	var road_color := Color(0.62, 0.58, 0.50, 0.86) if planned else Color("#C8A064")
 	if faction == "rival":
 		edge_color = Color(0.28, 0.17, 0.18, 0.72)
 		road_color = Color("#805d58")
@@ -44,11 +44,11 @@ func _rebuild() -> void:
 		edge_color = Color(0.58, 0.16, 0.13, 0.38)
 		road_color = Color(0.92, 0.26, 0.20, 0.58)
 	var width_variation := 0.96 + float(absi(tile.x * 17 + tile.y * 31) % 7) * 0.012
-	var road_width := 1.34 * ScaleProfile.ROAD_WIDTH_SCALE * width_variation
-	# Dirt-edge skirt, not a pale outline. Stamps (tracks/mud/breaks) are batched
-	# once for the map in production_world_view_3d — never per-tile Decals.
-	_add_path_mesh(road_width * 1.10, 0.040, _road_material(edge_color), "FeatheredEdge")
-	_add_path_mesh(road_width, 0.058, _road_material(road_color), "ContinuousDirt")
+	var road_width := 1.52 * ScaleProfile.ROAD_WIDTH_SCALE * width_variation
+	# Dirt-edge skirt, not a pale outline. Raised so the packed clay sits
+	# above the meadow at gameplay zoom. Stamps stay batched once.
+	_add_path_mesh(road_width * 1.12, 0.052, _road_material(edge_color), "FeatheredEdge")
+	_add_path_mesh(road_width, 0.088, _road_material(road_color), "ContinuousDirt")
 
 
 func _add_path_mesh(width: float, height: float, material: Material, node_name: String) -> void:
@@ -106,8 +106,8 @@ func _road_material(color: Color) -> ShaderMaterial:
 		var material := ShaderMaterial.new()
 		material.shader = preload("res://src/GodotClient3D/Shaders/settlement_road.gdshader")
 		material.set_shader_parameter("road_color", color)
-		material.set_shader_parameter("clay_color", Vector3(0.659, 0.537, 0.384))
-		material.set_shader_parameter("dirt_edge", Vector3(0.502, 0.388, 0.278))
+		material.set_shader_parameter("clay_color", Vector3(0.784, 0.627, 0.392))
+		material.set_shader_parameter("dirt_edge", Vector3(0.420, 0.310, 0.200))
 		material.set_shader_parameter("shoulder_lift", 0.0)
 		material.set_shader_parameter("light_tint", _light_tint)
 		material.set_shader_parameter("value_lift", _value_lift)

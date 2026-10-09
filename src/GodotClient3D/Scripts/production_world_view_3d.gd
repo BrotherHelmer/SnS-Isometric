@@ -25,15 +25,15 @@ const WATER_Y := -0.22
 const WATER_PAD_METRES := 2400.0
 const BEACH_MARGIN_TILES := 2
 const BEACH_MARGIN_METRES := 5.0
-const COAST_JUT_METRES := 12.0
+const COAST_JUT_METRES := 14.0
 const BEACH_APRON_PAD_METRES := 20.0
-const SHORE_FADE_METRES := 28.0
+const SHORE_FADE_METRES := 42.0
 const HORIZON_RADIUS_METRES := 420.0
 const FOG_VOLUME_HEIGHT_METRES := 56.0
 const FOG_VOLUME_CENTER_Y := 18.0
 const FOG_DISPLAY_UPSAMPLE := 8
 const FOG_UNKNOWN_BASE := Vector3(0.090, 0.149, 0.165) # #17262A
-const FOG_MIST_BASE := Vector3(0.255, 0.333, 0.294) # #41554B
+const FOG_MIST_BASE := Vector3(0.220, 0.260, 0.310) # #38434F
 
 var simulation
 var map_size := Vector2i.ZERO
@@ -131,6 +131,7 @@ var presentation_paused := false
 var _terrain_yard_cache: Dictionary = {}
 var _terrain_occupied_cache: Dictionary = {}
 var _terrain_road_cache: Dictionary = {}
+var _terrain_farm_cache: Dictionary = {}
 var _terrain_color_grid: PackedColorArray = PackedColorArray()
 var _terrain_lookups_ready := false
 var _atmosphere_scale := 1.0
@@ -210,6 +211,7 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 		claim_overlay_signature = ""
 		_terrain_yard_cache.clear()
 		_terrain_occupied_cache.clear()
+		_terrain_farm_cache.clear()
 		_terrain_road_cache.clear()
 		_terrain_color_grid = PackedColorArray()
 		_terrain_lookups_ready = false
@@ -538,6 +540,7 @@ func _refresh_terrain_lookups() -> void:
 			if String(building.get("type", "")) == Defs.BUILDING_ROAD:
 				_terrain_road_cache[_tile_key(Vector2i(building.get("position", Vector2i.ZERO)))] = true
 	_terrain_lookups_ready = true
+	_terrain_farm_cache = _farm_field_tiles()
 
 
 func _precompute_terrain_colors() -> void:
@@ -602,23 +605,26 @@ func _apply_ground_material(host: MeshInstance3D) -> void:
 	material.shader = preload("res://src/GodotClient3D/Shaders/settlement_ground.gdshader")
 	material.set_shader_parameter("light_tint", Vector3(_ground_tint.r, _ground_tint.g, _ground_tint.b))
 	material.set_shader_parameter("tint_floor", 0.0)
-	# The Director: GFX-G meadow. Yellow-olive so wide/opening hue
-	# returns to 65–75°. Dirt/paths stay clay so contrast std can
-	# climb toward 45 without lifting mean luma off ~85.
+	# The Director: GFX-H meadow. Same yellow-olive as GFX-G so the
+	# opening grade stays ~81 / 45 / 0.46 / 71°. Dirt, flowers, stones
+	# and crop rows are louder so the lawn is no longer an olive sheet.
 	material.set_shader_parameter("grass_sunlit", Vector3(0.541, 0.596, 0.282))
 	material.set_shader_parameter("grass_moss", Vector3(0.227, 0.290, 0.157))
 	material.set_shader_parameter("macro_metres", 16.0)
 	material.set_shader_parameter("patch_metres", 6.5)
 	material.set_shader_parameter("detail_metres", 1.10)
-	material.set_shader_parameter("macro_amount", 0.22)
-	material.set_shader_parameter("detail_amount", 0.085)
-	material.set_shader_parameter("dirt_amount", 0.48)
-	material.set_shader_parameter("flower_amount", 0.26)
+	material.set_shader_parameter("macro_amount", 0.28)
+	material.set_shader_parameter("detail_amount", 0.14)
+	material.set_shader_parameter("dirt_amount", 0.56)
+	material.set_shader_parameter("flower_amount", 0.40)
+	material.set_shader_parameter("stone_amount", 0.34)
+	material.set_shader_parameter("crop_amount", 1.0)
 	material.set_shader_parameter("meadow_lush", Vector3(0.408, 0.455, 0.227))
 	material.set_shader_parameter("meadow_warm", Vector3(0.384, 0.420, 0.188))
 	material.set_shader_parameter("forest_floor", Vector3(0.243, 0.306, 0.157))
 	material.set_shader_parameter("dirt_color", Vector3(0.573, 0.443, 0.306))
-	material.set_shader_parameter("road_earth", Vector3(0.690, 0.573, 0.408))
+	material.set_shader_parameter("road_earth", Vector3(0.784, 0.627, 0.392))
+	material.set_shader_parameter("wheat_gold", Vector3(0.788, 0.635, 0.290))
 	material.set_shader_parameter("gravel_color", Vector3(0.522, 0.514, 0.451))
 	material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
 	material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
@@ -746,15 +752,17 @@ func _compute_terrain_color(tile: Vector2i) -> Color:
 		base = base.lerp(Color(0.090, 0.149, 0.165, 0.28) if rock_weight < 3 else Color(0.416, 0.376, 0.329, 0.24), 0.55)
 	var path_w := maxf(_visual_path_weight(tile), _hamlet_path_weight(tile))
 	if path_w > 0.08:
-		base = base.lerp(Color(0.573, 0.443, 0.306, 0.72), clampf(path_w * 0.88, 0.0, 0.88))
+		base = base.lerp(Color(0.690, 0.520, 0.330, 0.88), clampf(path_w * 0.94, 0.0, 0.94))
+	if _is_farm_field_tile(tile):
+		base = Color(0.788, 0.635, 0.290, 0.94)
 	if _is_road_tile(tile):
-		base = Color(0.690, 0.573, 0.408, 0.82)
+		base = Color(0.784, 0.627, 0.392, 0.96)
 	elif _is_road_shoulder(tile):
-		base = base.lerp(Color(0.573, 0.443, 0.306, 0.48), 0.60)
-	if _terrain_occupied_cache.has(_tile_key(tile)):
-		base = base.lerp(Color(0.573, 0.443, 0.306, 0.50), 0.58)
-	elif _terrain_yard_cache.has(_tile_key(tile)):
-		base = base.lerp(Color(0.573, 0.443, 0.306, 0.26), 0.36)
+		base = base.lerp(Color(0.620, 0.470, 0.300, 0.72), 0.78)
+	if _terrain_occupied_cache.has(_tile_key(tile)) and not _is_farm_field_tile(tile):
+		base = base.lerp(Color(0.573, 0.443, 0.306, 0.62), 0.64)
+	elif _terrain_yard_cache.has(_tile_key(tile)) and not _is_farm_field_tile(tile):
+		base = base.lerp(Color(0.573, 0.443, 0.306, 0.34), 0.42)
 	if String(simulation.get_tile(tile)) == Defs.TILE_SHARD:
 		base = Color(0.275, 0.349, 0.388, 0.40)
 	var impact := 0.0
@@ -813,6 +821,35 @@ func _is_road_shoulder(tile: Vector2i) -> bool:
 		if _is_road_tile(tile + dir):
 			return true
 	return false
+
+
+func _is_farm_field_tile(tile: Vector2i) -> bool:
+	if _terrain_lookups_ready:
+		return _terrain_farm_cache.has(_tile_key(tile))
+	return _farm_field_tiles().has(_tile_key(tile))
+
+
+func _farm_field_tiles() -> Dictionary:
+	# Presentation crop rows around each farm. Does not consume TILE_GRASS
+	# or change placement — occupation splat only, so the shader can paint
+	# readable furrows at gameplay zoom.
+	var fields: Dictionary = {}
+	if simulation == null:
+		return fields
+	for building_value in simulation.get_buildings():
+		var building: Dictionary = building_value
+		var type_name := String(building.get("planned_type", "")) if bool(building.get("construction", false)) else String(building.get("type", ""))
+		if type_name != Defs.BUILDING_FARM:
+			continue
+		var anchor: Vector2i = building.get("position", Vector2i.ZERO)
+		var footprint := _building_footprint_for_visual(building, type_name)
+		for oy in range(-1, footprint.y + 3):
+			for ox in range(-3, footprint.x + 1):
+				var sample := anchor + Vector2i(ox, oy)
+				if simulation.is_inside_map(sample) and not _terrain_occupied_cache.has(_tile_key(sample)):
+					if not _is_road_tile(sample):
+						fields[_tile_key(sample)] = true
+	return fields
 
 
 func _calculate_height_signature() -> int:
@@ -934,7 +971,7 @@ func _rebuild_nature_multimeshes() -> void:
 			if index % 2 != 0:
 				continue
 			tree_floors.append(ContactAO.flatten_transform(batch[index], 1.7))
-	ContactAO.spawn_multimesh(resource_visuals_root, tree_floors, 0.40)
+	ContactAO.spawn_multimesh(resource_visuals_root, tree_floors, 0.22)
 
 
 func _sync_grass(force: bool) -> void:
@@ -969,7 +1006,7 @@ func _rebuild_grass_multimeshes() -> void:
 				continue
 			if not simulation.is_revealed(tile):
 				continue
-			if _is_road_tile(tile):
+			if _is_road_tile(tile) or _is_farm_field_tile(tile):
 				continue
 			if density < 0.55 and _tile_hash(tile, 11) % 3 == 0:
 				continue
@@ -979,36 +1016,39 @@ func _rebuild_grass_multimeshes() -> void:
 			var path_w := _visual_path_weight(tile)
 			if path_w > 0.45:
 				continue
-			# GFX-G: readable dirt + grass clumps at zoom 26 so contrast
-			# std can move toward 45 and sat toward 0.45.
+			# GFX-H: denser tufts, flowers and pebbles so the meadow
+			# reads as a ground material at zoom 26, not an olive sheet.
 			var patch := _tile_hash(tile, 19) % 5
 			var tufts := 0
-			if (meadow > 0.12 or near_yard) and patch <= 3:
-				tufts = 3 if meadow > 0.36 else 2
-			elif forest_edge >= 2 and _tile_hash(tile, 23) % 3 == 0:
-				tufts = 1
+			if (meadow > 0.08 or near_yard) and patch <= 4:
+				tufts = 4 if meadow > 0.30 else 3
+			elif forest_edge >= 1 and _tile_hash(tile, 23) % 2 == 0:
+				tufts = 2
 			if tufts == 0:
-				if meadow > 0.22 and _tile_hash(tile, 47) % 5 == 0 and Catalog.FLOWERS.size() > 0:
+				if meadow > 0.16 and _tile_hash(tile, 47) % 3 == 0 and Catalog.FLOWERS.size() > 0:
 					var lone_flower := String(Catalog.FLOWERS[_tile_hash(tile, 61) % Catalog.FLOWERS.size()])
-					_append_nature_transform(transforms_by_path, lone_flower, tile, 4, 0.70, 1.20, 0.45)
+					_append_nature_transform(transforms_by_path, lone_flower, tile, 4, 0.70, 1.28, 0.50)
+				if _tile_hash(tile, 101) % 4 == 0 and Catalog.ROCKS.size() > 0:
+					var lone_rock := String(Catalog.ROCKS[_tile_hash(tile, 109) % Catalog.ROCKS.size()])
+					_append_nature_transform(transforms_by_path, lone_rock, tile, 7, 0.50, 0.38, 0.16)
 				continue
 			for index in tufts:
 				var grass_path := String(Catalog.GRASS[_tile_hash(tile, 83 + index) % Catalog.GRASS.size()])
-				_append_nature_transform(transforms_by_path, grass_path, tile, index, 0.90, 1.40, 0.80)
-			if meadow > 0.26 and _tile_hash(tile, 47) % 7 == 0 and Catalog.FLOWERS.size() > 0:
+				_append_nature_transform(transforms_by_path, grass_path, tile, index, 0.95, 1.48, 0.86)
+			if meadow > 0.18 and _tile_hash(tile, 47) % 4 == 0 and Catalog.FLOWERS.size() > 0:
 				var flower_path := String(Catalog.FLOWERS[_tile_hash(tile, 61) % Catalog.FLOWERS.size()])
-				_append_nature_transform(transforms_by_path, flower_path, tile, 4, 0.55, 1.00, 0.40)
+				_append_nature_transform(transforms_by_path, flower_path, tile, 4, 0.60, 1.12, 0.46)
 			# Presentation-only meadow shrubs — not TILE_TREE, so the founding
 			# apron stays buildable while the camera still sees a composed yard.
-			if meadow > 0.24 and forest_edge == 0 and _tile_hash(tile, 59) % 8 == 0 and Catalog.UNDERSTORY.size() > 0:
+			if meadow > 0.20 and forest_edge == 0 and _tile_hash(tile, 59) % 6 == 0 and Catalog.UNDERSTORY.size() > 0:
 				var meadow_bush := String(Catalog.UNDERSTORY[_tile_hash(tile, 73) % Catalog.UNDERSTORY.size()])
-				_append_nature_transform(transforms_by_path, meadow_bush, tile, 8, 0.55, 0.92, 0.28)
+				_append_nature_transform(transforms_by_path, meadow_bush, tile, 8, 0.55, 0.96, 0.30)
 			if forest_edge >= 2 and _tile_hash(tile, 53) % 3 == 0 and Catalog.UNDERSTORY.size() > 0:
 				var bush_path := String(Catalog.UNDERSTORY[_tile_hash(tile, 71) % Catalog.UNDERSTORY.size()])
 				_append_nature_transform(transforms_by_path, bush_path, tile, 6, 0.50, 0.88, 0.30)
-			if (forest_edge >= 1 or meadow > 0.45) and _tile_hash(tile, 101) % 5 == 0 and Catalog.ROCKS.size() > 0:
+			if (forest_edge >= 1 or meadow > 0.32) and _tile_hash(tile, 101) % 3 == 0 and Catalog.ROCKS.size() > 0:
 				var rock_path := String(Catalog.ROCKS[_tile_hash(tile, 109) % Catalog.ROCKS.size()])
-				_append_nature_transform(transforms_by_path, rock_path, tile, 7, 0.55, 0.46, 0.18)
+				_append_nature_transform(transforms_by_path, rock_path, tile, 7, 0.58, 0.50, 0.20)
 	_spawn_nature_multimeshes(grass_root, transforms_by_path)
 	for child in grass_root.get_children():
 		if child is GeometryInstance3D:
@@ -2558,19 +2598,20 @@ func _rebuild_edge_forest(force: bool) -> void:
 	var transforms_by_path: Dictionary = {}
 	var floors: Array = []
 	var step := 1 if foliage_density >= 0.75 else 2
-	# GFX-G: five irregular rings so zoom 42/68 cannot read a diamond
-	# map cut. Skip a few slots so the mass is a woodland, not a hedge.
-	for ring in range(1, 6):
+	# GFX-H: seven irregular rings plus an on-map rim belt so zoom
+	# 42/68 cannot read a diamond map cut or a grey void.
+	for ring in range(1, 8):
 		for x in range(-ring, map_size.x + ring, step):
-			if _tile_hash(Vector2i(x, -ring), 13 + ring) % 7 != 0:
+			if _tile_hash(Vector2i(x, -ring), 13 + ring) % 11 != 0:
 				_append_edge_tree(transforms_by_path, _edge_tree_path(x, -ring, ring), Vector2(float(x), float(-ring)), ring)
-			if _tile_hash(Vector2i(x, map_size.y - 1 + ring), 17 + ring) % 7 != 0:
+			if _tile_hash(Vector2i(x, map_size.y - 1 + ring), 17 + ring) % 11 != 0:
 				_append_edge_tree(transforms_by_path, _edge_tree_path(x, map_size.y - 1 + ring, ring), Vector2(float(x), float(map_size.y - 1 + ring)), ring)
 		for y in range(-ring + 1, map_size.y + ring - 1, step):
-			if _tile_hash(Vector2i(-ring, y), 19 + ring) % 7 != 0:
+			if _tile_hash(Vector2i(-ring, y), 19 + ring) % 11 != 0:
 				_append_edge_tree(transforms_by_path, _edge_tree_path(-ring, y, ring), Vector2(float(-ring), float(y)), ring)
-			if _tile_hash(Vector2i(map_size.x - 1 + ring, y), 23 + ring) % 7 != 0:
+			if _tile_hash(Vector2i(map_size.x - 1 + ring, y), 23 + ring) % 11 != 0:
 				_append_edge_tree(transforms_by_path, _edge_tree_path(map_size.x - 1 + ring, y, ring), Vector2(float(map_size.x - 1 + ring), float(y)), ring)
+	_append_rim_woodland(transforms_by_path)
 	_spawn_nature_multimeshes(edge_forest_root, transforms_by_path)
 	# Trees keep directional shadows. Grass/flowers stay shadowless.
 	# Darker forest floor under every fourth canopy. One MultiMesh, not Decals.
@@ -2580,7 +2621,33 @@ func _rebuild_edge_forest(force: bool) -> void:
 			if index % 4 != 0:
 				continue
 			floors.append(ContactAO.flatten_transform(batch[index], 2.1))
-	ContactAO.spawn_multimesh(edge_forest_root, floors, 0.36)
+	ContactAO.spawn_multimesh(edge_forest_root, floors, 0.22)
+
+
+func _append_rim_woodland(groups: Dictionary) -> void:
+	# Trees and rocks on the last two revealed map tiles so the playable
+	# AABB does not print as a hard island against the shroud.
+	if simulation == null:
+		return
+	for y in range(map_size.y):
+		for x in range(map_size.x):
+			var tile := Vector2i(x, y)
+			var edge := mini(mini(tile.x, tile.y), mini(map_size.x - 1 - tile.x, map_size.y - 1 - tile.y))
+			if edge > 1:
+				continue
+			if not simulation.is_revealed(tile):
+				continue
+			if _terrain_occupied_cache.has(_tile_key(tile)) or _is_road_tile(tile):
+				continue
+			var tile_type := String(simulation.get_tile(tile))
+			if tile_type != Defs.TILE_GRASS and tile_type != Defs.TILE_TREE and tile_type != Defs.TILE_ROCK:
+				continue
+			if _tile_hash(tile, 29) % 5 == 0:
+				continue
+			if Catalog.ROCKS.size() > 0 and (_tile_hash(tile, 41) % 4 == 0 or tile_type == Defs.TILE_ROCK):
+				_append_nature_transform(groups, String(Catalog.ROCKS[_tile_hash(tile, 43) % Catalog.ROCKS.size()]), tile, 3, 0.70, 0.72, 0.28)
+			else:
+				_append_edge_tree(groups, _edge_tree_path(x, y, 0), Vector2(float(x), float(y)), 0)
 
 
 func _append_edge_tree(groups: Dictionary, path_value: String, logical: Vector2, ring: int, index := 0) -> void:
@@ -2735,9 +2802,54 @@ func _spawn_opening_hamlet(host: Node3D, hall: Vector2i, reserved: Dictionary) -
 	_spawn_dress_prop(host, "fence", hall + Vector2i(-3, -1), 90.0, 1.0, "DressFenceWestA")
 	_spawn_dress_prop(host, "fence", hall + Vector2i(-3, 1), 90.0, 1.0, "DressFenceWestB")
 	_spawn_dress_prop(host, "fence", hall + Vector2i(5, 0), 0.0, 1.0, "DressFenceEast")
+	_spawn_dress_prop(host, "fence", hall + Vector2i(-4, 3), 90.0, 1.0, "DressFenceWestC")
+	_spawn_dress_prop(host, "fence", hall + Vector2i(6, 3), 0.0, 1.0, "DressFenceEastB")
 	_spawn_dress_prop(host, "barrel", hall + Vector2i(5, 1), 25.0, 0.88, "DressBarrelEast", Vector3(-0.8, 0.0, 1.1))
+	_spawn_opening_crops(host, hall + Vector2i(3, -4))
+	_spawn_dress_pond(host, hall + Vector2i(-5, -3), Vector2(5.4, 3.6), "DressPond")
+	_spawn_dress_prop(host, "stone_stack", hall + Vector2i(-5, -2), 22.0, 0.70, "DressPondStoneA", Vector3(1.6, 0.0, 0.8))
+	_spawn_dress_prop(host, "fence", hall + Vector2i(-6, -4), 0.0, 0.92, "DressPondFence")
 	host.set_meta("hamlet_cottages", cottages)
 	host.set_meta("hamlet_reserved", reserved.size())
+	host.set_meta("hamlet_pond", 1)
+
+
+func _spawn_opening_crops(host: Node3D, origin: Vector2i) -> void:
+	# Presentation crop rows. Dirt plots + wheat so the opening and
+	# showcase cameras read fields, not a lawn. No TILE_GRASS consume.
+	var row := 0
+	while row < 4:
+		var col := 0
+		while col < 5:
+			var tile := origin + Vector2i(col, 0)
+			var nudge := Vector3(float(col) * 0.15, 0.0, -float(row) * 0.85)
+			_spawn_dress_prop(host, "dirt_plot", tile, 6.0, 0.78, "DressPlot_%d_%d" % [row, col], nudge)
+			_spawn_dress_prop(host, "wheat_crop", tile, 4.0, 1.18, "DressWheat_%d_%d" % [row, col], nudge + Vector3(0.0, 0.04, 0.0))
+			col += 1
+		row += 1
+	_spawn_dress_prop(host, "fence", origin + Vector2i(-1, 0), 90.0, 0.95, "DressCropFenceA")
+	_spawn_dress_prop(host, "fence", origin + Vector2i(4, 0), 90.0, 0.95, "DressCropFenceB")
+
+
+func _spawn_dress_pond(host: Node3D, tile: Vector2i, size: Vector2, node_name: String) -> void:
+	var pond := MeshInstance3D.new()
+	pond.name = node_name
+	var mesh := PlaneMesh.new()
+	mesh.size = size
+	pond.mesh = mesh
+	pond.position = tile_to_world(Vector2(tile)) + Vector3(0.0, 0.045, 0.0)
+	var water := StandardMaterial3D.new()
+	water.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+	water.albedo_color = Color(0.16, 0.30, 0.34, 0.90)
+	water.roughness = 0.10
+	water.metallic = 0.28
+	water.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	water.emission_enabled = true
+	water.emission = Color(0.08, 0.16, 0.20)
+	water.emission_energy_multiplier = 0.18
+	pond.material_override = water
+	pond.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	host.add_child(pond)
 
 
 func _dress_footprint_free(tile: Vector2i, width: int, height: int) -> bool:
@@ -2770,7 +2882,7 @@ func _spawn_dress_cottage(host: Node3D, kind: String, tile: Vector2i, width: int
 	_force_cast_shadows(model)
 	var footprint := Vector2i(width, height)
 	var world_size := ScaleProfile.footprint_world_size(footprint)
-	var disc := ContactAO.make_instance("ContactAO", Vector2(world_size.x * 1.08, world_size.y * 1.08), 0.48)
+	var disc := ContactAO.make_instance("ContactAO", Vector2(world_size.x * 1.08, world_size.y * 1.08), 0.24)
 	disc.position = Vector3(0.0, 0.018, 0.0)
 	wrap.add_child(disc)
 	var light := OmniLight3D.new()
@@ -2814,6 +2926,15 @@ func _spawn_dress_prop(host: Node3D, prop_key: String, tile: Vector2i, yaw_deg: 
 	prop.rotation.y = deg_to_rad(yaw_deg)
 	prop.scale = Vector3.ONE * ScaleProfile.world_prop_scale(prop_key) * scale_mul
 	_force_cast_shadows(prop)
+	if prop_key == "wheat_crop":
+		var gold := Color("#C9A24A")
+		for child in prop.find_children("*", "MeshInstance3D", true, false):
+			var mesh_i := child as MeshInstance3D
+			var mat := StandardMaterial3D.new()
+			mat.albedo_color = gold
+			mat.roughness = 0.78
+			mat.vertex_color_use_as_albedo = false
+			mesh_i.material_override = mat
 	if prop_key == "wood_stack":
 		var fire := OmniLight3D.new()
 		fire.name = "DressFire"
@@ -2886,6 +3007,12 @@ func _is_scatter_path(path_value: String) -> bool:
 
 
 func _foliage_material(mesh: Mesh, path_value: String) -> Material:
+	if String(path_value).contains("wheat"):
+		var gold := StandardMaterial3D.new()
+		gold.albedo_color = Identity.PALETTE_WHEAT
+		gold.roughness = 0.78
+		gold.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+		return gold
 	if _is_scatter_path(path_value):
 		# Keep authored tuft / blossom colours. The tree shader paints short
 		# blades as trunk-brown, which is the black-ant read.

@@ -1,9 +1,11 @@
 shader_type spatial;
 render_mode diffuse_burley, specular_disabled;
 
-// The Director: GFX-E designed ground. Vertex colour carries occupation
-// only (roads / aprons). Meadow colour is world-space multi-scale noise so
-// 2.5 m tiles cannot print a checkerboard. Palette from the GFX-D review.
+// The Director: GFX-H ground. Vertex colour carries occupation
+// (roads / aprons / crop fields). Meadow is world-space multi-scale
+// noise plus dirt, tufts, flowers and pebbles so 2.5 m tiles cannot
+// print an olive sheet. Palette stays GFX-G yellow-olive so the
+// opening grade (hue ~71°) does not drift.
 uniform vec3 light_tint : source_color = vec3(1.0);
 uniform float tint_floor = 0.0;
 uniform float tint_wash_lo = 0.70;
@@ -17,26 +19,30 @@ uniform vec3 flower_warm : source_color = vec3(0.620, 0.400, 0.300);
 uniform vec3 flower_cool : source_color = vec3(0.500, 0.380, 0.480);
 uniform vec3 gravel_color : source_color = vec3(0.522, 0.514, 0.451); // #858373
 uniform vec3 forest_floor : source_color = vec3(0.243, 0.306, 0.157); // #3E4E28
-uniform vec3 road_earth : source_color = vec3(0.690, 0.573, 0.408); // #B09268
+uniform vec3 road_earth : source_color = vec3(0.784, 0.627, 0.392); // #C8A064
+uniform vec3 wheat_gold : source_color = vec3(0.788, 0.635, 0.290); // #C9A24A
+uniform vec3 wheat_furrow : source_color = vec3(0.420, 0.310, 0.165);
 uniform float macro_metres = 16.0;
 uniform float patch_metres = 6.5;
 uniform float detail_metres = 1.10;
-uniform float macro_amount = 0.22;
-uniform float detail_amount = 0.085;
-uniform float dirt_amount = 0.48;
-uniform float flower_amount = 0.26;
+uniform float macro_amount = 0.28;
+uniform float detail_amount = 0.14;
+uniform float dirt_amount = 0.56;
+uniform float flower_amount = 0.40;
+uniform float stone_amount = 0.34;
+uniform float crop_amount = 1.0;
 // 1 at night / distant LOD: one-octave noise, no 4-tap detail normals.
 uniform float lod_cheap = 0.0;
 // G1: same noisy waterline as settlement_water.gdshader.
 uniform vec2 world_min_xz = vec2(-87.5, -87.5);
 uniform vec2 world_size_xz = vec2(175.0, 175.0);
-// GFX-G: shore dissolves into the wilderness shroud so zoom 42/68
+// GFX-G/H: shore dissolves into the wilderness shroud so zoom 42/68
 // cannot print a diamond island or a dark beach rim.
 uniform vec3 beach_color : source_color = vec3(0.090, 0.149, 0.165); // #17262A
 uniform vec3 rock_shore : source_color = vec3(0.078, 0.125, 0.141); // #142024
 uniform vec3 wet_sand : source_color = vec3(0.070, 0.110, 0.125); // #121C20
 uniform float beach_margin_metres = 5.0;
-uniform float coast_jut_metres = 12.0;
+uniform float coast_jut_metres = 14.0;
 uniform float apron_mode = 0.0;
 
 varying vec3 world_pos;
@@ -103,48 +109,74 @@ void fragment() {
 	float patch = lod_cheap > 0.5 ? noise2(patch_uv) : fbm(patch_uv);
 	float detail = lod_cheap > 0.5 ? 0.5 : fbm(detail_uv);
 	float dirt_noise = lod_cheap > 0.5 ? broad : fbm(world_pos.xz / (macro_metres * 1.15) + vec2(4.8, 21.0));
-	float dirt_mask = smoothstep(0.62, 0.90, dirt_noise);
+	float dirt_mask = smoothstep(0.48, 0.82, dirt_noise);
 	vec3 grass = mix(grass_moss, meadow_lush, clamp(broad * 0.55 + patch * 0.45, 0.0, 1.0));
-	grass = mix(grass, grass_sunlit, smoothstep(0.58, 0.92, patch) * 0.38);
-	grass = mix(grass, meadow_warm, smoothstep(0.72, 0.96, broad) * 0.16);
-	grass = mix(grass, forest_floor, smoothstep(0.08, 0.42, 1.0 - patch) * 0.22);
+	grass = mix(grass, grass_sunlit, smoothstep(0.50, 0.90, patch) * 0.46);
+	grass = mix(grass, meadow_warm, smoothstep(0.68, 0.96, broad) * 0.22);
+	grass = mix(grass, forest_floor, smoothstep(0.08, 0.42, 1.0 - patch) * 0.28);
+	// Blade-scale tuft striping so the meadow is not a painted slab.
 	if (lod_cheap < 0.5) {
-		float bloom = noise2(world_pos.xz / 4.2 + vec2(17.0, 5.0));
-		float blossom_w = smoothstep(0.78, 0.94, patch) * smoothstep(0.70, 0.92, bloom);
+		float tuft = abs(fract(world_pos.x * 1.85 + world_pos.z * 0.35 + patch * 0.4) - 0.5);
+		grass = mix(grass, grass * vec3(0.82, 0.88, 0.70), (1.0 - smoothstep(0.08, 0.28, tuft)) * 0.22);
+		float bloom = noise2(world_pos.xz / 3.6 + vec2(17.0, 5.0));
+		float blossom_w = smoothstep(0.70, 0.92, patch) * smoothstep(0.62, 0.88, bloom);
 		vec3 blossom = mix(flower_warm, flower_cool, step(0.5, noise2(world_pos.xz * 0.37)));
-		grass = mix(grass, mix(grass, blossom, 0.45), blossom_w * flower_amount);
+		grass = mix(grass, mix(grass, blossom, 0.55), blossom_w * flower_amount);
 	}
 	// COLOR.a is the occupation splat. Some backends drop vertex alpha
-	// to 1; then brown RGB (r > g) still marks roads / aprons.
+	// to 1; then brown RGB (r > g) still marks roads / aprons, and
+	// gold (g - b high) marks crop rows.
 	float occupy = clamp(COLOR.a, 0.0, 1.0);
 	if (occupy > 0.98) {
 		occupy = max(
-			smoothstep(0.05, 0.18, length(COLOR.rgb - grass)),
-			smoothstep(0.0, 0.10, COLOR.r - COLOR.g)
+			smoothstep(0.04, 0.14, length(COLOR.rgb - grass)),
+			smoothstep(0.0, 0.08, COLOR.r - COLOR.g)
 		);
 	}
+	float crop = occupy * crop_amount
+		* smoothstep(0.18, 0.30, COLOR.g - COLOR.b)
+		* smoothstep(0.06, 0.14, COLOR.r - COLOR.g);
 	// Irregular chewed edge so footprints are not board-game rectangles.
+	// GFX-H keeps more of the splat so 37 roads stay readable at zoom 26.
 	float chew = lod_cheap > 0.5 ? 0.5 : noise2(world_pos.xz * 1.65 + vec2(2.4, 9.1));
-	occupy *= clamp(0.72 + (chew - 0.5) * 0.55, 0.20, 1.0);
-	vec3 occupy_albedo = mix(dirt_color, road_earth, smoothstep(0.35, 0.80, COLOR.r));
-	occupy_albedo = mix(occupy_albedo, COLOR.rgb, 0.55);
-	vec3 ground = mix(grass, occupy_albedo, occupy);
-	ground = mix(ground, dirt_color, dirt_mask * dirt_amount * (1.0 - occupy * 0.70));
-	float gravel_n = lod_cheap > 0.5 ? 0.0 : smoothstep(0.76, 0.94, noise2(world_pos.xz / 9.0 + vec2(2.2, 14.0)));
-	ground = mix(ground, gravel_color, gravel_n * 0.22 * (0.18 + occupy));
+	occupy *= clamp(0.84 + (chew - 0.5) * 0.24, 0.68, 1.0);
+	vec3 occupy_albedo = mix(dirt_color, road_earth, smoothstep(0.28, 0.72, COLOR.r));
+	occupy_albedo = mix(occupy_albedo, COLOR.rgb, 0.82);
+	vec3 ground = mix(grass, occupy_albedo, occupy * (1.0 - crop));
+	if (crop > 0.08) {
+		float furrow = abs(fract(world_pos.x * 0.64 + world_pos.z * 0.05) - 0.5);
+		float ridge = smoothstep(0.05, 0.34, furrow);
+		vec3 wheat = mix(wheat_furrow, wheat_gold, ridge);
+		wheat = mix(wheat, wheat * 0.78, dirt_mask * 0.28);
+		ground = mix(ground, wheat, clamp(crop * 0.96, 0.0, 1.0));
+	}
+	ground = mix(ground, dirt_color, dirt_mask * dirt_amount * (1.0 - occupy * 0.55) * (1.0 - crop));
+	float gravel_n = lod_cheap > 0.5 ? 0.0 : smoothstep(0.72, 0.93, noise2(world_pos.xz / 7.5 + vec2(2.2, 14.0)));
+	ground = mix(ground, gravel_color, gravel_n * 0.34 * stone_amount * (0.22 + occupy));
+	if (lod_cheap < 0.5) {
+		float pebble = hash21(floor(world_pos.xz * 2.4));
+		float pebble_w = step(0.965, pebble) * (1.0 - occupy * 0.4) * (1.0 - crop);
+		ground = mix(ground, mix(gravel_color, dirt_color, 0.35), pebble_w * stone_amount);
+	}
 	float macro_var = mix(1.0 - macro_amount, 1.0 + macro_amount, broad);
 	float detail_var = mix(1.0 - detail_amount * 0.55, 1.0 + detail_amount, detail);
 	float wash = smoothstep(tint_wash_lo, max(tint_wash_lo + 0.02, tint_wash_hi), broad);
 	vec3 albedo = ground * mix(vec3(1.0), light_tint, mix(tint_floor, 1.0, wash)) * macro_var * detail_var;
 	vec3 shore = mix(beach_color, rock_shore, clamp(dirt_mask * 0.65 + broad * 0.35, 0.0, 1.0));
-	albedo = mix(albedo, shore, beach * (apron_mode > 0.5 ? 0.98 : 0.82));
+	albedo = mix(albedo, shore, beach * (apron_mode > 0.5 ? 0.98 : 0.88));
 	if (apron_mode > 0.5) {
 		float wet = 1.0 - smoothstep(0.0, 4.8, max(land, 0.0));
 		albedo = mix(albedo, wet_sand, wet * 0.78);
 	}
 	ALBEDO = albedo;
-	// Flat world-up normals. Colour breakup above still reads from the
-	// strategy camera without a crawling bump.
-	NORMAL = normalize((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
-	ROUGHNESS = mix(0.96, 0.88, dirt_mask);
+	if (lod_cheap > 0.5) {
+		NORMAL = normalize((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
+	} else {
+		// Reuse patch/detail already paid for. Four extra fbm taps
+		// were a lavapipe first-frame tax for almost no camera read.
+		float bump_w = mix(0.36, 0.72, dirt_mask + crop * 0.4 + occupy * 0.25);
+		vec3 bump = normalize(vec3((detail - 0.5) * bump_w, 1.0, (patch - 0.5) * bump_w));
+		NORMAL = normalize((VIEW_MATRIX * vec4(bump, 0.0)).xyz);
+	}
+	ROUGHNESS = mix(0.96, mix(0.86, 0.78, crop), dirt_mask);
 }

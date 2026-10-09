@@ -32,10 +32,9 @@ const SIZE_WARNING := 16
 
 const AUDIO_SETTINGS_PATH := "user://one_shard_audio.json"
 
-# The Director: GFX-G 4070 brief. Day luma stays ~85 (Filmic 0.78).
-# Meadow / forest shift yellow-olive so wide/opening hue returns to
-# 65–75° instead of the GFX-F olive-teal drift. Night moonlight is
-# lifted from luma 18 to a readable 45–60 with warm window pools.
+# The Director: GFX-H. Day grade stays GFX-G (opening 81 / 44.9 /
+# 0.46 / 71°). Night keeps luma ~50 but tints moonlit blue instead of
+# olive-green, with warm window / fire pools. Sun orbit 138 / night 300.
 # Sun orbit 138 / night 300 unchanged.
 const PALETTE_NAVY := Color("#101A22")
 const PALETTE_NIGHT_TERRAIN := Color("#17262A")
@@ -44,14 +43,14 @@ const PALETTE_MOSS := Color("#3A4A28")
 const PALETTE_SUNLIT_GRASS := Color("#8A9848")
 const PALETTE_MEADOW := Color("#68743A")
 const PALETTE_ROAD_CLAY := Color("#92714E")
-const PALETTE_DRY_EARTH := Color("#B09268")
+const PALETTE_DRY_EARTH := Color("#C8A064")
 const PALETTE_PLASTER := Color("#D9C49B")
 const PALETTE_TIMBER := Color("#57402B")
 const PALETTE_RUST := Color("#A75D39")
 const PALETTE_TEAL := Color("#426F6A")
 const PALETTE_GOLD := Color("#D2A64C")
 const PALETTE_WINDOW := Color("#F5B36B")
-const PALETTE_MOON := Color("#9CACC8")
+const PALETTE_MOON := Color("#A8B8D4")
 const PALETTE_STONE := Color("#858373")
 const PALETTE_CONIFER := Color("#2A4024")
 const PALETTE_CONIFER_SHADOW := Color("#243818")
@@ -143,15 +142,15 @@ const LIGHTING := {
 	},
 	"night": {
 		"ambient": 0.30,
-		"ambient_color": Color("#5A6E88"),
+		"ambient_color": Color("#4A5E80"),
 		"fog_density": 0.00040,
-		"fog_color": Color("#17262A"),
+		"fog_color": Color("#141E2C"),
 		"fog_energy": 0.32,
 		"fog_begin": 22.0,
 		"fog_end": 56.0,
 		"fog_aerial": 0.22,
 		"fog_sun_scatter": 0.06,
-		"saturation": 0.96,
+		"saturation": 0.88,
 		"contrast": 1.10,
 		"exposure": 0.84,
 		"brightness": 1.0,
@@ -161,20 +160,20 @@ const LIGHTING := {
 		"sun_pitch": -48.0,
 		"sun_orbit": 300.0,
 		"fill_energy": 0.14,
-		"fill_color": Color("#3A4A5C"),
+		"fill_color": Color("#3A4C68"),
 		"sky_top": PALETTE_NAVY,
-		"sky_horizon": PALETTE_NIGHT_TERRAIN,
+		"sky_horizon": Color("#1A2838"),
 		"ground_bottom": PALETTE_NAVY,
-		"ground_horizon": PALETTE_NIGHT_TERRAIN,
-		"ground_tint": Color(1.0, 1.0, 1.0),
-		"ground_tint_floor": 0.0,
+		"ground_horizon": Color("#1A2838"),
+		"ground_tint": Color(0.78, 0.86, 1.08),
+		"ground_tint_floor": 0.10,
 		"ground_wash_lo": 0.62,
 		"ground_wash_hi": 0.92,
 		"window_color": PALETTE_WINDOW,
 		"torch_color": PALETTE_TORCH,
 		"torch_range": 8.0,
 		"road_lift": 0.08,
-		"atmosphere_scale": 0.62,
+		"atmosphere_scale": 0.55,
 		"terrain_lod_cheap": 1.0
 	},
 	"reckoning": {
@@ -363,9 +362,9 @@ static func cycle_period_name(simulation, menu_visible := false) -> String:
 	return "day"
 
 
-# The Director: GFX-G LUT. Day midtones hold luma ~85; chroma nudges
-# sat toward 0.45. Night midtones lift so moonlight + window pools
-# land in luma 45–60 instead of the GFX-F hole at 18.
+# The Director: GFX-H LUT. Day midtones hold the GFX-G opening grade.
+# Night midtones stay lifted (luma ~50) but shadows lean moonlight
+# blue so olive terrain cannot wash the frame green.
 const LUT_SIZE := 17
 static var _lut_cache: Dictionary = {}
 
@@ -388,11 +387,11 @@ const GRADE := {
 	},
 	"night": {
 		"knots": [Vector2(0.0, 0.05), Vector2(0.18, 0.18), Vector2(0.45, 0.42), Vector2(0.72, 0.70), Vector2(1.0, 0.90)],
-		"shadow": Color("#1A2838"),
+		"shadow": Color("#142038"),
 		"highlight": Color("#F5B36B"),
-		"shadow_w": 0.10,
+		"shadow_w": 0.12,
 		"highlight_w": 0.12,
-		"chroma": 0.90
+		"chroma": 0.86
 	},
 	"reckoning": {
 		"knots": [Vector2(0.0, 0.05), Vector2(0.18, 0.18), Vector2(0.45, 0.44), Vector2(0.72, 0.70), Vector2(1.0, 0.88)],
