@@ -31,22 +31,21 @@ void fragment() {
 	vec3 roof_hi = mix(roof_color.rgb, terracotta.rgb, clamp(use_terracotta, 0.0, 1.0));
 	vec3 roof = mix(roof_shadow.rgb, roof_hi, clamp(luma * 1.45, 0.18, 1.0));
 	vec3 albedo;
+	EMISSION = vec3(0.0);
 	if (use_terracotta < 0.5) {
-		// Civic: atlas luma/RGB do not decide the wall. Camera-facing
-		// faces are sunlit plaster; other upright faces are limestone;
-		// only downward / back recesses go masonry. Roof only on
-		// clearly upward faces. Timber only on brown door/beam texels.
-		float cam_face = smoothstep(-0.12, 0.58, world_n.z);
-		float upright = 1.0 - smoothstep(0.28, 0.46, world_n.y);
-		vec3 wall = mix(wall_color.rgb, plaster_color.rgb, cam_face * 0.70);
-		wall = mix(masonry_color.rgb, wall, mix(0.62, 0.92, cam_face) * upright);
+		// Civic: atlas RGB/luma do not decide the wall. Roof only on
+		// clearly upward faces (y > 0.70). Everything else is pale
+		// limestone / plaster so ≥50% of the wall reads light on camera.
+		float roof_w = smoothstep(0.70, 0.86, world_n.y);
+		float cam_face = smoothstep(-0.20, 0.55, world_n.z);
+		vec3 wall = mix(wall_color.rgb, plaster_color.rgb, 0.58 + cam_face * 0.32);
+		wall = mix(wall, masonry_color.rgb, 0.08 * (1.0 - cam_face));
 		wall *= wall_lift;
-		albedo = wall;
-		if (roof_face) {
-			albedo = roof;
-		} else if (brown && luma < 0.36 && sat > 0.22) {
+		albedo = mix(wall, roof, roof_w);
+		if (brown && luma < 0.34 && sat > 0.28 && roof_w < 0.20) {
 			albedo = timber_color.rgb * mix(0.92, 1.08, luma);
 		}
+		EMISSION = mix(wall * 0.10, vec3(0.0), roof_w);
 	} else {
 		vec3 wall = mix(wall_color.rgb, plaster_color.rgb, smoothstep(0.40, 0.82, luma));
 		wall = mix(masonry_color.rgb, wall, smoothstep(0.16, 0.38, luma));

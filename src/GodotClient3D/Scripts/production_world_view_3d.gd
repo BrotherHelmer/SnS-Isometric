@@ -3310,13 +3310,14 @@ func _opening_ridge_tiles(hall: Vector2i) -> Array[Vector2i]:
 	# GFX-P: one back/upper formation. No large foreground rocks.
 	# Camera looks from +tile.y, so back is -Y.
 	return [
-		hall + Vector2i(-2, -7),
-		hall + Vector2i(-1, -8),
-		hall + Vector2i(0, -7),
-		hall + Vector2i(1, -8),
-		hall + Vector2i(2, -7),
-		hall + Vector2i(-3, -6),
-		hall + Vector2i(3, -6),
+		hall + Vector2i(4, -3),
+		hall + Vector2i(5, -4),
+		hall + Vector2i(6, -3),
+		hall + Vector2i(7, -4),
+		hall + Vector2i(5, -2),
+		hall + Vector2i(3, -4),
+		hall + Vector2i(6, -5),
+		hall + Vector2i(4, -5),
 	]
 
 
@@ -3419,14 +3420,13 @@ func _spawn_meandering_creek(ridge: Node3D, hall: Vector2i, road_w: float) -> vo
 	# GFX-P: west-forest ribbon. Continues under the trees. Not a
 	# diagonal wedge across the village. Width 0.55–0.75R ±12%.
 	var tiles: Array[Vector2i] = [
-		hall + Vector2i(-8, -7),
-		hall + Vector2i(-9, -4),
-		hall + Vector2i(-10, -1),
-		hall + Vector2i(-11, 2),
-		hall + Vector2i(-10, 5),
-		hall + Vector2i(-12, 8),
-		hall + Vector2i(-13, 11),
-		hall + Vector2i(-14, 14),
+		hall + Vector2i(-5, -2),
+		hall + Vector2i(-6, 1),
+		hall + Vector2i(-6, 4),
+		hall + Vector2i(-5, 7),
+		hall + Vector2i(-7, 10),
+		hall + Vector2i(-8, 13),
+		hall + Vector2i(-9, 16),
 	]
 	var points: Array[Vector3] = []
 	for tile in tiles:

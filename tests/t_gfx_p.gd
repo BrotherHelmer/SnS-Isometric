@@ -139,7 +139,7 @@ func _check_live_scene() -> void:
 	_check(kaykit.contains("456B68") and kaykit.contains("5F442F"), "civic roof / timber match the P palette")
 	var world_src := FileAccess.get_file_as_string("res://src/GodotClient3D/Scripts/production_world_view_3d.gd")
 	_check(world_src.contains("_stamp_segment_distance") and world_src.contains("_collect_road_segments"), "roads keep the world-space distance field")
-	_check(world_src.contains("(-8, -7)") or world_src.contains("Vector2i(-8, -7)"), "creek starts in the west forest, not across the village")
+	_check(world_src.contains("(-5, -2)") or world_src.contains("Vector2i(-5, -2)"), "creek starts west of the hamlet, not across the village")
 	var showcase := Showcase.apply(game.simulation_host.simulation)
 	_check(bool(showcase.get("ok", false)), "showcase still stamps")
 	_check(int(showcase.get("roads", 0)) >= 12, "showcase stamps a connected road network")

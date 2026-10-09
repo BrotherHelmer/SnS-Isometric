@@ -137,9 +137,9 @@ void fragment() {
 
 	// Palette owns the meadow. Broad 4R / local 0.8R richness, no chalk.
 	vec3 grass = mix(grass_moss, meadow_lush, clamp(broad * 0.58 + patch * 0.42, 0.0, 1.0));
-	grass = mix(grass, grass_sunlit, smoothstep(0.66, 0.94, patch) * 0.22);
+	grass = mix(grass, grass_sunlit, smoothstep(0.60, 0.92, patch) * 0.28);
 	float shade_macro = fbm(world_pos.xz / max(macro_metres * 1.52, 12.0) + vec2(9.4, 2.1));
-	float shade_w = smoothstep(0.40, 0.76, shade_macro) * 0.38;
+	float shade_w = smoothstep(0.36, 0.72, shade_macro) * 0.44;
 	grass = mix(grass, meadow_shade, shade_w);
 	grass = mix(grass, forest_floor, smoothstep(0.58, 0.90, 1.0 - patch) * 0.18);
 	grass = mix(grass, dirt_color, smoothstep(0.78, 0.96, noise2(world_pos.xz * 0.19 + vec2(4.2, 8.1))) * 0.10);
@@ -190,8 +190,8 @@ void fragment() {
 	// Worn paths. Keep the distance-field graph. Displace the edge
 	// ±0.07R with noise so the mask is no longer a rectangle.
 	float edge_noise = (fbm(world_pos.xz * 0.85 + vec2(2.4, 9.1)) - 0.5) * 2.0;
-	float worn = control + edge_noise * 0.14;
-	float road_w = smoothstep(0.12, 0.80, worn);
+	float worn = control + edge_noise * 0.08;
+	float road_w = smoothstep(0.08, 0.72, worn);
 	float center_w = smoothstep(0.36, 0.74, worn);
 	float shoulder_w = smoothstep(0.10, 0.34, worn) * (1.0 - center_w);
 	float across = abs(fract(world_pos.x * 0.21 + world_pos.z * 0.17) - 0.5);
