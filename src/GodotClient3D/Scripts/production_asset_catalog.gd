@@ -123,7 +123,13 @@ const EDGE_TREES := [
 	ROOT + "/opening_style/oak.tscn",
 ]
 
-const ROCKS := [ROOT + "/opening_style/rocks.tscn"]
+const ROCKS := [
+	ROOT + "/opening_style/rocks.tscn",
+	ROOT + "/nature/Rock_1_A_Color1.gltf",
+	ROOT + "/nature/Rock_1_B_Color1.gltf",
+	ROOT + "/nature/Rock_2_A_Color1.gltf",
+	ROOT + "/nature/Rock_2_B_Color1.gltf",
+]
 
 const HALO_PROPS := {
 	"log": ROOT + "/resources/Wood_Log_A.gltf",

@@ -84,7 +84,7 @@ func _check_live_scene() -> void:
 	if game.world_view.terrain_mesh_instance != null and game.world_view.terrain_mesh_instance.material_override is ShaderMaterial:
 		var ground := game.world_view.terrain_mesh_instance.material_override as ShaderMaterial
 		var lush: Vector3 = ground.get_shader_parameter("meadow_lush")
-		_check(lush.y > lush.x and lush.x >= 0.36 and lush.x < 0.50, "meadow_lush is still the yellow-olive")
+		_check(lush.y > lush.x and lush.x >= 0.18 and lush.x < 0.50, "meadow_lush is still the yellow-olive")
 		_check(float(ground.get_shader_parameter("dirt_amount")) >= 0.52, "dirt amount is 0.56")
 		_check(float(ground.get_shader_parameter("crop_amount")) >= 0.90, "crop rows are enabled")
 		_check(float(ground.get_shader_parameter("stone_amount")) >= 0.28, "pebbles are enabled")
@@ -93,7 +93,7 @@ func _check_live_scene() -> void:
 	var ground_src := FileAccess.get_file_as_string("res://src/GodotClient3D/Shaders/settlement_ground.gdshader")
 	_check(ground_src.contains("wheat_gold") and ground_src.contains("furrow"), "ground shader paints crop furrows")
 	var road := FileAccess.get_file_as_string("res://src/GodotClient3D/Scripts/production_road_view_3d.gd")
-	_check(road.contains("0.088") and (road.contains("#C8A064") or road.contains("#9F8260")), "road meshes are raised packed clay")
+	_check(road.contains("0.088") and (road.contains("#C8A064") or road.contains("#9F8260") or road.contains("#B0926C")), "road meshes are raised packed clay")
 	var fog := FileAccess.get_file_as_string("res://src/GodotClient3D/Shaders/production_fog_of_war.gdshader")
 	_check(fog.contains("feather_cells") and not fog.contains("edge_veil * 0.78"), "fog shroud uses a 1-2 cell feather, not the GFX-H haze")
 	var showcase := Showcase.apply(game.simulation_host.simulation)

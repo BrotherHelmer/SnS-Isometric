@@ -69,7 +69,7 @@ const TABLE := {
 		{"prop": "fence", "dx": -4, "dy": 2, "yaw": 90.0, "scale": 1.0},
 		{"prop": "barrel", "dx": 4, "dy": 2, "yaw": 14.0, "scale": 1.00},
 		{"prop": "wheelbarrow", "dx": 4, "dy": 3, "yaw": -20.0, "scale": 0.72},
-		{"prop": "dirt_plot", "dx": -1, "dy": 2, "yaw": 6.0, "scale": 0.90},
+		{"prop": "fence", "dx": -1, "dy": 2, "yaw": 6.0, "scale": 1.0},
 		{"prop": "garden", "dx": 0, "dy": 2, "yaw": -12.0, "scale": 1.00},
 		{"prop": "cart", "dx": 4, "dy": 1, "yaw": 18.0, "scale": 0.70},
 		{"prop": "crate", "dx": 3, "dy": -1, "yaw": 8.0, "scale": 0.90},

@@ -32,11 +32,10 @@ const SIZE_WARNING := 16
 
 const AUDIO_SETTINGS_PATH := "user://one_shard_audio.json"
 
-# The Director: GFX-I/J/K. Hold the GFX-G/H grade (sat 1.12 / contrast 1.12 /
+# The Director: GFX-I/J/K/L. Hold the GFX-G/H grade (sat 1.12 / contrast 1.12 /
 # exposure 0.86). Local lighting only: sun #FFE8CE 1.10 at 38°, ambient
 # #91A29A 0.32. Night stays moonlit blue. Environment haze is off.
-# GFX-K item 8 A/B (#FFE9D3 / 1.08 / ambient 0.30 / SSAO 0.60) was
-# evaluated and rolled back — the same-camera delta was marginal.
+# Keep K fog / forest / wheat / trim / night. L only retints architecture.
 const PALETTE_NAVY := Color("#101A22")
 const PALETTE_NIGHT_TERRAIN := Color("#17262A")
 const PALETTE_FOREST := Color("#3E4E28")
@@ -45,15 +44,15 @@ const PALETTE_SUNLIT_GRASS := Color("#8A9848")
 const PALETTE_MEADOW := Color("#68743A")
 const PALETTE_ROAD_CLAY := Color("#92714E")
 const PALETTE_DRY_EARTH := Color("#C8A064")
-const PALETTE_LIMESTONE := Color("#CBBCA0")
-const PALETTE_PLASTER := Color("#E0CDA9")
-const PALETTE_TIMBER := Color("#62432F")
-const PALETTE_RUST := Color("#A95F3F")
-const PALETTE_TEAL := Color("#426C67")
+const PALETTE_LIMESTONE := Color("#CDBD9F")
+const PALETTE_PLASTER := Color("#E0CDAE")
+const PALETTE_TIMBER := Color("#64452F")
+const PALETTE_RUST := Color("#A96342")
+const PALETTE_TEAL := Color("#456D68")
 const PALETTE_GOLD := Color("#D2A64C")
 const PALETTE_WINDOW := Color("#F5B36B")
 const PALETTE_MOON := Color("#A8B8D4")
-const PALETTE_STONE := Color("#817968")
+const PALETTE_STONE := Color("#716A5D")
 const PALETTE_CONIFER := Color("#284735")
 const PALETTE_CONIFER_SHADOW := Color("#243818")
 const PALETTE_CONIFER_SUN := Color("#52775A")

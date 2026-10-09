@@ -484,22 +484,21 @@ func _create_workyard() -> void:
 		"FARM":
 			_add_prop("crate", Vector3(2.45, 0.0, 1.15), Vector3.ONE * 0.85, "FarmSack")
 			_add_prop("barrel", Vector3(1.85, 0.0, 1.45), Vector3.ONE * 2.1, "FarmBasket")
-			# GFX-H: aligned crop rows so fields read at gameplay zoom,
-			# not a scatter of gold sticks on an olive sheet.
+			# GFX-L: wheat only — KayKit dirt_plot was the pale square in
+			# the field. Keep the gold rows; do not restamp a white plate.
 			for row in range(5):
 				for col in range(5):
 					var plot := Vector3(-0.25 + float(col) * 0.78, 0.0, -0.30 - float(row) * 0.62)
-					_add_prop("dirt_plot", plot, Vector3.ONE * 0.58, "DecorativeFarmPlot")
 					_add_prop("wheat_crop", plot + Vector3(0.0, 0.06, 0.0), Vector3.ONE * 1.58, "WheatCrop")
 			_add_prop("wheelbarrow", Vector3(3.15, 0.0, -1.20), Vector3.ONE * 0.76, "InventoryIndicatorWheat", "wheat")
-			# Add sheep paddock with fence
+			# Worn-earth paddock, not a pale rectangle over the wheat.
 			var paddock := MeshInstance3D.new()
 			paddock.name = "FarmPaddock"
 			var paddock_mesh := BoxMesh.new()
-			paddock_mesh.size = Vector3(3.2, 0.04, 2.4)
+			paddock_mesh.size = Vector3(1.6, 0.03, 1.2)
 			paddock.mesh = paddock_mesh
 			paddock.position = Vector3(-2.8, 0.02, 1.0)
-			paddock.material_override = _material(Color("#7a8a5a"), 0.0)
+			paddock.material_override = _material(Color("#886C49"), 0.0)
 			workyard_root.add_child(paddock)
 			# Add simple fence posts
 			for post_x in [-1.6, -2.4, -3.2, -4.0]:
@@ -903,6 +902,8 @@ func _add_prop(prop_key: String, local_position: Vector3, prop_scale: Vector3, n
 	prop.set_meta("base_scale", prop.scale)
 	if prop_key == "wheat_crop":
 		_tint_wheat(prop)
+	if prop_key == "dirt_plot":
+		_tint_earth(prop)
 	if resource_type != "":
 		prop.set_meta("inventory_resource", resource_type)
 		inventory_indicators.append(prop)
@@ -921,12 +922,22 @@ func _update_inventory_indicators(inventory: Dictionary) -> void:
 func _tint_wheat(prop: Node) -> void:
 	# Opening-style wheat.res is a grey-green stem; force a ripe gold so
 	# farm fields do not read as sticks at gameplay zoom.
-	var gold := Color("#C9A24A")
+	_tint_meshes(prop, Color("#C9A24A"), 0.78)
+
+
+func _tint_earth(prop: Node) -> void:
+	# KayKit dirt_plot is a pale/white slab. Force worn earth so a field
+	# cannot print an unexplained white square.
+	_tint_meshes(prop, Color("#886C49"), 0.92)
+
+
+func _tint_meshes(prop: Node, color: Color, roughness: float) -> void:
 	for child in prop.find_children("*", "MeshInstance3D", true, false):
 		var mesh_i := child as MeshInstance3D
 		var mat := StandardMaterial3D.new()
-		mat.albedo_color = gold
-		mat.roughness = 0.78
+		mat.albedo_color = color
+		mat.roughness = roughness
+		mat.metallic = 0.0
 		mat.vertex_color_use_as_albedo = false
 		mesh_i.material_override = mat
 
@@ -942,10 +953,17 @@ func _material(color: Color, transparency: float) -> StandardMaterial3D:
 	return material
 
 
+func _foundation_material(color: Color) -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.roughness = 0.9
+	material.metallic = 0.0
+	return material
+
+
 func _apply_principal_trim() -> void:
-	# GFX-I: plaster / timber / roof / stone read at default zoom on the
-	# three principal archetypes. Geometry stays KayKit; trim is shared
-	# boxes so Town Hall, house and bakery get character without a remodel.
+	# GFX-L: three archetypes. Keep K trim names. Replace the bunker wrap
+	# with a low fitted foundation and modular stone / plaster façades.
 	if building_type != "TOWN_HALL" and building_type != "CASTLE" and building_type != "HOUSE" and building_type != "BAKERY" and building_type != "LUMBER_CAMP" and building_type != "SAWMILL":
 		return
 	var plaster := _material(BuildingMaterials.WARM_PLASTER, 0.0)
@@ -956,21 +974,50 @@ func _apply_principal_trim() -> void:
 	var width := maxf(visual.x, 3.2)
 	var depth := maxf(visual.z, 3.2)
 	var wall_h := maxf(visual.y * 0.42, 1.55)
-	# Weathered stone plinth so the hall cannot sink to near-black.
+	var b := ScaleProfile.TOWN_HALL_WIDTH_METRES
+	var found_h := clampf(b * 0.048, 0.35, b * 0.06)
+	var found_w := width * 1.06
+	var found_d := depth * 1.06
+	var face := _foundation_material(BuildingMaterials.FOUNDATION_FACE)
+	var top := _foundation_material(BuildingMaterials.FOUNDATION_TOP)
+	var edge := _foundation_material(BuildingMaterials.FOUNDATION_EDGE)
+	# Low stone foundation. Not a raised concrete bunker.
 	var plinth := MeshInstance3D.new()
 	plinth.name = "TrimPlinth"
 	var plinth_mesh := BoxMesh.new()
-	plinth_mesh.size = Vector3(width * 1.02, 0.38, depth * 1.02)
+	plinth_mesh.size = Vector3(found_w, found_h, found_d)
 	plinth.mesh = plinth_mesh
-	plinth.position = Vector3(0.0, 0.19, _model_offset_z())
-	plinth.material_override = stone
+	plinth.position = Vector3(0.0, found_h * 0.5, _model_offset_z())
+	plinth.material_override = face
 	add_child(plinth)
+	var cap := MeshInstance3D.new()
+	cap.name = "TrimFoundationTop"
+	var cap_mesh := BoxMesh.new()
+	cap_mesh.size = Vector3(found_w * 0.96, 0.04, found_d * 0.96)
+	cap.mesh = cap_mesh
+	cap.position = Vector3(0.0, found_h + 0.01, _model_offset_z())
+	cap.material_override = top
+	add_child(cap)
+	for index in 4:
+		var skirt := MeshInstance3D.new()
+		skirt.name = "TrimFoundationEdge_%d" % index
+		var skirt_mesh := BoxMesh.new()
+		var sx := -1.0 if index < 2 else 1.0
+		var sz := -1.0 if index % 2 == 0 else 1.0
+		if absi(index) % 2 == 0:
+			skirt_mesh.size = Vector3(found_w * 0.98, found_h * 0.55, 0.06)
+		else:
+			skirt_mesh.size = Vector3(0.06, found_h * 0.55, found_d * 0.98)
+		skirt.mesh = skirt_mesh
+		skirt.position = Vector3(sx * found_w * 0.50, found_h * 0.28, _model_offset_z() + sz * found_d * 0.50)
+		skirt.material_override = edge
+		add_child(skirt)
 	# Timber posts at the four corners.
 	for index in 4:
 		var post := MeshInstance3D.new()
 		post.name = "TrimTimber_%d" % index
 		var post_mesh := BoxMesh.new()
-		post_mesh.size = Vector3(0.16, wall_h, 0.16)
+		post_mesh.size = Vector3(width * 0.025, wall_h, width * 0.025)
 		post.mesh = post_mesh
 		var sx := -1.0 if index < 2 else 1.0
 		var sz := -1.0 if index % 2 == 0 else 1.0
@@ -986,34 +1033,49 @@ func _apply_principal_trim() -> void:
 	plate.position = Vector3(0.0, wall_h * 0.62, _model_offset_z() + depth * 0.48)
 	plate.material_override = timber
 	add_child(plate)
-	# Roof-edge fascia.
+	# Roof-edge fascia / overhang.
 	var fascia := MeshInstance3D.new()
 	fascia.name = "TrimFascia"
 	var fascia_mesh := BoxMesh.new()
-	fascia_mesh.size = Vector3(width * 1.04, 0.10, 0.14)
+	fascia_mesh.size = Vector3(width * 1.09, 0.10, width * 0.045)
 	fascia.mesh = fascia_mesh
 	fascia.position = Vector3(0.0, wall_h + 0.22, _model_offset_z() + depth * 0.50)
 	fascia.material_override = roof
 	add_child(fascia)
 	if building_type == "TOWN_HALL" or building_type == "CASTLE":
 		var limestone := _material(BuildingMaterials.CASTLE_LIMESTONE, 0.0)
-		# Broad limestone plates over the dark KayKit body so the hall
-		# reads as pale stone at zoom 26, not a teal box.
-		for side in [
-			{"name": "TrimFacade", "size": Vector3(width * 0.90, wall_h * 0.72, 0.16), "pos": Vector3(0.0, wall_h * 0.42, _model_offset_z() + depth * 0.50)},
-			{"name": "TrimFacadeBack", "size": Vector3(width * 0.90, wall_h * 0.72, 0.16), "pos": Vector3(0.0, wall_h * 0.42, _model_offset_z() - depth * 0.50)},
-			{"name": "TrimFacadeLeft", "size": Vector3(0.16, wall_h * 0.72, depth * 0.88), "pos": Vector3(-width * 0.50, wall_h * 0.42, _model_offset_z())},
-			{"name": "TrimFacadeRight", "size": Vector3(0.16, wall_h * 0.72, depth * 0.88), "pos": Vector3(width * 0.50, wall_h * 0.42, _model_offset_z())},
-		]:
-			var plate_wall := MeshInstance3D.new()
-			plate_wall.name = String(side["name"])
-			var plate_mesh_wall := BoxMesh.new()
-			plate_mesh_wall.size = side["size"]
-			plate_wall.mesh = plate_mesh_wall
-			plate_wall.position = side["pos"]
-			plate_wall.material_override = limestone
-			add_child(plate_wall)
-		# GFX-K: two horizontal stone bands + pale corner pilasters.
+		# Modular façade panels — not one bunker wrap around the keep.
+		var panel_w := width * 0.28
+		var panel_h := wall_h * 0.58
+		for panel_i in 3:
+			var panel := MeshInstance3D.new()
+			panel.name = "TrimFacadePanel_%d" % panel_i
+			var panel_mesh := BoxMesh.new()
+			panel_mesh.size = Vector3(panel_w, panel_h, 0.08)
+			panel.mesh = panel_mesh
+			panel.position = Vector3((-0.30 + float(panel_i) * 0.30) * width, found_h + panel_h * 0.52, _model_offset_z() + depth * 0.49)
+			panel.material_override = limestone
+			add_child(panel)
+		# Dark courtyard well so the KayKit yard top is not a pale slab.
+		var well := MeshInstance3D.new()
+		well.name = "TrimCourtyardWell"
+		var well_mesh := BoxMesh.new()
+		well_mesh.size = Vector3(width * 0.58, 0.10, depth * 0.52)
+		well.mesh = well_mesh
+		well.position = Vector3(0.0, wall_h * 0.38, _model_offset_z() - depth * 0.04)
+		well.material_override = stone
+		add_child(well)
+		# Parapets / merlons so the silhouette reads as a castle wall.
+		for merlon_i in 6:
+			var merlon := MeshInstance3D.new()
+			merlon.name = "TrimParapet_%d" % merlon_i
+			var merlon_mesh := BoxMesh.new()
+			merlon_mesh.size = Vector3(width * 0.10, 0.28, 0.10)
+			merlon.mesh = merlon_mesh
+			merlon.position = Vector3((-0.42 + float(merlon_i) * 0.168) * width, wall_h * 0.92, _model_offset_z() + depth * 0.48)
+			merlon.material_override = limestone
+			add_child(merlon)
+		# Keep K bands + pilasters.
 		for band_i in 2:
 			var band := MeshInstance3D.new()
 			band.name = "TrimHallBand" if band_i == 0 else "TrimHallBandUpper"
@@ -1034,8 +1096,6 @@ func _apply_principal_trim() -> void:
 			pilaster.position = Vector3(sx * width * 0.48, wall_h * 0.50, _model_offset_z() + sz * depth * 0.46)
 			pilaster.material_override = limestone
 			add_child(pilaster)
-		# Visible limestone quoins, door surround and window lintels so
-		# the landmark reads as pale stone at default zoom, not dark teal.
 		for index in 4:
 			var quoin := MeshInstance3D.new()
 			quoin.name = "TrimQuoin_%d" % index
@@ -1055,6 +1115,15 @@ func _apply_principal_trim() -> void:
 		door.position = Vector3(0.0, 0.88, _model_offset_z() + depth * 0.52)
 		door.material_override = stone
 		add_child(door)
+		# Recessed archway over the door.
+		var arch := MeshInstance3D.new()
+		arch.name = "TrimArch"
+		var arch_mesh := BoxMesh.new()
+		arch_mesh.size = Vector3(1.55, 0.22, 0.18)
+		arch.mesh = arch_mesh
+		arch.position = Vector3(0.0, 1.78, _model_offset_z() + depth * 0.535)
+		arch.material_override = limestone
+		add_child(arch)
 		var lintel := MeshInstance3D.new()
 		lintel.name = "TrimLintel"
 		var lintel_mesh := BoxMesh.new()
@@ -1074,6 +1143,14 @@ func _apply_principal_trim() -> void:
 			add_child(window)
 		_create_chimney_marker(Vector3(width * 0.28, wall_h + 1.05, _model_offset_z() - depth * 0.12))
 	if building_type == "HOUSE" or building_type == "BAKERY":
+		var plaster_face := MeshInstance3D.new()
+		plaster_face.name = "TrimPlasterFace"
+		var plaster_mesh := BoxMesh.new()
+		plaster_mesh.size = Vector3(width * 0.72, wall_h * 0.62, 0.06)
+		plaster_face.mesh = plaster_mesh
+		plaster_face.position = Vector3(0.0, wall_h * 0.42, _model_offset_z() + depth * 0.49)
+		plaster_face.material_override = plaster
+		add_child(plaster_face)
 		var awning := MeshInstance3D.new()
 		awning.name = "TrimAwning"
 		var awning_mesh := BoxMesh.new()

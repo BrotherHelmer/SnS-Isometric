@@ -87,6 +87,10 @@ ASSET_CATALOG_GROUPS = {
     ],
     "ROCKS": [
         "res://assets/settlement3d/runtime/opening_style/rocks.tscn",
+        "res://assets/settlement3d/runtime/nature/Rock_1_A_Color1.gltf",
+        "res://assets/settlement3d/runtime/nature/Rock_1_B_Color1.gltf",
+        "res://assets/settlement3d/runtime/nature/Rock_2_A_Color1.gltf",
+        "res://assets/settlement3d/runtime/nature/Rock_2_B_Color1.gltf",
     ],
     "UNDERSTORY": [
         "res://assets/settlement3d/runtime/opening_style/bush.tscn",

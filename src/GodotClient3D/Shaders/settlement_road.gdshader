@@ -3,10 +3,10 @@ render_mode diffuse_lambert, specular_disabled, cull_disabled, blend_mix;
 
 // The Director: GFX-K worn medieval paths. Compacted earth centre,
 // grass-blended shoulders, dark ruts and sparse gravel. Not a brown ribbon.
-uniform vec4 road_color : source_color = vec4(0.624, 0.510, 0.376, 1.0); // #9F8260
-uniform vec3 clay_color : source_color = vec3(0.624, 0.510, 0.376); // #9F8260
-uniform vec3 dirt_edge : source_color = vec3(0.443, 0.345, 0.243); // #71583E
-uniform vec3 gravel_color : source_color = vec3(0.651, 0.608, 0.502); // #A69B80
+uniform vec4 road_color : source_color = vec4(0.690, 0.573, 0.424, 1.0); // #B0926C
+uniform vec3 clay_color : source_color = vec3(0.690, 0.573, 0.424); // #B0926C
+uniform vec3 dirt_edge : source_color = vec3(0.533, 0.424, 0.286); // #886C49
+uniform vec3 gravel_color : source_color = vec3(0.573, 0.565, 0.502); // #929080
 uniform vec3 light_tint : source_color = vec3(1.0);
 uniform float value_lift = 0.06;
 uniform float worn_darken = 0.16;
@@ -35,8 +35,8 @@ void fragment() {
 	float across = abs(UV.x - 0.5) * 2.0;
 	float chew = noise2(world_pos.xz * 0.18 + vec2(9.0, 4.0));
 	float irregular = across + (chew - 0.5) * 0.20;
-	// Centre 65% packed earth, 17.5% shoulder each side.
-	float edge = smoothstep(0.32, 0.65, irregular);
+	// Centre 70% packed earth, 15% shoulder each side.
+	float edge = smoothstep(0.35, 0.70, irregular);
 	vec3 clay = mix(road_color.rgb, clay_color, 0.70);
 	vec3 dirt = mix(road_color.rgb, dirt_edge, 0.86);
 	vec3 albedo = mix(clay, dirt * (1.0 + shoulder_lift), edge);
