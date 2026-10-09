@@ -9,9 +9,9 @@ const BevelShader = preload("res://src/GodotClient3D/Shaders/settlement_bevel.gd
 
 const ROUGHNESS := {
 	"plaster": 0.85,
-	"timber": 0.85,
-	"roof": 0.85,
-	"teal_roof": 0.85,
+	"timber": 0.70,
+	"roof": 0.72,
+	"teal_roof": 0.68,
 	"stone": 0.85,
 	"metal": 0.34,
 }
@@ -74,7 +74,8 @@ static func remap_albedo(kind: String, color: Color, building_type: String) -> C
 				next = color.lerp(CASTLE_SLATE, 0.88)
 			elif kind == "timber":
 				next = color.lerp(DARK_TIMBER, 0.70)
-			next = _lift_hall_luma(next)
+			if kind == "plaster" or kind == "stone":
+				next = _lift_hall_luma(next)
 		"TOWN_HALL":
 			if kind == "plaster":
 				next = color.lerp(CASTLE_LIMESTONE, 0.94)
@@ -84,7 +85,8 @@ static func remap_albedo(kind: String, color: Color, building_type: String) -> C
 				next = color.lerp(HALL_SLATE, 0.90)
 			elif kind == "timber":
 				next = color.lerp(DARK_TIMBER, 0.78)
-			next = _lift_hall_luma(next)
+			if kind == "plaster" or kind == "stone":
+				next = _lift_hall_luma(next)
 		"HOUSE", "FARM", "BAKERY", "STOREHOUSE":
 			if kind == "teal_roof" or kind == "roof":
 				# House / bakery keep clay so t_gfx_d terracotta still holds.
