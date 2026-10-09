@@ -685,11 +685,13 @@ func _bind_terrain_textures(material: ShaderMaterial) -> void:
 
 func _apply_meadow_palette(material: ShaderMaterial) -> void:
 	# GFX-N review meadow. Green lawn, brown only on roads / yards.
-	material.set_shader_parameter("grass_sunlit", Vector3(0.459, 0.533, 0.318))
-	material.set_shader_parameter("grass_moss", Vector3(0.224, 0.310, 0.200))
+	# Author darker / greener than the review hex so the frozen Filmic
+	# grade (warm sun #FFE8CE) still reads as lush #556D3F on lavapipe.
+	material.set_shader_parameter("grass_sunlit", Vector3(0.380, 0.498, 0.275))
+	material.set_shader_parameter("grass_moss", Vector3(0.165, 0.275, 0.145))
 	material.set_shader_parameter("meadow_lush", Vector3(0.333, 0.427, 0.247))
-	material.set_shader_parameter("meadow_warm", Vector3(0.459, 0.533, 0.318))
-	material.set_shader_parameter("forest_floor", Vector3(0.208, 0.282, 0.204))
+	material.set_shader_parameter("meadow_warm", Vector3(0.400, 0.510, 0.290))
+	material.set_shader_parameter("forest_floor", Vector3(0.165, 0.255, 0.160))
 	material.set_shader_parameter("dirt_color", Vector3(0.537, 0.424, 0.298))
 	material.set_shader_parameter("road_earth", Vector3(0.682, 0.565, 0.427))
 
@@ -698,13 +700,21 @@ func set_road_debug(enabled: bool) -> void:
 	road_debug_enabled = enabled
 	_bind_road_debug(terrain_mesh_instance)
 	_bind_road_debug(beach_apron_instance)
+	if terrain_root != null:
+		for node in terrain_root.find_children("*", "MeshInstance3D", true, false):
+			_bind_road_debug(node as MeshInstance3D)
 
 
 func _bind_road_debug(host: MeshInstance3D) -> void:
-	if host == null or not (host.material_override is ShaderMaterial):
+	if host == null or not is_instance_valid(host):
+		return
+	if not (host.material_override is ShaderMaterial):
 		return
 	var material := host.material_override as ShaderMaterial
+	if material.shader == null:
+		return
 	material.set_shader_parameter("road_debug", 1.0 if road_debug_enabled else 0.0)
+	material.set_shader_parameter("road_control_amount", 1.0)
 	if road_control_texture != null:
 		material.set_shader_parameter("road_control_tex", road_control_texture)
 
@@ -723,7 +733,9 @@ func _bake_road_control_texture() -> void:
 		for y in range(map_size.y):
 			for x in range(map_size.x):
 				var tile := Vector2i(x, y)
-				if not _is_road_tile(tile) and _visual_path_weight(tile) < 0.55 and _hamlet_path_weight(tile) < 0.55:
+				# Real road tiles only. Hamlet dress paths stay as soft
+				# vertex occupy so the opening lawn is not stamped clay.
+				if not _is_road_tile(tile):
 					continue
 				var world := tile_to_world(Vector2(tile))
 				centres.append(Vector2(world.x, world.z))

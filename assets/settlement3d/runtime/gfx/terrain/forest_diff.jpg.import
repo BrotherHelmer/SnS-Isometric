@@ -2,8 +2,8 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://gfxmforest_diff.jpg"
-path="res://.godot/imported/forest_diff.jpg-gfxm.ctex"
+uid="uid://cq2xh0tuj6p3d"
+path="res://.godot/imported/forest_diff.jpg-371a1295a981d5d6f24f52abe8d02ca0.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://assets/settlement3d/runtime/gfx/terrain/forest_diff.jpg"
-dest_files=["res://.godot/imported/forest_diff.jpg-gfxm.ctex"]
+dest_files=["res://.godot/imported/forest_diff.jpg-371a1295a981d5d6f24f52abe8d02ca0.ctex"]
 
 [params]
 

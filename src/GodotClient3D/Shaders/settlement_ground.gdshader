@@ -124,9 +124,9 @@ void fragment() {
 	// GFX-N: palette owns the meadow. Poly Haven maps are luminance
 	// detail only — they must not paint a sandy khaki wash.
 	float dark_grass = smoothstep(0.08, 0.46, 1.0 - patch) * (0.55 + 0.45 * (1.0 - broad));
-	grass = mix(grass, grass_sunlit, smoothstep(0.62, 0.94, patch) * 0.18);
-	grass = mix(grass, meadow_warm, smoothstep(0.74, 0.98, broad) * 0.10);
-	grass = mix(grass, forest_floor, clamp(dark_grass * 0.72, 0.0, 0.26));
+	grass = mix(grass, grass_sunlit, smoothstep(0.62, 0.94, patch) * 0.08);
+	grass = mix(grass, meadow_warm, smoothstep(0.74, 0.98, broad) * 0.04);
+	grass = mix(grass, forest_floor, clamp(dark_grass * 0.82, 0.0, 0.34));
 	if (tex_mix > 0.01) {
 		vec2 muv = world_pos.xz / max(tex_repeat_meadow, 1.5);
 		vec2 fuv = world_pos.xz / max(tex_repeat_forest, 1.2);
@@ -134,10 +134,12 @@ void fragment() {
 		float forest_luma = dot(texture(forest_tex, fuv).rgb, vec3(0.2126, 0.7152, 0.0722));
 		float dirt_luma = dot(texture(dirt_tex, muv * 1.15).rgb, vec3(0.2126, 0.7152, 0.0722));
 		float detail_luma = mix(meadow_luma, forest_luma, clamp(dark_grass * 0.85, 0.0, 0.55));
-		detail_luma = mix(detail_luma, dirt_luma, dirt_mask * 0.22);
+		detail_luma = mix(detail_luma, dirt_luma, dirt_mask * 0.10);
+		// Recentre luma so a bright sandy scan cannot lift the lawn.
+		detail_luma = clamp(0.42 + (detail_luma - 0.50) * 0.28, 0.28, 0.62);
 		float variation = smoothstep(0.20, 0.80, detail_luma);
-		vec3 palette_meadow = mix(grass_moss, grass_sunlit, variation);
-		grass = mix(grass, palette_meadow * (0.70 + detail_luma * 0.60), tex_mix);
+		vec3 palette_meadow = mix(grass_moss, meadow_lush, variation);
+		grass = mix(grass, palette_meadow * (0.92 + detail_luma * 0.16), tex_mix);
 	}
 	// Blade-scale tuft striping so the meadow is not a painted slab.
 	if (lod_cheap < 0.5) {
@@ -161,10 +163,14 @@ void fragment() {
 	// GFX-N: 512² road-control mask. Union (max) so intersections stay
 	// solid instead of averaging away at the Town Hall junction.
 	vec2 road_uv = (world_pos.xz - world_min_xz) / max(world_size_xz, vec2(0.001));
-	float control = texture(road_control_tex, clamp(road_uv, vec2(0.0), vec2(1.0))).r * road_control_amount;
+	// ImageTexture / spatial V can disagree on lavapipe. Union both
+	// orientations so the 512² mask cannot miss the settlement.
+	vec2 ru = clamp(road_uv, vec2(0.0), vec2(1.0));
+	vec2 rf = vec2(ru.x, 1.0 - ru.y);
+	float control = max(texture(road_control_tex, ru).r, texture(road_control_tex, rf).r) * road_control_amount;
 	occupy = max(occupy, control);
 	if (road_debug > 0.5) {
-		ALBEDO = mix(vec3(0.34, 0.35, 0.33), vec3(1.0, 0.0, 1.0), clamp(control, 0.0, 1.0));
+		ALBEDO = mix(vec3(0.22, 0.28, 0.20), vec3(1.0, 0.0, 1.0), clamp(control, 0.0, 1.0));
 		ROUGHNESS = 1.0;
 		METALLIC = 0.0;
 		return;
@@ -173,15 +179,15 @@ void fragment() {
 		* smoothstep(0.18, 0.30, COLOR.g - COLOR.b)
 		* smoothstep(0.06, 0.14, COLOR.r - COLOR.g);
 	// Irregular chewed edge so footprints are not board-game rectangles.
-	// GFX-H keeps more of the splat so 37 roads stay readable at zoom 26.
+	// Do not chew the unioned road-control mask — intersections stay solid.
 	float chew = lod_cheap > 0.5 ? 0.5 : noise2(world_pos.xz * 1.65 + vec2(2.4, 9.1));
-	occupy *= clamp(0.84 + (chew - 0.5) * 0.24, 0.68, 1.0);
+	occupy = max(occupy * clamp(0.84 + (chew - 0.5) * 0.24, 0.68, 1.0), control);
 	// Road shoulders: 20–35% of the road width, world-space noise, not
 	// a hard tile edge. Mid occupy = shoulder; high occupy = packed clay.
 	float shoulder = smoothstep(0.18, 0.55, occupy) * (1.0 - smoothstep(0.72, 0.94, occupy));
 	vec3 occupy_albedo = mix(dirt_color, road_earth, smoothstep(0.28, 0.82, max(COLOR.r, control)));
-	occupy_albedo = mix(occupy_albedo, COLOR.rgb, 0.35);
-	occupy_albedo = mix(occupy_albedo, mix(dirt_color, vec3(0.325, 0.416, 0.251), 0.40), shoulder * 0.40);
+	occupy_albedo = mix(occupy_albedo, COLOR.rgb, 0.12);
+	occupy_albedo = mix(occupy_albedo, mix(dirt_color, vec3(0.325, 0.416, 0.251), 0.40), shoulder * 0.28);
 	vec3 ground = mix(grass, occupy_albedo, occupy * (1.0 - crop));
 	if (crop > 0.08) {
 		float furrow = abs(fract(world_pos.x * 0.64 + world_pos.z * 0.05) - 0.5);
@@ -192,7 +198,7 @@ void fragment() {
 	}
 	// Keep dirt_amount for older gates; visually cap it so the meadow
 	// stays green. Earth belongs on roads and yards, not the lawn.
-	ground = mix(ground, dirt_color, dirt_mask * dirt_amount * 0.16 * (1.0 - occupy * 0.80) * (1.0 - crop));
+	ground = mix(ground, dirt_color, dirt_mask * dirt_amount * 0.07 * (1.0 - occupy * 0.90) * (1.0 - crop));
 	float gravel_n = lod_cheap > 0.5 ? 0.0 : smoothstep(0.72, 0.93, noise2(world_pos.xz / 7.5 + vec2(2.2, 14.0)));
 	ground = mix(ground, gravel_color, gravel_n * 0.34 * stone_amount * (0.22 + occupy));
 	if (lod_cheap < 0.5) {

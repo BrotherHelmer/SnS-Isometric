@@ -117,7 +117,7 @@ func _check_live_scene() -> void:
 	var road_src := FileAccess.get_file_as_string("res://src/GodotClient3D/Scripts/production_road_view_3d.gd")
 	_check(road_src.contains("RoadRutDecal") or road_src.contains("road_rut_decal"), "roads place sparse rut decals")
 	var ground_src := FileAccess.get_file_as_string("res://src/GodotClient3D/Shaders/settlement_ground.gdshader")
-	_check(ground_src.contains("5A7545") or ground_src.contains("526B40") or ground_src.contains("0.353, 0.459, 0.271") or ground_src.contains("0.322, 0.420, 0.251"), "meadow splat is #5A7545")
+	_check(ground_src.contains("5A7545") or ground_src.contains("526B40") or ground_src.contains("556D3F") or ground_src.contains("0.353, 0.459, 0.271") or ground_src.contains("0.322, 0.420, 0.251") or ground_src.contains("0.333, 0.427, 0.247"), "meadow splat is #5A7545")
 	var showcase := Showcase.apply(game.simulation_host.simulation)
 	_check(bool(showcase.get("ok", false)), "showcase still stamps")
 	game._sync_presentation()

@@ -68,11 +68,18 @@ func _run() -> void:
 	game._update_day_night_lighting()
 	game._sync_presentation()
 	game.world_view.set_road_debug(true)
-	game._sync_presentation()
 	game.camera_rig.compose_view(home, CameraRig.NORMAL_ZOOM)
+	if game.world_view.terrain_mesh_instance != null and game.world_view.terrain_mesh_instance.material_override is ShaderMaterial:
+		var dbg := game.world_view.terrain_mesh_instance.material_override as ShaderMaterial
+		print("GFX_N_SHOTS road_debug=%s control=%s" % [str(dbg.get_shader_parameter("road_debug")), str(game.world_view.road_control_texture != null)])
+		if game.world_view.road_control_texture != null:
+			var control_img: Image = game.world_view.road_control_texture.get_image()
+			if control_img != null:
+				control_img.save_png(dest.path_join("pkg2_road_control.png"))
+	for _dbg in 8:
+		await process_frame
 	await _capture(dest, "pkg2_road_debug.png")
 	game.world_view.set_road_debug(false)
-	game._sync_presentation()
 	game.camera_rig.compose_view(home, CameraRig.NORMAL_ZOOM)
 	await _capture(dest, "showcase_day.png")
 	await _capture(dest, "pkg2_roads.png")
