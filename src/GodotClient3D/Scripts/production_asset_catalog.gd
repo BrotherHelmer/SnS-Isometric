@@ -36,11 +36,12 @@ const ANIMATION_LIBRARIES := {
 }
 
 const BUILDINGS := {
-	"TOWN_HALL": ROOT + "/opening_style/town_hall.tscn",
-	"CASTLE": ROOT + "/opening_style/castle.tscn",
-	"HOUSE": ROOT + "/opening_style/house.tscn",
-	"LUMBER_CAMP": ROOT + "/opening_style/lumber_camp.tscn",
-	"SAWMILL": ROOT + "/opening_style/lumber_camp.tscn",
+	# GFX-M: live KayKit Medieval Hexagon meshes, not opening-style boxes.
+	"TOWN_HALL": ROOT + "/buildings/building_castle_green.gltf",
+	"CASTLE": ROOT + "/buildings/building_castle_green.gltf",
+	"HOUSE": ROOT + "/buildings/building_home_A_green.gltf",
+	"LUMBER_CAMP": ROOT + "/buildings/building_lumbermill_green.gltf",
+	"SAWMILL": ROOT + "/buildings/building_lumbermill_green.gltf",
 	"QUARRY": ROOT + "/opening_style/quarry.tscn",
 	"FARM": ROOT + "/opening_style/farm.tscn",
 	"BAKERY": ROOT + "/opening_style/bakery.tscn",
@@ -161,6 +162,14 @@ const GRASS := [ROOT + "/opening_style/grass.tscn"]
 
 const FLOWERS := [ROOT + "/opening_style/flowers.tscn"]
 
+# GFX-M: Poly Haven / ambientCG 1024² CC0 splat textures.
+const TERRAIN_TEXTURES := {
+	"meadow": ROOT + "/gfx/terrain/meadow_diff.jpg",
+	"forest": ROOT + "/gfx/terrain/forest_diff.jpg",
+	"dirt": ROOT + "/gfx/terrain/dirt_diff.jpg",
+	"rock": ROOT + "/gfx/terrain/rock_diff.jpg",
+}
+
 
 static func building_path(building_type: String) -> String:
 	return String(BUILDINGS.get(building_type, BUILDINGS["HOUSE"]))
@@ -172,7 +181,7 @@ static func character_path(worker_type: String) -> String:
 
 static func all_runtime_paths() -> Array[String]:
 	var paths: Array[String] = []
-	for group in [CHARACTERS, ANIMATION_LIBRARIES, BUILDINGS, TOOLS, CARGO, WORKYARD_PROPS, HALO_PROPS]:
+	for group in [CHARACTERS, ANIMATION_LIBRARIES, BUILDINGS, TOOLS, CARGO, WORKYARD_PROPS, HALO_PROPS, TERRAIN_TEXTURES]:
 		for path_value in group.values():
 			if not paths.has(String(path_value)):
 				paths.append(String(path_value))

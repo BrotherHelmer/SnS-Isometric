@@ -10,16 +10,16 @@ uniform vec3 light_tint : source_color = vec3(1.0);
 uniform float tint_floor = 0.0;
 uniform float tint_wash_lo = 0.70;
 uniform float tint_wash_hi = 0.94;
-uniform vec3 grass_sunlit : source_color = vec3(0.353, 0.459, 0.271); // #5A7545
+uniform vec3 grass_sunlit : source_color = vec3(0.322, 0.420, 0.251); // #526B40
 uniform vec3 grass_moss : source_color = vec3(0.204, 0.302, 0.204); // #344D34
 uniform vec3 dirt_color : source_color = vec3(0.533, 0.424, 0.286); // #886C49
-uniform vec3 meadow_lush : source_color = vec3(0.353, 0.459, 0.271); // #5A7545
-uniform vec3 meadow_warm : source_color = vec3(0.353, 0.459, 0.271); // #5A7545
+uniform vec3 meadow_lush : source_color = vec3(0.322, 0.420, 0.251); // #526B40
+uniform vec3 meadow_warm : source_color = vec3(0.322, 0.420, 0.251); // #526B40
 uniform vec3 flower_warm : source_color = vec3(0.820, 0.678, 0.302); // #D1AD4D
 uniform vec3 flower_cool : source_color = vec3(0.878, 0.831, 0.682); // #E0D4AE
 uniform vec3 gravel_color : source_color = vec3(0.573, 0.565, 0.502); // #929080
 uniform vec3 forest_floor : source_color = vec3(0.204, 0.302, 0.204); // #344D34
-uniform vec3 road_earth : source_color = vec3(0.690, 0.573, 0.424); // #B0926C
+uniform vec3 road_earth : source_color = vec3(0.671, 0.537, 0.388); // #AB8963
 uniform vec3 wheat_gold : source_color = vec3(0.788, 0.635, 0.290); // #C9A24A
 uniform vec3 wheat_furrow : source_color = vec3(0.420, 0.310, 0.165);
 uniform float macro_metres = 8.0;
@@ -41,6 +41,13 @@ uniform vec2 world_size_xz = vec2(175.0, 175.0);
 uniform vec3 beach_color : source_color = vec3(0.090, 0.153, 0.165); // #17272A
 uniform vec3 rock_shore : source_color = vec3(0.078, 0.125, 0.141); // #142024
 uniform vec3 wet_sand : source_color = vec3(0.070, 0.110, 0.125); // #121C20
+uniform sampler2D meadow_tex : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D forest_tex : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D dirt_tex : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D rock_tex : source_color, filter_linear_mipmap, repeat_enable;
+uniform float tex_mix = 0.58;
+uniform float tex_repeat_meadow = 3.64;
+uniform float tex_repeat_forest = 2.91;
 uniform float beach_margin_metres = 5.0;
 uniform float coast_jut_metres = 14.0;
 uniform float apron_mode = 0.0;
@@ -117,6 +124,24 @@ void fragment() {
 	grass = mix(grass, grass_sunlit, smoothstep(0.62, 0.94, patch) * 0.12);
 	grass = mix(grass, meadow_warm, smoothstep(0.74, 0.98, broad) * 0.10);
 	grass = mix(grass, forest_floor, clamp(dark_grass * 0.72, 0.0, 0.26));
+	// GFX-M authored 1024² maps. World-space UVs, then tint to the
+	// Nordic splat so photoreal scans do not break KayKit.
+	if (tex_mix > 0.01) {
+		vec2 muv = world_pos.xz / max(tex_repeat_meadow, 1.5);
+		vec2 fuv = world_pos.xz / max(tex_repeat_forest, 1.2);
+		vec3 meadow_s = texture(meadow_tex, muv).rgb;
+		vec3 forest_s = texture(forest_tex, fuv).rgb;
+		vec3 dirt_s = texture(dirt_tex, muv * 1.15).rgb;
+		vec3 rock_s = texture(rock_tex, fuv * 1.35).rgb;
+		meadow_s = mix(meadow_s, grass, 0.38);
+		forest_s = mix(forest_s, forest_floor, 0.40);
+		dirt_s = mix(dirt_s, dirt_color, 0.45);
+		rock_s = mix(rock_s, gravel_color, 0.50);
+		vec3 authored = mix(meadow_s, forest_s, clamp(dark_grass * 0.85, 0.0, 0.55));
+		authored = mix(authored, dirt_s, dirt_mask * 0.55);
+		authored = mix(authored, rock_s, dirt_mask * 0.22);
+		grass = mix(grass, authored, tex_mix);
+	}
 	// Blade-scale tuft striping so the meadow is not a painted slab.
 	if (lod_cheap < 0.5) {
 		float tuft = abs(fract(world_pos.x * 1.85 + world_pos.z * 0.35 + patch * 0.4) - 0.5);

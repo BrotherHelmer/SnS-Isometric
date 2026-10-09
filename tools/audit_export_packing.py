@@ -28,10 +28,10 @@ ASSET_CATALOG_GROUPS = {
         "res://assets/settlement3d/runtime/animations/Rig_Medium/Rig_Medium_Tools.glb",
     ],
     "BUILDINGS": [
-        "res://assets/settlement3d/runtime/opening_style/town_hall.tscn",
-        "res://assets/settlement3d/runtime/opening_style/castle.tscn",
-        "res://assets/settlement3d/runtime/opening_style/house.tscn",
-        "res://assets/settlement3d/runtime/opening_style/lumber_camp.tscn",
+        "res://assets/settlement3d/runtime/buildings/building_castle_green.gltf",
+        "res://assets/settlement3d/runtime/buildings/building_castle_green.gltf",
+        "res://assets/settlement3d/runtime/buildings/building_home_A_green.gltf",
+        "res://assets/settlement3d/runtime/buildings/building_lumbermill_green.gltf",
         "res://assets/settlement3d/runtime/opening_style/quarry.tscn",
         "res://assets/settlement3d/runtime/opening_style/farm.tscn",
         "res://assets/settlement3d/runtime/opening_style/bakery.tscn",
@@ -97,6 +97,12 @@ ASSET_CATALOG_GROUPS = {
     ],
     "GRASS": [
         "res://assets/settlement3d/runtime/opening_style/grass.tscn",
+    ],
+    "TERRAIN": [
+        "res://assets/settlement3d/runtime/gfx/terrain/meadow_diff.jpg",
+        "res://assets/settlement3d/runtime/gfx/terrain/forest_diff.jpg",
+        "res://assets/settlement3d/runtime/gfx/terrain/dirt_diff.jpg",
+        "res://assets/settlement3d/runtime/gfx/terrain/rock_diff.jpg",
     ],
     "FLOWERS": [
         "res://assets/settlement3d/runtime/opening_style/flowers.tscn",
@@ -181,7 +187,7 @@ def file_exists(res_path):
 
 RUNTIME_ROOT = "res://assets/settlement3d/runtime"
 MODEL_EXT = (".tscn", ".res", ".gltf", ".glb")
-LITERAL_MODEL_RE = re.compile(r'res://[A-Za-z0-9_./-]+\.(?:tscn|res|gltf|glb)')
+LITERAL_MODEL_RE = re.compile(r'res://[A-Za-z0-9_./-]+\.(?:tscn|res|gltf|glb|jpg|png)')
 ROOT_CONCAT_RE = re.compile(
     r'(?:ROOT|Catalog\.ROOT)\s*\+\s*["\']([^"\']+\.(?:tscn|res|gltf|glb))["\']'
 )

@@ -23,8 +23,8 @@ static func road_width_metres() -> float:
 # change presentation mass only and never alter authoritative footprints.
 const BUILDING_MODEL_SCALE := {
 	"ENEMY_CAMP": 2.0,
-	"TOWN_HALL": 2.00,
-	"CASTLE": 2.00,
+	"TOWN_HALL": 2.80,
+	"CASTLE": 2.80,
 	"HOUSE": 4.40,
 	"LUMBER_CAMP": 2.50,
 	"SAWMILL": 2.60,
@@ -44,8 +44,8 @@ const BUILDING_MODEL_SCALE := {
 const BUILDING_UNIT_SIZE := {
 	"LUMEN_PILLAR": Vector3(0.8, 1.3, 0.8),
 	"ENEMY_CAMP": Vector3(3.0, 3.7, 2.8),
-	"TOWN_HALL": Vector3(3.0, 3.7, 2.8),
-	"CASTLE": Vector3(3.0, 3.7, 2.8),
+	"TOWN_HALL": Vector3(1.9754, 3.9792, 2.2563),
+	"CASTLE": Vector3(1.9754, 3.9792, 2.2563),
 	"HOUSE": Vector3(0.7918, 0.9300, 0.8536),
 	"LUMBER_CAMP": Vector3(1.3667, 1.7080, 1.1893),
 	"SAWMILL": Vector3(1.3667, 1.7080, 1.1893),

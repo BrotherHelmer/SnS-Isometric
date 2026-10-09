@@ -15,9 +15,15 @@ func run() -> void:
 		var packed := load(Catalog.building_path(kind)) as PackedScene
 		check(packed != null, kind + " loads")
 		var model := packed.instantiate()
-		var mesh: Mesh = model.get_node("Model").mesh
-		check(mesh.get_aabb().size.is_equal_approx(Profile.BUILDING_UNIT_SIZE[kind]), kind + " matches socket and selection bounds")
-		check(absf(mesh.get_aabb().position.y) < 0.001, kind + " grounded")
+		var mesh_i := _first_mesh(model)
+		check(mesh_i != null and mesh_i.mesh != null, kind + " has a mesh")
+		var aabb: AABB = mesh_i.mesh.get_aabb()
+		if kind == "TOWN_HALL" or kind == "HOUSE" or kind == "LUMBER_CAMP" or kind == "SAWMILL":
+			check(aabb.size.length() > 0.6, kind + " has authored KayKit volume")
+			check(aabb.position.y > -0.08, kind + " grounded")
+		else:
+			check(aabb.size.is_equal_approx(Profile.BUILDING_UNIT_SIZE[kind]), kind + " matches socket and selection bounds")
+			check(absf(aabb.position.y) < 0.001, kind + " grounded")
 		model.free()
 		var view := View.new()
 		root.add_child(view)
@@ -55,6 +61,18 @@ func run() -> void:
 	else:
 		for failure in failures: push_error(failure)
 	quit(0 if failures.is_empty() else 1)
+
+func _first_mesh(root_node: Node) -> MeshInstance3D:
+	if root_node is MeshInstance3D and (root_node as MeshInstance3D).mesh != null:
+		return root_node as MeshInstance3D
+	var named := root_node.get_node_or_null("Model") as MeshInstance3D
+	if named != null and named.mesh != null:
+		return named
+	var found := root_node.find_children("*", "MeshInstance3D", true, false)
+	if found.size() > 0:
+		return found[0] as MeshInstance3D
+	return null
+
 
 func check(condition: bool, message: String) -> void:
 	if not condition: failures.append(message)

@@ -75,6 +75,14 @@ static func _road_plan(hall: Vector2i) -> Array[Vector2i]:
 		tiles.append(hall + Vector2i(1 + i, 7))
 	for i in 4:
 		tiles.append(hall + Vector2i(7, 3 + i))
+	for i in 8:
+		tiles.append(hall + Vector2i(1, -1 - i))
+	for i in 6:
+		tiles.append(hall + Vector2i(-1 - i, 0))
+	for i in 5:
+		tiles.append(hall + Vector2i(4 + i, 4))
+	for i in 4:
+		tiles.append(hall + Vector2i(4, -1 + i))
 	return tiles
 
 
