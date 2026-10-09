@@ -379,8 +379,11 @@ func _create_workyard() -> void:
 			# Existing civic supplies stay inside the hall's yard and do not add
 			# occupancy, resources or new buildings to the simulation.
 			_add_prop("barrel", Vector3(-2.15, 0.0, 2.5), Vector3.ONE * 3.5, "FoundingBarrel")
+			_add_prop("barrel", Vector3(-1.45, 0.0, 2.65), Vector3.ONE * 3.1, "FoundingBarrelB")
 			_add_prop("crate", Vector3(-2.55, 0.0, 1.7), Vector3.ONE * 3.5, "FoundingCrate")
 			_add_prop("wheelbarrow", Vector3(2.70, 0.0, 2.5), Vector3.ONE * 0.45, "FoundingWheelbarrow", "", Vector3(0.0, 25.0, 0.0))
+			_add_k_notice_board(Vector3(0.85, 0.0, 2.55))
+			_add_k_flag(Vector3(1.55, 0.0, 2.35))
 			# Issue #5: Castle upgrade - add military features when barracks built
 			if building_type == "CASTLE":
 				# Add battlements/fortifications
@@ -424,10 +427,15 @@ func _create_workyard() -> void:
 				royal_flag.position = Vector3(-0.55, 6.5, -0.5)
 				royal_flag.material_override = _material(Color("#7a4a3a"), 0.0)
 				workyard_root.add_child(royal_flag)
+		"HOUSE":
+			_add_prop("wood_stack", Vector3(-1.85, 0.0, 1.55), Vector3.ONE * 0.72, "HouseWoodpile")
+			_add_prop("barrel", Vector3(1.65, 0.0, 1.45), Vector3.ONE * 2.4, "HouseBarrel")
 		"LUMBER_CAMP":
 			# Issue #2 fix: Lumber Camp - more rustic forest camp with stacks and tools
 			_add_prop("wood_stack", Vector3(-2.75, 0.0, 0.55), Vector3.ONE * 1.2, "DecorativeLumber")
+			_add_prop("wood_stack", Vector3(-1.55, 0.0, 1.25), Vector3.ONE * 0.95, "DecorativeLumberB")
 			_add_prop("wood_stack", Vector3(-0.45, 0.0, -1.65), Vector3.ONE * 0.85, "InventoryIndicatorWood", "wood")
+			_add_prop("plank_stack", Vector3(1.85, 0.0, 1.35), Vector3.ONE * 0.88, "CampPlanks")
 			_add_prop("work_axe", Vector3(-2.00, 0.55, 1.35), Vector3.ONE * 1.15, "DecorativeWorkAxe", "", Vector3(0.0, 0.0, -24.0))
 			_add_prop("wheelbarrow", Vector3(2.8, 0.0, 0.35), Vector3.ONE * 0.75, "CampWheelbarrow", "", Vector3(0.0, 45.0, 0.0))
 			# Add a simple tent-like structure marker
@@ -474,6 +482,8 @@ func _create_workyard() -> void:
 			_add_prop("stone_stack", Vector3(3.15, 0.0, 0.20), Vector3.ONE * 0.85, "InventoryIndicatorStone", "stone")
 			_add_prop("wheelbarrow", Vector3(-3.10, 0.0, 0.35), Vector3.ONE * 0.8, "DecorativeWheelbarrow")
 		"FARM":
+			_add_prop("crate", Vector3(2.45, 0.0, 1.15), Vector3.ONE * 0.85, "FarmSack")
+			_add_prop("barrel", Vector3(1.85, 0.0, 1.45), Vector3.ONE * 2.1, "FarmBasket")
 			# GFX-H: aligned crop rows so fields read at gameplay zoom,
 			# not a scatter of gold sticks on an olive sheet.
 			for row in range(5):
@@ -834,6 +844,50 @@ func _update_activity_presentation(active: bool, night: bool) -> void:
 		lantern_light.light_color = Color("#8a5a6a") if faction == "rival" else Color("#6bcfe0")
 
 
+func _add_k_notice_board(local_position: Vector3) -> void:
+	var board := MeshInstance3D.new()
+	board.name = "DressNoticeBoard"
+	var board_mesh := BoxMesh.new()
+	board_mesh.size = Vector3(0.72, 0.85, 0.08)
+	board.mesh = board_mesh
+	board.position = local_position + Vector3(0.0, 0.72, 0.0)
+	board.material_override = _material(Color("#795436"), 0.0)
+	board.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	workyard_root.add_child(board)
+	var post := MeshInstance3D.new()
+	post.name = "DressNoticePost"
+	var post_mesh := BoxMesh.new()
+	post_mesh.size = Vector3(0.08, 1.15, 0.08)
+	post.mesh = post_mesh
+	post.position = local_position + Vector3(0.0, 0.58, 0.0)
+	post.material_override = _material(Color("#493525"), 0.0)
+	post.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	workyard_root.add_child(post)
+
+
+func _add_k_flag(local_position: Vector3) -> void:
+	var pole := MeshInstance3D.new()
+	pole.name = "DressCivicFlag"
+	var pole_mesh := CylinderMesh.new()
+	pole_mesh.height = ScaleProfile.TOWN_HALL_WIDTH_METRES * 0.25
+	pole_mesh.top_radius = 0.035
+	pole_mesh.bottom_radius = 0.045
+	pole.mesh = pole_mesh
+	pole.position = local_position + Vector3(0.0, pole_mesh.height * 0.5, 0.0)
+	pole.material_override = _material(Color("#493525"), 0.0)
+	pole.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	workyard_root.add_child(pole)
+	var cloth := MeshInstance3D.new()
+	cloth.name = "DressCivicFlagCloth"
+	var cloth_mesh := BoxMesh.new()
+	cloth_mesh.size = Vector3(0.62, 0.38, 0.04)
+	cloth.mesh = cloth_mesh
+	cloth.position = local_position + Vector3(-0.28, pole_mesh.height - 0.18, 0.0)
+	cloth.material_override = _material(Color("#A13F35"), 0.0)
+	cloth.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	workyard_root.add_child(cloth)
+
+
 func _add_prop(prop_key: String, local_position: Vector3, prop_scale: Vector3, node_name: String, resource_type := "", rotation_degrees_value := Vector3.ZERO) -> void:
 	if not Catalog.WORKYARD_PROPS.has(prop_key):
 		return
@@ -881,7 +935,7 @@ func _material(color: Color, transparency: float) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
 	material.albedo_color = color
 	var kind := BuildingMaterials.classify(color)
-	material.roughness = 0.85 if kind != "metal" else BuildingMaterials.roughness_for(kind)
+	material.roughness = BuildingMaterials.roughness_for(kind)
 	material.metallic = 0.0 if kind != "metal" else 0.42
 	if transparency > 0.0 or color.a < 1.0:
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -892,7 +946,7 @@ func _apply_principal_trim() -> void:
 	# GFX-I: plaster / timber / roof / stone read at default zoom on the
 	# three principal archetypes. Geometry stays KayKit; trim is shared
 	# boxes so Town Hall, house and bakery get character without a remodel.
-	if building_type != "TOWN_HALL" and building_type != "CASTLE" and building_type != "HOUSE" and building_type != "BAKERY":
+	if building_type != "TOWN_HALL" and building_type != "CASTLE" and building_type != "HOUSE" and building_type != "BAKERY" and building_type != "LUMBER_CAMP" and building_type != "SAWMILL":
 		return
 	var plaster := _material(BuildingMaterials.WARM_PLASTER, 0.0)
 	var timber := _material(BuildingMaterials.DARK_TIMBER, 0.0)
@@ -959,14 +1013,27 @@ func _apply_principal_trim() -> void:
 			plate_wall.position = side["pos"]
 			plate_wall.material_override = limestone
 			add_child(plate_wall)
-		var band := MeshInstance3D.new()
-		band.name = "TrimHallBand"
-		var band_mesh := BoxMesh.new()
-		band_mesh.size = Vector3(width * 0.88, 0.28, 0.08)
-		band.mesh = band_mesh
-		band.position = Vector3(0.0, wall_h * 0.38, _model_offset_z() + depth * 0.49)
-		band.material_override = limestone
-		add_child(band)
+		# GFX-K: two horizontal stone bands + pale corner pilasters.
+		for band_i in 2:
+			var band := MeshInstance3D.new()
+			band.name = "TrimHallBand" if band_i == 0 else "TrimHallBandUpper"
+			var band_mesh := BoxMesh.new()
+			band_mesh.size = Vector3(width * 0.88, wall_h * 0.035, 0.08)
+			band.mesh = band_mesh
+			band.position = Vector3(0.0, wall_h * (0.28 if band_i == 0 else 0.58), _model_offset_z() + depth * 0.49)
+			band.material_override = limestone
+			add_child(band)
+		for index in 4:
+			var pilaster := MeshInstance3D.new()
+			pilaster.name = "TrimPilaster_%d" % index
+			var pilaster_mesh := BoxMesh.new()
+			pilaster_mesh.size = Vector3(width * 0.055, wall_h * 0.96, width * 0.055)
+			pilaster.mesh = pilaster_mesh
+			var sx := -1.0 if index < 2 else 1.0
+			var sz := -1.0 if index % 2 == 0 else 1.0
+			pilaster.position = Vector3(sx * width * 0.48, wall_h * 0.50, _model_offset_z() + sz * depth * 0.46)
+			pilaster.material_override = limestone
+			add_child(pilaster)
 		# Visible limestone quoins, door surround and window lintels so
 		# the landmark reads as pale stone at default zoom, not dark teal.
 		for index in 4:
@@ -1016,6 +1083,45 @@ func _apply_principal_trim() -> void:
 		awning.rotation.x = -0.28
 		awning.material_override = timber
 		add_child(awning)
+		# GFX-K house archetype: projecting beams, shutters, rear chimney.
+		for beam_i in 5:
+			var beam := MeshInstance3D.new()
+			beam.name = "TrimBeam_%d" % beam_i
+			var beam_mesh := BoxMesh.new()
+			beam_mesh.size = Vector3(width * 0.025, wall_h * 0.82, width * 0.012)
+			beam.mesh = beam_mesh
+			beam.position = Vector3((-0.32 + float(beam_i) * 0.16) * width, wall_h * 0.48, _model_offset_z() + depth * 0.50)
+			beam.material_override = timber
+			add_child(beam)
+		for side in [-1.0, 1.0]:
+			var shutter := MeshInstance3D.new()
+			shutter.name = "TrimShutter_%d" % int(side)
+			var shutter_mesh := BoxMesh.new()
+			shutter_mesh.size = Vector3(0.18, 0.62, 0.06)
+			shutter.mesh = shutter_mesh
+			shutter.position = Vector3(side * width * 0.22, wall_h * 0.56, _model_offset_z() + depth * 0.52)
+			shutter.material_override = timber
+			add_child(shutter)
+		if building_type == "HOUSE":
+			_create_chimney_marker(Vector3(width * 0.09, wall_h + 0.20 * width, _model_offset_z() - depth * 0.18))
+	if building_type == "LUMBER_CAMP" or building_type == "SAWMILL":
+		var shop_awning := MeshInstance3D.new()
+		shop_awning.name = "TrimAwning"
+		var shop_mesh := BoxMesh.new()
+		shop_mesh.size = Vector3(width * 0.48, 0.07, 0.62)
+		shop_awning.mesh = shop_mesh
+		shop_awning.position = Vector3(0.0, wall_h * 0.70, _model_offset_z() + depth * 0.56)
+		shop_awning.rotation.x = -0.24
+		shop_awning.material_override = timber
+		add_child(shop_awning)
+		var shop_fascia := MeshInstance3D.new()
+		shop_fascia.name = "TrimShopFascia"
+		var shop_fascia_mesh := BoxMesh.new()
+		shop_fascia_mesh.size = Vector3(width * 1.02, wall_h * 0.02, width * 0.025)
+		shop_fascia.mesh = shop_fascia_mesh
+		shop_fascia.position = Vector3(0.0, wall_h + 0.18, _model_offset_z() + depth * 0.50)
+		shop_fascia.material_override = timber
+		add_child(shop_fascia)
 
 
 func _create_building_identity_markers() -> void:

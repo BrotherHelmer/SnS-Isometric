@@ -11,10 +11,10 @@ uniform vec3 mist_color = vec3(0.090, 0.153, 0.165);
 uniform vec2 world_min_xz = vec2(-87.5, -87.5);
 uniform vec2 world_size_xz = vec2(175.0, 175.0);
 uniform float unknown_opacity : hint_range(0.0, 1.0) = 1.0;
-uniform float explored_opacity : hint_range(0.0, 1.0) = 0.45;
+uniform float explored_opacity : hint_range(0.0, 1.0) = 0.55;
 uniform float cell_metres = 2.5;
 uniform float feather_cells = 1.25;
-uniform float noise_strength : hint_range(0.0, 1.0) = 0.55;
+uniform float noise_strength : hint_range(0.0, 1.0) = 0.12;
 uniform float shore_fade_metres = 4.0;
 
 varying vec2 world_xz;

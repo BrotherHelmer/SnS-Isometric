@@ -12,6 +12,12 @@ const TOOL_MODEL_SCALE := 0.82
 const CARGO_MODEL_SCALE := 1.08
 # GFX-06: 18% narrower than GFX-1 (1.18 → 0.97) so lanes sit in the soil.
 const ROAD_WIDTH_SCALE := 0.97
+# GFX-K: W is the Town Hall's 4×4 world footprint. R is the rendered road.
+const TOWN_HALL_WIDTH_METRES := 10.0
+
+
+static func road_width_metres() -> float:
+	return LOGICAL_CELL_METRES * ROAD_WIDTH_SCALE
 
 # Phase 2.1 visual calibration. Characters remain the reference; these values
 # change presentation mass only and never alter authoritative footprints.

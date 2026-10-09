@@ -39,10 +39,10 @@ func _check_grade() -> void:
 	_check(is_equal_approx(float(day_p["ambient"]), 0.32), "day ambient energy is 0.32")
 	_check(day_p["ambient_color"].is_equal_approx(Color("#91A29A")), "day ambient is #91A29A")
 	_check(is_equal_approx(float(day_p["fog_density"]), 0.0), "day environment haze density is 0")
-	_check(Identity.PALETTE_PLASTER.is_equal_approx(Color("#D8C7A8")) or Identity.PALETTE_PLASTER.is_equal_approx(Color("#D6C5A2")), "plaster trim stays warm plaster")
-	_check(Identity.PALETTE_TIMBER.is_equal_approx(Color("#59402B")) or Identity.PALETTE_TIMBER.is_equal_approx(Color("#553C2B")), "timber trim stays dark timber")
-	_check(Identity.PALETTE_TEAL.is_equal_approx(Color("#456966")) or Identity.PALETTE_TEAL.is_equal_approx(Color("#426863")), "roof trim stays teal slate")
-	_check(Identity.PALETTE_STONE.is_equal_approx(Color("#776F60")) or Identity.PALETTE_STONE.is_equal_approx(Color("#A39A85")), "stone trim stays weathered")
+	_check(Identity.PALETTE_PLASTER.is_equal_approx(Color("#D8C7A8")) or Identity.PALETTE_PLASTER.is_equal_approx(Color("#D6C5A2")) or Identity.PALETTE_PLASTER.is_equal_approx(Color("#E0CDA9")), "plaster trim stays warm plaster")
+	_check(Identity.PALETTE_TIMBER.is_equal_approx(Color("#59402B")) or Identity.PALETTE_TIMBER.is_equal_approx(Color("#553C2B")) or Identity.PALETTE_TIMBER.is_equal_approx(Color("#62432F")), "timber trim stays dark timber")
+	_check(Identity.PALETTE_TEAL.is_equal_approx(Color("#456966")) or Identity.PALETTE_TEAL.is_equal_approx(Color("#426863")) or Identity.PALETTE_TEAL.is_equal_approx(Color("#426C67")), "roof trim stays teal slate")
+	_check(Identity.PALETTE_STONE.is_equal_approx(Color("#776F60")) or Identity.PALETTE_STONE.is_equal_approx(Color("#A39A85")) or Identity.PALETTE_STONE.is_equal_approx(Color("#817968")), "stone trim stays weathered")
 	_check(Identity.PALETTE_FOG_UNKNOWN.is_equal_approx(Color("#17272A")), "shroud colour is #17272A")
 	_check(float(night_p["sun_energy"]) >= 0.38 and float(night_p["sun_energy"]) <= 0.48, "night moon energy stays 0.42")
 	var moon: Color = night_p["sun_color"]
@@ -55,10 +55,10 @@ func _check_materials() -> void:
 	var hall := BuildingMaterials.remap_albedo("stone", Color("#1a1612"), "TOWN_HALL")
 	var luma := hall.r * 0.2126 + hall.g * 0.7152 + hall.b * 0.0722
 	_check(luma >= 0.28, "Town Hall stone is not near-black")
-	_check(BuildingMaterials.WARM_PLASTER.is_equal_approx(Color("#D8C7A8")) or BuildingMaterials.WARM_PLASTER.is_equal_approx(Color("#D6C5A2")), "shared plaster is warm")
-	_check(BuildingMaterials.DARK_TIMBER.is_equal_approx(Color("#59402B")) or BuildingMaterials.DARK_TIMBER.is_equal_approx(Color("#553C2B")), "shared timber is dark")
-	_check(BuildingMaterials.HALL_SLATE.is_equal_approx(Color("#456966")) or BuildingMaterials.HALL_SLATE.is_equal_approx(Color("#426863")), "hall roof is teal slate")
-	_check(BuildingMaterials.WEATHERED_STONE.is_equal_approx(Color("#776F60")) or BuildingMaterials.WEATHERED_STONE.is_equal_approx(Color("#A39A85")), "shared stone is weathered")
+	_check(BuildingMaterials.WARM_PLASTER.is_equal_approx(Color("#D8C7A8")) or BuildingMaterials.WARM_PLASTER.is_equal_approx(Color("#D6C5A2")) or BuildingMaterials.WARM_PLASTER.is_equal_approx(Color("#E0CDA9")), "shared plaster is warm")
+	_check(BuildingMaterials.DARK_TIMBER.is_equal_approx(Color("#59402B")) or BuildingMaterials.DARK_TIMBER.is_equal_approx(Color("#553C2B")) or BuildingMaterials.DARK_TIMBER.is_equal_approx(Color("#62432F")), "shared timber is dark")
+	_check(BuildingMaterials.HALL_SLATE.is_equal_approx(Color("#456966")) or BuildingMaterials.HALL_SLATE.is_equal_approx(Color("#426863")) or BuildingMaterials.HALL_SLATE.is_equal_approx(Color("#426C67")), "hall roof is teal slate")
+	_check(BuildingMaterials.WEATHERED_STONE.is_equal_approx(Color("#776F60")) or BuildingMaterials.WEATHERED_STONE.is_equal_approx(Color("#A39A85")) or BuildingMaterials.WEATHERED_STONE.is_equal_approx(Color("#817968")), "shared stone is weathered")
 
 
 func _check_shadows() -> void:

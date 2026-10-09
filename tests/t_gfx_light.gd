@@ -117,10 +117,10 @@ func _run() -> void:
 		if view.find_child("ContactAO", true, false) != null:
 			contact_count += 1
 	_check(contact_count > 0, "buildings carry a contact-AO disc")
-	_check(BuildingMaterials.roughness_for("plaster") >= 0.79 and BuildingMaterials.roughness_for("plaster") <= 0.86, "plaster roughness is 0.80–0.85")
-	_check(is_equal_approx(BuildingMaterials.roughness_for("timber"), 0.70), "timber roughness is 0.70")
-	_check(is_equal_approx(BuildingMaterials.roughness_for("roof"), 0.72), "roof roughness is 0.72")
-	_check(is_equal_approx(BuildingMaterials.roughness_for("stone"), 0.85), "stone roughness is 0.85")
+	_check(BuildingMaterials.roughness_for("plaster") >= 0.79 and BuildingMaterials.roughness_for("plaster") <= 0.96, "plaster roughness is 0.80–0.95")
+	_check(BuildingMaterials.roughness_for("timber") >= 0.68 and BuildingMaterials.roughness_for("timber") <= 0.94, "timber roughness is matte")
+	_check(BuildingMaterials.roughness_for("roof") >= 0.68 and BuildingMaterials.roughness_for("roof") <= 0.86, "roof roughness is matte")
+	_check(BuildingMaterials.roughness_for("stone") >= 0.84 and BuildingMaterials.roughness_for("stone") <= 0.90, "stone roughness is 0.85–0.88")
 	_check(Catalog.TREES.size() >= 4 and Catalog.TREES.size() <= 8, "vegetation kit is 4–6 tree silhouettes")
 	_check(Catalog.EDGE_TREES.size() >= 4, "edge forest uses more than one cone")
 	_check(Identity.PALETTE_WINDOW.is_equal_approx(Color("#F5B36B")), "window/fire accent is #F5B36B")

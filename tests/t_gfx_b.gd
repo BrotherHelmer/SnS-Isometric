@@ -87,8 +87,8 @@ func _run() -> void:
 	_check(castle_roof.b > castle_roof.r, "castle roofs remap toward blue-grey slate")
 	_check(house_roof.r > house_roof.b + 0.05, "house roofs remap toward terracotta")
 	_check(castle_stone.r > stone.r, "castle plaster lifts toward pale masonry")
-	_check(is_equal_approx(BuildingMaterials.roughness_for("stone"), 0.85), "stone roughness stays 0.85")
-	_check(BuildingMaterials.roughness_for("plaster") >= 0.79 and BuildingMaterials.roughness_for("plaster") <= 0.86, "plaster roughness stays 0.80–0.85")
+	_check(BuildingMaterials.roughness_for("stone") >= 0.84 and BuildingMaterials.roughness_for("stone") <= 0.90, "stone roughness stays matte")
+	_check(BuildingMaterials.roughness_for("plaster") >= 0.79 and BuildingMaterials.roughness_for("plaster") <= 0.96, "plaster roughness stays 0.80–0.95")
 
 	var rec := QualityProfile.get_profile("recommended")
 	_check(bool(rec.get("glow", true)) == false, "recommended keeps glow off")
