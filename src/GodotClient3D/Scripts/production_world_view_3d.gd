@@ -637,11 +637,11 @@ func _apply_ground_material(host: MeshInstance3D) -> void:
 	# Stay olive-green; do not return to the yellow-lime GFX-D wash.
 	var road_w := ScaleProfile.road_width_metres()
 	_apply_meadow_palette(material)
-	material.set_shader_parameter("macro_metres", maxf(8.0, 3.0 * road_w))
+	material.set_shader_parameter("macro_metres", maxf(8.0, 4.0 * road_w))
 	material.set_shader_parameter("patch_metres", maxf(1.94, 0.8 * road_w))
 	material.set_shader_parameter("detail_metres", 1.10)
 	material.set_shader_parameter("macro_amount", 0.12)
-	material.set_shader_parameter("detail_amount", 0.12)
+	material.set_shader_parameter("detail_amount", 0.08)
 	material.set_shader_parameter("dirt_amount", 0.56)
 	material.set_shader_parameter("flower_amount", 0.22)
 	material.set_shader_parameter("stone_amount", 0.28)
@@ -674,7 +674,7 @@ func _bind_terrain_textures(material: ShaderMaterial) -> void:
 		material.set_shader_parameter("dirt_tex", dirt)
 	if rock != null:
 		material.set_shader_parameter("rock_tex", rock)
-	material.set_shader_parameter("tex_mix", 0.12)
+	material.set_shader_parameter("tex_mix", 0.16)
 	material.set_shader_parameter("tex_repeat_meadow", 1.5 * ScaleProfile.road_width_metres())
 	material.set_shader_parameter("tex_repeat_forest", 1.2 * ScaleProfile.road_width_metres())
 	if road_control_texture != null:
@@ -685,18 +685,19 @@ func _bind_terrain_textures(material: ShaderMaterial) -> void:
 
 
 func _apply_meadow_palette(material: ShaderMaterial) -> void:
-	# GFX-O review meadow. Palette hexes, no lift toward chalk.
-	material.set_shader_parameter("grass_sunlit", Vector3(0.451, 0.525, 0.314))
-	material.set_shader_parameter("grass_moss", Vector3(0.227, 0.318, 0.208))
-	material.set_shader_parameter("meadow_lush", Vector3(0.333, 0.427, 0.247))
-	material.set_shader_parameter("meadow_warm", Vector3(0.451, 0.525, 0.314))
-	material.set_shader_parameter("meadow_shade", Vector3(0.243, 0.349, 0.220))
-	material.set_shader_parameter("forest_floor", Vector3(0.204, 0.286, 0.208))
-	material.set_shader_parameter("dirt_color", Vector3(0.525, 0.404, 0.282))
-	material.set_shader_parameter("road_earth", Vector3(0.678, 0.553, 0.400))
-	material.set_shader_parameter("road_shoulder", Vector3(0.525, 0.404, 0.282))
-	material.set_shader_parameter("road_rut", Vector3(0.408, 0.322, 0.231))
-	material.set_shader_parameter("gravel_color", Vector3(0.729, 0.659, 0.557))
+	# GFX-P meadow richness on the O occupy / distance-field baseline.
+	material.set_shader_parameter("grass_sunlit", Vector3(0.447, 0.533, 0.325))
+	material.set_shader_parameter("grass_moss", Vector3(0.204, 0.294, 0.200))
+	material.set_shader_parameter("meadow_lush", Vector3(0.325, 0.424, 0.247))
+	material.set_shader_parameter("meadow_warm", Vector3(0.447, 0.533, 0.325))
+	material.set_shader_parameter("meadow_shade", Vector3(0.251, 0.353, 0.212))
+	material.set_shader_parameter("forest_floor", Vector3(0.204, 0.294, 0.200))
+	material.set_shader_parameter("dirt_color", Vector3(0.545, 0.439, 0.314))
+	material.set_shader_parameter("road_earth", Vector3(0.624, 0.502, 0.357))
+	material.set_shader_parameter("road_compacted", Vector3(0.506, 0.388, 0.267))
+	material.set_shader_parameter("road_shoulder", Vector3(0.467, 0.420, 0.306))
+	material.set_shader_parameter("road_rut", Vector3(0.400, 0.314, 0.224))
+	material.set_shader_parameter("gravel_color", Vector3(0.702, 0.627, 0.518))
 
 
 func set_road_debug(enabled: bool) -> void:
@@ -3306,17 +3307,17 @@ func _opening_forest_score(tile: Vector2i, hall: Vector2i) -> float:
 
 
 func _opening_ridge_tiles(hall: Vector2i) -> Array[Vector2i]:
-	# GFX-O: flanks plus one camera-side mass so the ridge reads from
-	# the gameplay camera. +tile.y is toward the lens.
+	# GFX-P: one back/upper formation. No large foreground rocks.
+	# Camera looks from +tile.y, so back is -Y.
 	return [
-		hall + Vector2i(-6, -1),
-		hall + Vector2i(-7, 1),
-		hall + Vector2i(-7, 3),
-		hall + Vector2i(-5, 4),
-		hall + Vector2i(7, -2),
-		hall + Vector2i(8, 0),
-		hall + Vector2i(7, 2),
-		hall + Vector2i(6, 4),
+		hall + Vector2i(4, -3),
+		hall + Vector2i(5, -4),
+		hall + Vector2i(6, -3),
+		hall + Vector2i(7, -4),
+		hall + Vector2i(5, -2),
+		hall + Vector2i(3, -4),
+		hall + Vector2i(6, -5),
+		hall + Vector2i(4, -5),
 	]
 
 
@@ -3331,15 +3332,15 @@ func opening_camera_focus() -> Vector3:
 
 
 func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
-	# GFX-L rocky ridge + meandering creek. Cosmetic only.
-	# KayKit CC0 rocks (Forest Nature Pack) plus bevelled masses.
+	# GFX-P: one back/upper rock formation 1.5–2.0B × 0.4–0.7B plus
+	# a west-forest creek ribbon. Cosmetic only. No foreground rocks.
 	var ridge := Node3D.new()
 	ridge.name = "DressRidge"
 	ridge.set_meta("cosmetic_only", true)
 	host.add_child(ridge)
-	var highlight := _ridge_material(Color("#B3A78E"), 0.92)
-	var midtone := _ridge_material(Color("#8E8A78"), 0.92)
-	var shade := _ridge_material(Color("#596258"), 0.92)
+	var highlight := _ridge_material(Color("#B9AC92"), 0.92)
+	var midtone := _ridge_material(Color("#918C79"), 0.92)
+	var shade := _ridge_material(Color("#61675B"), 0.92)
 	var b := ScaleProfile.TOWN_HALL_WIDTH_METRES
 	var r := ScaleProfile.road_width_metres()
 	var house_h := 0.930 * 4.40
@@ -3367,6 +3368,28 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 		if Catalog.ROCKS.size() > 1:
 			_spawn_kaykit_ridge_rock(ridge, tile, index, 0.70 + float(index % 4) * 0.08)
 		index += 1
+	var formation := MeshInstance3D.new()
+	formation.name = "RidgeFormation"
+	formation.mesh = _back_ridge_formation_mesh(b * 1.72, b * 0.52)
+	var anchor := tiles[2] if tiles.size() > 2 else hall + Vector2i(0, -7)
+	formation.position = tile_to_world(Vector2(anchor)) + Vector3(0.0, 0.0, -0.8)
+	formation.rotation.y = 0.18
+	formation.material_override = midtone
+	ridge.add_child(formation)
+	var formation_hi := MeshInstance3D.new()
+	formation_hi.name = "RidgeFormationCap"
+	formation_hi.mesh = _back_ridge_formation_mesh(b * 0.95, b * 0.38)
+	formation_hi.position = formation.position + Vector3(-1.6, 0.0, -1.1)
+	formation_hi.rotation.y = -0.31
+	formation_hi.material_override = highlight
+	ridge.add_child(formation_hi)
+	var formation_shade := MeshInstance3D.new()
+	formation_shade.name = "RidgeFormationShade"
+	formation_shade.mesh = _back_ridge_formation_mesh(b * 0.82, b * 0.34)
+	formation_shade.position = formation.position + Vector3(2.1, 0.0, -0.6)
+	formation_shade.rotation.y = 0.52
+	formation_shade.material_override = shade
+	ridge.add_child(formation_shade)
 	_spawn_meandering_creek(ridge, hall, r)
 
 
@@ -3380,9 +3403,9 @@ func _spawn_kaykit_ridge_rock(ridge: Node3D, tile: Vector2i, index: int, scale_m
 	prop.position = tile_to_world(Vector2(tile)) + Vector3(0.55, 0.0, -0.40)
 	prop.rotation.y = float(index) * 0.73
 	prop.scale = Vector3.ONE * clampf(scale_mul, 0.55, 1.15)
-	var tint := Color("#8E8A78") if index % 3 != 0 else Color("#B3A78E")
+	var tint := Color("#918C79") if index % 3 != 0 else Color("#B9AC92")
 	if index % 3 == 2:
-		tint = Color("#596258")
+		tint = Color("#61675B")
 	for child in prop.find_children("*", "MeshInstance3D", true, false):
 		var mesh_i := child as MeshInstance3D
 		var mat := StandardMaterial3D.new()
@@ -3394,67 +3417,76 @@ func _spawn_kaykit_ridge_rock(ridge: Node3D, tile: Vector2i, index: int, scale_m
 
 
 func _spawn_meandering_creek(ridge: Node3D, hall: Vector2i, road_w: float) -> void:
-	# Curve3D ribbon. No long turquoise rectangles.
+	# GFX-P: west-forest ribbon. Continues under the trees. Not a
+	# diagonal wedge across the village. Width 0.55–0.75R ±12%.
 	var tiles: Array[Vector2i] = [
-		hall + Vector2i(-4, 3),
-		hall + Vector2i(-2, 5),
-		hall + Vector2i(0, 6),
-		hall + Vector2i(2, 7),
-		hall + Vector2i(4, 6),
-		hall + Vector2i(5, 4),
-		hall + Vector2i(6, 2),
+		hall + Vector2i(-5, -2),
+		hall + Vector2i(-6, 1),
+		hall + Vector2i(-6, 4),
+		hall + Vector2i(-5, 7),
+		hall + Vector2i(-7, 10),
+		hall + Vector2i(-8, 13),
+		hall + Vector2i(-9, 16),
 	]
 	var points: Array[Vector3] = []
 	for tile in tiles:
 		if simulation != null and simulation.is_inside_map(tile):
-			points.append(tile_to_world(Vector2(tile)) + Vector3(0.0, 0.05, 0.0))
+			points.append(tile_to_world(Vector2(tile)) + Vector3(0.0, 0.04, 0.0))
 	if points.size() < 5:
 		return
-	var width := clampf(road_w * 0.88, road_w * 0.70, road_w * 1.0)
-	var bank := _ridge_material(Color("#857055"), 0.92)
+	var width := clampf(road_w * 0.65, road_w * 0.55, road_w * 0.75)
+	var bank := _ridge_material(Color("#786C50"), 0.92)
+	var shallow := _ridge_material(Color("#668F89"), 0.42)
 	var water := StandardMaterial3D.new()
 	water.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
 	water.albedo_color = Color("#345F65")
 	water.roughness = 0.35
 	water.metallic = 0.0
-	water.emission_enabled = true
-	water.emission = Color("#6B978F")
-	water.emission_energy_multiplier = 0.06
 	var mud := MeshInstance3D.new()
 	mud.name = "DressCreekBank"
-	mud.mesh = _creek_ribbon_mesh(points, width * 1.35)
+	mud.mesh = _creek_ribbon_mesh(points, width + road_w * 0.40, road_w)
 	mud.material_override = bank
 	mud.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	ridge.add_child(mud)
+	var shallows := MeshInstance3D.new()
+	shallows.name = "DressCreekShallow"
+	shallows.mesh = _creek_ribbon_mesh(points, width * 1.18, road_w)
+	shallows.position.y = 0.012
+	shallows.material_override = shallow
+	shallows.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	ridge.add_child(shallows)
 	var creek := MeshInstance3D.new()
 	creek.name = "DressCreek"
-	creek.mesh = _creek_ribbon_mesh(points, width)
-	creek.position.y = 0.02
+	creek.mesh = _creek_ribbon_mesh(points, width, road_w)
+	creek.position.y = 0.022
 	creek.material_override = water
 	creek.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	ridge.add_child(creek)
 
 
-func _creek_ribbon_mesh(points: Array[Vector3], width: float) -> ArrayMesh:
+func _creek_ribbon_mesh(points: Array[Vector3], width: float, road_w: float = 2.425) -> ArrayMesh:
+	# Sampled Curve3D. Full width at the ends — no triangular cap.
+	# bake 0.15R, sample 0.20R, width wobble ±12%.
 	var curve := Curve3D.new()
 	for point in points:
 		curve.add_point(point)
-	curve.bake_interval = 0.45
+	curve.bake_interval = maxf(0.12, 0.15 * road_w)
 	var length := maxf(curve.get_baked_length(), 1.0)
 	var tool := SurfaceTool.new()
 	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var samples := 36
+	var step := maxf(0.16, 0.20 * road_w)
+	var samples := maxi(24, int(ceil(length / step)))
 	var prev_left := Vector3.ZERO
 	var prev_right := Vector3.ZERO
 	for i in samples + 1:
 		var offset := length * float(i) / float(samples)
 		var pos := curve.sample_baked(offset)
-		var ahead := curve.sample_baked(minf(length, offset + 0.35))
+		var ahead := curve.sample_baked(minf(length, offset + step))
 		var tangent := ahead - pos
 		tangent.y = 0.0
 		if tangent.length() < 0.001:
 			tangent = Vector3(0.0, 0.0, 1.0)
-		var wobble := 1.0 + sin(float(i) * 0.73 + width) * 0.16
+		var wobble := 1.0 + sin(float(i) * 0.61 + width) * 0.12
 		var side := Vector3(-tangent.z, 0.0, tangent.x).normalized() * (width * 0.5 * wobble)
 		var left := pos + side
 		var right := pos - side
@@ -3463,6 +3495,31 @@ func _creek_ribbon_mesh(points: Array[Vector3], width: float) -> ArrayMesh:
 			_ridge_tri(tool, prev_left, right, left)
 		prev_left = left
 		prev_right = right
+	tool.generate_normals()
+	return tool.commit()
+
+
+func _back_ridge_formation_mesh(width: float, height: float) -> ArrayMesh:
+	# One mass 1.5–2.0B wide, 0.4–0.7B tall. Irregular bevel, not a box.
+	var tool := SurfaceTool.new()
+	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var count := 11
+	var top: Array[Vector3] = []
+	var bottom: Array[Vector3] = []
+	for i in count:
+		var ang := TAU * float(i) / float(count)
+		var radial := 0.78 + float((i * 7) % 5) * 0.05
+		var rx := width * 0.50 * radial
+		var rz := width * 0.28 * (0.82 + float((i * 3) % 4) * 0.06)
+		top.append(Vector3(cos(ang) * rx, height * (0.72 + float(i % 3) * 0.08), sin(ang) * rz))
+		bottom.append(Vector3(cos(ang) * rx * 1.08, 0.0, sin(ang) * rz * 1.10))
+	var apex := Vector3(0.15 * width, height * 1.04, -0.06 * width)
+	for i in count:
+		var n := (i + 1) % count
+		_ridge_tri(tool, apex, bottom[i], bottom[n])
+		_ridge_tri(tool, top[i], top[n], apex)
+		_ridge_tri(tool, bottom[i], top[i], top[n])
+		_ridge_tri(tool, bottom[i], top[n], bottom[n])
 	tool.generate_normals()
 	return tool.commit()
 

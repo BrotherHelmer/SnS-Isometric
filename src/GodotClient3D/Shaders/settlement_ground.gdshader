@@ -1,26 +1,27 @@
 shader_type spatial;
 render_mode diffuse_lambert, specular_disabled;
 
-// The Director: GFX-O. Diagnose then own the final albedo.
-// terrain_debug 1 = magenta (shader is live), 2 = solid #556D3F,
-// 3 = red road mask over dark green. Road control is linear data.
+// The Director: GFX-P. Keep occupy + debug modes. Worn path edges
+// and meadow richness sit on the GFX-O distance field.
+// terrain_debug 1 = magenta, 2 = solid meadow, 3 = red road mask.
 uniform vec3 light_tint : source_color = vec3(1.0);
 uniform float tint_floor = 0.0;
 uniform float tint_wash_lo = 0.70;
 uniform float tint_wash_hi = 0.94;
-uniform vec3 grass_sunlit : source_color = vec3(0.451, 0.525, 0.314); // #738650
-uniform vec3 grass_moss : source_color = vec3(0.227, 0.318, 0.208); // #3A5135
-uniform vec3 dirt_color : source_color = vec3(0.525, 0.404, 0.282); // #866748
-uniform vec3 meadow_lush : source_color = vec3(0.333, 0.427, 0.247); // #556D3F
-uniform vec3 meadow_warm : source_color = vec3(0.451, 0.525, 0.314); // #738650
-uniform vec3 meadow_shade : source_color = vec3(0.243, 0.349, 0.220); // #3E5938
+uniform vec3 grass_sunlit : source_color = vec3(0.447, 0.533, 0.325); // #728853
+uniform vec3 grass_moss : source_color = vec3(0.204, 0.294, 0.200); // #344B33
+uniform vec3 dirt_color : source_color = vec3(0.545, 0.439, 0.314); // #8B7050
+uniform vec3 meadow_lush : source_color = vec3(0.325, 0.424, 0.247); // #536C3F
+uniform vec3 meadow_warm : source_color = vec3(0.447, 0.533, 0.325); // #728853
+uniform vec3 meadow_shade : source_color = vec3(0.251, 0.353, 0.212); // #405A36
 uniform vec3 flower_warm : source_color = vec3(0.820, 0.678, 0.302);
 uniform vec3 flower_cool : source_color = vec3(0.878, 0.831, 0.682);
-uniform vec3 gravel_color : source_color = vec3(0.729, 0.659, 0.557); // #BAA88E
-uniform vec3 forest_floor : source_color = vec3(0.204, 0.286, 0.208); // #344935
-uniform vec3 road_earth : source_color = vec3(0.678, 0.553, 0.400); // #AD8D66
-uniform vec3 road_shoulder : source_color = vec3(0.525, 0.404, 0.282); // #866748
-uniform vec3 road_rut : source_color = vec3(0.408, 0.322, 0.231); // #68523B
+uniform vec3 gravel_color : source_color = vec3(0.702, 0.627, 0.518); // #B3A084
+uniform vec3 forest_floor : source_color = vec3(0.204, 0.294, 0.200); // #344B33
+uniform vec3 road_earth : source_color = vec3(0.624, 0.502, 0.357); // #9F805B
+uniform vec3 road_compacted : source_color = vec3(0.506, 0.388, 0.267); // #816344
+uniform vec3 road_shoulder : source_color = vec3(0.467, 0.420, 0.306); // #776B4E
+uniform vec3 road_rut : source_color = vec3(0.400, 0.314, 0.224); // #665039
 uniform vec3 wheat_gold : source_color = vec3(0.788, 0.635, 0.290);
 uniform vec3 wheat_furrow : source_color = vec3(0.420, 0.310, 0.165);
 uniform float macro_metres = 8.0;
@@ -134,14 +135,14 @@ void fragment() {
 	float patch = lod_cheap > 0.5 ? noise2(patch_uv) : fbm(patch_uv);
 	float detail = lod_cheap > 0.5 ? 0.5 : fbm(detail_uv);
 
-	// Palette owns the meadow. No brightening above the lush hex.
-	vec3 grass = mix(grass_moss, meadow_lush, clamp(broad * 0.55 + patch * 0.45, 0.0, 1.0));
-	grass = mix(grass, grass_sunlit, smoothstep(0.70, 0.96, patch) * 0.16);
-	// Soft shade patches: #3E5938, max 0.35, 35–50% feather, 5R macro.
+	// Palette owns the meadow. Broad 4R / local 0.8R richness, no chalk.
+	vec3 grass = mix(grass_moss, meadow_lush, clamp(broad * 0.58 + patch * 0.42, 0.0, 1.0));
+	grass = mix(grass, grass_sunlit, smoothstep(0.60, 0.92, patch) * 0.28);
 	float shade_macro = fbm(world_pos.xz / max(macro_metres * 1.52, 12.0) + vec2(9.4, 2.1));
-	float shade_w = smoothstep(0.42, 0.78, shade_macro) * 0.35;
+	float shade_w = smoothstep(0.36, 0.72, shade_macro) * 0.44;
 	grass = mix(grass, meadow_shade, shade_w);
-	grass = mix(grass, forest_floor, smoothstep(0.62, 0.92, 1.0 - patch) * 0.14);
+	grass = mix(grass, forest_floor, smoothstep(0.58, 0.90, 1.0 - patch) * 0.18);
+	grass = mix(grass, dirt_color, smoothstep(0.78, 0.96, noise2(world_pos.xz * 0.19 + vec2(4.2, 8.1))) * 0.10);
 
 	if (tex_mix > 0.01) {
 		vec2 muv = world_pos.xz / max(tex_repeat_meadow, 1.5);
@@ -186,14 +187,20 @@ void fragment() {
 	ground *= macro_var;
 	ground = mix(ground, dirt_color, 0.04 * dirt_amount * (1.0 - occupy) * (1.0 - crop));
 
-	// Roads win last. smoothstep over the finished ground.
-	float road_w = smoothstep(0.12, 0.80, control);
+	// Worn paths. Keep the distance-field graph. Displace the edge
+	// ±0.07R with noise so the mask is no longer a rectangle.
+	float edge_noise = (fbm(world_pos.xz * 0.85 + vec2(2.4, 9.1)) - 0.5) * 2.0;
+	float worn = control + edge_noise * 0.08;
+	float road_w = smoothstep(0.08, 0.72, worn);
+	float center_w = smoothstep(0.36, 0.74, worn);
+	float shoulder_w = smoothstep(0.10, 0.34, worn) * (1.0 - center_w);
 	float across = abs(fract(world_pos.x * 0.21 + world_pos.z * 0.17) - 0.5);
 	float rut = (1.0 - smoothstep(0.0, 0.07, abs(across - 0.22)))
 		+ (1.0 - smoothstep(0.0, 0.07, abs(across - 0.28)));
-	vec3 road_col = mix(road_earth, road_shoulder, smoothstep(0.18, 0.62, 1.0 - control));
-	road_col = mix(road_col, road_rut, clamp(rut * 0.45 * road_w, 0.0, 0.45));
-	road_col = mix(road_col, gravel_color, smoothstep(0.82, 0.96, noise2(world_pos.xz * 3.1)) * 0.16 * road_w);
+	vec3 road_col = mix(road_compacted, road_earth, center_w);
+	road_col = mix(road_col, road_shoulder, clamp(shoulder_w * 0.85, 0.0, 0.175 / max(road_w, 0.08)));
+	road_col = mix(road_col, road_rut, clamp(rut * 0.40 * road_w, 0.0, 0.40));
+	road_col = mix(road_col, gravel_color, smoothstep(0.80, 0.96, noise2(world_pos.xz * 3.1)) * 0.18 * road_w);
 	ground = mix(ground, road_col, road_w);
 
 	float wash = smoothstep(tint_wash_lo, max(tint_wash_lo + 0.02, tint_wash_hi), broad);
