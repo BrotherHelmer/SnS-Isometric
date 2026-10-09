@@ -111,9 +111,12 @@ void fragment() {
 	float dirt_noise = lod_cheap > 0.5 ? broad : fbm(world_pos.xz / (macro_metres * 1.15) + vec2(4.8, 21.0));
 	float dirt_mask = smoothstep(0.48, 0.82, dirt_noise);
 	vec3 grass = mix(grass_moss, meadow_lush, clamp(broad * 0.55 + patch * 0.45, 0.0, 1.0));
-	grass = mix(grass, grass_sunlit, smoothstep(0.50, 0.90, patch) * 0.46);
-	grass = mix(grass, meadow_warm, smoothstep(0.68, 0.96, broad) * 0.22);
-	grass = mix(grass, forest_floor, smoothstep(0.08, 0.42, 1.0 - patch) * 0.28);
+	// GFX-J: dark-grass 15–25% toward forest edges / depressions.
+	// Soften the bright beige sunlit wash that read as yellow patches.
+	float dark_grass = smoothstep(0.08, 0.46, 1.0 - patch) * (0.55 + 0.45 * (1.0 - broad));
+	grass = mix(grass, grass_sunlit, smoothstep(0.62, 0.94, patch) * 0.18);
+	grass = mix(grass, meadow_warm, smoothstep(0.74, 0.98, broad) * 0.12);
+	grass = mix(grass, forest_floor, clamp(dark_grass * 0.72, 0.0, 0.26));
 	// Blade-scale tuft striping so the meadow is not a painted slab.
 	if (lod_cheap < 0.5) {
 		float tuft = abs(fract(world_pos.x * 1.85 + world_pos.z * 0.35 + patch * 0.4) - 0.5);
@@ -140,8 +143,12 @@ void fragment() {
 	// GFX-H keeps more of the splat so 37 roads stay readable at zoom 26.
 	float chew = lod_cheap > 0.5 ? 0.5 : noise2(world_pos.xz * 1.65 + vec2(2.4, 9.1));
 	occupy *= clamp(0.84 + (chew - 0.5) * 0.24, 0.68, 1.0);
-	vec3 occupy_albedo = mix(dirt_color, road_earth, smoothstep(0.28, 0.72, COLOR.r));
-	occupy_albedo = mix(occupy_albedo, COLOR.rgb, 0.82);
+	// Road shoulders: 20–35% of the road width, world-space noise, not
+	// a hard tile edge. Mid occupy = shoulder; high occupy = packed clay.
+	float shoulder = smoothstep(0.18, 0.55, occupy) * (1.0 - smoothstep(0.72, 0.94, occupy));
+	vec3 occupy_albedo = mix(dirt_color, road_earth, smoothstep(0.40, 0.88, COLOR.r));
+	occupy_albedo = mix(occupy_albedo, COLOR.rgb, 0.70);
+	occupy_albedo = mix(occupy_albedo, mix(dirt_color, grass, 0.35), shoulder * 0.55);
 	vec3 ground = mix(grass, occupy_albedo, occupy * (1.0 - crop));
 	if (crop > 0.08) {
 		float furrow = abs(fract(world_pos.x * 0.64 + world_pos.z * 0.05) - 0.5);

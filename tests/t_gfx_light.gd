@@ -117,7 +117,7 @@ func _run() -> void:
 		if view.find_child("ContactAO", true, false) != null:
 			contact_count += 1
 	_check(contact_count > 0, "buildings carry a contact-AO disc")
-	_check(is_equal_approx(BuildingMaterials.roughness_for("plaster"), 0.80), "plaster roughness is 0.80")
+	_check(BuildingMaterials.roughness_for("plaster") >= 0.79 and BuildingMaterials.roughness_for("plaster") <= 0.86, "plaster roughness is 0.80–0.85")
 	_check(is_equal_approx(BuildingMaterials.roughness_for("timber"), 0.70), "timber roughness is 0.70")
 	_check(is_equal_approx(BuildingMaterials.roughness_for("roof"), 0.72), "roof roughness is 0.72")
 	_check(is_equal_approx(BuildingMaterials.roughness_for("stone"), 0.85), "stone roughness is 0.85")

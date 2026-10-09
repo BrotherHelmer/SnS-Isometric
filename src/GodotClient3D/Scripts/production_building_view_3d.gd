@@ -880,7 +880,9 @@ func _tint_wheat(prop: Node) -> void:
 func _material(color: Color, transparency: float) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
 	material.albedo_color = color
-	material.roughness = BuildingMaterials.roughness_for(BuildingMaterials.classify(color))
+	var kind := BuildingMaterials.classify(color)
+	material.roughness = 0.85 if kind != "metal" else BuildingMaterials.roughness_for(kind)
+	material.metallic = 0.0 if kind != "metal" else 0.42
 	if transparency > 0.0 or color.a < 1.0:
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	return material
@@ -940,14 +942,69 @@ func _apply_principal_trim() -> void:
 	fascia.material_override = roof
 	add_child(fascia)
 	if building_type == "TOWN_HALL" or building_type == "CASTLE":
+		var limestone := _material(BuildingMaterials.CASTLE_LIMESTONE, 0.0)
+		# Broad limestone plates over the dark KayKit body so the hall
+		# reads as pale stone at zoom 26, not a teal box.
+		for side in [
+			{"name": "TrimFacade", "size": Vector3(width * 0.90, wall_h * 0.72, 0.16), "pos": Vector3(0.0, wall_h * 0.42, _model_offset_z() + depth * 0.50)},
+			{"name": "TrimFacadeBack", "size": Vector3(width * 0.90, wall_h * 0.72, 0.16), "pos": Vector3(0.0, wall_h * 0.42, _model_offset_z() - depth * 0.50)},
+			{"name": "TrimFacadeLeft", "size": Vector3(0.16, wall_h * 0.72, depth * 0.88), "pos": Vector3(-width * 0.50, wall_h * 0.42, _model_offset_z())},
+			{"name": "TrimFacadeRight", "size": Vector3(0.16, wall_h * 0.72, depth * 0.88), "pos": Vector3(width * 0.50, wall_h * 0.42, _model_offset_z())},
+		]:
+			var plate_wall := MeshInstance3D.new()
+			plate_wall.name = String(side["name"])
+			var plate_mesh_wall := BoxMesh.new()
+			plate_mesh_wall.size = side["size"]
+			plate_wall.mesh = plate_mesh_wall
+			plate_wall.position = side["pos"]
+			plate_wall.material_override = limestone
+			add_child(plate_wall)
 		var band := MeshInstance3D.new()
 		band.name = "TrimHallBand"
 		var band_mesh := BoxMesh.new()
 		band_mesh.size = Vector3(width * 0.88, 0.28, 0.08)
 		band.mesh = band_mesh
 		band.position = Vector3(0.0, wall_h * 0.38, _model_offset_z() + depth * 0.49)
-		band.material_override = plaster
+		band.material_override = limestone
 		add_child(band)
+		# Visible limestone quoins, door surround and window lintels so
+		# the landmark reads as pale stone at default zoom, not dark teal.
+		for index in 4:
+			var quoin := MeshInstance3D.new()
+			quoin.name = "TrimQuoin_%d" % index
+			var quoin_mesh := BoxMesh.new()
+			quoin_mesh.size = Vector3(0.34, wall_h * 0.92, 0.34)
+			quoin.mesh = quoin_mesh
+			var sx := -1.0 if index < 2 else 1.0
+			var sz := -1.0 if index % 2 == 0 else 1.0
+			quoin.position = Vector3(sx * width * 0.50, wall_h * 0.50, _model_offset_z() + sz * depth * 0.48)
+			quoin.material_override = limestone
+			add_child(quoin)
+		var door := MeshInstance3D.new()
+		door.name = "TrimEntrance"
+		var door_mesh := BoxMesh.new()
+		door_mesh.size = Vector3(1.15, 1.55, 0.16)
+		door.mesh = door_mesh
+		door.position = Vector3(0.0, 0.88, _model_offset_z() + depth * 0.52)
+		door.material_override = stone
+		add_child(door)
+		var lintel := MeshInstance3D.new()
+		lintel.name = "TrimLintel"
+		var lintel_mesh := BoxMesh.new()
+		lintel_mesh.size = Vector3(1.45, 0.22, 0.20)
+		lintel.mesh = lintel_mesh
+		lintel.position = Vector3(0.0, 1.72, _model_offset_z() + depth * 0.53)
+		lintel.material_override = limestone
+		add_child(lintel)
+		for side in [-1.0, 1.0]:
+			var window := MeshInstance3D.new()
+			window.name = "TrimWindow_%d" % int(side)
+			var window_mesh := BoxMesh.new()
+			window_mesh.size = Vector3(0.62, 0.72, 0.10)
+			window.mesh = window_mesh
+			window.position = Vector3(side * width * 0.28, wall_h * 0.58, _model_offset_z() + depth * 0.51)
+			window.material_override = limestone
+			add_child(window)
 		_create_chimney_marker(Vector3(width * 0.28, wall_h + 1.05, _model_offset_z() - depth * 0.12))
 	if building_type == "HOUSE" or building_type == "BAKERY":
 		var awning := MeshInstance3D.new()

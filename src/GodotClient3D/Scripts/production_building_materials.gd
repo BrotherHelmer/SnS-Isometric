@@ -1,14 +1,14 @@
 class_name ProductionBuildingMaterials
 extends RefCounted
 
-## GFX-I trim-sheet remap. Walks imported meshes. Does not remodel.
-## Town Hall / house / workshop share plaster #D6C5A2, timber #553C2B,
-## roof #426863, stone #A39A85. Hall masonry stays a readable midtone.
+## GFX-J landmark remap. Walks imported meshes. Does not remodel.
+## Limestone #C5B69B, plaster #D8C7A8, timber #59402B, slate #456966,
+## stone accent #776F60. Roughness 0.85 / metallic 0 on stone and plaster.
 
 const BevelShader = preload("res://src/GodotClient3D/Shaders/settlement_bevel.gdshader")
 
 const ROUGHNESS := {
-	"plaster": 0.80,
+	"plaster": 0.85,
 	"timber": 0.70,
 	"roof": 0.72,
 	"teal_roof": 0.68,
@@ -16,16 +16,17 @@ const ROUGHNESS := {
 	"metal": 0.34,
 }
 
-const CASTLE_MASONRY := Color("#D6C5A2")
-const CASTLE_SLATE := Color("#426863")
-const HALL_MASONRY := Color("#D6C5A2")
-const HALL_SLATE := Color("#426863")
+const CASTLE_LIMESTONE := Color("#C5B69B")
+const CASTLE_MASONRY := Color("#C5B69B")
+const CASTLE_SLATE := Color("#456966")
+const HALL_MASONRY := Color("#C5B69B")
+const HALL_SLATE := Color("#456966")
 const CLAY_ROOF := Color("#A75D39")
 const KEEP_SLATE := Color("#4A5A4C")
-const WARM_PLASTER := Color("#D6C5A2")
-const DARK_TIMBER := Color("#553C2B")
-const WEATHERED_STONE := Color("#A39A85")
-const HALL_LUMA_FLOOR := 0.30
+const WARM_PLASTER := Color("#D8C7A8")
+const DARK_TIMBER := Color("#59402B")
+const WEATHERED_STONE := Color("#776F60")
+const HALL_LUMA_FLOOR := 0.42
 
 static var _bevel_by_kind: Dictionary = {}
 
@@ -35,6 +36,8 @@ static func apply(root: Node, seed_id: int, building_type: String = "") -> void:
 		return
 	var shift := _instance_shift(seed_id)
 	_walk(root, shift, building_type)
+	if building_type == "TOWN_HALL" or building_type == "CASTLE":
+		_lift_landmark_walls(root)
 
 
 static func classify(albedo: Color) -> String:
@@ -66,23 +69,26 @@ static func remap_albedo(kind: String, color: Color, building_type: String) -> C
 	match building_type:
 		"CASTLE":
 			if kind == "plaster":
-				next = color.lerp(CASTLE_MASONRY, 0.72)
+				next = color.lerp(CASTLE_LIMESTONE, 0.92)
 			elif kind == "stone":
-				next = color.lerp(WEATHERED_STONE, 0.45).lerp(CASTLE_MASONRY, 0.28)
+				next = color.lerp(WEATHERED_STONE, 0.28).lerp(CASTLE_LIMESTONE, 0.78)
 			elif kind == "teal_roof" or kind == "roof":
-				next = color.lerp(CASTLE_SLATE, 0.82)
-			elif kind == "timber":
-				next = color.lerp(DARK_TIMBER, 0.55)
-		"TOWN_HALL":
-			if kind == "plaster":
-				next = color.lerp(HALL_MASONRY, 0.88)
-			elif kind == "stone":
-				next = color.lerp(WEATHERED_STONE, 0.72).lerp(HALL_MASONRY, 0.38)
-			elif kind == "teal_roof" or kind == "roof":
-				next = color.lerp(HALL_SLATE, 0.86)
+				next = color.lerp(CASTLE_SLATE, 0.88)
 			elif kind == "timber":
 				next = color.lerp(DARK_TIMBER, 0.70)
-			next = _lift_hall_luma(next)
+			if kind == "plaster" or kind == "stone":
+				next = _lift_hall_luma(next)
+		"TOWN_HALL":
+			if kind == "plaster":
+				next = color.lerp(CASTLE_LIMESTONE, 0.94)
+			elif kind == "stone":
+				next = color.lerp(WEATHERED_STONE, 0.22).lerp(CASTLE_LIMESTONE, 0.82)
+			elif kind == "teal_roof" or kind == "roof":
+				next = color.lerp(HALL_SLATE, 0.90)
+			elif kind == "timber":
+				next = color.lerp(DARK_TIMBER, 0.78)
+			if kind == "plaster" or kind == "stone":
+				next = _lift_hall_luma(next)
 		"HOUSE", "FARM", "BAKERY", "STOREHOUSE":
 			if kind == "teal_roof" or kind == "roof":
 				# House / bakery keep clay so t_gfx_d terracotta still holds.
@@ -177,6 +183,34 @@ static func _bevel_material(kind: String) -> ShaderMaterial:
 	material.set_shader_parameter("bevel_color", Vector3(color.r, color.g, color.b))
 	material.set_shader_parameter("bevel_amount", amount)
 	_bevel_by_kind[kind] = material
+	return material
+
+
+static func _lift_landmark_walls(node: Node) -> void:
+	# KayKit halls paint walls the same dark teal as the roof. Remap
+	# those dark faces to limestone so the landmark reads pale stone.
+	if node is MeshInstance3D:
+		var instance := node as MeshInstance3D
+		if instance.material_override is StandardMaterial3D:
+			instance.material_override = _limestone_if_dark_teal(instance.material_override as StandardMaterial3D)
+		if instance.mesh != null:
+			for surface in instance.mesh.get_surface_count():
+				var mat := instance.get_active_material(surface)
+				if mat is StandardMaterial3D:
+					instance.set_surface_override_material(surface, _limestone_if_dark_teal(mat as StandardMaterial3D))
+	for child in node.get_children():
+		_lift_landmark_walls(child)
+
+
+static func _limestone_if_dark_teal(source: StandardMaterial3D) -> StandardMaterial3D:
+	var color := source.albedo_color
+	var luma := color.r * 0.2126 + color.g * 0.7152 + color.b * 0.0722
+	if not (color.b > color.r + 0.02 and color.g > color.r and luma < 0.30):
+		return source
+	var material := source.duplicate() as StandardMaterial3D
+	material.albedo_color = CASTLE_LIMESTONE
+	material.roughness = 0.85
+	material.metallic = 0.0
 	return material
 
 
