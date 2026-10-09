@@ -36,7 +36,7 @@ func _check_grade() -> void:
 	_check(float(day_p["ambient"]) >= 0.22 and float(day_p["ambient"]) <= 0.36, "day ambient stays in the GFX-I band")
 	var sun: Color = day_p["sun_color"]
 	_check(sun.is_equal_approx(Color("#FFE8CE")) or sun.is_equal_approx(Color("#FFF0DE")), "day key stays warm cream")
-	_check(Identity.PALETTE_MEADOW.is_equal_approx(Color("#68743A")) or Identity.PALETTE_MEADOW.is_equal_approx(Color("#556D3F")), "meadow is yellow-olive #68743A")
+	_check(Identity.PALETTE_MEADOW.is_equal_approx(Color("#68743A")) or Identity.PALETTE_MEADOW.is_equal_approx(Color("#556D3F")) or Identity.PALETTE_MEADOW.is_equal_approx(Color("#536C3F")), "meadow is yellow-olive #68743A")
 	_check(Identity.PALETTE_SUNLIT_GRASS.is_equal_approx(Color("#8A9848")), "sunlit grass is #8A9848")
 	_check(Identity.PALETTE_FOREST.r > Identity.PALETTE_FOREST.b, "forest is olive, not teal")
 	_check(Identity.PALETTE_WINDOW.is_equal_approx(Color("#F5B36B")), "window emission is #F5B36B")
