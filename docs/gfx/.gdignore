@@ -1,0 +1,4 @@
+# Playtest CSVs are data logs, not Godot translations.
+*.csv
+*.translation
+*.csv.import

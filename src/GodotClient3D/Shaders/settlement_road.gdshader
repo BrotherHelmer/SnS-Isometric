@@ -3,10 +3,10 @@ render_mode diffuse_lambert, specular_disabled, cull_disabled, blend_mix;
 
 // The Director: GFX-K worn medieval paths. Compacted earth centre,
 // grass-blended shoulders, dark ruts and sparse gravel. Not a brown ribbon.
-uniform vec4 road_color : source_color = vec4(0.671, 0.537, 0.388, 1.0); // #AB8963
-uniform vec3 clay_color : source_color = vec3(0.671, 0.537, 0.388); // #AB8963
-uniform vec3 dirt_edge : source_color = vec3(0.502, 0.404, 0.278); // #806747
-uniform vec3 gravel_color : source_color = vec3(0.722, 0.639, 0.533); // #B8A388
+uniform vec4 road_color : source_color = vec4(0.682, 0.565, 0.427, 1.0); // #AE906D
+uniform vec3 clay_color : source_color = vec3(0.573, 0.439, 0.298); // #92704C
+uniform vec3 dirt_edge : source_color = vec3(0.424, 0.329, 0.235); // #6C543C
+uniform vec3 gravel_color : source_color = vec3(0.718, 0.631, 0.529); // #B7A187
 uniform vec3 light_tint : source_color = vec3(1.0);
 uniform float value_lift = 0.06;
 uniform float worn_darken = 0.16;

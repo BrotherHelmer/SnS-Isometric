@@ -2,8 +2,8 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://gfxmdirt_diff.jpg"
-path="res://.godot/imported/dirt_diff.jpg-gfxm.ctex"
+uid="uid://b41ov3ndwrxfn"
+path="res://.godot/imported/dirt_diff.jpg-ba6427ffea79ea5442a1122cd2470e68.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://assets/settlement3d/runtime/gfx/terrain/dirt_diff.jpg"
-dest_files=["res://.godot/imported/dirt_diff.jpg-gfxm.ctex"]
+dest_files=["res://.godot/imported/dirt_diff.jpg-ba6427ffea79ea5442a1122cd2470e68.ctex"]
 
 [params]
 

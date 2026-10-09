@@ -1,0 +1,10 @@
+elapsed,day,night,event,detail,wait_ms,frame_ms,errors
+1.7,1,0,opening_day,"opening composed on the ridge/creek landmark",7980.70,214.634,0
+27.3,1,0,build_day,"first house/road placed from the opening",2735.41,202.536,0
+28.9,1,0,scout_day,"guard scouting toward the west fog",4999.52,211.972,0
+343.7,1,1,first_night,"first night after the opening day",3113.53,191.339,0
+345.3,1,1,night_raid,"first night raid banner",2126.61,191.555,0
+901.6,2,0,fifteen_minutes,"first 15 game minutes complete",2865.49,238.169,0
+903.2,2,0,showcase_day,"15-building village after the live opening",3987.35,305.436,0
+904.8,2,0,showcase_wide,"showcase at the 1.5x zoom cap",4238.92,367.667,0
+906.4,2,0,fog_edge,"1.5x zoom at the unknown edge (day)",4189.19,366.407,0

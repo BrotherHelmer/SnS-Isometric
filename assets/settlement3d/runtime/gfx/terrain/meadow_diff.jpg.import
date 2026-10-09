@@ -2,8 +2,8 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://gfxmmeadow_diff.jpg"
-path="res://.godot/imported/meadow_diff.jpg-gfxm.ctex"
+uid="uid://6i0ld1yf0i16"
+path="res://.godot/imported/meadow_diff.jpg-769cbbdd37d1657dcbd0a40efc553732.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://assets/settlement3d/runtime/gfx/terrain/meadow_diff.jpg"
-dest_files=["res://.godot/imported/meadow_diff.jpg-gfxm.ctex"]
+dest_files=["res://.godot/imported/meadow_diff.jpg-769cbbdd37d1657dcbd0a40efc553732.ctex"]
 
 [params]
 
