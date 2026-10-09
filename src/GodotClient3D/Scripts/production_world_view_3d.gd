@@ -886,6 +886,8 @@ func _calculate_nature_layout_signature() -> int:
 
 func _rebuild_nature_multimeshes() -> void:
 	for child in resource_visuals_root.get_children():
+		if String(child.name) == "OpeningDress":
+			continue
 		resource_visuals_root.remove_child(child)
 		child.free()
 	var transforms_by_path: Dictionary = {}

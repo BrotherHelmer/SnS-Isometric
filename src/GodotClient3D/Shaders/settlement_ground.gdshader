@@ -137,7 +137,7 @@ void fragment() {
 	float wash = smoothstep(tint_wash_lo, max(tint_wash_lo + 0.02, tint_wash_hi), broad);
 	vec3 albedo = ground * mix(vec3(1.0), light_tint, mix(tint_floor, 1.0, wash)) * macro_var * detail_var;
 	vec3 shore = mix(beach_color, rock_shore, clamp(dirt_mask * 0.65 + broad * 0.35, 0.0, 1.0));
-	albedo = mix(albedo, shore, beach * (apron_mode > 0.5 ? 0.98 : 0.62));
+	albedo = mix(albedo, shore, beach * (apron_mode > 0.5 ? 0.98 : 0.82));
 	if (apron_mode > 0.5) {
 		float wet = 1.0 - smoothstep(0.0, 4.8, max(land, 0.0));
 		albedo = mix(albedo, wet_sand, wet * 0.78);

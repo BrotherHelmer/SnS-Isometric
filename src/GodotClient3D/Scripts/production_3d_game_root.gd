@@ -731,11 +731,11 @@ func _create_lighting() -> void:
 	environment.sky = sky
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.ambient_light_color = Color("#8799AA")
-	environment.ambient_light_energy = 0.20
+	environment.ambient_light_energy = 0.26
 	# The Director: GFX-G Filmic. Same 0.78 exposure; stronger SSAO and
 	# cooler fill so shadows read without lifting mean luma.
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	environment.tonemap_exposure = 0.78
+	environment.tonemap_exposure = 0.86
 	environment.tonemap_white = 6.0
 	environment.ssao_enabled = bool(quality_profile.get("ssao", quality_profile.get("shadows", true)))
 	environment.ssao_radius = 0.85
@@ -764,8 +764,8 @@ func _create_lighting() -> void:
 	environment.set("glow_levels/6", 0.0)
 	environment.set("glow_levels/7", 0.0)
 	environment.adjustment_enabled = true
-	environment.adjustment_saturation = 1.16
-	environment.adjustment_contrast = 1.14
+	environment.adjustment_saturation = 1.12
+	environment.adjustment_contrast = 1.12
 	environment.adjustment_brightness = 1.0
 	environment.adjustment_color_correction = Identity.grade_lut_for("day")
 	environment.fog_enabled = true

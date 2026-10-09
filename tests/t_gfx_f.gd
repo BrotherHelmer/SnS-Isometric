@@ -29,7 +29,7 @@ func _check_grade() -> void:
 	var day_p := Identity.lighting_palette("day")
 	var night_p := Identity.lighting_palette("night")
 	_check(float(day_p["saturation"]) >= 1.08 and float(day_p["saturation"]) <= 1.18, "day sat is 1.08–1.16")
-	_check(float(day_p["exposure"]) >= 0.74 and float(day_p["exposure"]) <= 0.82, "day exposure is 0.78")
+	_check(float(day_p["exposure"]) >= 0.74 and float(day_p["exposure"]) <= 0.90, "day exposure is Filmic 0.78–0.86")
 	_check(float(day_p["tonemap_white"]) >= 5.5 and float(day_p["tonemap_white"]) <= 6.5, "Filmic white is 6")
 	_check(float(day_p["sun_energy"]) >= 1.15 and float(day_p["sun_energy"]) <= 1.28, "day sun is 1.20–1.24")
 	_check(float(day_p["ambient"]) >= 0.18 and float(day_p["ambient"]) <= 0.30, "day ambient stays low")

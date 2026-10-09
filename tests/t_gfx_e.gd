@@ -35,7 +35,7 @@ func _check_grade() -> void:
 	var day_p := Identity.lighting_palette("day")
 	var night_p := Identity.lighting_palette("night")
 	_check(float(day_p["saturation"]) >= 1.04 and float(day_p["saturation"]) <= 1.16, "day saturation is GFX-F 1.04–1.16")
-	_check(float(day_p["exposure"]) >= 0.72 and float(day_p["exposure"]) <= 0.84, "day exposure is ~0.78")
+	_check(float(day_p["exposure"]) >= 0.72 and float(day_p["exposure"]) <= 0.90, "day exposure is Filmic 0.78–0.86")
 	_check(float(day_p["sun_energy"]) >= 1.10 and float(day_p["sun_energy"]) <= 1.30, "day sun energy is 1.10–1.30")
 	var tint: Color = day_p["ground_tint"]
 	_check(is_equal_approx(tint.r, 1.0) and is_equal_approx(tint.g, 1.0) and is_equal_approx(tint.b, 1.0), "day ground tint is neutral")

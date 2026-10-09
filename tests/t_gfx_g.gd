@@ -28,22 +28,22 @@ func _run() -> void:
 func _check_grade() -> void:
 	var day_p := Identity.lighting_palette("day")
 	var night_p := Identity.lighting_palette("night")
-	_check(float(day_p["saturation"]) >= 1.14 and float(day_p["saturation"]) <= 1.18, "day sat is 1.16")
-	_check(float(day_p["contrast"]) >= 1.12 and float(day_p["contrast"]) <= 1.16, "day contrast is 1.14")
-	_check(float(day_p["exposure"]) >= 0.74 and float(day_p["exposure"]) <= 0.82, "day exposure stays 0.78")
-	_check(float(day_p["sun_energy"]) >= 1.18 and float(day_p["sun_energy"]) <= 1.26, "day sun is ~1.22")
+	_check(float(day_p["saturation"]) >= 1.10 and float(day_p["saturation"]) <= 1.16, "day sat is 1.12")
+	_check(float(day_p["contrast"]) >= 1.10 and float(day_p["contrast"]) <= 1.16, "day contrast is 1.12")
+	_check(float(day_p["exposure"]) >= 0.82 and float(day_p["exposure"]) <= 0.90, "day exposure is 0.86")
+	_check(float(day_p["sun_energy"]) >= 1.18 and float(day_p["sun_energy"]) <= 1.28, "day sun is ~1.24")
 	_check(float(day_p["sun_pitch"]) <= -26.0 and float(day_p["sun_pitch"]) >= -32.0, "day sun pitch lengthens shadows")
-	_check(float(day_p["ambient"]) >= 0.18 and float(day_p["ambient"]) <= 0.24, "day ambient stays low")
+	_check(float(day_p["ambient"]) >= 0.22 and float(day_p["ambient"]) <= 0.30, "day ambient stays low")
 	var sun: Color = day_p["sun_color"]
 	_check(sun.is_equal_approx(Color("#FFF0DE")), "day key is #FFF0DE")
 	_check(Identity.PALETTE_MEADOW.is_equal_approx(Color("#68743A")), "meadow is yellow-olive #68743A")
 	_check(Identity.PALETTE_SUNLIT_GRASS.is_equal_approx(Color("#8A9848")), "sunlit grass is #8A9848")
 	_check(Identity.PALETTE_FOREST.r > Identity.PALETTE_FOREST.b, "forest is olive, not teal")
 	_check(Identity.PALETTE_WINDOW.is_equal_approx(Color("#F5B36B")), "window emission is #F5B36B")
-	_check(float(night_p["sun_energy"]) >= 0.44 and float(night_p["sun_energy"]) <= 0.52, "night moon is 0.48")
-	_check(float(night_p["ambient"]) >= 0.32 and float(night_p["ambient"]) <= 0.40, "night ambient is 0.36")
-	_check(float(night_p["exposure"]) >= 0.86 and float(night_p["exposure"]) <= 0.94, "night exposure is 0.90")
-	_check(float(night_p["atmosphere_scale"]) >= 0.65, "night atmosphere is lifted")
+	_check(float(night_p["sun_energy"]) >= 0.38 and float(night_p["sun_energy"]) <= 0.48, "night moon is 0.42")
+	_check(float(night_p["ambient"]) >= 0.26 and float(night_p["ambient"]) <= 0.34, "night ambient is 0.30")
+	_check(float(night_p["exposure"]) >= 0.80 and float(night_p["exposure"]) <= 0.88, "night exposure is 0.84")
+	_check(float(night_p["atmosphere_scale"]) >= 0.55, "night atmosphere is lifted")
 	_check(float(night_p["torch_range"]) >= 7.0, "night window pools reach the yard")
 	var moon: Color = night_p["sun_color"]
 	_check(moon.b > moon.r, "night key stays cool moonlight")
@@ -108,9 +108,9 @@ func _sim_night_check(game) -> void:
 	sim.is_night = true
 	sim.phase_time = 20.0
 	game._update_day_night_lighting()
-	_check(game.sun_light.light_energy >= 0.44, "live night moon is 0.48")
-	_check(game.environment_resource.ambient_light_energy >= 0.32, "live night ambient is 0.36")
-	_check(is_equal_approx(game.environment_resource.tonemap_exposure, 0.90) or game.environment_resource.tonemap_exposure >= 0.86, "live night exposure is 0.90")
+	_check(game.sun_light.light_energy >= 0.38, "live night moon is 0.42")
+	_check(game.environment_resource.ambient_light_energy >= 0.26, "live night ambient is 0.30")
+	_check(game.environment_resource.tonemap_exposure >= 0.80, "live night exposure is 0.84")
 	var dress: Node = game.world_view.resource_visuals_root.get_node_or_null("OpeningDress")
 	if dress != null:
 		var window: OmniLight3D = dress.find_child("DressWindow", true, false) as OmniLight3D

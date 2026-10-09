@@ -70,7 +70,7 @@ const PALETTE_WHEAT := Color("#C9A24A")
 
 const LIGHTING := {
 	"day": {
-		"ambient": 0.20,
+		"ambient": 0.26,
 		"ambient_color": Color("#7A8478"),
 		"fog_density": 0.00028,
 		"fog_color": Color("#B8C0C4"),
@@ -79,12 +79,12 @@ const LIGHTING := {
 		"fog_end": 70.0,
 		"fog_aerial": 0.40,
 		"fog_sun_scatter": 0.12,
-		"saturation": 1.16,
-		"contrast": 1.14,
-		"exposure": 0.78,
+		"saturation": 1.12,
+		"contrast": 1.12,
+		"exposure": 0.86,
 		"brightness": 1.0,
 		"tonemap_white": 6.0,
-		"sun_energy": 1.22,
+		"sun_energy": 1.24,
 		"sun_color": Color("#FFF0DE"),
 		"sun_pitch": -28.0,
 		"sun_orbit": 138.0,
@@ -142,7 +142,7 @@ const LIGHTING := {
 		"terrain_lod_cheap": 0.0
 	},
 	"night": {
-		"ambient": 0.36,
+		"ambient": 0.30,
 		"ambient_color": Color("#5A6E88"),
 		"fog_density": 0.00040,
 		"fog_color": Color("#17262A"),
@@ -151,12 +151,12 @@ const LIGHTING := {
 		"fog_end": 56.0,
 		"fog_aerial": 0.22,
 		"fog_sun_scatter": 0.06,
-		"saturation": 0.98,
-		"contrast": 1.12,
-		"exposure": 0.90,
+		"saturation": 0.96,
+		"contrast": 1.10,
+		"exposure": 0.84,
 		"brightness": 1.0,
 		"tonemap_white": 6.0,
-		"sun_energy": 0.48,
+		"sun_energy": 0.42,
 		"sun_color": PALETTE_MOON,
 		"sun_pitch": -48.0,
 		"sun_orbit": 300.0,
@@ -174,7 +174,7 @@ const LIGHTING := {
 		"torch_color": PALETTE_TORCH,
 		"torch_range": 8.0,
 		"road_lift": 0.08,
-		"atmosphere_scale": 0.72,
+		"atmosphere_scale": 0.62,
 		"terrain_lod_cheap": 1.0
 	},
 	"reckoning": {
@@ -371,12 +371,12 @@ static var _lut_cache: Dictionary = {}
 
 const GRADE := {
 	"day": {
-		"knots": [Vector2(0.0, 0.012), Vector2(0.18, 0.08), Vector2(0.45, 0.38), Vector2(0.72, 0.80), Vector2(1.0, 0.98)],
+		"knots": [Vector2(0.0, 0.02), Vector2(0.18, 0.12), Vector2(0.45, 0.44), Vector2(0.72, 0.82), Vector2(1.0, 0.98)],
 		"shadow": Color("#1C2820"),
 		"highlight": Color("#F6D6A0"),
-		"shadow_w": 0.16,
+		"shadow_w": 0.12,
 		"highlight_w": 0.10,
-		"chroma": 1.08
+		"chroma": 1.02
 	},
 	"dusk": {
 		"knots": [Vector2(0.0, 0.02), Vector2(0.18, 0.11), Vector2(0.45, 0.38), Vector2(0.72, 0.74), Vector2(1.0, 0.95)],
@@ -387,12 +387,12 @@ const GRADE := {
 		"chroma": 0.98
 	},
 	"night": {
-		"knots": [Vector2(0.0, 0.10), Vector2(0.18, 0.26), Vector2(0.45, 0.52), Vector2(0.72, 0.76), Vector2(1.0, 0.92)],
+		"knots": [Vector2(0.0, 0.05), Vector2(0.18, 0.18), Vector2(0.45, 0.42), Vector2(0.72, 0.70), Vector2(1.0, 0.90)],
 		"shadow": Color("#1A2838"),
 		"highlight": Color("#F5B36B"),
-		"shadow_w": 0.08,
-		"highlight_w": 0.14,
-		"chroma": 0.92
+		"shadow_w": 0.10,
+		"highlight_w": 0.12,
+		"chroma": 0.90
 	},
 	"reckoning": {
 		"knots": [Vector2(0.0, 0.05), Vector2(0.18, 0.18), Vector2(0.45, 0.44), Vector2(0.72, 0.70), Vector2(1.0, 0.88)],
