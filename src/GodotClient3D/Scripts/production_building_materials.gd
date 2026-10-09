@@ -17,16 +17,16 @@ const ROUGHNESS := {
 	"metal": 0.34,
 }
 
-const CASTLE_LIMESTONE := Color("#CDBD9F")
-const CASTLE_MASONRY := Color("#CDBD9F")
-const CASTLE_SLATE := Color("#456D68")
-const HALL_MASONRY := Color("#CDBD9F")
-const HALL_SLATE := Color("#456D68")
-const CLAY_ROOF := Color("#A96342")
+const CASTLE_LIMESTONE := Color("#C8BA9C")
+const CASTLE_MASONRY := Color("#C8BA9C")
+const CASTLE_SLATE := Color("#426B66")
+const HALL_MASONRY := Color("#C8BA9C")
+const HALL_SLATE := Color("#426B66")
+const CLAY_ROOF := Color("#A76140")
 const KEEP_SLATE := Color("#314B49")
-const WARM_PLASTER := Color("#E0CDAE")
-const DARK_TIMBER := Color("#64452F")
-const WEATHERED_STONE := Color("#716A5D")
+const WARM_PLASTER := Color("#DDCAA8")
+const DARK_TIMBER := Color("#5F422E")
+const WEATHERED_STONE := Color("#635B4C")
 const FOUNDATION_FACE := Color("#A99D82")
 const FOUNDATION_TOP := Color("#C1B394")
 const FOUNDATION_EDGE := Color("#756C5B")
@@ -145,6 +145,9 @@ static func _walk(node: Node, shift: Vector3, building_type: String) -> void:
 static func _tune(source: StandardMaterial3D, shift: Vector3, building_type: String) -> StandardMaterial3D:
 	var material := source.duplicate() as StandardMaterial3D
 	var kind := classify(material.albedo_color)
+	# KayKit hexagon atlas ships near-white albedo. Do not classify that as metal.
+	if material.albedo_texture != null and kind == "metal":
+		kind = "plaster" if building_type == "HOUSE" or building_type == "BAKERY" or building_type == "FARM" else "stone"
 	material.roughness = roughness_for(kind)
 	material.metallic = 0.42 if kind == "metal" else 0.0
 	var color := remap_albedo(kind, material.albedo_color, building_type)

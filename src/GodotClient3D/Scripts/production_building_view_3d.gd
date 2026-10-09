@@ -975,9 +975,11 @@ func _apply_principal_trim() -> void:
 	var depth := maxf(visual.z, 3.2)
 	var wall_h := maxf(visual.y * 0.42, 1.55)
 	var b := ScaleProfile.TOWN_HALL_WIDTH_METRES
-	var found_h := clampf(b * 0.048, 0.35, b * 0.06)
-	var found_w := width * 1.06
-	var found_d := depth * 1.06
+	# GFX-M: expose no more than 0.05B of stone. Inset so the KayKit
+	# castle is not mounted on a wider box.
+	var found_h := clampf(b * 0.028, 0.18, b * 0.05)
+	var found_w := width * 0.88
+	var found_d := depth * 0.88
 	var face := _foundation_material(BuildingMaterials.FOUNDATION_FACE)
 	var top := _foundation_material(BuildingMaterials.FOUNDATION_TOP)
 	var edge := _foundation_material(BuildingMaterials.FOUNDATION_EDGE)
@@ -1056,13 +1058,13 @@ func _apply_principal_trim() -> void:
 			panel.position = Vector3((-0.30 + float(panel_i) * 0.30) * width, found_h + panel_h * 0.52, _model_offset_z() + depth * 0.49)
 			panel.material_override = limestone
 			add_child(panel)
-		# Dark courtyard well so the KayKit yard top is not a pale slab.
+		# Small recessed well only — not a pale courtyard slab.
 		var well := MeshInstance3D.new()
 		well.name = "TrimCourtyardWell"
 		var well_mesh := BoxMesh.new()
-		well_mesh.size = Vector3(width * 0.58, 0.10, depth * 0.52)
+		well_mesh.size = Vector3(width * 0.22, 0.05, depth * 0.22)
 		well.mesh = well_mesh
-		well.position = Vector3(0.0, wall_h * 0.38, _model_offset_z() - depth * 0.04)
+		well.position = Vector3(0.0, found_h + 0.08, _model_offset_z() - depth * 0.04)
 		well.material_override = stone
 		add_child(well)
 		# Parapets / merlons so the silhouette reads as a castle wall.

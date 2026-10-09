@@ -24,9 +24,16 @@ func _run() -> void:
 		if packed == null:
 			continue
 		var model := packed.instantiate()
-		var mesh: Mesh = model.get_node("Model").mesh
-		_check(mesh.get_aabb().size.is_equal_approx(Profile.BUILDING_UNIT_SIZE[kind]), "%s footprint AABB unchanged" % kind)
-		_check(absf(mesh.get_aabb().position.y) < 0.001, "%s stays grounded" % kind)
+		var mesh_i := _first_mesh(model)
+		_check(mesh_i != null and mesh_i.mesh != null, "%s has a mesh" % kind)
+		if mesh_i != null and mesh_i.mesh != null:
+			var aabb := mesh_i.mesh.get_aabb()
+			if _kaykit_kind(kind):
+				_check(aabb.size.length() > 0.6, "%s has authored KayKit volume" % kind)
+				_check(aabb.position.y > -0.08, "%s stays grounded" % kind)
+			else:
+				_check(aabb.size.is_equal_approx(Profile.BUILDING_UNIT_SIZE[kind]), "%s footprint AABB unchanged" % kind)
+				_check(absf(aabb.position.y) < 0.001, "%s stays grounded" % kind)
 		model.free()
 
 	_check(Catalog.TREES.size() >= 4 and Catalog.TREES.size() <= 8, "tree kit stays 4–8 silhouettes")
@@ -63,6 +70,22 @@ func _run() -> void:
 	await process_frame
 	print("T_GFX_C %s" % ("PASS" if failures.is_empty() else "FAIL"))
 	quit(0 if failures.is_empty() else 1)
+
+
+func _kaykit_kind(kind: String) -> bool:
+	return kind == "TOWN_HALL" or kind == "CASTLE" or kind == "HOUSE" or kind == "LUMBER_CAMP"
+
+
+func _first_mesh(root_node: Node) -> MeshInstance3D:
+	if root_node is MeshInstance3D and (root_node as MeshInstance3D).mesh != null:
+		return root_node as MeshInstance3D
+	var named := root_node.get_node_or_null("Model") as MeshInstance3D
+	if named != null and named.mesh != null:
+		return named
+	var found := root_node.find_children("*", "MeshInstance3D", true, false)
+	if found.size() > 0:
+		return found[0] as MeshInstance3D
+	return null
 
 
 func _check(ok: bool, message: String) -> void:

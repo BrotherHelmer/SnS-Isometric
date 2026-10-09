@@ -641,11 +641,12 @@ func _apply_ground_material(host: MeshInstance3D) -> void:
 	material.set_shader_parameter("flower_amount", 0.40)
 	material.set_shader_parameter("stone_amount", 0.34)
 	material.set_shader_parameter("crop_amount", 1.0)
-	material.set_shader_parameter("meadow_lush", Vector3(0.353, 0.459, 0.271))
-	material.set_shader_parameter("meadow_warm", Vector3(0.353, 0.459, 0.271))
+	material.set_shader_parameter("meadow_lush", Vector3(0.322, 0.420, 0.251))
+	material.set_shader_parameter("meadow_warm", Vector3(0.322, 0.420, 0.251))
 	material.set_shader_parameter("forest_floor", Vector3(0.204, 0.302, 0.204))
 	material.set_shader_parameter("dirt_color", Vector3(0.533, 0.424, 0.286))
-	material.set_shader_parameter("road_earth", Vector3(0.690, 0.573, 0.424))
+	material.set_shader_parameter("road_earth", Vector3(0.671, 0.537, 0.388))
+	_bind_terrain_textures(material)
 	material.set_shader_parameter("wheat_gold", Vector3(0.788, 0.635, 0.290))
 	material.set_shader_parameter("gravel_color", Vector3(0.573, 0.565, 0.502))
 	material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
@@ -657,6 +658,26 @@ func _apply_ground_material(host: MeshInstance3D) -> void:
 	material.set_shader_parameter("coast_jut_metres", COAST_JUT_METRES)
 	material.set_shader_parameter("apron_mode", 0.0)
 	host.material_override = material
+
+
+func _bind_terrain_textures(material: ShaderMaterial) -> void:
+	# GFX-M: 1024² CC0 splat maps. Tint in the shader so photoreal scans
+	# stay in the Nordic KayKit family.
+	var meadow := load(Catalog.TERRAIN_TEXTURES["meadow"])
+	var forest := load(Catalog.TERRAIN_TEXTURES["forest"])
+	var dirt := load(Catalog.TERRAIN_TEXTURES["dirt"])
+	var rock := load(Catalog.TERRAIN_TEXTURES["rock"])
+	if meadow != null:
+		material.set_shader_parameter("meadow_tex", meadow)
+	if forest != null:
+		material.set_shader_parameter("forest_tex", forest)
+	if dirt != null:
+		material.set_shader_parameter("dirt_tex", dirt)
+	if rock != null:
+		material.set_shader_parameter("rock_tex", rock)
+	material.set_shader_parameter("tex_mix", 0.58)
+	material.set_shader_parameter("tex_repeat_meadow", 1.5 * ScaleProfile.road_width_metres())
+	material.set_shader_parameter("tex_repeat_forest", 1.2 * ScaleProfile.road_width_metres())
 
 
 func _rebuild_terrain_collision(mesh: Mesh) -> void:
@@ -2708,9 +2729,10 @@ func _rebuild_beach_apron() -> void:
 	# Terrain continues under the shroud — meadow language, not a teal void.
 	material.set_shader_parameter("grass_sunlit", Vector3(0.353, 0.459, 0.271))
 	material.set_shader_parameter("grass_moss", Vector3(0.204, 0.302, 0.204))
-	material.set_shader_parameter("meadow_lush", Vector3(0.353, 0.459, 0.271))
-	material.set_shader_parameter("meadow_warm", Vector3(0.353, 0.459, 0.271))
+	material.set_shader_parameter("meadow_lush", Vector3(0.322, 0.420, 0.251))
+	material.set_shader_parameter("meadow_warm", Vector3(0.322, 0.420, 0.251))
 	material.set_shader_parameter("forest_floor", Vector3(0.204, 0.302, 0.204))
+	_bind_terrain_textures(material)
 	material.set_shader_parameter("beach_color", Vector3(0.090, 0.153, 0.165))
 	material.set_shader_parameter("rock_shore", Vector3(0.078, 0.125, 0.141))
 	material.set_shader_parameter("wet_sand", Vector3(0.070, 0.110, 0.125))
@@ -3082,19 +3104,17 @@ func _spawn_opening_hamlet(host: Node3D, hall: Vector2i, reserved: Dictionary) -
 
 
 func _opening_ridge_tiles(hall: Vector2i) -> Array[Vector2i]:
-	# GFX-L: 2.5–3.5B diagonal ridge. +tile.y is toward the camera.
-	# Tiles stay outside the hall 4×4 and the cottage at hall+(-2,5).
+	# GFX-M: forest-edge ridge, not the camera-foreground foam blocks.
+	# +tile.y is toward the camera — keep rocks on the flanks / back.
 	return [
-		hall + Vector2i(0, 7),
-		hall + Vector2i(0, 6),
-		hall + Vector2i(1, 6),
-		hall + Vector2i(2, 6),
-		hall + Vector2i(3, 7),
-		hall + Vector2i(-3, 5),
-		hall + Vector2i(-4, 4),
-		hall + Vector2i(-5, 3),
-		hall + Vector2i(-5, 4),
-		hall + Vector2i(1, 7),
+		hall + Vector2i(-6, -1),
+		hall + Vector2i(-7, 1),
+		hall + Vector2i(-7, 3),
+		hall + Vector2i(-5, -3),
+		hall + Vector2i(7, -2),
+		hall + Vector2i(8, 0),
+		hall + Vector2i(7, 2),
+		hall + Vector2i(6, -4),
 	]
 
 
@@ -3115,11 +3135,12 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 	ridge.name = "DressRidge"
 	ridge.set_meta("cosmetic_only", true)
 	host.add_child(ridge)
-	var highlight := _ridge_material(Color("#C5B99D"), 0.86)
-	var midtone := _ridge_material(Color("#A99F89"), 0.88)
-	var shade := _ridge_material(Color("#64695C"), 0.90)
+	var highlight := _ridge_material(Color("#B4AA92"), 0.92)
+	var midtone := _ridge_material(Color("#8E8C78"), 0.92)
+	var shade := _ridge_material(Color("#626B61"), 0.92)
 	var b := ScaleProfile.TOWN_HALL_WIDTH_METRES
 	var r := ScaleProfile.road_width_metres()
+	var house_h := 0.930 * 4.40
 	var tiles := _opening_ridge_tiles(hall)
 	var index := 0
 	for tile in tiles:
@@ -3127,12 +3148,12 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 			continue
 		var block := MeshInstance3D.new()
 		block.name = "RidgeRock_%d" % index
-		var wide := b * (0.22 + float(index % 5) * 0.08)
-		var tall := b * (0.40 + float(index % 4) * 0.08)
-		tall = minf(tall, b * 0.72)
+		var wide := b * (0.18 + float(index % 5) * 0.07)
+		wide = clampf(wide, b * 0.15, b * 0.55)
+		var tall := minf(house_h * 0.35, b * 0.16)
 		block.mesh = _bevelled_ridge_mesh(index, wide, tall)
 		var world := tile_to_world(Vector2(tile))
-		block.position = world + Vector3(float(index % 2) * 0.45, 0.0, float((index + 1) % 2) * -0.32)
+		block.position = world + Vector3(float(index % 2) * 0.28, 0.0, float((index + 1) % 2) * -0.22)
 		block.rotation.y = float(index) * 0.47
 		if index % 3 == 0:
 			block.material_override = highlight
@@ -3142,7 +3163,7 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 			block.material_override = shade
 		ridge.add_child(block)
 		if Catalog.ROCKS.size() > 1:
-			_spawn_kaykit_ridge_rock(ridge, tile, index, tall / maxf(1.6, b * 0.18))
+			_spawn_kaykit_ridge_rock(ridge, tile, index, 0.70 + float(index % 4) * 0.08)
 		index += 1
 	_spawn_meandering_creek(ridge, hall, r)
 
@@ -3156,15 +3177,15 @@ func _spawn_kaykit_ridge_rock(ridge: Node3D, tile: Vector2i, index: int, scale_m
 	prop.name = "RidgeKaykit_%d" % index
 	prop.position = tile_to_world(Vector2(tile)) + Vector3(0.55, 0.0, -0.40)
 	prop.rotation.y = float(index) * 0.73
-	prop.scale = Vector3.ONE * clampf(scale_mul, 1.8, 4.2)
-	var tint := Color("#A99F89") if index % 3 != 0 else Color("#C5B99D")
+	prop.scale = Vector3.ONE * clampf(scale_mul, 0.55, 1.15)
+	var tint := Color("#8E8C78") if index % 3 != 0 else Color("#B4AA92")
 	if index % 3 == 2:
-		tint = Color("#64695C")
+		tint = Color("#626B61")
 	for child in prop.find_children("*", "MeshInstance3D", true, false):
 		var mesh_i := child as MeshInstance3D
 		var mat := StandardMaterial3D.new()
 		mat.albedo_color = tint
-		mat.roughness = 0.88
+		mat.roughness = 0.92
 		mat.metallic = 0.0
 		mesh_i.material_override = mat
 	ridge.add_child(prop)
@@ -3187,16 +3208,16 @@ func _spawn_meandering_creek(ridge: Node3D, hall: Vector2i, road_w: float) -> vo
 			points.append(tile_to_world(Vector2(tile)) + Vector3(0.0, 0.05, 0.0))
 	if points.size() < 5:
 		return
-	var width := clampf(road_w * 0.82, road_w * 0.65, road_w * 1.0)
-	var bank := _ridge_material(Color("#786B54"), 0.92)
+	var width := clampf(road_w * 0.82, road_w * 0.60, road_w * 1.0)
+	var bank := _ridge_material(Color("#8A7658"), 0.92)
 	var water := StandardMaterial3D.new()
 	water.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
-	water.albedo_color = Color("#315C61")
-	water.roughness = 0.28
+	water.albedo_color = Color("#315D62")
+	water.roughness = 0.32
 	water.metallic = 0.0
 	water.emission_enabled = true
-	water.emission = Color("#6C9994")
-	water.emission_energy_multiplier = 0.08
+	water.emission = Color("#638D86")
+	water.emission_energy_multiplier = 0.04
 	var mud := MeshInstance3D.new()
 	mud.name = "DressCreekBank"
 	mud.mesh = _creek_ribbon_mesh(points, width * 1.35)
@@ -3220,7 +3241,7 @@ func _creek_ribbon_mesh(points: Array[Vector3], width: float) -> ArrayMesh:
 	var length := maxf(curve.get_baked_length(), 1.0)
 	var tool := SurfaceTool.new()
 	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var samples := 28
+	var samples := 36
 	var prev_left := Vector3.ZERO
 	var prev_right := Vector3.ZERO
 	for i in samples + 1:
@@ -3231,7 +3252,8 @@ func _creek_ribbon_mesh(points: Array[Vector3], width: float) -> ArrayMesh:
 		tangent.y = 0.0
 		if tangent.length() < 0.001:
 			tangent = Vector3(0.0, 0.0, 1.0)
-		var side := Vector3(-tangent.z, 0.0, tangent.x).normalized() * (width * 0.5)
+		var wobble := 1.0 + sin(float(i) * 0.73 + width) * 0.16
+		var side := Vector3(-tangent.z, 0.0, tangent.x).normalized() * (width * 0.5 * wobble)
 		var left := pos + side
 		var right := pos - side
 		if i > 0:
