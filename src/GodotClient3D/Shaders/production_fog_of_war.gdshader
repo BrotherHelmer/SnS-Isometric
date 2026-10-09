@@ -61,6 +61,7 @@ void fragment() {
 	float frontier = (1.0 - inside) * (1.0 - smoothstep(0.6, max(shore_fade_metres * 0.55, 2.5), dist_out));
 	ALBEDO = mix(ALBEDO, mist_color, frontier * 0.35);
 	float inward_m = min(min(raw_uv.x, 1.0 - raw_uv.x), min(raw_uv.y, 1.0 - raw_uv.y)) * min(world_size_xz.x, world_size_xz.y);
-	float edge_veil = (1.0 - smoothstep(4.0, max(shore_fade_metres, 8.0), inward_m)) * inside;
-	ALPHA = max(mix(unknown_opacity, unknown * unknown_opacity, inside), edge_veil * 0.88);
+	float edge_veil = (1.0 - smoothstep(1.5, max(shore_fade_metres, 12.0), inward_m)) * inside;
+	ALBEDO = mix(ALBEDO, mix(unknown_color, mist_color, 0.40), edge_veil * 0.78);
+	ALPHA = max(mix(unknown_opacity, unknown * unknown_opacity, inside), edge_veil);
 }

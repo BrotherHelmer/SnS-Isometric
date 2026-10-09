@@ -738,14 +738,14 @@ func _create_lighting() -> void:
 	environment.tonemap_exposure = 0.86
 	environment.tonemap_white = 6.0
 	environment.ssao_enabled = bool(quality_profile.get("ssao", quality_profile.get("shadows", true)))
-	environment.ssao_radius = 0.85
-	environment.ssao_intensity = 1.85
-	environment.ssao_power = 1.60
-	environment.ssao_detail = 0.50
-	environment.ssao_horizon = 0.06
+	environment.ssao_radius = 0.42
+	environment.ssao_intensity = 1.50
+	environment.ssao_power = 1.18
+	environment.ssao_detail = 0.36
+	environment.ssao_horizon = 0.08
 	environment.ssao_sharpness = 0.98
-	environment.ssao_light_affect = 0.10
-	environment.ssao_ao_channel_affect = 0.55
+	environment.ssao_light_affect = 0.08
+	environment.ssao_ao_channel_affect = 0.40
 	environment.ssil_enabled = bool(quality_profile.get("ssil", false))
 	environment.ssil_radius = 3.0
 	environment.ssil_intensity = 0.75
@@ -3867,12 +3867,12 @@ func _apply_quality_features() -> void:
 	# The Director: night drops SSAO. Very-Low still left lavapipe 1 ms
 	# over the +15% GFX-1 guard; windows/moon carry night form instead.
 	environment_resource.ssao_enabled = want_ssao and not night
-	environment_resource.ssao_radius = 0.75
+	environment_resource.ssao_radius = 0.42
 	environment_resource.ssao_intensity = 1.50
-	environment_resource.ssao_power = 1.50
-	environment_resource.ssao_detail = 0.50
+	environment_resource.ssao_power = 1.18
+	environment_resource.ssao_detail = 0.36
 	environment_resource.ssao_sharpness = 0.98
-	environment_resource.ssao_light_affect = 0.10
+	environment_resource.ssao_light_affect = 0.08
 	var high_ssao := String(quality_profile.get("name", "recommended")) == "high"
 	RenderingServer.environment_set_ssao_quality(
 		RenderingServer.ENV_SSAO_QUALITY_MEDIUM if high_ssao else RenderingServer.ENV_SSAO_QUALITY_LOW,

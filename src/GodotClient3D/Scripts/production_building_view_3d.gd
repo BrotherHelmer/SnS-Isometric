@@ -473,11 +473,13 @@ func _create_workyard() -> void:
 			_add_prop("stone_stack", Vector3(3.15, 0.0, 0.20), Vector3.ONE * 0.85, "InventoryIndicatorStone", "stone")
 			_add_prop("wheelbarrow", Vector3(-3.10, 0.0, 0.35), Vector3.ONE * 0.8, "DecorativeWheelbarrow")
 		"FARM":
-			# Issue #3 fix: Farm must look like a farm - add crops, paddock, and sheep
-			for x in range(-1, 3):
-				for z in range(3):
-					_add_prop("dirt_plot", Vector3(float(x) * 1.15, 0.0, -0.85 - float(z) * 0.95), Vector3.ONE * 0.72, "DecorativeFarmPlot")
-					_add_prop("wheat_crop", Vector3(float(x) * 1.15, 0.08, -0.85 - float(z) * 0.95), Vector3.ONE * 1.72, "WheatCrop")
+			# GFX-H: aligned crop rows so fields read at gameplay zoom,
+			# not a scatter of gold sticks on an olive sheet.
+			for row in range(5):
+				for col in range(5):
+					var plot := Vector3(-0.25 + float(col) * 0.78, 0.0, -0.30 - float(row) * 0.62)
+					_add_prop("dirt_plot", plot, Vector3.ONE * 0.58, "DecorativeFarmPlot")
+					_add_prop("wheat_crop", plot + Vector3(0.0, 0.06, 0.0), Vector3.ONE * 1.58, "WheatCrop")
 			_add_prop("wheelbarrow", Vector3(3.15, 0.0, -1.20), Vector3.ONE * 0.76, "InventoryIndicatorWheat", "wheat")
 			# Add sheep paddock with fence
 			var paddock := MeshInstance3D.new()
@@ -982,7 +984,7 @@ func _create_contact_ao() -> void:
 	var visual := _visual_size()
 	var width := maxf(world_size.x, visual.x) * 1.08
 	var depth := maxf(world_size.y, visual.z) * 1.08
-	var intensity := 0.28 if building_type == "WALL" else 0.48
+	var intensity := 0.18 if building_type == "WALL" else 0.24
 	var disc := ContactAO.make_instance("ContactAO", Vector2(width, depth), intensity)
 	disc.position = Vector3(0.0, 0.018, _model_offset_z())
 	add_child(disc)
