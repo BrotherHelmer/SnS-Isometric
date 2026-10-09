@@ -56,7 +56,7 @@ static func _apply_kaykit_remap(root: Node, building_type: String) -> void:
 	# Per-surface override. Do not edit the imported atlas. Civic roofs
 	# stay muted teal slate; houses / workshops roll terracotta. No emerald.
 	var terracotta := building_type == "HOUSE" or building_type == "LUMBER_CAMP" or building_type == "SAWMILL" or building_type == "FARM" or building_type == "BAKERY" or building_type == "STOREHOUSE"
-	var wall_lift := 1.32 if building_type == "TOWN_HALL" or building_type == "CASTLE" else 1.08
+	var wall_lift := 1.42 if building_type == "TOWN_HALL" or building_type == "CASTLE" else 1.10
 	var roughness := 0.86 if terracotta else 0.83
 	for node in root.find_children("*", "MeshInstance3D", true, false):
 		var instance := node as MeshInstance3D

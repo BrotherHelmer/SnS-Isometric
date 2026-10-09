@@ -767,10 +767,16 @@ func _bake_road_control_texture() -> void:
 		var min_xz := _fog_world_min_xz()
 		var size_xz := _fog_world_size_xz()
 		var visual_w := ScaleProfile.road_width_metres() * 1.32
+		var spoke_w := ScaleProfile.road_width_metres() * 0.58
 		var segments: Array[Vector2] = _collect_road_segments()
 		var i := 0
 		while i + 1 < segments.size():
 			_stamp_segment_distance(img, segments[i], segments[i + 1], min_xz, size_xz, visual_w)
+			i += 2
+		var spokes: Array[Vector2] = _collect_hamlet_spokes()
+		i = 0
+		while i + 1 < spokes.size():
+			_stamp_segment_distance(img, spokes[i], spokes[i + 1], min_xz, size_xz, spoke_w)
 			i += 2
 	if road_control_texture == null:
 		road_control_texture = ImageTexture.create_from_image(img)
@@ -787,15 +793,15 @@ func _collect_road_segments() -> Array[Vector2]:
 	for y in range(map_size.y):
 		for x in range(map_size.x):
 			var tile := Vector2i(x, y)
-			var roadish := _is_road_tile(tile) or _visual_path_weight(tile) >= 0.55 or _hamlet_path_weight(tile) >= 0.55
-			if not roadish:
+			if not _is_road_tile(tile) and _visual_path_weight(tile) < 0.70:
 				continue
 			var a := Vector2(tile_to_world(Vector2(tile)).x, tile_to_world(Vector2(tile)).z)
-			for dir in [Vector2i(1, 0), Vector2i(0, 1)]:
-				var other := tile + dir
+			var dirs: Array[Vector2i] = [Vector2i(1, 0), Vector2i(0, 1)]
+			for dir in dirs:
+				var other: Vector2i = tile + dir
 				if not simulation.is_inside_map(other):
 					continue
-				var other_road := _is_road_tile(other) or _visual_path_weight(other) >= 0.45 or _hamlet_path_weight(other) >= 0.45
+				var other_road := _is_road_tile(other) or _visual_path_weight(other) >= 0.55
 				if not other_road:
 					continue
 				var b := Vector2(tile_to_world(Vector2(other)).x, tile_to_world(Vector2(other)).z)
@@ -807,15 +813,22 @@ func _collect_road_segments() -> Array[Vector2]:
 				seen[key] = true
 				segs.append(a)
 				segs.append(b)
-	if simulation.is_town_hall_founded():
-		var hall: Vector2i = simulation.town_hall_position
-		var center := Vector2(tile_to_world(Vector2(hall) + Vector2(1.5, 1.5)).x, tile_to_world(Vector2(hall) + Vector2(1.5, 1.5)).z)
-		for spec_value in _opening_hamlet_spec():
-			var spec: Dictionary = spec_value
-			var dest_tile := hall + Vector2i(int(spec["ox"]), int(spec["oy"]))
-			var dest := Vector2(tile_to_world(Vector2(dest_tile)).x, tile_to_world(Vector2(dest_tile)).z)
-			segs.append(center)
-			segs.append(dest)
+	return segs
+
+
+func _collect_hamlet_spokes() -> Array[Vector2]:
+	# Thin hall→cottage traces. Fat spokes painted the opening lawn tan.
+	var segs: Array[Vector2] = []
+	if simulation == null or not simulation.is_town_hall_founded():
+		return segs
+	var hall: Vector2i = simulation.town_hall_position
+	var center := Vector2(tile_to_world(Vector2(hall) + Vector2(1.5, 1.5)).x, tile_to_world(Vector2(hall) + Vector2(1.5, 1.5)).z)
+	for spec_value in _opening_hamlet_spec():
+		var spec: Dictionary = spec_value
+		var dest_tile := hall + Vector2i(int(spec["ox"]), int(spec["oy"]))
+		var dest := Vector2(tile_to_world(Vector2(dest_tile) + Vector2(float(spec["w"]) * 0.5, float(spec["h"]) * 0.5)).x, tile_to_world(Vector2(dest_tile) + Vector2(float(spec["w"]) * 0.5, float(spec["h"]) * 0.5)).z)
+		segs.append(center)
+		segs.append(dest)
 	return segs
 
 

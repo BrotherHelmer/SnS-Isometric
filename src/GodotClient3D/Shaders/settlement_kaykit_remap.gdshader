@@ -22,17 +22,29 @@ void fragment() {
 	float mx = max(tex.r, max(tex.g, tex.b));
 	float mn = min(tex.r, min(tex.g, tex.b));
 	float sat = mx > 0.001 ? (mx - mn) / mx : 0.0;
+	vec3 world_n = normalize((INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz);
+	bool roof_face = world_n.y > 0.38;
 	bool green = tex.g > tex.r + 0.035 && tex.g > tex.b + 0.015 && sat > 0.16;
 	bool brown = tex.r > tex.g + 0.02 && tex.r > tex.b && sat > 0.14 && luma < 0.58;
 	bool dark = luma < 0.30;
 	vec3 roof_hi = mix(roof_color.rgb, terracotta.rgb, clamp(use_terracotta, 0.0, 1.0));
 	vec3 roof = mix(roof_shadow.rgb, roof_hi, clamp(luma * 1.45, 0.18, 1.0));
-	vec3 wall = mix(masonry_color.rgb, wall_color.rgb, smoothstep(0.22, 0.52, luma));
-	wall = mix(wall, plaster_color.rgb, smoothstep(0.58, 0.86, luma));
-	wall *= mix(0.96, 1.20, luma) * wall_lift;
+	// Light limestone first. Masonry only on the darkest recesses.
+	vec3 wall = mix(wall_color.rgb, plaster_color.rgb, smoothstep(0.40, 0.82, luma));
+	wall = mix(masonry_color.rgb, wall, smoothstep(0.16, 0.38, luma));
+	wall *= mix(1.04, 1.24, luma) * wall_lift;
 	vec3 timber = timber_color.rgb * mix(0.88, 1.12, luma);
 	vec3 albedo;
-	if (green) {
+	if (use_terracotta < 0.5) {
+		// Civic: default limestone. Only the darkest green atlas
+		// texels lean toward slate so walls stay at least half pale.
+		albedo = wall;
+		if (green && luma < 0.38) {
+			albedo = mix(wall, roof, 0.42);
+		} else if (brown && luma < 0.40) {
+			albedo = timber;
+		}
+	} else if (green && roof_face) {
 		albedo = roof;
 	} else if (brown && luma < 0.46) {
 		albedo = timber;

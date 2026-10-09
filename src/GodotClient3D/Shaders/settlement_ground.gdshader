@@ -104,26 +104,20 @@ void vertex() {
 }
 
 void fragment() {
+	float control = texture(road_control_tex, road_control_uv(world_pos.xz)).r * road_control_amount;
 	if (terrain_debug > 0.5 && terrain_debug < 1.5) {
 		ALBEDO = vec3(1.0, 0.0, 1.0);
 		ROUGHNESS = 1.0;
 		METALLIC = 0.0;
-		return;
-	}
-	if (terrain_debug > 1.5 && terrain_debug < 2.5) {
+	} else if (terrain_debug > 1.5 && terrain_debug < 2.5) {
 		ALBEDO = meadow_lush;
 		ROUGHNESS = 0.94;
 		METALLIC = 0.0;
-		return;
-	}
-	float control = texture(road_control_tex, road_control_uv(world_pos.xz)).r * road_control_amount;
-	if (terrain_debug > 2.5 || road_debug > 0.5) {
+	} else if (terrain_debug > 2.5 || road_debug > 0.5) {
 		ALBEDO = mix(vec3(0.16, 0.22, 0.14), vec3(0.86, 0.08, 0.08), smoothstep(0.12, 0.80, control));
 		ROUGHNESS = 1.0;
 		METALLIC = 0.0;
-		return;
-	}
-
+	} else {
 	float land = island_land(world_pos.xz);
 	float inward = inward_metres(world_pos.xz);
 	if (apron_mode > 0.5) {
@@ -219,4 +213,5 @@ void fragment() {
 	}
 	ROUGHNESS = 0.94;
 	METALLIC = 0.0;
+	}
 }

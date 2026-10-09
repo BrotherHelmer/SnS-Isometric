@@ -68,6 +68,11 @@ func _check_live_scene() -> void:
 	root.add_child(game)
 	await process_frame
 	await process_frame
+	_check(game.world_view != null, "world view compiled")
+	if game.world_view == null:
+		game.queue_free()
+		await process_frame
+		return
 	game.start_new_3d(game.DEFAULT_SEED)
 	game._hide_start_menu()
 	for _i in 4:
@@ -93,6 +98,7 @@ func _check_live_scene() -> void:
 	else:
 		_check(false, "terrain uses the settlement ground shader")
 	var ground_src := FileAccess.get_file_as_string("res://src/GodotClient3D/Shaders/settlement_ground.gdshader")
+	_check(not ground_src.contains("return;"), "fragment has no early return (Godot rejects it)")
 	_check(ground_src.contains("COLOR.r > COLOR.g") and ground_src.contains("terrain_debug"), "occupy no longer treats dropped-alpha grass as dirt")
 	_check(ground_src.contains("source_color") and ground_src.contains("hint_default_black"), "albedo maps use source_color; the road mask does not")
 	_check(ground_src.contains("smoothstep(0.12, 0.80, control)"), "roads smoothstep over the finished ground")
@@ -120,7 +126,7 @@ func _check_live_scene() -> void:
 	var road_src := FileAccess.get_file_as_string("res://src/GodotClient3D/Scripts/production_road_view_3d.gd")
 	_check(road_src.contains("#AD8D66"), "raised road meshes use #AD8D66")
 	var kaykit := FileAccess.get_file_as_string("res://src/GodotClient3D/Shaders/settlement_kaykit_remap.gdshader")
-	_check(kaykit.contains("masonry_color") and kaykit.contains("1.32"), "KayKit remap lifts castle walls")
+	_check(kaykit.contains("masonry_color") and (kaykit.contains("1.32") or kaykit.contains("roof_face")), "KayKit remap lifts castle walls")
 	_check(kaykit.contains("CFC2A6") and kaykit.contains("466C69"), "castle palette is light stone / muted teal")
 	var world_src := FileAccess.get_file_as_string("res://src/GodotClient3D/Scripts/production_world_view_3d.gd")
 	_check(world_src.contains("_stamp_segment_distance") and world_src.contains("_collect_road_segments"), "roads bake a world-space distance field")

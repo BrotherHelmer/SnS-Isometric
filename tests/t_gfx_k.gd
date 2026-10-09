@@ -115,7 +115,7 @@ func _check_live_scene() -> void:
 		_check(hall_view.find_child("DressNoticeBoard", true, false) != null, "Town Hall front has a notice board")
 		_check(hall_view.find_child("DressCivicFlag", true, false) != null, "Town Hall front has a flag")
 	var road_src := FileAccess.get_file_as_string("res://src/GodotClient3D/Shaders/settlement_road.gdshader")
-	_check(road_src.contains("9F8260") or road_src.contains("B0926C") or road_src.contains("AB8963") or road_src.contains("AE906D") or road_src.contains("0.690, 0.573, 0.424") or road_src.contains("0.671, 0.537, 0.388") or road_src.contains("0.682, 0.565, 0.427"), "roads use compacted earth")
+	_check(road_src.contains("9F8260") or road_src.contains("B0926C") or road_src.contains("AB8963") or road_src.contains("AE906D") or road_src.contains("AD8D66") or road_src.contains("0.690, 0.573, 0.424") or road_src.contains("0.671, 0.537, 0.388") or road_src.contains("0.682, 0.565, 0.427") or road_src.contains("0.678, 0.553, 0.400"), "roads use compacted earth")
 	_check(road_src.contains("rut"), "roads have cart ruts")
 	var ground_src := FileAccess.get_file_as_string("res://src/GodotClient3D/Shaders/settlement_ground.gdshader")
 	_check(ground_src.contains("60764A") or ground_src.contains("5A7545") or ground_src.contains("556D3F") or ground_src.contains("0.353, 0.459, 0.271") or ground_src.contains("526B40") or ground_src.contains("0.322, 0.420, 0.251") or ground_src.contains("0.333, 0.427, 0.247"), "meadow base is olive")
