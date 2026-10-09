@@ -1,31 +1,35 @@
 class_name ProductionBuildingMaterials
 extends RefCounted
 
-## GFX-K landmark remap. Walks imported meshes. Does not remodel.
-## Limestone #CBBCA0, plaster #E0CDA9, timber #62432F, slate #426C67,
-## recessed stone #817968. Stone 0.88 / plaster 0.95 / timber 0.92 / roof 0.82.
+## GFX-L landmark remap. Walks imported meshes. Does not remodel.
+## Limestone #CDBD9F, plaster #E0CDAE, timber #64452F, slate #456D68,
+## recessed stone #716A5D. Stone 0.88 / plaster 0.95 / timber 0.90 /
+## slate 0.83 / terracotta 0.88.
 
 const BevelShader = preload("res://src/GodotClient3D/Shaders/settlement_bevel.gdshader")
 
 const ROUGHNESS := {
 	"plaster": 0.95,
-	"timber": 0.92,
-	"roof": 0.82,
-	"teal_roof": 0.82,
+	"timber": 0.90,
+	"roof": 0.88,
+	"teal_roof": 0.83,
 	"stone": 0.88,
 	"metal": 0.34,
 }
 
-const CASTLE_LIMESTONE := Color("#CBBCA0")
-const CASTLE_MASONRY := Color("#CBBCA0")
-const CASTLE_SLATE := Color("#426C67")
-const HALL_MASONRY := Color("#CBBCA0")
-const HALL_SLATE := Color("#426C67")
-const CLAY_ROOF := Color("#A95F3F")
+const CASTLE_LIMESTONE := Color("#CDBD9F")
+const CASTLE_MASONRY := Color("#CDBD9F")
+const CASTLE_SLATE := Color("#456D68")
+const HALL_MASONRY := Color("#CDBD9F")
+const HALL_SLATE := Color("#456D68")
+const CLAY_ROOF := Color("#A96342")
 const KEEP_SLATE := Color("#314B49")
-const WARM_PLASTER := Color("#E0CDA9")
-const DARK_TIMBER := Color("#62432F")
-const WEATHERED_STONE := Color("#817968")
+const WARM_PLASTER := Color("#E0CDAE")
+const DARK_TIMBER := Color("#64452F")
+const WEATHERED_STONE := Color("#716A5D")
+const FOUNDATION_FACE := Color("#A99D82")
+const FOUNDATION_TOP := Color("#C1B394")
+const FOUNDATION_EDGE := Color("#756C5B")
 const HALL_LUMA_FLOOR := 0.42
 
 static var _bevel_by_kind: Dictionary = {}

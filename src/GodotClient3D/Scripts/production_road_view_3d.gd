@@ -33,7 +33,7 @@ func _rebuild() -> void:
 		remove_child(child)
 		child.queue_free()
 	var edge_color := Color(0.32, 0.28, 0.22, 0.42) if planned else Color(0.443, 0.345, 0.243, 0.55)
-	var road_color := Color(0.62, 0.58, 0.50, 0.86) if planned else Color("#9F8260")
+	var road_color := Color(0.62, 0.58, 0.50, 0.86) if planned else Color("#B0926C")
 	if faction == "rival":
 		edge_color = Color(0.28, 0.17, 0.18, 0.72)
 		road_color = Color("#805d58")
@@ -49,6 +49,33 @@ func _rebuild() -> void:
 	# above the meadow at gameplay zoom. Stamps stay batched once.
 	_add_path_mesh(road_width * 1.12, 0.052, _road_material(edge_color), "FeatheredEdge")
 	_add_path_mesh(road_width, 0.088, _road_material(road_color), "ContinuousDirt")
+	if not planned and _popcount(connection_mask) >= 3 and absi(tile.x * 13 + tile.y * 29) % 3 == 0:
+		_add_rut_decal(road_width)
+
+
+func _popcount(mask: int) -> int:
+	var count := 0
+	var value := mask
+	while value > 0:
+		count += value & 1
+		value >>= 1
+	return count
+
+
+func _add_rut_decal(road_width: float) -> void:
+	# Sparse crossroad decal. Splat shader owns the continuous road.
+	var decal := Decal.new()
+	decal.name = "RoadRutDecal"
+	decal.texture_albedo = load("res://assets/settlement3d/runtime/gfx/road_rut_decal.png")
+	decal.albedo_mix = 0.65
+	decal.normal_fade = 0.4
+	decal.distance_fade_enabled = true
+	decal.distance_fade_begin = 18.0
+	decal.distance_fade_length = 10.0
+	decal.size = Vector3(road_width * 1.15, 0.45, road_width * 0.85)
+	decal.position = Vector3(0.0, 0.12, 0.0)
+	decal.cull_mask = 1
+	add_child(decal)
 
 
 func _add_path_mesh(width: float, height: float, material: Material, node_name: String) -> void:
@@ -106,9 +133,9 @@ func _road_material(color: Color) -> ShaderMaterial:
 		var material := ShaderMaterial.new()
 		material.shader = preload("res://src/GodotClient3D/Shaders/settlement_road.gdshader")
 		material.set_shader_parameter("road_color", color)
-		material.set_shader_parameter("clay_color", Vector3(0.624, 0.510, 0.376))
-		material.set_shader_parameter("dirt_edge", Vector3(0.443, 0.345, 0.243))
-		material.set_shader_parameter("gravel_color", Vector3(0.651, 0.608, 0.502))
+		material.set_shader_parameter("clay_color", Vector3(0.690, 0.573, 0.424))
+		material.set_shader_parameter("dirt_edge", Vector3(0.533, 0.424, 0.286))
+		material.set_shader_parameter("gravel_color", Vector3(0.573, 0.565, 0.502))
 		material.set_shader_parameter("road_width_metres", 1.52 * ScaleProfile.ROAD_WIDTH_SCALE)
 		material.set_shader_parameter("shoulder_lift", 0.0)
 		material.set_shader_parameter("light_tint", _light_tint)
