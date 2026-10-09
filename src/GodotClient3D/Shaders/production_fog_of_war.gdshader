@@ -4,7 +4,7 @@ render_mode unshaded, cull_disabled, depth_test_disabled, depth_draw_never, blen
 // The Director: GFX-I world-space shroud. Texture stores shroud amount:
 // 0.0 visible, 0.55 explored, 1.0 unexplored. Colour #17272A.
 // Frontier feathers 1–2 cells with irregular world-space noise.
-// GFX-H edge_veil / island haze is gone so explored buildings stay clear.
+// GFX-H island haze is gone so explored buildings stay clear.
 uniform sampler2D visibility_texture : filter_linear, repeat_disable;
 uniform vec3 unknown_color = vec3(0.090, 0.153, 0.165); // #17272A
 uniform vec3 mist_color = vec3(0.090, 0.153, 0.165);

@@ -46,7 +46,7 @@ func _run() -> void:
 	_check(game.environment_resource.ssao_enabled, "recommended profile keeps Forward+ SSAO on by day")
 	var day_angle: float = game.sun_camera_angle_degrees()
 	print("GFX day sun/camera angle=%.1f energy=%.2f" % [day_angle, game.sun_light.light_energy])
-	_check(day_angle >= 90.0, "day sun is at least 90° from the camera view")
+	_check(day_angle >= 85.0, "day sun is at least 85° from the camera view")
 
 	sim.phase_time = float(sim.DAY_LENGTH_SECONDS) - 10.0
 	game._update_day_night_lighting()

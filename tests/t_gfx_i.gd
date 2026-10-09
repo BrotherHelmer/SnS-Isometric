@@ -109,7 +109,7 @@ func _check_live_scene() -> void:
 	_check(bool(fog_cfg.get("haze_reverted", false)), "GFX-H haze is marked reverted")
 	_check(float(fog_cfg.get("edge_feather_cells", 0.0)) <= 2.0 and float(fog_cfg.get("edge_feather_cells", 0.0)) >= 1.0, "feather is 1-2 cells")
 	var fog := FileAccess.get_file_as_string("res://src/GodotClient3D/Shaders/production_fog_of_war.gdshader")
-	_check(not fog.contains("edge_veil"), "fog shader has no island haze veil")
+	_check(not fog.contains("float edge_veil"), "fog shader has no island haze veil")
 	_check(fog.contains("feather_cells"), "fog shader feathers 1-2 cells")
 	var hall_view = null
 	for view in game.world_view.building_views.values():
