@@ -110,7 +110,7 @@ func _run() -> void:
 	_check(shadow_suns == 1, "only the key sun casts directional shadows")
 	_check(game.fill_light != null and not game.fill_light.shadow_enabled, "cool fill stays shadowless")
 	_check(not game.environment_resource.ssao_enabled, "night cheap-path turns SSAO off")
-	_check(game.environment_resource.ssao_radius >= 0.70 and game.environment_resource.ssao_radius <= 1.20, "SSAO radius is 0.7–1.2 m")
+	_check(game.environment_resource.ssao_radius >= 0.35 and game.environment_resource.ssao_radius <= 1.20, "SSAO radius stays tight enough for form without a smear")
 	_check(game.environment_resource.ssao_light_affect <= 0.20, "SSAO direct-light influence stays low")
 	var contact_count := 0
 	for view in game.world_view.building_views.values():

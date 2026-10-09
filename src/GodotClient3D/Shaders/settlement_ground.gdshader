@@ -172,15 +172,10 @@ void fragment() {
 	if (lod_cheap > 0.5) {
 		NORMAL = normalize((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
 	} else {
-		// Static world-space bump. Dirt / tufts / furrows catch the warm
-		// key without a crawling normal map.
-		vec2 e = vec2(0.38, 0.0);
-		float hL = fbm((world_pos.xz - e) / 1.7);
-		float hR = fbm((world_pos.xz + e) / 1.7);
-		float hD = fbm((world_pos.xz - e.yx) / 1.7);
-		float hU = fbm((world_pos.xz + e.yx) / 1.7);
-		float bump_w = mix(0.42, 0.85, dirt_mask + crop * 0.4 + occupy * 0.25);
-		vec3 bump = normalize(vec3((hL - hR) * bump_w, 1.0, (hD - hU) * bump_w));
+		// Reuse patch/detail already paid for. Four extra fbm taps
+		// were a lavapipe first-frame tax for almost no camera read.
+		float bump_w = mix(0.36, 0.72, dirt_mask + crop * 0.4 + occupy * 0.25);
+		vec3 bump = normalize(vec3((detail - 0.5) * bump_w, 1.0, (patch - 0.5) * bump_w));
 		NORMAL = normalize((VIEW_MATRIX * vec4(bump, 0.0)).xyz);
 	}
 	ROUGHNESS = mix(0.96, mix(0.86, 0.78, crop), dirt_mask);
