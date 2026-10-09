@@ -5,7 +5,10 @@ const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_p
 
 const CLOSE_ZOOM := 16.0
 const NORMAL_ZOOM := 26.0
-const STRATEGIC_ZOOM := 68.0
+# GFX-J: zoom-out cap ~1.5× gameplay coverage so the player cannot
+# pull back onto a diamond island in a flat void.
+const STRATEGIC_ZOOM := 39.0
+const PLAY_ZOOM_CAP := 1.5
 const PREFERRED_YAW := -0.62
 # The Director: GFX-D default framing. 26 is ~32% closer than GFX-C's 38
 # so the founding meadow fills the camera instead of unused lawn.
@@ -46,7 +49,8 @@ func _process(delta: float) -> void:
 		if input_vector != Vector2.ZERO:
 			_pan(input_vector.normalized() * delta * target_zoom * 0.42, false, "keyboard")
 	position = position.lerp(target_position, minf(1.0, delta * 9.0))
-	camera.size = lerpf(camera.size, target_zoom, minf(1.0, delta * 10.0))
+	target_zoom = clampf(target_zoom, CLOSE_ZOOM, STRATEGIC_ZOOM)
+	camera.size = clampf(lerpf(camera.size, target_zoom, minf(1.0, delta * 10.0)), CLOSE_ZOOM, STRATEGIC_ZOOM)
 
 
 # Camera input must arrive before Control nodes consume it. The Phase 3 HUD

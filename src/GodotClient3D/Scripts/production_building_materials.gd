@@ -1,31 +1,32 @@
 class_name ProductionBuildingMaterials
 extends RefCounted
 
-## GFX-I trim-sheet remap. Walks imported meshes. Does not remodel.
-## Town Hall / house / workshop share plaster #D6C5A2, timber #553C2B,
-## roof #426863, stone #A39A85. Hall masonry stays a readable midtone.
+## GFX-J landmark remap. Walks imported meshes. Does not remodel.
+## Limestone #C5B69B, plaster #D8C7A8, timber #59402B, slate #456966,
+## stone accent #776F60. Roughness 0.85 / metallic 0 on stone and plaster.
 
 const BevelShader = preload("res://src/GodotClient3D/Shaders/settlement_bevel.gdshader")
 
 const ROUGHNESS := {
-	"plaster": 0.80,
-	"timber": 0.70,
-	"roof": 0.72,
-	"teal_roof": 0.68,
+	"plaster": 0.85,
+	"timber": 0.85,
+	"roof": 0.85,
+	"teal_roof": 0.85,
 	"stone": 0.85,
 	"metal": 0.34,
 }
 
-const CASTLE_MASONRY := Color("#D6C5A2")
-const CASTLE_SLATE := Color("#426863")
-const HALL_MASONRY := Color("#D6C5A2")
-const HALL_SLATE := Color("#426863")
+const CASTLE_LIMESTONE := Color("#C5B69B")
+const CASTLE_MASONRY := Color("#C5B69B")
+const CASTLE_SLATE := Color("#456966")
+const HALL_MASONRY := Color("#C5B69B")
+const HALL_SLATE := Color("#456966")
 const CLAY_ROOF := Color("#A75D39")
 const KEEP_SLATE := Color("#4A5A4C")
-const WARM_PLASTER := Color("#D6C5A2")
-const DARK_TIMBER := Color("#553C2B")
-const WEATHERED_STONE := Color("#A39A85")
-const HALL_LUMA_FLOOR := 0.30
+const WARM_PLASTER := Color("#D8C7A8")
+const DARK_TIMBER := Color("#59402B")
+const WEATHERED_STONE := Color("#776F60")
+const HALL_LUMA_FLOOR := 0.42
 
 static var _bevel_by_kind: Dictionary = {}
 
@@ -66,22 +67,23 @@ static func remap_albedo(kind: String, color: Color, building_type: String) -> C
 	match building_type:
 		"CASTLE":
 			if kind == "plaster":
-				next = color.lerp(CASTLE_MASONRY, 0.72)
+				next = color.lerp(CASTLE_LIMESTONE, 0.92)
 			elif kind == "stone":
-				next = color.lerp(WEATHERED_STONE, 0.45).lerp(CASTLE_MASONRY, 0.28)
+				next = color.lerp(WEATHERED_STONE, 0.28).lerp(CASTLE_LIMESTONE, 0.78)
 			elif kind == "teal_roof" or kind == "roof":
-				next = color.lerp(CASTLE_SLATE, 0.82)
-			elif kind == "timber":
-				next = color.lerp(DARK_TIMBER, 0.55)
-		"TOWN_HALL":
-			if kind == "plaster":
-				next = color.lerp(HALL_MASONRY, 0.88)
-			elif kind == "stone":
-				next = color.lerp(WEATHERED_STONE, 0.72).lerp(HALL_MASONRY, 0.38)
-			elif kind == "teal_roof" or kind == "roof":
-				next = color.lerp(HALL_SLATE, 0.86)
+				next = color.lerp(CASTLE_SLATE, 0.88)
 			elif kind == "timber":
 				next = color.lerp(DARK_TIMBER, 0.70)
+			next = _lift_hall_luma(next)
+		"TOWN_HALL":
+			if kind == "plaster":
+				next = color.lerp(CASTLE_LIMESTONE, 0.94)
+			elif kind == "stone":
+				next = color.lerp(WEATHERED_STONE, 0.22).lerp(CASTLE_LIMESTONE, 0.82)
+			elif kind == "teal_roof" or kind == "roof":
+				next = color.lerp(HALL_SLATE, 0.90)
+			elif kind == "timber":
+				next = color.lerp(DARK_TIMBER, 0.78)
 			next = _lift_hall_luma(next)
 		"HOUSE", "FARM", "BAKERY", "STOREHOUSE":
 			if kind == "teal_roof" or kind == "roof":

@@ -35,7 +35,7 @@ const FOG_DISPLAY_UPSAMPLE := 8
 const FOG_UNKNOWN_BASE := Vector3(0.090, 0.153, 0.165) # #17272A
 const FOG_MIST_BASE := Vector3(0.090, 0.153, 0.165) # #17272A
 const FOG_VISIBLE := 0
-const FOG_EXPLORED := 140
+const FOG_EXPLORED := 115
 const FOG_UNEXPLORED := 255
 const GROUND_PATCH_CHUNK_METRES := 40.0
 
@@ -247,7 +247,8 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 
 func bind_fog_overlay(_camera: Camera3D) -> void:
 	fog_overlay_camera = _camera
-	_hide_fog_screen()
+	if fog_visibility_texture != null:
+		_ensure_fog_screen()
 
 
 func sync_frame(frame_snapshot: Dictionary) -> void:
@@ -429,16 +430,18 @@ func fog_configuration() -> Dictionary:
 	return {
 		"uses_smoothed_texture": fog_visibility_texture != null,
 		"filter_linear": true,
-		"edge_feather_cells": 1.6,
-		"noise_strength": 0.55,
+		"edge_feather_cells": 1.25,
+		"noise_strength": 0.45,
 		"unknown_opacity": 1.0,
 		"visible_alpha": 0.0,
-		"explored_alpha": 0.55,
+		"explored_alpha": 0.45,
 		"unexplored_alpha": 1.0,
 		"unknown_color": FOG_UNKNOWN_BASE,
 		"mist_color": FOG_MIST_BASE,
 		"haze_reverted": true,
-		"world_anchored": true,
+		"screen_composited": fog_screen != null and fog_screen.visible,
+		"world_anchored": false,
+		"zoom_cap": 1.5,
 		"volume_mesh": fog_plane != null,
 		"exterior_opaque": true,
 		"shore_fade_metres": SHORE_FADE_METRES,
@@ -491,7 +494,7 @@ func fog_mask_sample_for_tile(tile: Vector2i) -> float:
 	var mask_tile := Vector2i(tile.x / FOG_MASK_DIVISOR, tile.y / FOG_MASK_DIVISOR)
 	if mask_tile.x < 0 or mask_tile.y < 0 or mask_tile.x >= fog_mask_size.x or mask_tile.y >= fog_mask_size.y:
 		return 0.0
-	# Texture stores shroud (0 visible / 0.55 explored / 1 unexplored).
+	# Texture stores shroud (0 visible / 0.45 explored / 1 unexplored).
 	# Callers still want visibility, so invert.
 	return 1.0 - float(fog_mask_bytes[mask_tile.y * fog_mask_size.x + mask_tile.x]) / 255.0
 
@@ -775,7 +778,9 @@ func _compute_terrain_color(tile: Vector2i) -> Color:
 	if _is_road_tile(tile):
 		base = Color(0.784, 0.627, 0.392, 0.96)
 	elif _is_road_shoulder(tile):
-		base = base.lerp(Color(0.620, 0.470, 0.300, 0.72), 0.78)
+		# 20–35% of the road width, not a hard beige stripe.
+		var shoulder := 0.20 + float(_tile_hash(tile, 41) % 16) / 100.0
+		base = base.lerp(Color(0.520, 0.410, 0.275, 0.55), clampf(shoulder, 0.20, 0.35))
 	if _terrain_occupied_cache.has(_tile_key(tile)) and not _is_farm_field_tile(tile):
 		base = base.lerp(Color(0.573, 0.443, 0.306, 0.62), 0.64)
 	elif _terrain_yard_cache.has(_tile_key(tile)) and not _is_farm_field_tile(tile):
@@ -1163,19 +1168,21 @@ func _rebuild_ground_patches() -> void:
 			var world := tile_to_world(Vector2(tile))
 			var chunk := Vector2i(int(floor(world.x / GROUND_PATCH_CHUNK_METRES)), int(floor(world.z / GROUND_PATCH_CHUNK_METRES)))
 			var seed_h := _tile_hash(tile, 29)
-			# Darker grass patches 1–3 road widths, one seed every ~5 tiles.
-			if seed_h % 5 == 0 and grass_path != "":
-				_bucket_patch(chunk_buckets, chunk, "dark_grass", _patch_transform(tile, 3, road_w * (1.15 + float(seed_h % 40) / 50.0), 0.04))
+			# GFX-J: 1–3 road-width dark-grass patches, 15–25% coverage,
+			# biased to forest edges. Soil stays muted, not bright beige.
+			var edge := mini(mini(tile.x, tile.y), mini(map_size.x - 1 - tile.x, map_size.y - 1 - tile.y))
+			var dark_odds := 5 if edge > 6 else 4
+			if seed_h % dark_odds == 0 and grass_path != "":
+				var span := road_w * (1.0 + float(seed_h % 100) / 50.0)
+				_bucket_patch(chunk_buckets, chunk, "dark_grass", _patch_transform(tile, 3, span, 0.035))
+			if seed_h % 13 == 0:
+				_bucket_patch(chunk_buckets, chunk, "soil", _patch_transform(tile, 5, road_w * (0.70 + float(seed_h % 30) / 60.0), 0.03))
+			if seed_h % 8 == 0 and flower_path != "":
+				_bucket_patch(chunk_buckets, chunk, "flowers", _nature_transform_at(tile, 6, flower_path, 0.55, 1.05, 0.55))
 				if seed_h % 2 == 0:
-					_bucket_patch(chunk_buckets, chunk, "dark_grass", _patch_transform(tile, 4, road_w * 0.85, 0.04))
-			# Exposed soil, smaller than the grass patches.
-			if seed_h % 11 == 0:
-				_bucket_patch(chunk_buckets, chunk, "soil", _patch_transform(tile, 5, road_w * (0.55 + float(seed_h % 20) / 80.0), 0.03))
-			# Decorative clusters 0.2–0.5 road widths.
-			if seed_h % 7 == 0 and flower_path != "":
-				_bucket_patch(chunk_buckets, chunk, "flowers", _nature_transform_at(tile, 6, flower_path, 0.35, 0.85, 0.35))
-			if seed_h % 9 == 0 and rock_path != "":
-				_bucket_patch(chunk_buckets, chunk, "stones", _nature_transform_at(tile, 7, rock_path, 0.28, 0.32, 0.14))
+					_bucket_patch(chunk_buckets, chunk, "flowers", _nature_transform_at(tile, 16, flower_path, 0.80, 0.90, 0.40))
+			if seed_h % 10 == 0 and rock_path != "":
+				_bucket_patch(chunk_buckets, chunk, "stones", _nature_transform_at(tile, 7, rock_path, 0.45, 0.48, 0.22))
 	for chunk_key in chunk_buckets:
 		var kinds: Dictionary = chunk_buckets[chunk_key]
 		for kind in kinds:
@@ -1254,11 +1261,11 @@ func _ground_patch_material(kind: String) -> Material:
 		"dark_grass":
 			material.albedo_color = Color("#3A4A22")
 		"soil":
-			material.albedo_color = Color("#6B5340")
+			material.albedo_color = Color("#4A3C2E")
 		"flowers":
 			return null
 		"stones":
-			material.albedo_color = Color("#A39A85")
+			material.albedo_color = Color("#776F60")
 		_:
 			material.albedo_color = Color("#3E4E28")
 	return material
@@ -2176,11 +2183,21 @@ func _sync_fog(force: bool) -> void:
 		fog_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
 		fog_material.render_priority = 20
 	fog_material.set_shader_parameter("unknown_opacity", 1.0)
-	fog_material.set_shader_parameter("explored_opacity", 0.55)
+	fog_material.set_shader_parameter("explored_opacity", 0.45)
 	fog_material.set_shader_parameter("cell_metres", ScaleProfile.LOGICAL_CELL_METRES)
-	fog_material.set_shader_parameter("feather_cells", 1.6)
-	fog_material.set_shader_parameter("noise_strength", 0.55)
+	fog_material.set_shader_parameter("feather_cells", 1.25)
+	fog_material.set_shader_parameter("noise_strength", 0.45)
 	fog_material.set_shader_parameter("shore_fade_metres", SHORE_FADE_METRES)
+	if fog_screen_material != null:
+		fog_screen_material.set_shader_parameter("unknown_opacity", 1.0)
+		fog_screen_material.set_shader_parameter("explored_opacity", 0.45)
+		fog_screen_material.set_shader_parameter("cell_metres", ScaleProfile.LOGICAL_CELL_METRES)
+		fog_screen_material.set_shader_parameter("feather_cells", 1.25)
+		fog_screen_material.set_shader_parameter("noise_strength", 0.45)
+		fog_screen_material.set_shader_parameter("unknown_color", FOG_UNKNOWN_BASE)
+		fog_screen_material.set_shader_parameter("mist_color", FOG_MIST_BASE)
+		fog_screen_material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
+		fog_screen_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
 	_ensure_fog_volume()
 
 
@@ -2260,9 +2277,14 @@ func _ensure_fog_volume() -> void:
 	fog_plane.material_override = fog_material
 	fog_plane.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	fog_plane.extra_cull_margin = 96.0
-	fog_plane.visible = true
+	# GFX-J: the world sheet printed triangular AABB cuts. Keep the node
+	# for old callers, but the live shroud is the screen overlay.
+	fog_plane.visible = false
 	_ensure_fog_skirts()
-	_hide_fog_screen()
+	for skirt_value in fog_skirts:
+		if skirt_value is MeshInstance3D:
+			(skirt_value as MeshInstance3D).visible = false
+	_ensure_fog_screen()
 
 
 func _ensure_fog_skirts() -> void:
@@ -2312,7 +2334,39 @@ func _hide_fog_screen() -> void:
 
 
 func _ensure_fog_screen() -> void:
-	_hide_fog_screen()
+	if fog_overlay_camera == null:
+		return
+	if fog_screen_material == null:
+		fog_screen_material = ShaderMaterial.new()
+		fog_screen_material.shader = FogScreenShader
+		fog_screen_material.render_priority = 80
+	if fog_visibility_texture != null:
+		fog_screen_material.set_shader_parameter("visibility_texture", fog_visibility_texture)
+	fog_screen_material.set_shader_parameter("unknown_color", FOG_UNKNOWN_BASE)
+	fog_screen_material.set_shader_parameter("mist_color", FOG_MIST_BASE)
+	fog_screen_material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
+	fog_screen_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
+	fog_screen_material.set_shader_parameter("unknown_opacity", 1.0)
+	fog_screen_material.set_shader_parameter("explored_opacity", 0.45)
+	fog_screen_material.set_shader_parameter("cell_metres", ScaleProfile.LOGICAL_CELL_METRES)
+	fog_screen_material.set_shader_parameter("feather_cells", 1.25)
+	fog_screen_material.set_shader_parameter("noise_strength", 0.45)
+	if fog_screen == null or not is_instance_valid(fog_screen):
+		fog_screen = MeshInstance3D.new()
+		fog_screen.name = "ScreenFogOverlay"
+		var tool := SurfaceTool.new()
+		tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+		tool.add_vertex(Vector3(-1.0, -1.0, 0.0))
+		tool.add_vertex(Vector3(3.0, -1.0, 0.0))
+		tool.add_vertex(Vector3(-1.0, 3.0, 0.0))
+		fog_screen.mesh = tool.commit()
+		fog_screen.material_override = fog_screen_material
+		fog_screen.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		fog_screen.extra_cull_margin = 16384.0
+		fog_overlay_camera.add_child(fog_screen)
+	else:
+		fog_screen.material_override = fog_screen_material
+	fog_screen.visible = true
 
 
 func _upsample_fog_mask(source: PackedByteArray, size: Vector2i, scale: int) -> PackedByteArray:
@@ -3013,29 +3067,37 @@ func _spawn_opening_hamlet(host: Node3D, hall: Vector2i, reserved: Dictionary) -
 
 
 func _opening_ridge_tiles(hall: Vector2i) -> Array[Vector2i]:
-	# One geological landmark, 1–2 Town Hall widths, west of the pond.
+	# GFX-J: 1.5–2 Town Hall widths, west of the hall so the default
+	# opening camera cannot miss it. Frames the clearing, not the rim.
 	return [
-		hall + Vector2i(-8, -1),
-		hall + Vector2i(-8, 0),
-		hall + Vector2i(-8, 1),
-		hall + Vector2i(-7, 0),
-		hall + Vector2i(-7, 1),
+		hall + Vector2i(-6, 2),
 		hall + Vector2i(-7, 2),
-		hall + Vector2i(-6, 1),
+		hall + Vector2i(-6, 3),
+		hall + Vector2i(-7, 3),
+		hall + Vector2i(-5, 3),
+		hall + Vector2i(-6, 4),
+		hall + Vector2i(-7, 4),
+		hall + Vector2i(-5, 4),
+		hall + Vector2i(-4, 3),
+		hall + Vector2i(-3, -4),
+		hall + Vector2i(-4, -4),
 	]
 
 
 func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
-	# Rocky ridge plus a creek that feeds the millpond. Presentation only.
+	# Unmistakable rocky ridge + creek. Sunlit #B3A78A, recess #66685B,
+	# water #315D66. About 5–10% of the opening view.
 	var ridge := Node3D.new()
 	ridge.name = "DressRidge"
 	host.add_child(ridge)
-	var stone := StandardMaterial3D.new()
-	stone.albedo_color = BuildingMaterials.WEATHERED_STONE
-	stone.roughness = 0.92
-	var cliff := StandardMaterial3D.new()
-	cliff.albedo_color = Color("#6E6758")
-	cliff.roughness = 0.88
+	var sunlit := StandardMaterial3D.new()
+	sunlit.albedo_color = Color("#B3A78A")
+	sunlit.roughness = 0.85
+	sunlit.metallic = 0.0
+	var recess := StandardMaterial3D.new()
+	recess.albedo_color = Color("#66685B")
+	recess.roughness = 0.88
+	recess.metallic = 0.0
 	var tiles := _opening_ridge_tiles(hall)
 	var index := 0
 	for tile in tiles:
@@ -3043,40 +3105,62 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 			continue
 		var block := MeshInstance3D.new()
 		block.name = "RidgeRock_%d" % index
-		var mesh := BoxMesh.new()
-		var tall := 1.15 + float(index % 3) * 0.45
-		mesh.size = Vector3(2.35, tall, 2.05)
-		block.mesh = mesh
+		var tall := 2.35 + float(index % 4) * 0.55
+		var wide := 3.35 + float(index % 3) * 0.45
+		if index >= 8:
+			# Foreground boulders, still large but not a wall.
+			tall *= 0.72
+			wide *= 0.78
+		if index % 3 == 0:
+			var prism := PrismMesh.new()
+			prism.size = Vector3(wide, tall, wide * 0.72)
+			block.mesh = prism
+		else:
+			var mesh := BoxMesh.new()
+			mesh.size = Vector3(wide, tall, wide * 0.78)
+			block.mesh = mesh
 		var world := tile_to_world(Vector2(tile))
-		block.position = world + Vector3(float(index % 2) * 0.35, tall * 0.42, float((index + 1) % 2) * -0.25)
-		block.rotation.y = float(index) * 0.31
-		block.material_override = stone if index % 2 == 0 else cliff
+		block.position = world + Vector3(float(index % 2) * 0.45, tall * 0.42, float((index + 1) % 2) * -0.35)
+		block.rotation.y = float(index) * 0.37
+		block.material_override = sunlit if index % 2 == 0 else recess
 		ridge.add_child(block)
 		if Catalog.ROCKS.size() > 0:
-			_spawn_dress_prop(ridge, "stone_stack", tile, float(index * 18), 0.82, "RidgeStack_%d" % index, Vector3(0.4, 0.0, -0.3))
+			_spawn_dress_prop(ridge, "stone_stack", tile, float(index * 18), 1.15, "RidgeStack_%d" % index, Vector3(0.55, 0.0, -0.4))
 		index += 1
+	var water := StandardMaterial3D.new()
+	water.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+	water.albedo_color = Color("#315D66")
+	water.roughness = 0.18
+	water.metallic = 0.0
+	water.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	water.emission_enabled = true
+	water.emission = Color("#315D66")
+	water.emission_energy_multiplier = 0.12
 	var creek := MeshInstance3D.new()
 	creek.name = "DressCreek"
 	var creek_mesh := PlaneMesh.new()
-	creek_mesh.size = Vector2(7.2, 1.55)
+	creek_mesh.size = Vector2(14.5, 2.15)
 	creek.mesh = creek_mesh
 	var pond := hall + Vector2i(-5, -3)
-	var ridge_end := hall + Vector2i(-7, 1)
+	var ridge_end := hall + Vector2i(-6, 3)
 	var mid := (Vector2(pond) + Vector2(ridge_end)) * 0.5
-	creek.position = tile_to_world(mid) + Vector3(0.0, 0.05, 0.0)
+	creek.position = tile_to_world(mid) + Vector3(0.0, 0.06, 0.0)
 	creek.rotation.y = atan2(float(pond.x - ridge_end.x), float(pond.y - ridge_end.y))
-	var water := StandardMaterial3D.new()
-	water.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
-	water.albedo_color = Color(0.16, 0.30, 0.34, 0.88)
-	water.roughness = 0.10
-	water.metallic = 0.22
-	water.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	water.emission_enabled = true
-	water.emission = Color(0.08, 0.16, 0.20)
-	water.emission_energy_multiplier = 0.16
 	creek.material_override = water
 	creek.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	ridge.add_child(creek)
+	var bend := MeshInstance3D.new()
+	bend.name = "DressCreekBend"
+	var bend_mesh := PlaneMesh.new()
+	bend_mesh.size = Vector2(7.4, 1.85)
+	bend.mesh = bend_mesh
+	var mouth := hall + Vector2i(-3, -4)
+	var bend_mid := (Vector2(pond) + Vector2(mouth)) * 0.5
+	bend.position = tile_to_world(bend_mid) + Vector3(0.4, 0.055, 0.0)
+	bend.rotation.y = atan2(float(mouth.x - pond.x), float(mouth.y - pond.y))
+	bend.material_override = water
+	bend.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	ridge.add_child(bend)
 
 
 func _spawn_opening_crops(host: Node3D, origin: Vector2i) -> void:

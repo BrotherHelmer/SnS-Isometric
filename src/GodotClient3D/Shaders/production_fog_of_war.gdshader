@@ -1,19 +1,19 @@
 shader_type spatial;
 render_mode unshaded, cull_disabled, depth_test_disabled, depth_draw_never, blend_mix, fog_disabled;
 
-// The Director: GFX-I world-space shroud. Texture stores shroud amount:
-// 0.0 visible, 0.55 explored, 1.0 unexplored. Colour #17272A.
-// Frontier feathers 1–2 cells with irregular world-space noise.
-// GFX-H island haze is gone so explored buildings stay clear.
+// The Director: GFX-I/J world-space shroud (kept, but hidden). Live FOW
+// is production_fog_screen.gdshader. Texture stores shroud amount:
+// 0.0 visible, 0.45 explored, 1.0 unexplored. Colour #17272A.
+// Frontier feathers 1–1.5 cells. GFX-H island haze is gone.
 uniform sampler2D visibility_texture : filter_linear, repeat_disable;
 uniform vec3 unknown_color = vec3(0.090, 0.153, 0.165); // #17272A
 uniform vec3 mist_color = vec3(0.090, 0.153, 0.165);
 uniform vec2 world_min_xz = vec2(-87.5, -87.5);
 uniform vec2 world_size_xz = vec2(175.0, 175.0);
 uniform float unknown_opacity : hint_range(0.0, 1.0) = 1.0;
-uniform float explored_opacity : hint_range(0.0, 1.0) = 0.55;
+uniform float explored_opacity : hint_range(0.0, 1.0) = 0.45;
 uniform float cell_metres = 2.5;
-uniform float feather_cells = 1.6;
+uniform float feather_cells = 1.25;
 uniform float noise_strength : hint_range(0.0, 1.0) = 0.55;
 uniform float shore_fade_metres = 4.0;
 

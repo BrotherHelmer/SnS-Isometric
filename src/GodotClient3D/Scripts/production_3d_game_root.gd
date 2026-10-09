@@ -719,7 +719,10 @@ func _create_lighting() -> void:
 	environment_node.name = "ShardlitEnvironment"
 	var environment := Environment.new()
 	environment_resource = environment
-	environment.background_mode = Environment.BG_SKY
+	# GFX-J: the shroud is screen-composited. Match the void to #17272A
+	# so any pixel the overlay misses is still the wilderness colour.
+	environment.background_mode = Environment.BG_COLOR
+	environment.background_color = Color("#17272A")
 	var sky := Sky.new()
 	var sky_material_value := ProceduralSkyMaterial.new()
 	sky_material = sky_material_value
@@ -3944,6 +3947,8 @@ func _apply_lighting_palette(palette: Dictionary) -> void:
 	ProductionRoadView3D.set_lighting(road_tint, float(palette.get("road_lift", 0.06)))
 	environment_resource.ambient_light_energy = float(palette.get("ambient", 0.5))
 	environment_resource.ambient_light_color = palette.get("ambient_color", palette.get("fill_color", Color("#718FA3")))
+	environment_resource.background_mode = Environment.BG_COLOR
+	environment_resource.background_color = Color("#17272A")
 	environment_resource.fog_enabled = false
 	environment_resource.fog_density = 0.0
 	environment_resource.fog_light_color = palette.get("fog_color", Color("#17272A"))
