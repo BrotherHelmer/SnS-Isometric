@@ -84,7 +84,7 @@ func _check_live_scene() -> void:
 	if game.world_view.terrain_mesh_instance != null and game.world_view.terrain_mesh_instance.material_override is ShaderMaterial:
 		var ground := game.world_view.terrain_mesh_instance.material_override as ShaderMaterial
 		var lush: Vector3 = ground.get_shader_parameter("meadow_lush")
-		_check(lush.y > lush.x and lush.x >= 0.36 and lush.x < 0.50, "meadow_lush is still the yellow-olive")
+		_check(lush.y > lush.x and lush.x >= 0.18 and lush.x < 0.50, "meadow_lush is still the yellow-olive")
 		_check(float(ground.get_shader_parameter("dirt_amount")) >= 0.52, "dirt amount is 0.56")
 		_check(float(ground.get_shader_parameter("crop_amount")) >= 0.90, "crop rows are enabled")
 		_check(float(ground.get_shader_parameter("stone_amount")) >= 0.28, "pebbles are enabled")

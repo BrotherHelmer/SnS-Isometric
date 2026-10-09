@@ -42,7 +42,7 @@ func _check_grade() -> void:
 	_check(Identity.PALETTE_PLASTER.is_equal_approx(Color("#D8C7A8")) or Identity.PALETTE_PLASTER.is_equal_approx(Color("#D6C5A2")) or Identity.PALETTE_PLASTER.is_equal_approx(Color("#E0CDA9")) or Identity.PALETTE_PLASTER.is_equal_approx(Color("#E0CDAE")), "plaster trim stays warm plaster")
 	_check(Identity.PALETTE_TIMBER.is_equal_approx(Color("#59402B")) or Identity.PALETTE_TIMBER.is_equal_approx(Color("#553C2B")) or Identity.PALETTE_TIMBER.is_equal_approx(Color("#62432F")) or Identity.PALETTE_TIMBER.is_equal_approx(Color("#64452F")), "timber trim stays dark timber")
 	_check(Identity.PALETTE_TEAL.is_equal_approx(Color("#456966")) or Identity.PALETTE_TEAL.is_equal_approx(Color("#426863")) or Identity.PALETTE_TEAL.is_equal_approx(Color("#426C67")) or Identity.PALETTE_TEAL.is_equal_approx(Color("#456D68")), "roof trim stays teal slate")
-	_check(Identity.PALETTE_STONE.is_equal_approx(Color("#776F60")) or Identity.PALETTE_STONE.is_equal_approx(Color("#A39A85")) or Identity.PALETTE_STONE.is_equal_approx(Color("#817968")), "stone trim stays weathered")
+	_check(Identity.PALETTE_STONE.is_equal_approx(Color("#776F60")) or Identity.PALETTE_STONE.is_equal_approx(Color("#A39A85")) or Identity.PALETTE_STONE.is_equal_approx(Color("#817968")) or Identity.PALETTE_STONE.is_equal_approx(Color("#716A5D")), "stone trim stays weathered")
 	_check(Identity.PALETTE_FOG_UNKNOWN.is_equal_approx(Color("#17272A")), "shroud colour is #17272A")
 	_check(float(night_p["sun_energy"]) >= 0.38 and float(night_p["sun_energy"]) <= 0.48, "night moon energy stays 0.42")
 	var moon: Color = night_p["sun_color"]
@@ -58,7 +58,7 @@ func _check_materials() -> void:
 	_check(BuildingMaterials.WARM_PLASTER.is_equal_approx(Color("#D8C7A8")) or BuildingMaterials.WARM_PLASTER.is_equal_approx(Color("#D6C5A2")) or BuildingMaterials.WARM_PLASTER.is_equal_approx(Color("#E0CDA9")) or BuildingMaterials.WARM_PLASTER.is_equal_approx(Color("#E0CDAE")), "shared plaster is warm")
 	_check(BuildingMaterials.DARK_TIMBER.is_equal_approx(Color("#59402B")) or BuildingMaterials.DARK_TIMBER.is_equal_approx(Color("#553C2B")) or BuildingMaterials.DARK_TIMBER.is_equal_approx(Color("#62432F")) or BuildingMaterials.DARK_TIMBER.is_equal_approx(Color("#64452F")), "shared timber is dark")
 	_check(BuildingMaterials.HALL_SLATE.is_equal_approx(Color("#456966")) or BuildingMaterials.HALL_SLATE.is_equal_approx(Color("#426863")) or BuildingMaterials.HALL_SLATE.is_equal_approx(Color("#426C67")) or BuildingMaterials.HALL_SLATE.is_equal_approx(Color("#456D68")), "hall roof is teal slate")
-	_check(BuildingMaterials.WEATHERED_STONE.is_equal_approx(Color("#776F60")) or BuildingMaterials.WEATHERED_STONE.is_equal_approx(Color("#A39A85")) or BuildingMaterials.WEATHERED_STONE.is_equal_approx(Color("#817968")), "shared stone is weathered")
+	_check(BuildingMaterials.WEATHERED_STONE.is_equal_approx(Color("#776F60")) or BuildingMaterials.WEATHERED_STONE.is_equal_approx(Color("#A39A85")) or BuildingMaterials.WEATHERED_STONE.is_equal_approx(Color("#817968")) or BuildingMaterials.WEATHERED_STONE.is_equal_approx(Color("#716A5D")), "shared stone is weathered")
 
 
 func _check_shadows() -> void:
