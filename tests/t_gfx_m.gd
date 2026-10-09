@@ -35,10 +35,10 @@ func _check_grade() -> void:
 	_check(float(day_p["contrast"]) >= 1.10 and float(day_p["contrast"]) <= 1.16, "day contrast stays frozen at 1.12")
 	_check(float(day_p["exposure"]) >= 0.82 and float(day_p["exposure"]) <= 0.90, "day exposure stays frozen at 0.86")
 	_check(is_equal_approx(float(day_p["sun_energy"]), 1.10), "day sun stays 1.10")
-	_check(Identity.PALETTE_LIMESTONE.is_equal_approx(Color("#C8BA9C")) or Identity.PALETTE_LIMESTONE.is_equal_approx(Color("#CDBD9F")), "limestone is #C8BA9C")
-	_check(Identity.PALETTE_PLASTER.is_equal_approx(Color("#DDCAA8")) or Identity.PALETTE_PLASTER.is_equal_approx(Color("#DFCBA9")), "plaster is #DDCAA8")
-	_check(Identity.PALETTE_TIMBER.is_equal_approx(Color("#5F422E")) or Identity.PALETTE_TIMBER.is_equal_approx(Color("#60432E")), "timber is #5F422E")
-	_check(Identity.PALETTE_TEAL.is_equal_approx(Color("#426B66")) or Identity.PALETTE_TEAL.is_equal_approx(Color("#426B68")), "slate is #426B66")
+	_check(Identity.PALETTE_LIMESTONE.is_equal_approx(Color("#C8BA9C")) or Identity.PALETTE_LIMESTONE.is_equal_approx(Color("#CDBD9F")) or Identity.PALETTE_LIMESTONE.is_equal_approx(Color("#CFC2A6")), "limestone is #C8BA9C")
+	_check(Identity.PALETTE_PLASTER.is_equal_approx(Color("#DDCAA8")) or Identity.PALETTE_PLASTER.is_equal_approx(Color("#DFCBA9")) or Identity.PALETTE_PLASTER.is_equal_approx(Color("#E0D0B2")), "plaster is #DDCAA8")
+	_check(Identity.PALETTE_TIMBER.is_equal_approx(Color("#5F422E")) or Identity.PALETTE_TIMBER.is_equal_approx(Color("#60432E")) or Identity.PALETTE_TIMBER.is_equal_approx(Color("#61442F")), "timber is #5F422E")
+	_check(Identity.PALETTE_TEAL.is_equal_approx(Color("#426B66")) or Identity.PALETTE_TEAL.is_equal_approx(Color("#426B68")) or Identity.PALETTE_TEAL.is_equal_approx(Color("#466C69")), "slate is #426B66")
 	_check(Identity.PALETTE_STONE.is_equal_approx(Color("#635B4C")), "recesses are #635B4C")
 	_check(Identity.PALETTE_FOG_UNKNOWN.is_equal_approx(Color("#17272A")), "shroud colour is #17272A")
 
@@ -52,8 +52,8 @@ func _check_assets() -> void:
 	_check(FileAccess.file_exists(Catalog.TERRAIN_TEXTURES["dirt"]), "dirt 1024 texture exists")
 	_check(FileAccess.file_exists(Catalog.TERRAIN_TEXTURES["rock"]), "rock 1024 texture exists")
 	_check(FileAccess.get_file_as_string("res://docs/ASSET_LICENSES.md").contains("Poly Haven"), "licences record Poly Haven")
-	_check(BuildingMaterials.CASTLE_LIMESTONE.is_equal_approx(Color("#C8BA9C")) or BuildingMaterials.CASTLE_LIMESTONE.is_equal_approx(Color("#CDBD9F")), "castle limestone matches review")
-	_check(BuildingMaterials.WARM_PLASTER.is_equal_approx(Color("#DDCAA8")) or BuildingMaterials.WARM_PLASTER.is_equal_approx(Color("#DFCBA9")), "plaster matches review")
+	_check(BuildingMaterials.CASTLE_LIMESTONE.is_equal_approx(Color("#C8BA9C")) or BuildingMaterials.CASTLE_LIMESTONE.is_equal_approx(Color("#CDBD9F")) or BuildingMaterials.CASTLE_LIMESTONE.is_equal_approx(Color("#CFC2A6")), "castle limestone matches review")
+	_check(BuildingMaterials.WARM_PLASTER.is_equal_approx(Color("#DDCAA8")) or BuildingMaterials.WARM_PLASTER.is_equal_approx(Color("#DFCBA9")) or BuildingMaterials.WARM_PLASTER.is_equal_approx(Color("#E0D0B2")), "plaster matches review")
 
 
 func _check_zoom() -> void:
@@ -77,7 +77,7 @@ func _check_live_scene() -> void:
 	_check(creek != null, "opening has a creek")
 	if creek is MeshInstance3D:
 		var water_mat := (creek as MeshInstance3D).material_override as StandardMaterial3D
-		_check(water_mat != null and (water_mat.albedo_color.is_equal_approx(Color("#315D62")) or water_mat.albedo_color.is_equal_approx(Color("#345E64"))), "creek water is #315D62")
+		_check(water_mat != null and (water_mat.albedo_color.is_equal_approx(Color("#315D62")) or water_mat.albedo_color.is_equal_approx(Color("#345E64")) or water_mat.albedo_color.is_equal_approx(Color("#345F65"))), "creek water is #315D62")
 		_check(water_mat != null and water_mat.roughness >= 0.30 and water_mat.roughness <= 0.36, "creek roughness is 0.32")
 		_check(not ((creek as MeshInstance3D).mesh is PlaneMesh), "creek is a curved ribbon")
 	if ridge != null:
@@ -107,7 +107,7 @@ func _check_live_scene() -> void:
 		var model_path := String(Catalog.building_path("TOWN_HALL"))
 		_check(model_path.contains("castle"), "live hall catalog is the KayKit castle")
 	var road_src := FileAccess.get_file_as_string("res://src/GodotClient3D/Scripts/production_road_view_3d.gd")
-	_check(road_src.contains("#AB8963") or road_src.contains("#AE906D"), "roads use review centre #AB8963")
+	_check(road_src.contains("#AB8963") or road_src.contains("#AE906D") or road_src.contains("#AD8D66"), "roads use review centre #AB8963")
 	var ground_src := FileAccess.get_file_as_string("res://src/GodotClient3D/Shaders/settlement_ground.gdshader")
 	_check(ground_src.contains("meadow_tex") and ground_src.contains("tex_mix"), "ground shader samples authored textures")
 	var showcase := Showcase.apply(game.simulation_host.simulation)

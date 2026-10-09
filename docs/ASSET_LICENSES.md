@@ -20,8 +20,9 @@ Attribution is optional. The Nordic diorama look stays KayKit-coherent.
 | Rocky-soil splat 1024² | `assets/settlement3d/runtime/gfx/terrain/rock_diff.jpg` | Poly Haven — rock_ground_02 1K diff | CC0 1.0 | https://polyhaven.com/a/rock_ground_02 |
 | Opening-style rocks / wheat / fence / lantern / cart | `assets/settlement3d/runtime/opening_style/*.tscn` | Project-authored (`tools/build_opening_style_models.gd`) | CC0 | See `ASSETS/credits.md`. |
 | Road rut decal | `assets/settlement3d/runtime/gfx/road_rut_decal.png` | Project-authored Pillow mask | CC0 | Sparse Decal on crossroads. |
-| Curved creek ribbon | procedural `Curve3D` + `SurfaceTool` | Project-authored | CC0 | Opaque water `#345E64`. |
+| Curved creek ribbon | procedural `Curve3D` + `SurfaceTool` | Project-authored | CC0 | Opaque water `#345F65` (GFX-O). |
 | Kaykit remap shader | `src/GodotClient3D/Shaders/settlement_kaykit_remap.gdshader` | Project-authored | CC0 | Per-surface remap of the Hexagon atlas. Roofs become muted teal / terracotta; walls become limestone / plaster. Does not edit the imported PNG. |
+| GFX-O distance-field road mask | procedural 512² `Image` + `settlement_ground.gdshader` | Project-authored | CC0 | World-space X/Z distance field. Linear control (no `source_color`). Gameplay-camera debug modes 1–3. |
 | KayKit characters, farm, tools, resources | `assets/settlement3d/runtime/` | Kay Lousberg — Adventurers, Mystery Monthly 6, Resource Bits, RPG Tools | CC0 1.0 | Unchanged from prior ledgers. |
 | Cinzel / Source Sans 3 | HUD fonts | Google Fonts | SIL OFL 1.1 | See `docs/art/ASSET_LEDGER.md`. |
 
