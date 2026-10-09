@@ -7,6 +7,7 @@ extends RefCounted
 ## slate 0.83 / terracotta 0.88.
 
 const BevelShader = preload("res://src/GodotClient3D/Shaders/settlement_bevel.gdshader")
+const KaykitRemap = preload("res://src/GodotClient3D/Shaders/settlement_kaykit_remap.gdshader")
 
 const ROUGHNESS := {
 	"plaster": 0.95,
@@ -17,15 +18,15 @@ const ROUGHNESS := {
 	"metal": 0.34,
 }
 
-const CASTLE_LIMESTONE := Color("#C8BA9C")
-const CASTLE_MASONRY := Color("#C8BA9C")
-const CASTLE_SLATE := Color("#426B66")
-const HALL_MASONRY := Color("#C8BA9C")
-const HALL_SLATE := Color("#426B66")
-const CLAY_ROOF := Color("#A76140")
-const KEEP_SLATE := Color("#314B49")
-const WARM_PLASTER := Color("#DDCAA8")
-const DARK_TIMBER := Color("#5F422E")
+const CASTLE_LIMESTONE := Color("#CDBD9F")
+const CASTLE_MASONRY := Color("#CDBD9F")
+const CASTLE_SLATE := Color("#426B68")
+const HALL_MASONRY := Color("#CDBD9F")
+const HALL_SLATE := Color("#426B68")
+const CLAY_ROOF := Color("#A96343")
+const KEEP_SLATE := Color("#304C49")
+const WARM_PLASTER := Color("#DFCBA9")
+const DARK_TIMBER := Color("#60432E")
 const WEATHERED_STONE := Color("#635B4C")
 const FOUNDATION_FACE := Color("#A99D82")
 const FOUNDATION_TOP := Color("#C1B394")
@@ -38,10 +39,59 @@ static var _bevel_by_kind: Dictionary = {}
 static func apply(root: Node, seed_id: int, building_type: String = "") -> void:
 	if root == null:
 		return
+	if _is_kaykit_hexagon(building_type):
+		_apply_kaykit_remap(root, building_type)
+		return
 	var shift := _instance_shift(seed_id)
 	_walk(root, shift, building_type)
 	if building_type == "TOWN_HALL" or building_type == "CASTLE":
 		_lift_landmark_walls(root)
+
+
+static func _is_kaykit_hexagon(building_type: String) -> bool:
+	return building_type == "TOWN_HALL" or building_type == "CASTLE" or building_type == "HOUSE" or building_type == "LUMBER_CAMP" or building_type == "SAWMILL"
+
+
+static func _apply_kaykit_remap(root: Node, building_type: String) -> void:
+	# Per-surface override. Do not edit the imported atlas. Civic roofs
+	# stay muted teal slate; houses / workshops roll terracotta. No emerald.
+	var terracotta := building_type == "HOUSE" or building_type == "LUMBER_CAMP" or building_type == "SAWMILL" or building_type == "FARM" or building_type == "BAKERY" or building_type == "STOREHOUSE"
+	var wall_lift := 1.18 if building_type == "TOWN_HALL" or building_type == "CASTLE" else 1.04
+	var roughness := 0.86 if terracotta else 0.83
+	for node in root.find_children("*", "MeshInstance3D", true, false):
+		var instance := node as MeshInstance3D
+		if instance == null:
+			continue
+		var tex: Texture2D = _first_albedo_texture(instance)
+		var material := ShaderMaterial.new()
+		material.shader = KaykitRemap
+		if tex != null:
+			material.set_shader_parameter("albedo_tex", tex)
+		material.set_shader_parameter("wall_color", CASTLE_LIMESTONE)
+		material.set_shader_parameter("plaster_color", WARM_PLASTER)
+		material.set_shader_parameter("timber_color", DARK_TIMBER)
+		material.set_shader_parameter("roof_color", HALL_SLATE)
+		material.set_shader_parameter("roof_shadow", KEEP_SLATE)
+		material.set_shader_parameter("terracotta", CLAY_ROOF)
+		material.set_shader_parameter("use_terracotta", 1.0 if terracotta else 0.0)
+		material.set_shader_parameter("wall_lift", wall_lift)
+		material.set_shader_parameter("roughness", roughness)
+		instance.material_override = material
+
+
+static func _first_albedo_texture(instance: MeshInstance3D) -> Texture2D:
+	if instance.material_override is StandardMaterial3D:
+		var over := instance.material_override as StandardMaterial3D
+		if over.albedo_texture != null:
+			return over.albedo_texture
+	if instance.mesh != null:
+		for surface in instance.mesh.get_surface_count():
+			var mat := instance.get_active_material(surface)
+			if mat == null:
+				mat = instance.mesh.surface_get_material(surface)
+			if mat is StandardMaterial3D and (mat as StandardMaterial3D).albedo_texture != null:
+				return (mat as StandardMaterial3D).albedo_texture
+	return load("res://assets/settlement3d/runtime/buildings/hexagons_medieval.png") as Texture2D
 
 
 static func classify(albedo: Color) -> String:

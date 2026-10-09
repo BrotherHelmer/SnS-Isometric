@@ -142,6 +142,9 @@ var _terrain_color_grid: PackedColorArray = PackedColorArray()
 var _terrain_lookups_ready := false
 var _atmosphere_scale := 1.0
 var _ground_tint := Color(1.0, 1.0, 1.0)
+var road_control_texture: ImageTexture
+var road_debug_enabled := false
+const ROAD_CONTROL_RES := 512
 
 
 func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {}) -> void:
@@ -584,6 +587,7 @@ func _cached_terrain_color(tile: Vector2i) -> Color:
 func _rebuild_terrain() -> void:
 	_refresh_terrain_lookups()
 	_precompute_terrain_colors()
+	_bake_road_control_texture()
 	_commit_terrain_mesh(true)
 	_rebuild_beach_apron()
 
@@ -594,6 +598,7 @@ func _rebake_terrain_occupation() -> void:
 	# after each occupation signature used to stall the first frame.
 	_refresh_terrain_lookups()
 	_precompute_terrain_colors()
+	_bake_road_control_texture()
 	_commit_terrain_mesh(false)
 
 
@@ -630,8 +635,7 @@ func _apply_ground_material(host: MeshInstance3D) -> void:
 	# The Director: GFX-K three-scale meadow. Broad 3.0R, medium 0.8R.
 	# Stay olive-green; do not return to the yellow-lime GFX-D wash.
 	var road_w := ScaleProfile.road_width_metres()
-	material.set_shader_parameter("grass_sunlit", Vector3(0.353, 0.459, 0.271))
-	material.set_shader_parameter("grass_moss", Vector3(0.204, 0.302, 0.204))
+	_apply_meadow_palette(material)
 	material.set_shader_parameter("macro_metres", maxf(8.0, 3.0 * road_w))
 	material.set_shader_parameter("patch_metres", maxf(1.94, 0.8 * road_w))
 	material.set_shader_parameter("detail_metres", 1.10)
@@ -641,11 +645,6 @@ func _apply_ground_material(host: MeshInstance3D) -> void:
 	material.set_shader_parameter("flower_amount", 0.40)
 	material.set_shader_parameter("stone_amount", 0.34)
 	material.set_shader_parameter("crop_amount", 1.0)
-	material.set_shader_parameter("meadow_lush", Vector3(0.322, 0.420, 0.251))
-	material.set_shader_parameter("meadow_warm", Vector3(0.322, 0.420, 0.251))
-	material.set_shader_parameter("forest_floor", Vector3(0.204, 0.302, 0.204))
-	material.set_shader_parameter("dirt_color", Vector3(0.533, 0.424, 0.286))
-	material.set_shader_parameter("road_earth", Vector3(0.671, 0.537, 0.388))
 	_bind_terrain_textures(material)
 	material.set_shader_parameter("wheat_gold", Vector3(0.788, 0.635, 0.290))
 	material.set_shader_parameter("gravel_color", Vector3(0.573, 0.565, 0.502))
@@ -675,9 +674,110 @@ func _bind_terrain_textures(material: ShaderMaterial) -> void:
 		material.set_shader_parameter("dirt_tex", dirt)
 	if rock != null:
 		material.set_shader_parameter("rock_tex", rock)
-	material.set_shader_parameter("tex_mix", 0.58)
+	material.set_shader_parameter("tex_mix", 0.20)
 	material.set_shader_parameter("tex_repeat_meadow", 1.5 * ScaleProfile.road_width_metres())
 	material.set_shader_parameter("tex_repeat_forest", 1.2 * ScaleProfile.road_width_metres())
+	if road_control_texture != null:
+		material.set_shader_parameter("road_control_tex", road_control_texture)
+	material.set_shader_parameter("road_control_amount", 1.0)
+	material.set_shader_parameter("road_debug", 1.0 if road_debug_enabled else 0.0)
+
+
+func _apply_meadow_palette(material: ShaderMaterial) -> void:
+	# GFX-N review meadow. Green lawn, brown only on roads / yards.
+	material.set_shader_parameter("grass_sunlit", Vector3(0.459, 0.533, 0.318))
+	material.set_shader_parameter("grass_moss", Vector3(0.224, 0.310, 0.200))
+	material.set_shader_parameter("meadow_lush", Vector3(0.333, 0.427, 0.247))
+	material.set_shader_parameter("meadow_warm", Vector3(0.459, 0.533, 0.318))
+	material.set_shader_parameter("forest_floor", Vector3(0.208, 0.282, 0.204))
+	material.set_shader_parameter("dirt_color", Vector3(0.537, 0.424, 0.298))
+	material.set_shader_parameter("road_earth", Vector3(0.682, 0.565, 0.427))
+
+
+func set_road_debug(enabled: bool) -> void:
+	road_debug_enabled = enabled
+	_bind_road_debug(terrain_mesh_instance)
+	_bind_road_debug(beach_apron_instance)
+
+
+func _bind_road_debug(host: MeshInstance3D) -> void:
+	if host == null or not (host.material_override is ShaderMaterial):
+		return
+	var material := host.material_override as ShaderMaterial
+	material.set_shader_parameter("road_debug", 1.0 if road_debug_enabled else 0.0)
+	if road_control_texture != null:
+		material.set_shader_parameter("road_control_tex", road_control_texture)
+
+
+func _bake_road_control_texture() -> void:
+	# 512² RGBA8 world-space mask. R = union of road disks / capsules.
+	var img := Image.create(ROAD_CONTROL_RES, ROAD_CONTROL_RES, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 1))
+	if simulation != null and map_size.x > 0:
+		var min_xz := _fog_world_min_xz()
+		var size_xz := _fog_world_size_xz()
+		var r := ScaleProfile.road_width_metres()
+		var cell := ScaleProfile.LOGICAL_CELL_METRES
+		var centres: Array[Vector2] = []
+		_refresh_terrain_lookups()
+		for y in range(map_size.y):
+			for x in range(map_size.x):
+				var tile := Vector2i(x, y)
+				if not _is_road_tile(tile) and _visual_path_weight(tile) < 0.55 and _hamlet_path_weight(tile) < 0.55:
+					continue
+				var world := tile_to_world(Vector2(tile))
+				centres.append(Vector2(world.x, world.z))
+		var px_per_m := float(ROAD_CONTROL_RES) / maxf(size_xz.x, 1.0)
+		var radius_px := int(ceili((r * 0.55) * px_per_m)) + 2
+		for centre in centres:
+			var uv := (centre - min_xz) / size_xz
+			var cx := int(round(uv.x * float(ROAD_CONTROL_RES - 1)))
+			var cy := int(round(uv.y * float(ROAD_CONTROL_RES - 1)))
+			_stamp_road_disk(img, cx, cy, radius_px, r, px_per_m)
+		# Capsules between 4-adjacent road tiles so junctions union, not average.
+		for centre in centres:
+			for other in centres:
+				var delta := other - centre
+				if delta.length_squared() < 0.01 or delta.length() > cell * 1.35:
+					continue
+				_stamp_road_capsule(img, centre, other, min_xz, size_xz, r * 0.48, px_per_m)
+	if road_control_texture == null:
+		road_control_texture = ImageTexture.create_from_image(img)
+	else:
+		road_control_texture.update(img)
+	_bind_road_debug(terrain_mesh_instance)
+	_bind_road_debug(beach_apron_instance)
+
+
+func _stamp_road_disk(img: Image, cx: int, cy: int, radius_px: int, road_r: float, px_per_m: float) -> void:
+	var res := ROAD_CONTROL_RES
+	var inner := (road_r * 0.65) * px_per_m
+	var outer := (road_r + road_r * 0.12) * px_per_m
+	for oy in range(-radius_px, radius_px + 1):
+		for ox in range(-radius_px, radius_px + 1):
+			var x := cx + ox
+			var y := cy + oy
+			if x < 0 or y < 0 or x >= res or y >= res:
+				continue
+			var dist := Vector2(float(ox), float(oy)).length()
+			var mask := 1.0 - smoothstep(inner, maxf(inner + 0.5, outer), dist)
+			if mask <= 0.02:
+				continue
+			var prev := img.get_pixel(x, y)
+			if mask > prev.r:
+				img.set_pixel(x, y, Color(mask, prev.g, prev.b, 1.0))
+
+
+func _stamp_road_capsule(img: Image, a: Vector2, b: Vector2, min_xz: Vector2, size_xz: Vector2, half_w: float, px_per_m: float) -> void:
+	var res := ROAD_CONTROL_RES
+	var steps := maxi(2, int(ceili(a.distance_to(b) * px_per_m)))
+	var radius_px := int(ceili(half_w * px_per_m)) + 1
+	for i in steps + 1:
+		var p := a.lerp(b, float(i) / float(steps))
+		var uv := (p - min_xz) / size_xz
+		var cx := int(round(uv.x * float(res - 1)))
+		var cy := int(round(uv.y * float(res - 1)))
+		_stamp_road_disk(img, cx, cy, radius_px, half_w * 2.0, px_per_m)
 
 
 func _rebuild_terrain_collision(mesh: Mesh) -> void:
@@ -799,7 +899,7 @@ func _compute_terrain_color(tile: Vector2i) -> Color:
 	if _is_farm_field_tile(tile):
 		base = Color(0.788, 0.635, 0.290, 0.94)
 	if _is_road_tile(tile):
-		base = Color(0.784, 0.627, 0.392, 0.96)
+		base = Color(0.682, 0.565, 0.427, 0.98)
 	elif _is_road_shoulder(tile):
 		# 20–35% of the road width, not a hard beige stripe.
 		var shoulder := 0.20 + float(_tile_hash(tile, 41) % 16) / 100.0
@@ -1061,37 +1161,34 @@ func _rebuild_grass_multimeshes() -> void:
 			var path_w := _visual_path_weight(tile)
 			if path_w > 0.45:
 				continue
-			# GFX-H: denser tufts, flowers and pebbles so the meadow
-			# reads as a ground material at zoom 26, not an olive sheet.
+			# GFX-N: cluster at forest edges and landmarks. Sparse meadow
+			# center so construction stays readable.
 			var patch := _tile_hash(tile, 19) % 5
 			var tufts := 0
-			if (meadow > 0.08 or near_yard) and patch <= 4:
-				tufts = 4 if meadow > 0.30 else 3
-			elif forest_edge >= 1 and _tile_hash(tile, 23) % 2 == 0:
-				tufts = 2
+			if forest_edge >= 1:
+				tufts = 5 if forest_edge >= 2 else 4
+			elif near_yard and patch <= 3:
+				tufts = 3
+			elif meadow > 0.22 and patch == 0:
+				tufts = 1
 			if tufts == 0:
-				if meadow > 0.16 and _tile_hash(tile, 47) % 3 == 0 and Catalog.FLOWERS.size() > 0:
+				if forest_edge >= 1 and _tile_hash(tile, 47) % 2 == 0 and Catalog.FLOWERS.size() > 0:
 					var lone_flower := String(Catalog.FLOWERS[_tile_hash(tile, 61) % Catalog.FLOWERS.size()])
 					_append_nature_transform(transforms_by_path, lone_flower, tile, 4, 0.70, 1.28, 0.50)
-				if _tile_hash(tile, 101) % 4 == 0 and Catalog.ROCKS.size() > 0:
-					var lone_rock := String(Catalog.ROCKS[_tile_hash(tile, 109) % Catalog.ROCKS.size()])
-					_append_nature_transform(transforms_by_path, lone_rock, tile, 7, 0.50, 0.38, 0.16)
 				continue
 			for index in tufts:
 				var grass_path := String(Catalog.GRASS[_tile_hash(tile, 83 + index) % Catalog.GRASS.size()])
 				_append_nature_transform(transforms_by_path, grass_path, tile, index, 0.95, 1.48, 0.86)
-			if meadow > 0.18 and _tile_hash(tile, 47) % 4 == 0 and Catalog.FLOWERS.size() > 0:
+			if (forest_edge >= 1 or near_yard) and _tile_hash(tile, 47) % 3 == 0 and Catalog.FLOWERS.size() > 0:
 				var flower_path := String(Catalog.FLOWERS[_tile_hash(tile, 61) % Catalog.FLOWERS.size()])
 				_append_nature_transform(transforms_by_path, flower_path, tile, 4, 0.60, 1.12, 0.46)
-			# Presentation-only meadow shrubs — not TILE_TREE, so the founding
-			# apron stays buildable while the camera still sees a composed yard.
-			if meadow > 0.20 and forest_edge == 0 and _tile_hash(tile, 59) % 6 == 0 and Catalog.UNDERSTORY.size() > 0:
+			if meadow > 0.20 and forest_edge == 0 and near_yard and _tile_hash(tile, 59) % 6 == 0 and Catalog.UNDERSTORY.size() > 0:
 				var meadow_bush := String(Catalog.UNDERSTORY[_tile_hash(tile, 73) % Catalog.UNDERSTORY.size()])
 				_append_nature_transform(transforms_by_path, meadow_bush, tile, 8, 0.55, 0.96, 0.30)
 			if forest_edge >= 1 and forest_edge <= 3 and _tile_hash(tile, 53) % 2 == 0 and Catalog.UNDERSTORY.size() > 0:
 				var bush_path := String(Catalog.UNDERSTORY[_tile_hash(tile, 71) % Catalog.UNDERSTORY.size()])
 				_append_nature_transform(transforms_by_path, bush_path, tile, 6, 0.50, 0.35, 0.30)
-			if (forest_edge >= 1 or meadow > 0.32) and _tile_hash(tile, 101) % 3 == 0 and Catalog.ROCKS.size() > 0:
+			if forest_edge >= 1 and _tile_hash(tile, 101) % 4 == 0 and Catalog.ROCKS.size() > 0:
 				var rock_path := String(Catalog.ROCKS[_tile_hash(tile, 109) % Catalog.ROCKS.size()])
 				_append_nature_transform(transforms_by_path, rock_path, tile, 7, 0.58, 0.50, 0.20)
 	_spawn_nature_multimeshes(grass_root, transforms_by_path)
@@ -2727,11 +2824,7 @@ func _rebuild_beach_apron() -> void:
 	material.set_shader_parameter("detail_amount", 0.045)
 	material.set_shader_parameter("dirt_amount", 0.18)
 	# Terrain continues under the shroud — meadow language, not a teal void.
-	material.set_shader_parameter("grass_sunlit", Vector3(0.353, 0.459, 0.271))
-	material.set_shader_parameter("grass_moss", Vector3(0.204, 0.302, 0.204))
-	material.set_shader_parameter("meadow_lush", Vector3(0.322, 0.420, 0.251))
-	material.set_shader_parameter("meadow_warm", Vector3(0.322, 0.420, 0.251))
-	material.set_shader_parameter("forest_floor", Vector3(0.204, 0.302, 0.204))
+	_apply_meadow_palette(material)
 	_bind_terrain_textures(material)
 	material.set_shader_parameter("beach_color", Vector3(0.090, 0.153, 0.165))
 	material.set_shader_parameter("rock_shore", Vector3(0.078, 0.125, 0.141))
@@ -3013,13 +3106,9 @@ func _rebuild_opening_dressing() -> void:
 				keep += 18
 			if _tile_hash(tile, 77) % 100 > clampi(keep, 18, 88):
 				continue
-			var rock_landmark := ox >= 4 and oy >= 2 and ox <= 9 and oy <= 8
-			if rock_landmark and Catalog.ROCKS.size() > 0 and _tile_hash(tile, 81) % 3 != 0:
-				_append_nature_transform(transforms_by_path, String(Catalog.ROCKS[_tile_hash(tile, 83) % Catalog.ROCKS.size()]), tile, 3, 0.70, 0.85, 0.40)
-			elif _tile_hash(tile, 81) % 9 == 0 and Catalog.ROCKS.size() > 0:
-				_append_nature_transform(transforms_by_path, String(Catalog.ROCKS[_tile_hash(tile, 83) % Catalog.ROCKS.size()]), tile, 3, 0.55, 0.72, 0.28)
-			else:
-				_append_nature_transform(transforms_by_path, _tree_path_for_tile(tile, 0, 3), tile, 0, 0.70, 1.05, 0.42)
+			# GFX-N: hide pale meadow rocks. Ridge debris stays retinted
+			# to #898776. Forest fill is trees only.
+			_append_nature_transform(transforms_by_path, _tree_path_for_tile(tile, 0, 3), tile, 0, 0.70, 1.05, 0.42)
 	_spawn_nature_multimeshes(host, transforms_by_path)
 
 
@@ -3135,9 +3224,9 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 	ridge.name = "DressRidge"
 	ridge.set_meta("cosmetic_only", true)
 	host.add_child(ridge)
-	var highlight := _ridge_material(Color("#B4AA92"), 0.92)
-	var midtone := _ridge_material(Color("#8E8C78"), 0.92)
-	var shade := _ridge_material(Color("#626B61"), 0.92)
+	var highlight := _ridge_material(Color("#B6AC94"), 0.92)
+	var midtone := _ridge_material(Color("#898776"), 0.92)
+	var shade := _ridge_material(Color("#5E655B"), 0.92)
 	var b := ScaleProfile.TOWN_HALL_WIDTH_METRES
 	var r := ScaleProfile.road_width_metres()
 	var house_h := 0.930 * 4.40
@@ -3148,8 +3237,8 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 			continue
 		var block := MeshInstance3D.new()
 		block.name = "RidgeRock_%d" % index
-		var wide := b * (0.18 + float(index % 5) * 0.07)
-		wide = clampf(wide, b * 0.15, b * 0.55)
+		var wide := b * (0.14 + float(index % 5) * 0.03)
+		wide = clampf(wide, b * 0.12, b * 0.28)
 		var tall := minf(house_h * 0.35, b * 0.16)
 		block.mesh = _bevelled_ridge_mesh(index, wide, tall)
 		var world := tile_to_world(Vector2(tile))
@@ -3178,9 +3267,9 @@ func _spawn_kaykit_ridge_rock(ridge: Node3D, tile: Vector2i, index: int, scale_m
 	prop.position = tile_to_world(Vector2(tile)) + Vector3(0.55, 0.0, -0.40)
 	prop.rotation.y = float(index) * 0.73
 	prop.scale = Vector3.ONE * clampf(scale_mul, 0.55, 1.15)
-	var tint := Color("#8E8C78") if index % 3 != 0 else Color("#B4AA92")
+	var tint := Color("#898776") if index % 3 != 0 else Color("#B6AC94")
 	if index % 3 == 2:
-		tint = Color("#626B61")
+		tint = Color("#5E655B")
 	for child in prop.find_children("*", "MeshInstance3D", true, false):
 		var mesh_i := child as MeshInstance3D
 		var mat := StandardMaterial3D.new()
@@ -3194,13 +3283,13 @@ func _spawn_kaykit_ridge_rock(ridge: Node3D, tile: Vector2i, index: int, scale_m
 func _spawn_meandering_creek(ridge: Node3D, hall: Vector2i, road_w: float) -> void:
 	# Curve3D ribbon. No long turquoise rectangles.
 	var tiles: Array[Vector2i] = [
-		hall + Vector2i(-5, -2),
-		hall + Vector2i(-4, 0),
-		hall + Vector2i(-5, 2),
-		hall + Vector2i(-4, 4),
+		hall + Vector2i(-6, 1),
+		hall + Vector2i(-5, 3),
+		hall + Vector2i(-4, 5),
 		hall + Vector2i(-2, 6),
 		hall + Vector2i(0, 7),
-		hall + Vector2i(2, 7),
+		hall + Vector2i(2, 6),
+		hall + Vector2i(3, 4),
 	]
 	var points: Array[Vector3] = []
 	for tile in tiles:
@@ -3208,16 +3297,16 @@ func _spawn_meandering_creek(ridge: Node3D, hall: Vector2i, road_w: float) -> vo
 			points.append(tile_to_world(Vector2(tile)) + Vector3(0.0, 0.05, 0.0))
 	if points.size() < 5:
 		return
-	var width := clampf(road_w * 0.82, road_w * 0.60, road_w * 1.0)
-	var bank := _ridge_material(Color("#8A7658"), 0.92)
+	var width := clampf(road_w * 0.88, road_w * 0.70, road_w * 1.0)
+	var bank := _ridge_material(Color("#847257"), 0.92)
 	var water := StandardMaterial3D.new()
 	water.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
-	water.albedo_color = Color("#315D62")
-	water.roughness = 0.32
+	water.albedo_color = Color("#345E64")
+	water.roughness = 0.35
 	water.metallic = 0.0
 	water.emission_enabled = true
-	water.emission = Color("#638D86")
-	water.emission_energy_multiplier = 0.04
+	water.emission = Color("#719B93")
+	water.emission_energy_multiplier = 0.06
 	var mud := MeshInstance3D.new()
 	mud.name = "DressCreekBank"
 	mud.mesh = _creek_ribbon_mesh(points, width * 1.35)

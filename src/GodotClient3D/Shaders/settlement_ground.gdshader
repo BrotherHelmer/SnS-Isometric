@@ -10,16 +10,16 @@ uniform vec3 light_tint : source_color = vec3(1.0);
 uniform float tint_floor = 0.0;
 uniform float tint_wash_lo = 0.70;
 uniform float tint_wash_hi = 0.94;
-uniform vec3 grass_sunlit : source_color = vec3(0.322, 0.420, 0.251); // #526B40
-uniform vec3 grass_moss : source_color = vec3(0.204, 0.302, 0.204); // #344D34
-uniform vec3 dirt_color : source_color = vec3(0.533, 0.424, 0.286); // #886C49
-uniform vec3 meadow_lush : source_color = vec3(0.322, 0.420, 0.251); // #526B40
-uniform vec3 meadow_warm : source_color = vec3(0.322, 0.420, 0.251); // #526B40
+uniform vec3 grass_sunlit : source_color = vec3(0.459, 0.533, 0.318); // #758851
+uniform vec3 grass_moss : source_color = vec3(0.224, 0.310, 0.200); // #394F33
+uniform vec3 dirt_color : source_color = vec3(0.537, 0.424, 0.298); // #896C4C
+uniform vec3 meadow_lush : source_color = vec3(0.333, 0.427, 0.247); // #556D3F
+uniform vec3 meadow_warm : source_color = vec3(0.459, 0.533, 0.318); // #758851
 uniform vec3 flower_warm : source_color = vec3(0.820, 0.678, 0.302); // #D1AD4D
 uniform vec3 flower_cool : source_color = vec3(0.878, 0.831, 0.682); // #E0D4AE
 uniform vec3 gravel_color : source_color = vec3(0.573, 0.565, 0.502); // #929080
-uniform vec3 forest_floor : source_color = vec3(0.204, 0.302, 0.204); // #344D34
-uniform vec3 road_earth : source_color = vec3(0.671, 0.537, 0.388); // #AB8963
+uniform vec3 forest_floor : source_color = vec3(0.208, 0.282, 0.204); // #354834
+uniform vec3 road_earth : source_color = vec3(0.682, 0.565, 0.427); // #AE906D
 uniform vec3 wheat_gold : source_color = vec3(0.788, 0.635, 0.290); // #C9A24A
 uniform vec3 wheat_furrow : source_color = vec3(0.420, 0.310, 0.165);
 uniform float macro_metres = 8.0;
@@ -45,9 +45,12 @@ uniform sampler2D meadow_tex : source_color, filter_linear_mipmap, repeat_enable
 uniform sampler2D forest_tex : source_color, filter_linear_mipmap, repeat_enable;
 uniform sampler2D dirt_tex : source_color, filter_linear_mipmap, repeat_enable;
 uniform sampler2D rock_tex : source_color, filter_linear_mipmap, repeat_enable;
-uniform float tex_mix = 0.58;
+uniform float tex_mix = 0.20;
 uniform float tex_repeat_meadow = 3.64;
 uniform float tex_repeat_forest = 2.91;
+uniform sampler2D road_control_tex : hint_default_black, filter_linear, repeat_disable;
+uniform float road_control_amount = 1.0;
+uniform float road_debug = 0.0;
 uniform float beach_margin_metres = 5.0;
 uniform float coast_jut_metres = 14.0;
 uniform float apron_mode = 0.0;
@@ -118,29 +121,23 @@ void fragment() {
 	float dirt_noise = lod_cheap > 0.5 ? broad : fbm(world_pos.xz / (macro_metres * 1.15) + vec2(4.8, 21.0));
 	float dirt_mask = smoothstep(0.48, 0.82, dirt_noise);
 	vec3 grass = mix(grass_moss, meadow_lush, clamp(broad * 0.55 + patch * 0.45, 0.0, 1.0));
-	// GFX-K: three scales. Broad meadow 3.0R / medium 0.8R / fine unchanged.
-	// Dark-grass 15–25% toward forest edges. No yellow-lime wash.
+	// GFX-N: palette owns the meadow. Poly Haven maps are luminance
+	// detail only — they must not paint a sandy khaki wash.
 	float dark_grass = smoothstep(0.08, 0.46, 1.0 - patch) * (0.55 + 0.45 * (1.0 - broad));
-	grass = mix(grass, grass_sunlit, smoothstep(0.62, 0.94, patch) * 0.12);
+	grass = mix(grass, grass_sunlit, smoothstep(0.62, 0.94, patch) * 0.18);
 	grass = mix(grass, meadow_warm, smoothstep(0.74, 0.98, broad) * 0.10);
 	grass = mix(grass, forest_floor, clamp(dark_grass * 0.72, 0.0, 0.26));
-	// GFX-M authored 1024² maps. World-space UVs, then tint to the
-	// Nordic splat so photoreal scans do not break KayKit.
 	if (tex_mix > 0.01) {
 		vec2 muv = world_pos.xz / max(tex_repeat_meadow, 1.5);
 		vec2 fuv = world_pos.xz / max(tex_repeat_forest, 1.2);
-		vec3 meadow_s = texture(meadow_tex, muv).rgb;
-		vec3 forest_s = texture(forest_tex, fuv).rgb;
-		vec3 dirt_s = texture(dirt_tex, muv * 1.15).rgb;
-		vec3 rock_s = texture(rock_tex, fuv * 1.35).rgb;
-		meadow_s = mix(meadow_s, grass, 0.38);
-		forest_s = mix(forest_s, forest_floor, 0.40);
-		dirt_s = mix(dirt_s, dirt_color, 0.45);
-		rock_s = mix(rock_s, gravel_color, 0.50);
-		vec3 authored = mix(meadow_s, forest_s, clamp(dark_grass * 0.85, 0.0, 0.55));
-		authored = mix(authored, dirt_s, dirt_mask * 0.55);
-		authored = mix(authored, rock_s, dirt_mask * 0.22);
-		grass = mix(grass, authored, tex_mix);
+		float meadow_luma = dot(texture(meadow_tex, muv).rgb, vec3(0.2126, 0.7152, 0.0722));
+		float forest_luma = dot(texture(forest_tex, fuv).rgb, vec3(0.2126, 0.7152, 0.0722));
+		float dirt_luma = dot(texture(dirt_tex, muv * 1.15).rgb, vec3(0.2126, 0.7152, 0.0722));
+		float detail_luma = mix(meadow_luma, forest_luma, clamp(dark_grass * 0.85, 0.0, 0.55));
+		detail_luma = mix(detail_luma, dirt_luma, dirt_mask * 0.22);
+		float variation = smoothstep(0.20, 0.80, detail_luma);
+		vec3 palette_meadow = mix(grass_moss, grass_sunlit, variation);
+		grass = mix(grass, palette_meadow * (0.70 + detail_luma * 0.60), tex_mix);
 	}
 	// Blade-scale tuft striping so the meadow is not a painted slab.
 	if (lod_cheap < 0.5) {
@@ -161,6 +158,17 @@ void fragment() {
 			smoothstep(0.0, 0.08, COLOR.r - COLOR.g)
 		);
 	}
+	// GFX-N: 512² road-control mask. Union (max) so intersections stay
+	// solid instead of averaging away at the Town Hall junction.
+	vec2 road_uv = (world_pos.xz - world_min_xz) / max(world_size_xz, vec2(0.001));
+	float control = texture(road_control_tex, clamp(road_uv, vec2(0.0), vec2(1.0))).r * road_control_amount;
+	occupy = max(occupy, control);
+	if (road_debug > 0.5) {
+		ALBEDO = mix(vec3(0.34, 0.35, 0.33), vec3(1.0, 0.0, 1.0), clamp(control, 0.0, 1.0));
+		ROUGHNESS = 1.0;
+		METALLIC = 0.0;
+		return;
+	}
 	float crop = occupy * crop_amount
 		* smoothstep(0.18, 0.30, COLOR.g - COLOR.b)
 		* smoothstep(0.06, 0.14, COLOR.r - COLOR.g);
@@ -171,9 +179,9 @@ void fragment() {
 	// Road shoulders: 20–35% of the road width, world-space noise, not
 	// a hard tile edge. Mid occupy = shoulder; high occupy = packed clay.
 	float shoulder = smoothstep(0.18, 0.55, occupy) * (1.0 - smoothstep(0.72, 0.94, occupy));
-	vec3 occupy_albedo = mix(dirt_color, road_earth, smoothstep(0.40, 0.88, COLOR.r));
-	occupy_albedo = mix(occupy_albedo, COLOR.rgb, 0.70);
-	occupy_albedo = mix(occupy_albedo, mix(dirt_color, grass, 0.35), shoulder * 0.55);
+	vec3 occupy_albedo = mix(dirt_color, road_earth, smoothstep(0.28, 0.82, max(COLOR.r, control)));
+	occupy_albedo = mix(occupy_albedo, COLOR.rgb, 0.35);
+	occupy_albedo = mix(occupy_albedo, mix(dirt_color, vec3(0.325, 0.416, 0.251), 0.40), shoulder * 0.40);
 	vec3 ground = mix(grass, occupy_albedo, occupy * (1.0 - crop));
 	if (crop > 0.08) {
 		float furrow = abs(fract(world_pos.x * 0.64 + world_pos.z * 0.05) - 0.5);
@@ -182,7 +190,9 @@ void fragment() {
 		wheat = mix(wheat, wheat * 0.78, dirt_mask * 0.28);
 		ground = mix(ground, wheat, clamp(crop * 0.96, 0.0, 1.0));
 	}
-	ground = mix(ground, dirt_color, dirt_mask * dirt_amount * (1.0 - occupy * 0.55) * (1.0 - crop));
+	// Keep dirt_amount for older gates; visually cap it so the meadow
+	// stays green. Earth belongs on roads and yards, not the lawn.
+	ground = mix(ground, dirt_color, dirt_mask * dirt_amount * 0.16 * (1.0 - occupy * 0.80) * (1.0 - crop));
 	float gravel_n = lod_cheap > 0.5 ? 0.0 : smoothstep(0.72, 0.93, noise2(world_pos.xz / 7.5 + vec2(2.2, 14.0)));
 	ground = mix(ground, gravel_color, gravel_n * 0.34 * stone_amount * (0.22 + occupy));
 	if (lod_cheap < 0.5) {
@@ -210,5 +220,6 @@ void fragment() {
 		vec3 bump = normalize(vec3((detail - 0.5) * bump_w, 1.0, (patch - 0.5) * bump_w));
 		NORMAL = normalize((VIEW_MATRIX * vec4(bump, 0.0)).xyz);
 	}
-	ROUGHNESS = mix(0.96, mix(0.86, 0.78, crop), dirt_mask);
+	ROUGHNESS = mix(0.94, mix(0.90, 0.82, crop), occupy * 0.55 + dirt_mask * 0.20);
+	METALLIC = 0.0;
 }
