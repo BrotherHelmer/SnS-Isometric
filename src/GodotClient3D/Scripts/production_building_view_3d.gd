@@ -724,18 +724,22 @@ func _update_stall_icon(snapshot: Dictionary) -> void:
 
 
 func apply_light_palette(window_color: Color, torch_color: Color, torch_range: float) -> void:
+	# The Director: GFX-G night pools. 4070 GFX-F night luma 18 was
+	# unplayable. Warm windows / fires must reach past the porch so a
+	# raid reads against blue moonlight.
 	if window_light != null:
 		window_light.light_color = window_color
-		window_light.omni_range = clampf(torch_range, 2.6, 4.4)
-		window_light.light_energy = 0.42 if building_type != "TOWN_HALL" else 0.58
+		window_light.omni_range = clampf(torch_range, 3.2, 9.0)
+		window_light.light_energy = 1.20 if building_type != "TOWN_HALL" else 1.65
 	if window_emission != null and window_emission.material_override is StandardMaterial3D:
 		var glow_material := window_emission.material_override as StandardMaterial3D
 		glow_material.emission = window_color
 		glow_material.albedo_color = window_color
-		glow_material.emission_energy_multiplier = 1.55
+		glow_material.emission_energy_multiplier = 2.40
 	if lantern_light != null:
 		lantern_light.light_color = torch_color
-		lantern_light.omni_range = clampf(torch_range, 2.6, 4.0)
+		lantern_light.omni_range = clampf(torch_range, 3.2, 8.0)
+		lantern_light.light_energy = 1.05
 
 
 func _update_night_presentation(night: bool, occupants: int) -> void:
@@ -748,9 +752,9 @@ func _update_night_presentation(night: bool, occupants: int) -> void:
 		window_light = OmniLight3D.new()
 		window_light.name = "InhabitedWindowGlow"
 		window_light.position = sockets["entrance"].position + Vector3(0.0, 1.05, -0.28)
-		window_light.light_color = Color("#F2B56B")
-		window_light.light_energy = 0.42 if building_type != "TOWN_HALL" else 0.58
-		window_light.omni_range = 3.4 if building_type != "TOWN_HALL" else 4.2
+		window_light.light_color = Color("#F5B36B")
+		window_light.light_energy = 1.20 if building_type != "TOWN_HALL" else 1.65
+		window_light.omni_range = 7.2 if building_type != "TOWN_HALL" else 8.4
 		window_light.shadow_enabled = false
 		window_light.distance_fade_enabled = true
 		window_light.distance_fade_begin = 8.0
@@ -764,8 +768,8 @@ func _update_night_presentation(night: bool, occupants: int) -> void:
 		window_emission.position = sockets["entrance"].position + Vector3(0.0, 1.15, -0.06)
 		var glow_material := _material(Color("#F2B56B"), 0.0)
 		glow_material.emission_enabled = true
-		glow_material.emission = Color("#F2B56B")
-		glow_material.emission_energy_multiplier = 1.55
+		glow_material.emission = Color("#F5B36B")
+		glow_material.emission_energy_multiplier = 2.40
 		window_emission.material_override = glow_material
 		add_child(window_emission)
 	window_light.visible = night and inhabited
@@ -978,7 +982,7 @@ func _create_contact_ao() -> void:
 	var visual := _visual_size()
 	var width := maxf(world_size.x, visual.x) * 1.08
 	var depth := maxf(world_size.y, visual.z) * 1.08
-	var intensity := 0.22 if building_type == "WALL" else 0.28
+	var intensity := 0.28 if building_type == "WALL" else 0.48
 	var disc := ContactAO.make_instance("ContactAO", Vector2(width, depth), intensity)
 	disc.position = Vector3(0.0, 0.018, _model_offset_z())
 	add_child(disc)

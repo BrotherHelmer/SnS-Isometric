@@ -73,9 +73,9 @@ func _run() -> void:
 
 	_check(Identity.PALETTE_SUNLIT_GRASS.g > Identity.PALETTE_SUNLIT_GRASS.r, "identity sunlit grass is green")
 	var night_p := Identity.lighting_palette("night")
-	_check(float(night_p["sun_energy"]) >= 0.14 and float(night_p["sun_energy"]) <= 0.22, "night moon is the GFX-F 0.18 mood")
-	_check(float(night_p["ambient"]) >= 0.12 and float(night_p["ambient"]) <= 0.22, "night ambient is the GFX-F 0.16 mood")
-	_check(float(night_p["fill_energy"]) <= 0.14, "night fill is not a cyan wash")
+	_check(float(night_p["sun_energy"]) >= 0.40 and float(night_p["sun_energy"]) <= 0.55, "night moon is a readable moonlight")
+	_check(float(night_p["ambient"]) >= 0.28 and float(night_p["ambient"]) <= 0.42, "night ambient is lifted")
+	_check(float(night_p["fill_energy"]) <= 0.18, "night fill is not a cyan wash")
 	_check(float(night_p["road_lift"]) <= 0.16, "night roads are not lifted into white")
 
 	var slate := Color("#304d44")

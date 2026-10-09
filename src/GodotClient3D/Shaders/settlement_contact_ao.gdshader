@@ -17,7 +17,8 @@ void fragment() {
 	// Darkest in a ring at the object's feet, softer toward the centre and rim.
 	float rim = 1.0 - smoothstep(outer - 0.18, outer, r);
 	float contact = mix(0.78, 0.42, smoothstep(inner, 0.62, r));
-	float shade = mix(1.0, contact, clamp(intensity, 0.0, 0.85) * rim);
-	ALBEDO = vec3(shade);
+	float shade = mix(1.0, contact, clamp(intensity, 0.0, 0.92) * rim);
+	// Cool tint so contact reads as shadow, not dirt.
+	ALBEDO = vec3(shade * 0.90, shade * 0.94, shade * 1.0);
 	ALPHA = rim;
 }

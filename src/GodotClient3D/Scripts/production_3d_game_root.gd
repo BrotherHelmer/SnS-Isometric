@@ -731,15 +731,16 @@ func _create_lighting() -> void:
 	environment.sky = sky
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.ambient_light_color = Color("#8799AA")
-	environment.ambient_light_energy = 0.25
-	# The Director: GFX-F Filmic. Stronger key vs ambient; Filmic white 6.
+	environment.ambient_light_energy = 0.20
+	# The Director: GFX-G Filmic. Same 0.78 exposure; stronger SSAO and
+	# cooler fill so shadows read without lifting mean luma.
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	environment.tonemap_exposure = 0.78
 	environment.tonemap_white = 6.0
 	environment.ssao_enabled = bool(quality_profile.get("ssao", quality_profile.get("shadows", true)))
-	environment.ssao_radius = 0.75
-	environment.ssao_intensity = 1.50
-	environment.ssao_power = 1.50
+	environment.ssao_radius = 0.85
+	environment.ssao_intensity = 1.85
+	environment.ssao_power = 1.60
 	environment.ssao_detail = 0.50
 	environment.ssao_horizon = 0.06
 	environment.ssao_sharpness = 0.98
@@ -763,8 +764,8 @@ func _create_lighting() -> void:
 	environment.set("glow_levels/6", 0.0)
 	environment.set("glow_levels/7", 0.0)
 	environment.adjustment_enabled = true
-	environment.adjustment_saturation = 1.10
-	environment.adjustment_contrast = 1.08
+	environment.adjustment_saturation = 1.16
+	environment.adjustment_contrast = 1.14
 	environment.adjustment_brightness = 1.0
 	environment.adjustment_color_correction = Identity.grade_lut_for("day")
 	environment.fog_enabled = true
@@ -3905,9 +3906,9 @@ func _apply_sun_shadow_settings(light: DirectionalLight3D) -> void:
 	light.directional_shadow_max_distance = float(quality_profile.get("shadow_distance", 56.0))
 	light.directional_shadow_fade_start = 0.85
 	light.directional_shadow_pancake_size = 4.0
-	light.shadow_bias = 0.06
-	light.shadow_normal_bias = 1.0
-	light.shadow_blur = float(quality_profile.get("shadow_blur", 0.8))
+	light.shadow_bias = 0.05
+	light.shadow_normal_bias = 0.8
+	light.shadow_blur = float(quality_profile.get("shadow_blur", 0.5))
 	light.shadow_opacity = 1.0
 	light.light_angular_distance = 0.0
 	if RenderingServer.has_method("directional_shadow_atlas_set_size"):

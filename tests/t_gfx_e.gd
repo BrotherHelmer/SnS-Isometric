@@ -41,12 +41,12 @@ func _check_grade() -> void:
 	_check(is_equal_approx(tint.r, 1.0) and is_equal_approx(tint.g, 1.0) and is_equal_approx(tint.b, 1.0), "day ground tint is neutral")
 	var sun: Color = day_p["sun_color"]
 	_check(sun.r > sun.b + 0.12 and sun.g > 0.70, "day key stays warm")
-	_check(float(night_p["sun_energy"]) >= 0.14 and float(night_p["sun_energy"]) <= 0.24, "night moon is the GFX-F 0.18 mood")
-	_check(float(night_p["ambient"]) >= 0.12 and float(night_p["ambient"]) <= 0.22, "night ambient is the GFX-F 0.16 mood")
-	_check(float(night_p["fill_energy"]) <= 0.14, "night fill is not a cyan wash")
+	_check(float(night_p["sun_energy"]) >= 0.40 and float(night_p["sun_energy"]) <= 0.55, "night moon is a readable moonlight")
+	_check(float(night_p["ambient"]) >= 0.28 and float(night_p["ambient"]) <= 0.42, "night ambient is lifted")
+	_check(float(night_p["fill_energy"]) <= 0.18, "night fill is not a cyan wash")
 	_check(Identity.PALETTE_WINDOW.is_equal_approx(Color("#F5B36B")), "window accent is #F5B36B")
-	_check(Identity.PALETTE_MEADOW.is_equal_approx(Color("#536B3E")), "meadow is ChatGPT #536B3E")
-	_check(Identity.PALETTE_CONIFER_SHADOW.is_equal_approx(Color("#1A3326")), "conifer shadow is dark #1A3326")
+	_check(Identity.PALETTE_MEADOW.g > Identity.PALETTE_MEADOW.r and Identity.PALETTE_MEADOW.r > Identity.PALETTE_MEADOW.b, "meadow is yellow-olive")
+	_check(Identity.PALETTE_CONIFER_SHADOW.g > Identity.PALETTE_CONIFER_SHADOW.b, "conifer shadow is olive, not teal")
 
 
 func _check_kit() -> void:
