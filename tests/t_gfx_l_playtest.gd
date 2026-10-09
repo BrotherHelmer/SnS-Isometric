@@ -54,10 +54,10 @@ func _run() -> void:
 	_check(dress != null and dress.find_child("DressCreek", true, false) != null, "opening creek is dressed")
 	await _sample(game, dest, "opening_day", "opening composed on the ridge/creek landmark")
 
-	var road := sim._town_hall_entrance_tile() + Vector2i(0, 1)
+	var road: Vector2i = sim._town_hall_entrance_tile() + Vector2i(0, 1)
 	sim._prepare_test_tile(road, Defs.TILE_GRASS)
 	var road_result: Dictionary = sim.request_build(Defs.BUILDING_ROAD, road)
-	var house := road + Vector2i(2, 0)
+	var house: Vector2i = road + Vector2i(2, 0)
 	for offset in [Vector2i.ZERO, Vector2i.RIGHT, Vector2i.DOWN, Vector2i(1, 1)]:
 		sim._prepare_test_tile(house + offset, Defs.TILE_GRASS)
 	var build_result: Dictionary = sim.request_build(Defs.BUILDING_HOUSE, house)
