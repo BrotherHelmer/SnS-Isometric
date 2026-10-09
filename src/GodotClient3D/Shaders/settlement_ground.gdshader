@@ -8,33 +8,33 @@ uniform vec3 light_tint : source_color = vec3(1.0);
 uniform float tint_floor = 0.0;
 uniform float tint_wash_lo = 0.70;
 uniform float tint_wash_hi = 0.94;
-uniform vec3 grass_sunlit : source_color = vec3(0.447, 0.533, 0.302); // #72884D
-uniform vec3 grass_moss : source_color = vec3(0.204, 0.302, 0.208); // #344D35
+uniform vec3 grass_sunlit : source_color = vec3(0.541, 0.596, 0.282); // #8A9848
+uniform vec3 grass_moss : source_color = vec3(0.227, 0.290, 0.157); // #3A4A28
 uniform vec3 dirt_color : source_color = vec3(0.573, 0.443, 0.306); // #92714E
-uniform vec3 meadow_lush : source_color = vec3(0.325, 0.420, 0.243); // #536B3E
-uniform vec3 meadow_warm : source_color = vec3(0.290, 0.384, 0.220);
+uniform vec3 meadow_lush : source_color = vec3(0.408, 0.455, 0.227); // #68743A
+uniform vec3 meadow_warm : source_color = vec3(0.384, 0.420, 0.188); // #626B30
 uniform vec3 flower_warm : source_color = vec3(0.620, 0.400, 0.300);
 uniform vec3 flower_cool : source_color = vec3(0.500, 0.380, 0.480);
 uniform vec3 gravel_color : source_color = vec3(0.522, 0.514, 0.451); // #858373
-uniform vec3 forest_floor : source_color = vec3(0.188, 0.278, 0.208); // #304735
+uniform vec3 forest_floor : source_color = vec3(0.243, 0.306, 0.157); // #3E4E28
 uniform vec3 road_earth : source_color = vec3(0.690, 0.573, 0.408); // #B09268
 uniform float macro_metres = 16.0;
 uniform float patch_metres = 6.5;
 uniform float detail_metres = 1.10;
-uniform float macro_amount = 0.20;
-uniform float detail_amount = 0.070;
-uniform float dirt_amount = 0.34;
-uniform float flower_amount = 0.22;
+uniform float macro_amount = 0.22;
+uniform float detail_amount = 0.085;
+uniform float dirt_amount = 0.48;
+uniform float flower_amount = 0.26;
 // 1 at night / distant LOD: one-octave noise, no 4-tap detail normals.
 uniform float lod_cheap = 0.0;
 // G1: same noisy waterline as settlement_water.gdshader.
 uniform vec2 world_min_xz = vec2(-87.5, -87.5);
 uniform vec2 world_size_xz = vec2(175.0, 175.0);
-// GFX-F: no peach rim. Shore is dark moss / wet slate so fog_edge
-// cannot print a beige boarder against the wilderness shroud.
-uniform vec3 beach_color : source_color = vec3(0.204, 0.255, 0.216); // #344137
-uniform vec3 rock_shore : source_color = vec3(0.173, 0.196, 0.188); // #2C3230
-uniform vec3 wet_sand : source_color = vec3(0.145, 0.165, 0.157); // #252A28
+// GFX-G: shore dissolves into the wilderness shroud so zoom 42/68
+// cannot print a diamond island or a dark beach rim.
+uniform vec3 beach_color : source_color = vec3(0.090, 0.149, 0.165); // #17262A
+uniform vec3 rock_shore : source_color = vec3(0.078, 0.125, 0.141); // #142024
+uniform vec3 wet_sand : source_color = vec3(0.070, 0.110, 0.125); // #121C20
 uniform float beach_margin_metres = 5.0;
 uniform float coast_jut_metres = 12.0;
 uniform float apron_mode = 0.0;
@@ -137,10 +137,10 @@ void fragment() {
 	float wash = smoothstep(tint_wash_lo, max(tint_wash_lo + 0.02, tint_wash_hi), broad);
 	vec3 albedo = ground * mix(vec3(1.0), light_tint, mix(tint_floor, 1.0, wash)) * macro_var * detail_var;
 	vec3 shore = mix(beach_color, rock_shore, clamp(dirt_mask * 0.65 + broad * 0.35, 0.0, 1.0));
-	albedo = mix(albedo, shore, beach * (apron_mode > 0.5 ? 0.92 : 0.22));
+	albedo = mix(albedo, shore, beach * (apron_mode > 0.5 ? 0.98 : 0.82));
 	if (apron_mode > 0.5) {
-		float wet = 1.0 - smoothstep(0.0, 3.2, max(land, 0.0));
-		albedo = mix(albedo, wet_sand, wet * 0.55);
+		float wet = 1.0 - smoothstep(0.0, 4.8, max(land, 0.0));
+		albedo = mix(albedo, wet_sand, wet * 0.78);
 	}
 	ALBEDO = albedo;
 	// Flat world-up normals. Colour breakup above still reads from the

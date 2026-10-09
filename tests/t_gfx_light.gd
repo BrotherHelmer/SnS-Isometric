@@ -62,7 +62,7 @@ func _run() -> void:
 	_check(game.environment_resource.tonemap_mode == Environment.TONE_MAPPER_FILMIC, "tonemap is Filmic")
 	_check(float(day_p["saturation"]) >= 1.04 and float(day_p["saturation"]) <= 1.16, "day sat is GFX-F 1.04–1.16")
 	_check(float(dusk_p["saturation"]) >= 0.90 and float(dusk_p["saturation"]) <= 1.04, "dusk sat is 0.90–1.04")
-	_check(float(night_p["saturation"]) >= 0.86 and float(night_p["saturation"]) <= 0.96, "night sat is 0.86–0.96")
+	_check(float(night_p["saturation"]) >= 0.86 and float(night_p["saturation"]) <= 1.02, "night sat is 0.86–1.02")
 	_check(float(day_p["contrast"]) <= 1.16 and float(dusk_p["contrast"]) <= 1.16 and float(day_p["contrast"]) < 1.40, "contrast is not crushed through B/C/S")
 	_check(float(night_p["road_lift"]) <= 0.16, "night roads are not lifted into white")
 	_check(Identity.grade_lut_for("day") is Texture and Identity.grade_lut3d_for("dusk") is Texture3D and Identity.grade_lut3d_for("night") is Texture3D, "day/dusk/night expose 1D and 3D grade LUTs")
@@ -124,7 +124,7 @@ func _run() -> void:
 	_check(Catalog.TREES.size() >= 4 and Catalog.TREES.size() <= 8, "vegetation kit is 4–6 tree silhouettes")
 	_check(Catalog.EDGE_TREES.size() >= 4, "edge forest uses more than one cone")
 	_check(Identity.PALETTE_WINDOW.is_equal_approx(Color("#F5B36B")), "window/fire accent is #F5B36B")
-	_check(float(night_p["torch_range"]) <= 4.2, "night window pools stay short-range")
+	_check(float(night_p["torch_range"]) >= 6.0 and float(night_p["torch_range"]) <= 9.0, "night window pools reach the yard")
 
 	game.apply_quality_profile("recommended")
 	_check(not game.environment_resource.ssil_enabled and not game.environment_resource.glow_enabled, "recommended profile keeps SSIL and glow off")

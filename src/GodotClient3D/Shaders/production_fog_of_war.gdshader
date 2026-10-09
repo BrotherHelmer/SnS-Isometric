@@ -9,7 +9,7 @@ uniform vec3 mist_color = vec3(0.16, 0.19, 0.22);
 uniform vec2 world_min_xz = vec2(-87.5, -87.5);
 uniform vec2 world_size_xz = vec2(175.0, 175.0);
 uniform float unknown_opacity : hint_range(0.0, 1.0) = 0.998;
-uniform float edge_softness : hint_range(0.01, 0.5) = 0.42;
+uniform float edge_softness : hint_range(0.01, 0.8) = 0.58;
 uniform float noise_strength : hint_range(0.0, 0.3) = 0.22;
 // Explored shoreline only. Unexplored off-map stays fully unknown (#47).
 uniform float shore_fade_metres = 16.0;
@@ -60,5 +60,7 @@ void fragment() {
 	float dist_out = max(max(outside.x, outside.y), 0.0);
 	float frontier = (1.0 - inside) * (1.0 - smoothstep(0.6, max(shore_fade_metres * 0.55, 2.5), dist_out));
 	ALBEDO = mix(ALBEDO, mist_color, frontier * 0.35);
-	ALPHA = mix(unknown_opacity, unknown * unknown_opacity, inside);
+	float inward_m = min(min(raw_uv.x, 1.0 - raw_uv.x), min(raw_uv.y, 1.0 - raw_uv.y)) * min(world_size_xz.x, world_size_xz.y);
+	float edge_veil = (1.0 - smoothstep(4.0, max(shore_fade_metres, 8.0), inward_m)) * inside;
+	ALPHA = max(mix(unknown_opacity, unknown * unknown_opacity, inside), edge_veil * 0.88);
 }

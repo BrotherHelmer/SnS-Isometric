@@ -28,11 +28,11 @@ func _run() -> void:
 
 	var day_p := Identity.lighting_palette("day")
 	_check(float(day_p["saturation"]) >= 1.04 and float(day_p["saturation"]) <= 1.16, "day saturation is GFX-F 1.04–1.16")
-	_check(float(day_p["contrast"]) >= 1.04 and float(day_p["contrast"]) <= 1.12, "day contrast is 1.04–1.12")
+	_check(float(day_p["contrast"]) >= 1.04 and float(day_p["contrast"]) <= 1.16, "day contrast is 1.04–1.16")
 	var sun: Color = day_p["sun_color"]
 	_check(sun.r > sun.b + 0.12 and sun.g > 0.70, "day key stays warm")
 	_check(float(day_p["sun_energy"]) >= 1.10 and float(day_p["sun_energy"]) <= 1.30, "day sun energy is 1.10–1.30")
-	_check(float(day_p["sun_pitch"]) <= -30.0 and float(day_p["sun_pitch"]) >= -40.0, "day sun sits 30–40° above the horizon")
+	_check(float(day_p["sun_pitch"]) <= -26.0 and float(day_p["sun_pitch"]) >= -40.0, "day sun sits 26–40° above the horizon")
 	var fill: Color = day_p["fill_color"]
 	_check(fill.b > fill.r, "cool fill against the warm key")
 

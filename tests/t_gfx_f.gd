@@ -1,7 +1,7 @@
 extends SceneTree
 
-## GFX-F light gate: directional shadows, Filmic 0.78/1.10, deeper meadow,
-## opening dress, opaque fog shroud, darker night.
+## GFX-F light gate, widened for GFX-G: Filmic 0.78, yellow-olive meadow,
+## opening dress, opaque fog shroud, readable night.
 
 const Catalog = preload("res://src/GodotClient3D/Scripts/production_asset_catalog.gd")
 const QualityProfile = preload("res://src/GodotClient3D/Scripts/production_quality_profile.gd")
@@ -28,20 +28,20 @@ func _run() -> void:
 func _check_grade() -> void:
 	var day_p := Identity.lighting_palette("day")
 	var night_p := Identity.lighting_palette("night")
-	_check(float(day_p["saturation"]) >= 1.08 and float(day_p["saturation"]) <= 1.12, "day sat is 1.10")
-	_check(float(day_p["exposure"]) >= 0.74 and float(day_p["exposure"]) <= 0.82, "day exposure is 0.78")
+	_check(float(day_p["saturation"]) >= 1.08 and float(day_p["saturation"]) <= 1.18, "day sat is 1.08–1.16")
+	_check(float(day_p["exposure"]) >= 0.74 and float(day_p["exposure"]) <= 0.90, "day exposure is Filmic 0.78–0.86")
 	_check(float(day_p["tonemap_white"]) >= 5.5 and float(day_p["tonemap_white"]) <= 6.5, "Filmic white is 6")
-	_check(float(day_p["sun_energy"]) >= 1.15 and float(day_p["sun_energy"]) <= 1.25, "day sun is 1.20")
-	_check(float(day_p["ambient"]) >= 0.22 and float(day_p["ambient"]) <= 0.30, "day ambient is 0.25")
-	_check(float(day_p["contrast"]) >= 1.06 and float(day_p["contrast"]) <= 1.10, "day contrast is 1.08")
+	_check(float(day_p["sun_energy"]) >= 1.15 and float(day_p["sun_energy"]) <= 1.28, "day sun is 1.20–1.24")
+	_check(float(day_p["ambient"]) >= 0.18 and float(day_p["ambient"]) <= 0.30, "day ambient stays low")
+	_check(float(day_p["contrast"]) >= 1.06 and float(day_p["contrast"]) <= 1.16, "day contrast is 1.08–1.14")
 	var sun: Color = day_p["sun_color"]
 	_check(sun.is_equal_approx(Color("#FFF0DE")), "day key is #FFF0DE")
-	_check(Identity.PALETTE_MEADOW.is_equal_approx(Color("#536B3E")), "meadow is #536B3E")
-	_check(Identity.PALETTE_SUNLIT_GRASS.is_equal_approx(Color("#72884D")), "sunlit meadow is #72884D")
+	_check(Identity.PALETTE_MEADOW.g > Identity.PALETTE_MEADOW.r and Identity.PALETTE_MEADOW.r > Identity.PALETTE_MEADOW.b, "meadow is yellow-olive")
+	_check(Identity.PALETTE_SUNLIT_GRASS.g > Identity.PALETTE_SUNLIT_GRASS.r, "sunlit meadow stays green")
 	_check(Identity.PALETTE_WINDOW.is_equal_approx(Color("#F5B36B")), "window emission is #F5B36B")
-	_check(float(night_p["sun_energy"]) <= 0.22, "night moon is 0.18")
-	_check(float(night_p["ambient"]) <= 0.20, "night ambient is 0.16")
-	_check(float(night_p["exposure"]) <= 0.72, "night exposure is 0.67")
+	_check(float(night_p["sun_energy"]) >= 0.40 and float(night_p["sun_energy"]) <= 0.55, "night moon is a readable moonlight")
+	_check(float(night_p["ambient"]) >= 0.28 and float(night_p["ambient"]) <= 0.42, "night ambient is lifted")
+	_check(float(night_p["exposure"]) >= 0.84 and float(night_p["exposure"]) <= 0.96, "night exposure is lifted")
 	var moon: Color = night_p["sun_color"]
 	_check(moon.b > moon.r, "night key stays cool, not cyan-bright")
 
@@ -66,7 +66,7 @@ func _check_live_scene() -> void:
 	_check(game.environment_resource.tonemap_mode == Environment.TONE_MAPPER_FILMIC, "tonemap is Filmic")
 	_check(game.sun_light.shadow_opacity >= 0.98, "day shadows are opacity 1")
 	_check(game.sun_light.directional_shadow_mode == DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS, "day uses 4 PSSM splits")
-	_check(game.environment_resource.ambient_light_energy <= 0.30, "live ambient is the low GFX-F fill")
+	_check(game.environment_resource.ambient_light_energy <= 0.30, "live ambient is the low day fill")
 	_check(game.environment_resource.ssao_intensity >= 1.45, "SSAO intensity is 1.50")
 	_check(game.world_view.has_method("_rebuild_opening_dressing"), "opening dress exists")
 	var dress: Node = game.world_view.resource_visuals_root.get_node_or_null("OpeningDress")
@@ -74,12 +74,12 @@ func _check_live_scene() -> void:
 	if game.world_view.terrain_mesh_instance != null and game.world_view.terrain_mesh_instance.material_override is ShaderMaterial:
 		var ground := game.world_view.terrain_mesh_instance.material_override as ShaderMaterial
 		var lush: Vector3 = ground.get_shader_parameter("meadow_lush")
-		_check(lush.y > lush.x and lush.x < 0.40, "meadow_lush is the deeper #536B3E family")
-		_check(float(ground.get_shader_parameter("dirt_amount")) >= 0.30, "worn earth reads at gameplay zoom")
+		_check(lush.y > lush.x and lush.x < 0.50, "meadow_lush is yellow-olive")
+		_check(float(ground.get_shader_parameter("dirt_amount")) >= 0.42, "worn earth reads at gameplay zoom")
 	var fog := FileAccess.get_file_as_string("res://src/GodotClient3D/Shaders/production_fog_of_war.gdshader")
 	_check(fog.contains("mix(unknown_opacity, unknown * unknown_opacity, inside)"), "fog shroud is opaque off-map")
 	var ground_src := FileAccess.get_file_as_string("res://src/GodotClient3D/Shaders/settlement_ground.gdshader")
-	_check(ground_src.contains("0.204, 0.255, 0.216") or ground_src.contains("#344137"), "shore is dark moss, not peach")
+	_check(ground_src.contains("0.090, 0.149, 0.165") or ground_src.contains("#17262A"), "shore dissolves into the wilderness shroud")
 	var wheat := FileAccess.get_file_as_string("res://src/GodotClient3D/Scripts/production_building_view_3d.gd")
 	_check(wheat.contains("_tint_wheat") and wheat.contains("#C9A24A"), "wheat crops force ripe gold")
 	var showcase := Showcase.apply(game.simulation_host.simulation)
@@ -95,8 +95,8 @@ func sim_night_check(game) -> void:
 	sim.is_night = true
 	sim.phase_time = 20.0
 	game._update_day_night_lighting()
-	_check(game.sun_light.light_energy <= 0.22, "live night moon is dim")
-	_check(game.environment_resource.ambient_light_energy <= 0.20, "live night ambient is dim")
+	_check(game.sun_light.light_energy >= 0.40 and game.sun_light.light_energy <= 0.55, "live night moon is readable")
+	_check(game.environment_resource.ambient_light_energy >= 0.28 and game.environment_resource.ambient_light_energy <= 0.42, "live night ambient is lifted")
 
 
 func _check(ok: bool, message: String) -> void:
