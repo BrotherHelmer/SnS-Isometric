@@ -20,8 +20,8 @@ Master-volume change, no `.github/workflows` edits.
 
 ## Order
 
-1. **Night.** Moon `#9CACC8` 0.48, ambient `#5A6E88` 0.36, exposure
-   0.90, atmosphere 0.72, window / fire pools `#F5B36B` out to 8 m.
+1. **Night.** Moon `#9CACC8` 0.42, ambient `#5A6E88` 0.30, exposure
+   0.84, atmosphere 0.62, window / fire pools `#F5B36B` out to 8 m.
    Target luma 45–60. 18 was unplayable.
 2. **Hue.** Meadow `#68743A` / sunlit `#8A9848` / forest `#3E4E28`.
    Foliage leaves the teal `#15281E` hole. Wide and opening should
