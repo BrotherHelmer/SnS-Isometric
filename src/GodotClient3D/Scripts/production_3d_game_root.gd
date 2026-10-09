@@ -730,16 +730,16 @@ func _create_lighting() -> void:
 	sky.sky_material = sky_material_value
 	environment.sky = sky
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color("#8799AA")
-	environment.ambient_light_energy = 0.26
-	# The Director: GFX-G Filmic. Same 0.78 exposure; stronger SSAO and
-	# cooler fill so shadows read without lifting mean luma.
+	environment.ambient_light_color = Color("#91A29A")
+	environment.ambient_light_energy = 0.32
+	# The Director: GFX-I Filmic. Grade stays GFX-G; SSAO tightens so
+	# conifers keep green in shadow instead of a dark smear.
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	environment.tonemap_exposure = 0.86
 	environment.tonemap_white = 6.0
 	environment.ssao_enabled = bool(quality_profile.get("ssao", quality_profile.get("shadows", true)))
-	environment.ssao_radius = 0.42
-	environment.ssao_intensity = 1.50
+	environment.ssao_radius = 0.55
+	environment.ssao_intensity = 1.10
 	environment.ssao_power = 1.18
 	environment.ssao_detail = 0.36
 	environment.ssao_horizon = 0.08
@@ -768,26 +768,28 @@ func _create_lighting() -> void:
 	environment.adjustment_contrast = 1.12
 	environment.adjustment_brightness = 1.0
 	environment.adjustment_color_correction = Identity.grade_lut_for("day")
-	environment.fog_enabled = true
+	# GFX-I: Environment depth haze is off. World-space FOW shroud owns
+	# the unknown. Volumetrics stay off so the village is not veiled.
+	environment.fog_enabled = false
 	environment.fog_mode = Environment.FOG_MODE_DEPTH
-	environment.fog_light_color = Color("#607681")
-	environment.fog_light_energy = 0.55
+	environment.fog_light_color = Color("#17272A")
+	environment.fog_light_energy = 0.0
 	environment.fog_density = 0.0
 	environment.fog_height = 0.0
 	environment.fog_height_density = 0.0
-	environment.fog_aerial_perspective = 0.55
-	environment.fog_sun_scatter = 0.25
+	environment.fog_aerial_perspective = 0.0
+	environment.fog_sun_scatter = 0.0
 	environment.fog_depth_begin = 28.0
 	environment.fog_depth_end = 65.0
-	environment.volumetric_fog_enabled = bool(quality_profile.get("volumetric_fog", false))
+	environment.volumetric_fog_enabled = false
 	environment_node.environment = environment
 	lighting_rig.add_child(environment_node)
 	var sun := DirectionalLight3D.new()
 	sun_light = sun
 	sun.name = "Sun"
-	sun.light_color = Color("#FFE1BD")
-	sun.light_energy = 0.95
-	sun.shadow_opacity = 1.0
+	sun.light_color = Color("#FFE8CE")
+	sun.light_energy = 1.10
+	sun.shadow_opacity = 0.85
 	# The Director: GFX-05 one key sun, PSSM 2-split, no PCSS softness.
 	sun.light_angular_distance = 0.0
 	sun.shadow_enabled = bool(quality_profile.get("shadows", true))
@@ -3867,8 +3869,8 @@ func _apply_quality_features() -> void:
 	# The Director: night drops SSAO. Very-Low still left lavapipe 1 ms
 	# over the +15% GFX-1 guard; windows/moon carry night form instead.
 	environment_resource.ssao_enabled = want_ssao and not night
-	environment_resource.ssao_radius = 0.42
-	environment_resource.ssao_intensity = 1.50
+	environment_resource.ssao_radius = 0.55
+	environment_resource.ssao_intensity = 1.10
 	environment_resource.ssao_power = 1.18
 	environment_resource.ssao_detail = 0.36
 	environment_resource.ssao_sharpness = 0.98
@@ -3884,7 +3886,8 @@ func _apply_quality_features() -> void:
 	)
 	environment_resource.ssil_enabled = bool(quality_profile.get("ssil", false))
 	environment_resource.glow_enabled = bool(quality_profile.get("glow", false))
-	environment_resource.volumetric_fog_enabled = bool(quality_profile.get("volumetric_fog", false))
+	environment_resource.volumetric_fog_enabled = false
+	environment_resource.fog_enabled = false
 
 
 func _apply_sun_shadow_settings(light: DirectionalLight3D) -> void:
@@ -3908,8 +3911,8 @@ func _apply_sun_shadow_settings(light: DirectionalLight3D) -> void:
 	light.directional_shadow_pancake_size = 4.0
 	light.shadow_bias = 0.05
 	light.shadow_normal_bias = 0.8
-	light.shadow_blur = float(quality_profile.get("shadow_blur", 0.5))
-	light.shadow_opacity = 1.0
+	light.shadow_blur = float(quality_profile.get("shadow_blur", 1.0))
+	light.shadow_opacity = 0.85
 	light.light_angular_distance = 0.0
 	if RenderingServer.has_method("directional_shadow_atlas_set_size"):
 		RenderingServer.call("directional_shadow_atlas_set_size", 4096 if high else 2048, true)
@@ -3941,11 +3944,12 @@ func _apply_lighting_palette(palette: Dictionary) -> void:
 	ProductionRoadView3D.set_lighting(road_tint, float(palette.get("road_lift", 0.06)))
 	environment_resource.ambient_light_energy = float(palette.get("ambient", 0.5))
 	environment_resource.ambient_light_color = palette.get("ambient_color", palette.get("fill_color", Color("#718FA3")))
-	environment_resource.fog_density = float(palette.get("fog_density", 0.0))
-	environment_resource.fog_light_color = palette.get("fog_color", Color("#607681"))
-	environment_resource.fog_light_energy = float(palette.get("fog_energy", 0.55))
-	environment_resource.fog_aerial_perspective = float(palette.get("fog_aerial", 0.55))
-	environment_resource.fog_sun_scatter = float(palette.get("fog_sun_scatter", 0.25))
+	environment_resource.fog_enabled = false
+	environment_resource.fog_density = 0.0
+	environment_resource.fog_light_color = palette.get("fog_color", Color("#17272A"))
+	environment_resource.fog_light_energy = 0.0
+	environment_resource.fog_aerial_perspective = 0.0
+	environment_resource.fog_sun_scatter = 0.0
 	environment_resource.fog_depth_begin = float(palette.get("fog_begin", 28.0))
 	environment_resource.fog_depth_end = float(palette.get("fog_end", 65.0))
 	environment_resource.fog_height = 0.0

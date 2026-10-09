@@ -128,9 +128,9 @@ func _check_live_scene() -> void:
 	for _i in 4:
 		await process_frame
 	_check(game.environment_resource.tonemap_mode == Environment.TONE_MAPPER_FILMIC, "tonemap is Filmic")
-	_check(game.sun_light.shadow_opacity >= 0.98, "day shadows are opacity 1")
+	_check(game.sun_light.shadow_opacity >= 0.80, "day shadows stay strong")
 	_check(is_equal_approx(game.sun_light.shadow_bias, 0.06) or game.sun_light.shadow_bias <= 0.07, "shadow bias is the GFX-F 0.06")
-	_check(game.environment_resource.ssao_intensity >= 1.4, "SSAO intensity stays at the GFX-F preset")
+	_check(game.environment_resource.ssao_intensity >= 1.05, "SSAO intensity stays at the GFX-I preset")
 	if game.world_view.terrain_mesh_instance != null and game.world_view.terrain_mesh_instance.material_override is ShaderMaterial:
 		var ground := game.world_view.terrain_mesh_instance.material_override as ShaderMaterial
 		_check(float(ground.get_shader_parameter("patch_metres")) >= 6.0, "ground has a mid-scale patch layer")

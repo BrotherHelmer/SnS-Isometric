@@ -32,10 +32,9 @@ const SIZE_WARNING := 16
 
 const AUDIO_SETTINGS_PATH := "user://one_shard_audio.json"
 
-# The Director: GFX-H. Day grade stays GFX-G (opening 81 / 44.9 /
-# 0.46 / 71°). Night keeps luma ~50 but tints moonlit blue instead of
-# olive-green, with warm window / fire pools. Sun orbit 138 / night 300.
-# Sun orbit 138 / night 300 unchanged.
+# The Director: GFX-I. Hold the GFX-G/H grade (sat 1.12 / contrast 1.12 /
+# exposure 0.86). Local lighting only: sun #FFE8CE 1.10 at 38°, ambient
+# #91A29A 0.32. Night stays moonlit blue. Environment haze is off.
 const PALETTE_NAVY := Color("#101A22")
 const PALETTE_NIGHT_TERRAIN := Color("#17262A")
 const PALETTE_FOREST := Color("#3E4E28")
@@ -44,14 +43,14 @@ const PALETTE_SUNLIT_GRASS := Color("#8A9848")
 const PALETTE_MEADOW := Color("#68743A")
 const PALETTE_ROAD_CLAY := Color("#92714E")
 const PALETTE_DRY_EARTH := Color("#C8A064")
-const PALETTE_PLASTER := Color("#D9C49B")
-const PALETTE_TIMBER := Color("#57402B")
+const PALETTE_PLASTER := Color("#D6C5A2")
+const PALETTE_TIMBER := Color("#553C2B")
 const PALETTE_RUST := Color("#A75D39")
-const PALETTE_TEAL := Color("#426F6A")
+const PALETTE_TEAL := Color("#426863")
 const PALETTE_GOLD := Color("#D2A64C")
 const PALETTE_WINDOW := Color("#F5B36B")
 const PALETTE_MOON := Color("#A8B8D4")
-const PALETTE_STONE := Color("#858373")
+const PALETTE_STONE := Color("#A39A85")
 const PALETTE_CONIFER := Color("#2A4024")
 const PALETTE_CONIFER_SHADOW := Color("#243818")
 const PALETTE_CONIFER_SUN := Color("#5A7040")
@@ -62,30 +61,30 @@ const PALETTE_GRASS_TUFT := Color("#527038")
 const PALETTE_GRASS_TUFT_LIT := Color("#7A8C48")
 const PALETTE_GRASS_TUFT_DARK := Color("#2E3E1C")
 const PALETTE_TORCH := Color("#FFB36B")
-const PALETTE_FOG_UNKNOWN := Color("#17262A")
+const PALETTE_FOG_UNKNOWN := Color("#17272A")
 const PALETTE_FOG_REMEMBERED := Color("#25363B")
 const PALETTE_FOG_FRONTIER := Color("#41554B")
 const PALETTE_WHEAT := Color("#C9A24A")
 
 const LIGHTING := {
 	"day": {
-		"ambient": 0.26,
-		"ambient_color": Color("#7A8478"),
-		"fog_density": 0.00028,
-		"fog_color": Color("#B8C0C4"),
-		"fog_energy": 0.38,
+		"ambient": 0.32,
+		"ambient_color": Color("#91A29A"),
+		"fog_density": 0.0,
+		"fog_color": Color("#17272A"),
+		"fog_energy": 0.0,
 		"fog_begin": 30.0,
 		"fog_end": 70.0,
-		"fog_aerial": 0.40,
-		"fog_sun_scatter": 0.12,
+		"fog_aerial": 0.0,
+		"fog_sun_scatter": 0.0,
 		"saturation": 1.12,
 		"contrast": 1.12,
 		"exposure": 0.86,
 		"brightness": 1.0,
 		"tonemap_white": 6.0,
-		"sun_energy": 1.24,
-		"sun_color": Color("#FFF0DE"),
-		"sun_pitch": -28.0,
+		"sun_energy": 1.10,
+		"sun_color": Color("#FFE8CE"),
+		"sun_pitch": -38.0,
 		"sun_orbit": 138.0,
 		"fill_energy": 0.05,
 		"fill_color": Color("#6A8498"),
@@ -107,13 +106,13 @@ const LIGHTING := {
 	"dusk": {
 		"ambient": 0.22,
 		"ambient_color": Color("#6A7A8C"),
-		"fog_density": 0.0004,
-		"fog_color": Color("#6A7068"),
-		"fog_energy": 0.40,
+		"fog_density": 0.0,
+		"fog_color": Color("#17272A"),
+		"fog_energy": 0.0,
 		"fog_begin": 24.0,
 		"fog_end": 58.0,
-		"fog_aerial": 0.34,
-		"fog_sun_scatter": 0.10,
+		"fog_aerial": 0.0,
+		"fog_sun_scatter": 0.0,
 		"saturation": 0.98,
 		"contrast": 1.06,
 		"exposure": 0.72,
@@ -143,13 +142,13 @@ const LIGHTING := {
 	"night": {
 		"ambient": 0.30,
 		"ambient_color": Color("#4A5E80"),
-		"fog_density": 0.00040,
-		"fog_color": Color("#141E2C"),
-		"fog_energy": 0.32,
+		"fog_density": 0.0,
+		"fog_color": Color("#17272A"),
+		"fog_energy": 0.0,
 		"fog_begin": 22.0,
 		"fog_end": 56.0,
-		"fog_aerial": 0.22,
-		"fog_sun_scatter": 0.06,
+		"fog_aerial": 0.0,
+		"fog_sun_scatter": 0.0,
 		"saturation": 0.88,
 		"contrast": 1.10,
 		"exposure": 0.84,
@@ -179,13 +178,13 @@ const LIGHTING := {
 	"reckoning": {
 		"ambient": 0.44,
 		"ambient_color": Color("#1A2438"),
-		"fog_density": 0.0010,
-		"fog_color": Color("#243458"),
-		"fog_energy": 0.48,
+		"fog_density": 0.0,
+		"fog_color": Color("#17272A"),
+		"fog_energy": 0.0,
 		"fog_begin": 16.0,
 		"fog_end": 46.0,
-		"fog_aerial": 0.32,
-		"fog_sun_scatter": 0.08,
+		"fog_aerial": 0.0,
+		"fog_sun_scatter": 0.0,
 		"saturation": 0.92,
 		"contrast": 1.0,
 		"exposure": 0.92,

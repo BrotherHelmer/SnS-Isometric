@@ -1,0 +1,7 @@
+elapsed,day,night,event,detail,wait_ms,frame_ms
+1.7,1,0,showcase_day,"15-building Filmic 0.86 / sun 1.10 / no haze",6577.57,416.975
+3.3,1,0,showcase_wide,"showcase at a concept-like establishing angle",5472.14,457.177
+1.7,1,0,opening_day,"opening hamlet + ridge at the closer default zoom",4659.57,337.076
+3.3,1,0,scout_day,"guard scouting toward the west fog",4065.33,305.946
+4.9,1,1,night_raid,"moonlit blue + warm window pools, no haze",3446.92,283.172
+6.5,1,0,fog_edge,"strategic zoom at the unknown edge (day)",3812.04,345.127

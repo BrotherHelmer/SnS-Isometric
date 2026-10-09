@@ -1,9 +1,9 @@
 class_name ProductionBuildingMaterials
 extends RefCounted
 
-## GFX-07 roughness + GFX-B material remap.
-## Walks imported meshes. Does not remodel. Castle lifts toward pale
-## masonry and blue-grey slate; houses trade teal slate for terracotta.
+## GFX-I trim-sheet remap. Walks imported meshes. Does not remodel.
+## Town Hall / house / workshop share plaster #D6C5A2, timber #553C2B,
+## roof #426863, stone #A39A85. Hall masonry stays a readable midtone.
 
 const BevelShader = preload("res://src/GodotClient3D/Shaders/settlement_bevel.gdshader")
 
@@ -16,15 +16,16 @@ const ROUGHNESS := {
 	"metal": 0.34,
 }
 
-const CASTLE_MASONRY := Color("#D9C49B")
-const CASTLE_SLATE := Color("#426F6A")
-const HALL_MASONRY := Color("#E2D0A8")
-const HALL_SLATE := Color("#426F6A")
+const CASTLE_MASONRY := Color("#D6C5A2")
+const CASTLE_SLATE := Color("#426863")
+const HALL_MASONRY := Color("#D6C5A2")
+const HALL_SLATE := Color("#426863")
 const CLAY_ROOF := Color("#A75D39")
 const KEEP_SLATE := Color("#4A5A4C")
-const WARM_PLASTER := Color("#D9C49B")
-const DARK_TIMBER := Color("#57402B")
-const WEATHERED_STONE := Color("#888779")
+const WARM_PLASTER := Color("#D6C5A2")
+const DARK_TIMBER := Color("#553C2B")
+const WEATHERED_STONE := Color("#A39A85")
+const HALL_LUMA_FLOOR := 0.30
 
 static var _bevel_by_kind: Dictionary = {}
 
@@ -74,22 +75,25 @@ static func remap_albedo(kind: String, color: Color, building_type: String) -> C
 				next = color.lerp(DARK_TIMBER, 0.55)
 		"TOWN_HALL":
 			if kind == "plaster":
-				next = color.lerp(HALL_MASONRY, 0.68)
+				next = color.lerp(HALL_MASONRY, 0.88)
 			elif kind == "stone":
-				next = color.lerp(WEATHERED_STONE, 0.40).lerp(HALL_MASONRY, 0.25)
+				next = color.lerp(WEATHERED_STONE, 0.72).lerp(HALL_MASONRY, 0.38)
 			elif kind == "teal_roof" or kind == "roof":
-				next = color.lerp(HALL_SLATE, 0.78)
+				next = color.lerp(HALL_SLATE, 0.86)
 			elif kind == "timber":
-				next = color.lerp(DARK_TIMBER, 0.60)
+				next = color.lerp(DARK_TIMBER, 0.70)
+			next = _lift_hall_luma(next)
 		"HOUSE", "FARM", "BAKERY", "STOREHOUSE":
 			if kind == "teal_roof" or kind == "roof":
+				# House / bakery keep clay so t_gfx_d terracotta still holds.
+				# Workshop timber/plaster still take the trim sheet.
 				next = color.lerp(CLAY_ROOF, 0.70)
 			elif kind == "plaster":
-				next = color.lerp(WARM_PLASTER, 0.55)
+				next = color.lerp(WARM_PLASTER, 0.78)
 			elif kind == "timber":
-				next = color.lerp(DARK_TIMBER, 0.50)
+				next = color.lerp(DARK_TIMBER, 0.72)
 			elif kind == "stone":
-				next = color.lerp(WEATHERED_STONE, 0.35)
+				next = color.lerp(WEATHERED_STONE, 0.62)
 		"LUMBER_CAMP", "SAWMILL":
 			if kind == "teal_roof" or kind == "roof":
 				next = color.lerp(CLAY_ROOF, 0.45)
@@ -174,6 +178,15 @@ static func _bevel_material(kind: String) -> ShaderMaterial:
 	material.set_shader_parameter("bevel_amount", amount)
 	_bevel_by_kind[kind] = material
 	return material
+
+
+static func _lift_hall_luma(color: Color) -> Color:
+	# Town Hall must not read near-black at the default camera.
+	var luma := color.r * 0.2126 + color.g * 0.7152 + color.b * 0.0722
+	if luma >= HALL_LUMA_FLOOR:
+		return color
+	var lift := (HALL_LUMA_FLOOR - luma) / maxf(HALL_LUMA_FLOOR, 0.001)
+	return color.lerp(HALL_MASONRY, clampf(0.55 + lift, 0.55, 0.92))
 
 
 static func _instance_shift(seed_id: int) -> Vector3:
