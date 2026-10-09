@@ -1,10 +1,10 @@
 class_name ProductionBuildingMaterials
 extends RefCounted
 
-## GFX-L landmark remap. Walks imported meshes. Does not remodel.
-## Limestone #CDBD9F, plaster #E0CDAE, timber #64452F, slate #456D68,
-## recessed stone #716A5D. Stone 0.88 / plaster 0.95 / timber 0.90 /
-## slate 0.83 / terracotta 0.88.
+## GFX-O landmark remap. Walks imported meshes. Does not remodel.
+## Light stone #CFC2A6 / #E0D0B2 / #847C6B, timber #61442F, slate
+## #466C69. Stone 0.88 / plaster 0.95 / timber 0.90 / slate 0.83 /
+## terracotta 0.88. Castle / hall wall_lift is 1.32.
 
 const BevelShader = preload("res://src/GodotClient3D/Shaders/settlement_bevel.gdshader")
 const KaykitRemap = preload("res://src/GodotClient3D/Shaders/settlement_kaykit_remap.gdshader")
@@ -18,15 +18,15 @@ const ROUGHNESS := {
 	"metal": 0.34,
 }
 
-const CASTLE_LIMESTONE := Color("#CDBD9F")
-const CASTLE_MASONRY := Color("#CDBD9F")
-const CASTLE_SLATE := Color("#426B68")
-const HALL_MASONRY := Color("#CDBD9F")
-const HALL_SLATE := Color("#426B68")
+const CASTLE_LIMESTONE := Color("#CFC2A6")
+const CASTLE_MASONRY := Color("#847C6B")
+const CASTLE_SLATE := Color("#466C69")
+const HALL_MASONRY := Color("#CFC2A6")
+const HALL_SLATE := Color("#466C69")
 const CLAY_ROOF := Color("#A96343")
 const KEEP_SLATE := Color("#304C49")
-const WARM_PLASTER := Color("#DFCBA9")
-const DARK_TIMBER := Color("#60432E")
+const WARM_PLASTER := Color("#E0D0B2")
+const DARK_TIMBER := Color("#61442F")
 const WEATHERED_STONE := Color("#635B4C")
 const FOUNDATION_FACE := Color("#A99D82")
 const FOUNDATION_TOP := Color("#C1B394")
@@ -56,7 +56,7 @@ static func _apply_kaykit_remap(root: Node, building_type: String) -> void:
 	# Per-surface override. Do not edit the imported atlas. Civic roofs
 	# stay muted teal slate; houses / workshops roll terracotta. No emerald.
 	var terracotta := building_type == "HOUSE" or building_type == "LUMBER_CAMP" or building_type == "SAWMILL" or building_type == "FARM" or building_type == "BAKERY" or building_type == "STOREHOUSE"
-	var wall_lift := 1.18 if building_type == "TOWN_HALL" or building_type == "CASTLE" else 1.04
+	var wall_lift := 1.32 if building_type == "TOWN_HALL" or building_type == "CASTLE" else 1.08
 	var roughness := 0.86 if terracotta else 0.83
 	for node in root.find_children("*", "MeshInstance3D", true, false):
 		var instance := node as MeshInstance3D
@@ -69,6 +69,7 @@ static func _apply_kaykit_remap(root: Node, building_type: String) -> void:
 			material.set_shader_parameter("albedo_tex", tex)
 		material.set_shader_parameter("wall_color", CASTLE_LIMESTONE)
 		material.set_shader_parameter("plaster_color", WARM_PLASTER)
+		material.set_shader_parameter("masonry_color", CASTLE_MASONRY)
 		material.set_shader_parameter("timber_color", DARK_TIMBER)
 		material.set_shader_parameter("roof_color", HALL_SLATE)
 		material.set_shader_parameter("roof_shadow", KEEP_SLATE)
