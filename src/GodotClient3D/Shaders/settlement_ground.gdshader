@@ -10,23 +10,23 @@ uniform vec3 light_tint : source_color = vec3(1.0);
 uniform float tint_floor = 0.0;
 uniform float tint_wash_lo = 0.70;
 uniform float tint_wash_hi = 0.94;
-uniform vec3 grass_sunlit : source_color = vec3(0.541, 0.596, 0.282); // #8A9848
-uniform vec3 grass_moss : source_color = vec3(0.227, 0.290, 0.157); // #3A4A28
+uniform vec3 grass_sunlit : source_color = vec3(0.510, 0.576, 0.388); // #829363
+uniform vec3 grass_moss : source_color = vec3(0.251, 0.357, 0.224); // #405B39
 uniform vec3 dirt_color : source_color = vec3(0.573, 0.443, 0.306); // #92714E
-uniform vec3 meadow_lush : source_color = vec3(0.408, 0.455, 0.227); // #68743A
-uniform vec3 meadow_warm : source_color = vec3(0.384, 0.420, 0.188); // #626B30
-uniform vec3 flower_warm : source_color = vec3(0.620, 0.400, 0.300);
-uniform vec3 flower_cool : source_color = vec3(0.500, 0.380, 0.480);
-uniform vec3 gravel_color : source_color = vec3(0.522, 0.514, 0.451); // #858373
-uniform vec3 forest_floor : source_color = vec3(0.243, 0.306, 0.157); // #3E4E28
-uniform vec3 road_earth : source_color = vec3(0.784, 0.627, 0.392); // #C8A064
+uniform vec3 meadow_lush : source_color = vec3(0.376, 0.463, 0.290); // #60764A
+uniform vec3 meadow_warm : source_color = vec3(0.376, 0.463, 0.290); // #60764A
+uniform vec3 flower_warm : source_color = vec3(0.820, 0.678, 0.302); // #D1AD4D
+uniform vec3 flower_cool : source_color = vec3(0.878, 0.831, 0.682); // #E0D4AE
+uniform vec3 gravel_color : source_color = vec3(0.651, 0.608, 0.502); // #A69B80
+uniform vec3 forest_floor : source_color = vec3(0.208, 0.290, 0.204); // #354A34
+uniform vec3 road_earth : source_color = vec3(0.624, 0.510, 0.376); // #9F8260
 uniform vec3 wheat_gold : source_color = vec3(0.788, 0.635, 0.290); // #C9A24A
 uniform vec3 wheat_furrow : source_color = vec3(0.420, 0.310, 0.165);
-uniform float macro_metres = 16.0;
-uniform float patch_metres = 6.5;
+uniform float macro_metres = 8.0;
+uniform float patch_metres = 1.94;
 uniform float detail_metres = 1.10;
-uniform float macro_amount = 0.28;
-uniform float detail_amount = 0.14;
+uniform float macro_amount = 0.22;
+uniform float detail_amount = 0.12;
 uniform float dirt_amount = 0.56;
 uniform float flower_amount = 0.40;
 uniform float stone_amount = 0.34;
@@ -111,11 +111,11 @@ void fragment() {
 	float dirt_noise = lod_cheap > 0.5 ? broad : fbm(world_pos.xz / (macro_metres * 1.15) + vec2(4.8, 21.0));
 	float dirt_mask = smoothstep(0.48, 0.82, dirt_noise);
 	vec3 grass = mix(grass_moss, meadow_lush, clamp(broad * 0.55 + patch * 0.45, 0.0, 1.0));
-	// GFX-J: dark-grass 15–25% toward forest edges / depressions.
-	// Soften the bright beige sunlit wash that read as yellow patches.
+	// GFX-K: three scales. Broad meadow 3.0R / medium 0.8R / fine unchanged.
+	// Dark-grass 15–25% toward forest edges. No yellow-lime wash.
 	float dark_grass = smoothstep(0.08, 0.46, 1.0 - patch) * (0.55 + 0.45 * (1.0 - broad));
-	grass = mix(grass, grass_sunlit, smoothstep(0.62, 0.94, patch) * 0.18);
-	grass = mix(grass, meadow_warm, smoothstep(0.74, 0.98, broad) * 0.12);
+	grass = mix(grass, grass_sunlit, smoothstep(0.62, 0.94, patch) * 0.12);
+	grass = mix(grass, meadow_warm, smoothstep(0.74, 0.98, broad) * 0.10);
 	grass = mix(grass, forest_floor, clamp(dark_grass * 0.72, 0.0, 0.26));
 	// Blade-scale tuft striping so the meadow is not a painted slab.
 	if (lod_cheap < 0.5) {

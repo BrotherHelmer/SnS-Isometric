@@ -133,7 +133,7 @@ func _check_live_scene() -> void:
 	_check(game.environment_resource.ssao_intensity >= 1.05, "SSAO intensity stays at the GFX-I preset")
 	if game.world_view.terrain_mesh_instance != null and game.world_view.terrain_mesh_instance.material_override is ShaderMaterial:
 		var ground := game.world_view.terrain_mesh_instance.material_override as ShaderMaterial
-		_check(float(ground.get_shader_parameter("patch_metres")) >= 6.0, "ground has a mid-scale patch layer")
+		_check(float(ground.get_shader_parameter("patch_metres")) >= 1.80, "ground has a mid-scale patch layer")
 		_check(float(ground.get_shader_parameter("macro_amount")) >= 0.10, "macro breakup stays on")
 		var meadow_warm: Vector3 = ground.get_shader_parameter("meadow_warm")
 		_check(meadow_warm.y >= meadow_warm.x and meadow_warm.x < 0.55, "meadow_warm is olive, not yellow")

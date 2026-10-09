@@ -696,8 +696,7 @@ func _initialize_presentation() -> void:
 	world_view.setup(simulation_host.simulation, world_snapshot, quality_profile)
 	world_view.bind_fog_overlay(camera_rig.camera)
 	camera_rig.configure_for_map(simulation_host.simulation.map_size)
-	var town_center := Vector2(simulation_host.simulation.town_hall_position) + Vector2(1.5, 1.5)
-	camera_rig.compose_view(world_view.tile_to_world(town_center), ProductionIsometricCameraRig3D.NORMAL_ZOOM)
+	camera_rig.compose_view(world_view.opening_camera_focus(), ProductionIsometricCameraRig3D.NORMAL_ZOOM)
 	if minimap != null:
 		minimap.bind(simulation_host.simulation, world_view, camera_rig)
 	last_synced_tick = -1

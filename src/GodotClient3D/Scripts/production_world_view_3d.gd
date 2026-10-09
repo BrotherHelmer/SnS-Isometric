@@ -431,10 +431,10 @@ func fog_configuration() -> Dictionary:
 		"uses_smoothed_texture": fog_visibility_texture != null,
 		"filter_linear": true,
 		"edge_feather_cells": 1.25,
-		"noise_strength": 0.45,
+		"noise_strength": 0.12,
 		"unknown_opacity": 1.0,
 		"visible_alpha": 0.0,
-		"explored_alpha": 0.45,
+		"explored_alpha": 0.55,
 		"unexplored_alpha": 1.0,
 		"unknown_color": FOG_UNKNOWN_BASE,
 		"mist_color": FOG_MIST_BASE,
@@ -625,23 +625,23 @@ func _apply_ground_material(host: MeshInstance3D) -> void:
 	material.shader = preload("res://src/GodotClient3D/Shaders/settlement_ground.gdshader")
 	material.set_shader_parameter("light_tint", Vector3(_ground_tint.r, _ground_tint.g, _ground_tint.b))
 	material.set_shader_parameter("tint_floor", 0.0)
-	# The Director: GFX-H meadow. Same yellow-olive as GFX-G so the
-	# opening grade stays ~81 / 45 / 0.46 / 71°. Dirt, flowers, stones
-	# and crop rows are louder so the lawn is no longer an olive sheet.
-	material.set_shader_parameter("grass_sunlit", Vector3(0.541, 0.596, 0.282))
-	material.set_shader_parameter("grass_moss", Vector3(0.227, 0.290, 0.157))
-	material.set_shader_parameter("macro_metres", 16.0)
-	material.set_shader_parameter("patch_metres", 6.5)
+	# The Director: GFX-K three-scale meadow. Broad 3.0R, medium 0.8R.
+	# Stay olive-green; do not return to the yellow-lime GFX-D wash.
+	var road_w := ScaleProfile.road_width_metres()
+	material.set_shader_parameter("grass_sunlit", Vector3(0.510, 0.576, 0.388))
+	material.set_shader_parameter("grass_moss", Vector3(0.251, 0.357, 0.224))
+	material.set_shader_parameter("macro_metres", maxf(8.0, 3.0 * road_w))
+	material.set_shader_parameter("patch_metres", maxf(1.94, 0.8 * road_w))
 	material.set_shader_parameter("detail_metres", 1.10)
-	material.set_shader_parameter("macro_amount", 0.28)
-	material.set_shader_parameter("detail_amount", 0.14)
+	material.set_shader_parameter("macro_amount", 0.22)
+	material.set_shader_parameter("detail_amount", 0.12)
 	material.set_shader_parameter("dirt_amount", 0.56)
 	material.set_shader_parameter("flower_amount", 0.40)
 	material.set_shader_parameter("stone_amount", 0.34)
 	material.set_shader_parameter("crop_amount", 1.0)
-	material.set_shader_parameter("meadow_lush", Vector3(0.408, 0.455, 0.227))
-	material.set_shader_parameter("meadow_warm", Vector3(0.384, 0.420, 0.188))
-	material.set_shader_parameter("forest_floor", Vector3(0.243, 0.306, 0.157))
+	material.set_shader_parameter("meadow_lush", Vector3(0.376, 0.463, 0.290))
+	material.set_shader_parameter("meadow_warm", Vector3(0.376, 0.463, 0.290))
+	material.set_shader_parameter("forest_floor", Vector3(0.208, 0.290, 0.204))
 	material.set_shader_parameter("dirt_color", Vector3(0.573, 0.443, 0.306))
 	material.set_shader_parameter("road_earth", Vector3(0.784, 0.627, 0.392))
 	material.set_shader_parameter("wheat_gold", Vector3(0.788, 0.635, 0.290))
@@ -965,8 +965,8 @@ func _rebuild_nature_multimeshes() -> void:
 				visual_count = 0
 			for index in visual_count:
 				var path_value := _tree_path_for_tile(tile, index, neighbors)
-				# 0.8–1.4× archetype so the woodland has stacked heights.
-				_append_nature_transform(transforms_by_path, path_value, tile, index, 0.55, 0.82 + float(stage) * 0.06, 0.58)
+				var scales := _tree_scale_range(path_value, neighbors)
+				_append_nature_transform(transforms_by_path, path_value, tile, index, 0.55, float(scales.x), float(scales.y))
 			if stage >= 2 and neighbors >= 3 and foliage_density >= 0.75:
 				var understory_path := String(Catalog.UNDERSTORY[_tile_hash(tile, 71) % Catalog.UNDERSTORY.size()])
 				_append_nature_transform(transforms_by_path, understory_path, tile, 5, 0.84, 0.66, 0.18)
@@ -1065,9 +1065,9 @@ func _rebuild_grass_multimeshes() -> void:
 			if meadow > 0.20 and forest_edge == 0 and _tile_hash(tile, 59) % 6 == 0 and Catalog.UNDERSTORY.size() > 0:
 				var meadow_bush := String(Catalog.UNDERSTORY[_tile_hash(tile, 73) % Catalog.UNDERSTORY.size()])
 				_append_nature_transform(transforms_by_path, meadow_bush, tile, 8, 0.55, 0.96, 0.30)
-			if forest_edge >= 2 and _tile_hash(tile, 53) % 3 == 0 and Catalog.UNDERSTORY.size() > 0:
+			if forest_edge >= 1 and forest_edge <= 3 and _tile_hash(tile, 53) % 2 == 0 and Catalog.UNDERSTORY.size() > 0:
 				var bush_path := String(Catalog.UNDERSTORY[_tile_hash(tile, 71) % Catalog.UNDERSTORY.size()])
-				_append_nature_transform(transforms_by_path, bush_path, tile, 6, 0.50, 0.88, 0.30)
+				_append_nature_transform(transforms_by_path, bush_path, tile, 6, 0.50, 0.35, 0.30)
 			if (forest_edge >= 1 or meadow > 0.32) and _tile_hash(tile, 101) % 3 == 0 and Catalog.ROCKS.size() > 0:
 				var rock_path := String(Catalog.ROCKS[_tile_hash(tile, 109) % Catalog.ROCKS.size()])
 				_append_nature_transform(transforms_by_path, rock_path, tile, 7, 0.58, 0.50, 0.20)
@@ -1183,6 +1183,14 @@ func _rebuild_ground_patches() -> void:
 					_bucket_patch(chunk_buckets, chunk, "flowers", _nature_transform_at(tile, 16, flower_path, 0.80, 0.90, 0.40))
 			if seed_h % 10 == 0 and rock_path != "":
 				_bucket_patch(chunk_buckets, chunk, "stones", _nature_transform_at(tile, 7, rock_path, 0.45, 0.48, 0.22))
+			# GFX-K: 12–18 decorative clusters per 100 R². 3–7 clumps each.
+			if seed_h % 7 == 0 and grass_path != "":
+				var clump_n := 3 + seed_h % 5
+				for clump_i in clump_n:
+					var clump_w := road_w * (0.12 + float((seed_h + clump_i * 9) % 11) / 100.0)
+					_bucket_patch(chunk_buckets, chunk, "cluster", _patch_transform(tile, 11 + clump_i, clump_w, 0.04))
+					if clump_i % 3 == 0 and flower_path != "":
+						_bucket_patch(chunk_buckets, chunk, "flowers", _nature_transform_at(tile, 21 + clump_i, flower_path, 0.30 * road_w / ScaleProfile.LOGICAL_CELL_METRES, 0.70, 0.35))
 	for chunk_key in chunk_buckets:
 		var kinds: Dictionary = chunk_buckets[chunk_key]
 		for kind in kinds:
@@ -1235,7 +1243,7 @@ func _nature_transform_at(tile: Vector2i, index: int, path_value: String, radius
 
 
 func _ground_patch_mesh(kind: String, grass_path: String, flower_path: String, rock_path: String) -> Mesh:
-	if kind == "dark_grass" or kind == "soil":
+	if kind == "dark_grass" or kind == "soil" or kind == "cluster":
 		var disk := CylinderMesh.new()
 		disk.top_radius = 0.50
 		disk.bottom_radius = 0.50
@@ -1259,7 +1267,9 @@ func _ground_patch_material(kind: String) -> Material:
 	material.metallic = 0.0
 	match kind:
 		"dark_grass":
-			material.albedo_color = Color("#3A4A22")
+			material.albedo_color = Color("#405B39")
+		"cluster":
+			material.albedo_color = Color("#354A34")
 		"soil":
 			material.albedo_color = Color("#4A3C2E")
 		"flowers":
@@ -2183,17 +2193,17 @@ func _sync_fog(force: bool) -> void:
 		fog_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
 		fog_material.render_priority = 20
 	fog_material.set_shader_parameter("unknown_opacity", 1.0)
-	fog_material.set_shader_parameter("explored_opacity", 0.45)
+	fog_material.set_shader_parameter("explored_opacity", 0.55)
 	fog_material.set_shader_parameter("cell_metres", ScaleProfile.LOGICAL_CELL_METRES)
 	fog_material.set_shader_parameter("feather_cells", 1.25)
-	fog_material.set_shader_parameter("noise_strength", 0.45)
+	fog_material.set_shader_parameter("noise_strength", 0.12)
 	fog_material.set_shader_parameter("shore_fade_metres", SHORE_FADE_METRES)
 	if fog_screen_material != null:
 		fog_screen_material.set_shader_parameter("unknown_opacity", 1.0)
-		fog_screen_material.set_shader_parameter("explored_opacity", 0.45)
+		fog_screen_material.set_shader_parameter("explored_opacity", 0.55)
 		fog_screen_material.set_shader_parameter("cell_metres", ScaleProfile.LOGICAL_CELL_METRES)
 		fog_screen_material.set_shader_parameter("feather_cells", 1.25)
-		fog_screen_material.set_shader_parameter("noise_strength", 0.45)
+		fog_screen_material.set_shader_parameter("noise_strength", 0.12)
 		fog_screen_material.set_shader_parameter("unknown_color", FOG_UNKNOWN_BASE)
 		fog_screen_material.set_shader_parameter("mist_color", FOG_MIST_BASE)
 		fog_screen_material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
@@ -2347,10 +2357,10 @@ func _ensure_fog_screen() -> void:
 	fog_screen_material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
 	fog_screen_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
 	fog_screen_material.set_shader_parameter("unknown_opacity", 1.0)
-	fog_screen_material.set_shader_parameter("explored_opacity", 0.45)
+	fog_screen_material.set_shader_parameter("explored_opacity", 0.55)
 	fog_screen_material.set_shader_parameter("cell_metres", ScaleProfile.LOGICAL_CELL_METRES)
 	fog_screen_material.set_shader_parameter("feather_cells", 1.25)
-	fog_screen_material.set_shader_parameter("noise_strength", 0.45)
+	fog_screen_material.set_shader_parameter("noise_strength", 0.12)
 	if fog_screen == null or not is_instance_valid(fog_screen):
 		fog_screen = MeshInstance3D.new()
 		fog_screen.name = "ScreenFogOverlay"
@@ -3055,6 +3065,8 @@ func _spawn_opening_hamlet(host: Node3D, hall: Vector2i, reserved: Dictionary) -
 	_spawn_dress_prop(host, "fence", hall + Vector2i(-4, 3), 90.0, 1.0, "DressFenceWestC")
 	_spawn_dress_prop(host, "fence", hall + Vector2i(6, 3), 0.0, 1.0, "DressFenceEastB")
 	_spawn_dress_prop(host, "barrel", hall + Vector2i(5, 1), 25.0, 0.88, "DressBarrelEast", Vector3(-0.8, 0.0, 1.1))
+	_spawn_dress_prop(host, "stone_stack", hall + Vector2i(4, 3), 12.0, 0.55, "DressCrossroadsStone")
+	_spawn_dress_prop(host, "crate", hall + Vector2i(4, 2), -8.0, 0.72, "DressSignCrate", Vector3(0.4, 0.0, 0.2))
 	_spawn_opening_crops(host, hall + Vector2i(3, -4))
 	_spawn_dress_pond(host, hall + Vector2i(-5, -3), Vector2(5.4, 3.6), "DressPond")
 	_spawn_dress_prop(host, "stone_stack", hall + Vector2i(-5, -2), 22.0, 0.70, "DressPondStoneA", Vector3(1.6, 0.0, 0.8))
@@ -3067,35 +3079,44 @@ func _spawn_opening_hamlet(host: Node3D, hall: Vector2i, reserved: Dictionary) -
 
 
 func _opening_ridge_tiles(hall: Vector2i) -> Array[Vector2i]:
-	# GFX-J: +tile.y is toward the camera. Plant the ridge in the near
-	# west lawn so zoom 26 sees 1.5–2 Town Hall widths of rock and creek.
+	# GFX-K: 1.8W diagonal ridge in the near-west lawn. +tile.y is toward
+	# the camera. Tiles stay outside the hall's 4×4 so rocks do not sit
+	# inside the limestone box.
 	return [
+		hall + Vector2i(0, 7),
 		hall + Vector2i(0, 6),
 		hall + Vector2i(1, 6),
 		hall + Vector2i(2, 6),
-		hall + Vector2i(-1, 6),
-		hall + Vector2i(1, 7),
-		hall + Vector2i(-4, 3),
-		hall + Vector2i(-5, 3),
+		hall + Vector2i(3, 7),
+		hall + Vector2i(-3, 5),
 		hall + Vector2i(-4, 4),
+		hall + Vector2i(-5, 3),
 		hall + Vector2i(-5, 4),
+		hall + Vector2i(1, 7),
 	]
 
 
+func opening_camera_focus() -> Vector3:
+	# Town Hall at about 53% across, 56% down in the opening viewport.
+	if simulation == null or not simulation.is_town_hall_founded():
+		return Vector3.ZERO
+	var hall: Vector2i = simulation.town_hall_position
+	var center := tile_to_world(Vector2(hall) + Vector2(1.5, 1.5))
+	var w := ScaleProfile.TOWN_HALL_WIDTH_METRES
+	return center + Vector3(-0.12 * w, 0.0, 0.18 * w)
+
+
 func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
-	# Unmistakable rocky ridge + creek. Sunlit #B3A78A, recess #66685B,
-	# water #315D66. About 5–10% of the opening view.
+	# Landmark ridge + creek. 1.8W wide, 0.35W tall, 6–10 bevelled rocks.
+	# Cosmetic only — no pathfinding change.
 	var ridge := Node3D.new()
 	ridge.name = "DressRidge"
+	ridge.set_meta("cosmetic_only", true)
 	host.add_child(ridge)
-	var sunlit := StandardMaterial3D.new()
-	sunlit.albedo_color = Color("#B3A78A")
-	sunlit.roughness = 0.85
-	sunlit.metallic = 0.0
-	var recess := StandardMaterial3D.new()
-	recess.albedo_color = Color("#66685B")
-	recess.roughness = 0.88
-	recess.metallic = 0.0
+	var highlight := _ridge_material(Color("#B7AE98"), 0.86)
+	var midtone := _ridge_material(Color("#8C8975"), 0.88)
+	var shade := _ridge_material(Color("#555D54"), 0.90)
+	var w := ScaleProfile.TOWN_HALL_WIDTH_METRES
 	var tiles := _opening_ridge_tiles(hall)
 	var index := 0
 	for tile in tiles:
@@ -3103,40 +3124,37 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 			continue
 		var block := MeshInstance3D.new()
 		block.name = "RidgeRock_%d" % index
-		var tall := 3.15 + float(index % 4) * 0.70
-		var wide := 3.85 + float(index % 3) * 0.55
-		if index >= 6:
-			tall *= 0.82
-			wide *= 0.88
-		if index % 3 == 0:
-			var prism := PrismMesh.new()
-			prism.size = Vector3(wide, tall, wide * 0.72)
-			block.mesh = prism
-		else:
-			var mesh := BoxMesh.new()
-			mesh.size = Vector3(wide, tall, wide * 0.78)
-			block.mesh = mesh
+		var wide := w * (0.10 + float(index % 5) * 0.04)
+		var tall := w * (0.16 + float(index % 4) * 0.045)
+		tall = minf(tall, w * 0.35)
+		block.mesh = _bevelled_ridge_mesh(index, wide, tall)
 		var world := tile_to_world(Vector2(tile))
-		block.position = world + Vector3(float(index % 2) * 0.45, tall * 0.50, float((index + 1) % 2) * -0.35)
-		block.rotation.y = float(index) * 0.37
-		block.material_override = sunlit if index % 3 == 0 else recess
+		block.position = world + Vector3(float(index % 2) * 0.35, 0.0, float((index + 1) % 2) * -0.28)
+		block.rotation.y = float(index) * 0.41
+		if index % 3 == 0:
+			block.material_override = highlight
+		elif index % 3 == 1:
+			block.material_override = midtone
+		else:
+			block.material_override = shade
 		ridge.add_child(block)
-		if Catalog.ROCKS.size() > 0:
-			_spawn_dress_prop(ridge, "stone_stack", tile, float(index * 18), 1.15, "RidgeStack_%d" % index, Vector3(0.55, 0.0, -0.4))
+		if Catalog.ROCKS.size() > 0 and index % 2 == 0:
+			_spawn_dress_prop(ridge, "stone_stack", tile, float(index * 18), 0.85, "RidgeStack_%d" % index, Vector3(0.45, 0.0, -0.3))
 		index += 1
+	var bank := _ridge_material(Color("#736448"), 0.92)
 	var water := StandardMaterial3D.new()
 	water.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
-	water.albedo_color = Color("#315D66")
-	water.roughness = 0.18
+	water.albedo_color = Color("#37646A")
+	water.roughness = 0.16
 	water.metallic = 0.0
 	water.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	water.emission_enabled = true
-	water.emission = Color("#315D66")
-	water.emission_energy_multiplier = 0.12
+	water.emission = Color("#82B3AD")
+	water.emission_energy_multiplier = 0.10
 	var creek := MeshInstance3D.new()
 	creek.name = "DressCreek"
 	var creek_mesh := PlaneMesh.new()
-	creek_mesh.size = Vector2(14.5, 2.15)
+	creek_mesh.size = Vector2(w * 1.55, w * 0.18)
 	creek.mesh = creek_mesh
 	var pond := hall + Vector2i(-5, -3)
 	var ridge_end := hall + Vector2i(1, 6)
@@ -3149,7 +3167,7 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 	var bend := MeshInstance3D.new()
 	bend.name = "DressCreekBend"
 	var bend_mesh := PlaneMesh.new()
-	bend_mesh.size = Vector2(7.4, 1.85)
+	bend_mesh.size = Vector2(w * 0.82, w * 0.16)
 	bend.mesh = bend_mesh
 	var mouth := hall + Vector2i(-5, 4)
 	var bend_mid := (Vector2(pond) + Vector2(mouth)) * 0.5
@@ -3158,6 +3176,57 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 	bend.material_override = water
 	bend.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	ridge.add_child(bend)
+	var bank_strip := MeshInstance3D.new()
+	bank_strip.name = "DressCreekBank"
+	var bank_mesh := BoxMesh.new()
+	bank_mesh.size = Vector3(w * 1.40, 0.10, w * 0.08)
+	bank_strip.mesh = bank_mesh
+	bank_strip.position = creek.position + Vector3(0.35, 0.02, 0.55)
+	bank_strip.rotation.y = creek.rotation.y
+	bank_strip.material_override = bank
+	bank_strip.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	ridge.add_child(bank_strip)
+
+
+func _ridge_material(color: Color, roughness: float) -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.roughness = roughness
+	material.metallic = 0.0
+	return material
+
+
+func _bevelled_ridge_mesh(seed_id: int, width: float, height: float) -> ArrayMesh:
+	# Low-poly bevelled rock: irregular top ring, darker implicit sides.
+	var tool := SurfaceTool.new()
+	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var count := 8 + (absi(seed_id) % 5)
+	var top: Array[Vector3] = []
+	var bottom: Array[Vector3] = []
+	for i in count:
+		var ang := TAU * float(i) / float(count)
+		var jitter := 0.72 + float((absi(seed_id * 17 + i * 13) % 40)) / 100.0
+		var r := width * 0.48 * jitter
+		top.append(Vector3(cos(ang) * r, height, sin(ang) * r * 0.78))
+		bottom.append(Vector3(cos(ang) * r * 1.08, 0.0, sin(ang) * r * 0.86))
+	var apex := Vector3(0.0, height * 0.18, 0.0)
+	for i in count:
+		var n := (i + 1) % count
+		_ridge_tri(tool, apex, bottom[i], bottom[n])
+		_ridge_tri(tool, top[i], top[n], Vector3(0.0, height * 1.02, 0.0))
+		_ridge_tri(tool, bottom[i], top[i], top[n])
+		_ridge_tri(tool, bottom[i], top[n], bottom[n])
+	tool.generate_normals()
+	return tool.commit()
+
+
+func _ridge_tri(tool: SurfaceTool, a: Vector3, b: Vector3, c: Vector3) -> void:
+	tool.set_normal(Vector3.UP)
+	tool.add_vertex(a)
+	tool.set_normal(Vector3.UP)
+	tool.add_vertex(b)
+	tool.set_normal(Vector3.UP)
+	tool.add_vertex(c)
 
 
 func _spawn_opening_crops(host: Node3D, origin: Vector2i) -> void:
@@ -3262,10 +3331,10 @@ func _spawn_dress_cottage(host: Node3D, kind: String, tile: Vector2i, width: int
 func _dress_cottage_trim(wrap: Node3D, kind: String, width: int, height: int) -> void:
 	var plaster := StandardMaterial3D.new()
 	plaster.albedo_color = BuildingMaterials.WARM_PLASTER
-	plaster.roughness = 0.80
+	plaster.roughness = 0.95
 	var timber := StandardMaterial3D.new()
 	timber.albedo_color = BuildingMaterials.DARK_TIMBER
-	timber.roughness = 0.70
+	timber.roughness = 0.92
 	var stone := StandardMaterial3D.new()
 	stone.albedo_color = BuildingMaterials.WEATHERED_STONE
 	stone.roughness = 0.85
@@ -3382,16 +3451,38 @@ func _force_cast_shadows(node: Node) -> void:
 
 
 func _tree_path_for_tile(tile: Vector2i, index: int, neighbors: int) -> String:
-	# Clustered woodland: 55% conifer / 30% broadleaf / 15% small LOD.
+	# GFX-K woodland: 55% conifer / 25% broadleaf / 20% understory at the edge.
 	var roll := _tile_hash(tile, 17 + index) % 100
+	if neighbors <= 1:
+		if roll < 55 and Catalog.CONIFERS.size() > 0:
+			return String(Catalog.CONIFERS[_tile_hash(tile, 31 + index) % Catalog.CONIFERS.size()])
+		if roll < 80 and Catalog.DECIDUOUS.size() > 0:
+			return String(Catalog.DECIDUOUS[_tile_hash(tile, 41 + index) % Catalog.DECIDUOUS.size()])
+		if Catalog.UNDERSTORY.size() > 0:
+			return String(Catalog.UNDERSTORY[_tile_hash(tile, 51 + index) % Catalog.UNDERSTORY.size()])
 	if neighbors >= 2:
 		if roll < 55 and Catalog.CONIFERS.size() > 0:
 			return String(Catalog.CONIFERS[_tile_hash(tile, 31 + index) % Catalog.CONIFERS.size()])
-		if roll < 85 and Catalog.DECIDUOUS.size() > 0:
+		if roll < 80 and Catalog.DECIDUOUS.size() > 0:
 			return String(Catalog.DECIDUOUS[_tile_hash(tile, 41 + index) % Catalog.DECIDUOUS.size()])
 		if Catalog.EDGE_TREES.size() > 0:
 			return String(Catalog.EDGE_TREES[_tile_hash(tile, 51 + index) % Catalog.EDGE_TREES.size()])
 	return String(Catalog.TREES[_tile_hash(tile, 17 + index) % Catalog.TREES.size()])
+
+
+func _tree_scale_range(path_value: String, neighbors: int) -> Vector2:
+	# Height bands from the GFX-K woodland table.
+	if String(path_value).contains("fir_tall") or String(path_value).contains("spruce"):
+		return Vector2(0.85, 0.50)
+	if String(path_value).contains("fir"):
+		return Vector2(0.70, 0.40)
+	if String(path_value).contains("broadleaf") or String(path_value).contains("oak") or String(path_value).contains("birch"):
+		return Vector2(0.80, 0.45)
+	if String(path_value).contains("bush") or String(path_value).contains("under"):
+		return Vector2(0.35, 0.30)
+	if neighbors <= 1:
+		return Vector2(0.70, 0.40)
+	return Vector2(0.82, 0.40)
 
 
 func _is_tree_path(path_value: String) -> bool:
@@ -3411,25 +3502,28 @@ func _foliage_material(mesh: Mesh, path_value: String) -> Material:
 		gold.roughness = 0.78
 		gold.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
 		return gold
-	if _is_scatter_path(path_value):
+	if _is_scatter_path(path_value) and not String(path_value).contains("bush"):
 		# Keep authored tuft / blossom colours. The tree shader paints short
 		# blades as trunk-brown, which is the black-ant read.
 		return null
 	var material := ShaderMaterial.new()
 	material.shader = FoliageShader
-	var tint := Color("#3A5028")
-	var lift := 1.06
+	var tint := Color("#4B6841")
+	var lift := 1.08
 	if String(path_value).contains("spruce") or String(path_value).contains("fir_tall"):
-		tint = Color("#2A3E1C")
-		lift = 1.02
-	elif String(path_value).contains("fir"):
-		tint = Color("#324828")
-		lift = 1.04
-	elif String(path_value).contains("birch"):
-		tint = Color("#7A9250")
+		tint = Color("#284735")
 		lift = 1.12
+	elif String(path_value).contains("fir"):
+		tint = Color("#34543B")
+		lift = 1.10
+	elif String(path_value).contains("birch"):
+		tint = Color("#82945D")
+		lift = 1.16
 	elif String(path_value).contains("broadleaf") or String(path_value).contains("oak"):
-		tint = Color("#4A6230")
+		tint = Color("#4B6841")
+		lift = 1.14
+	elif String(path_value).contains("bush") or String(path_value).contains("under"):
+		tint = Color("#314A32")
 		lift = 1.08
 	material.set_shader_parameter("albedo_color", Vector3(tint.r, tint.g, tint.b))
 	material.set_shader_parameter("trunk_color", Vector3(0.28, 0.20, 0.14))

@@ -1,17 +1,18 @@
 shader_type spatial;
 render_mode diffuse_lambert, specular_disabled, cull_disabled, blend_mix;
 
-// The Director: GFX-H roads. Compacted clay centre must read at gameplay
-// zoom 26 — GFX-G's clay sat too close to the meadow and vanished.
-// Darker dirt edges, noisy smoothstep into the grass. No pale shoulder.
-uniform vec4 road_color : source_color = vec4(0.784, 0.627, 0.392, 1.0); // #C8A064
-uniform vec3 clay_color : source_color = vec3(0.784, 0.627, 0.392); // #C8A064
-uniform vec3 dirt_edge : source_color = vec3(0.420, 0.310, 0.200); // #6B4F33
+// The Director: GFX-K worn medieval paths. Compacted earth centre,
+// grass-blended shoulders, dark ruts and sparse gravel. Not a brown ribbon.
+uniform vec4 road_color : source_color = vec4(0.624, 0.510, 0.376, 1.0); // #9F8260
+uniform vec3 clay_color : source_color = vec3(0.624, 0.510, 0.376); // #9F8260
+uniform vec3 dirt_edge : source_color = vec3(0.443, 0.345, 0.243); // #71583E
+uniform vec3 gravel_color : source_color = vec3(0.651, 0.608, 0.502); // #A69B80
 uniform vec3 light_tint : source_color = vec3(1.0);
 uniform float value_lift = 0.06;
 uniform float worn_darken = 0.16;
 uniform float shoulder_lift = 0.0;
 uniform float edge_noise = 0.42;
+uniform float road_width_metres = 1.47;
 
 varying vec3 world_pos;
 
@@ -32,12 +33,22 @@ void vertex() {
 
 void fragment() {
 	float across = abs(UV.x - 0.5) * 2.0;
-	float chew = noise2(world_pos.xz * 2.1 + vec2(9.0, 4.0));
-	float edge = smoothstep(0.26 + chew * 0.22, 0.90 + chew * 0.14, across);
-	vec3 clay = mix(road_color.rgb, clay_color, 0.70) * (1.0 - worn_darken * (1.0 - edge));
+	float chew = noise2(world_pos.xz * 0.18 + vec2(9.0, 4.0));
+	float irregular = across + (chew - 0.5) * 0.20;
+	// Centre 65% packed earth, 17.5% shoulder each side.
+	float edge = smoothstep(0.32, 0.65, irregular);
+	vec3 clay = mix(road_color.rgb, clay_color, 0.70);
 	vec3 dirt = mix(road_color.rgb, dirt_edge, 0.86);
-	// shoulder_lift stays 0 — pale graphic borders were the board-game read.
 	vec3 albedo = mix(clay, dirt * (1.0 + shoulder_lift), edge);
+	float worn = smoothstep(0.72, 0.94, noise2(world_pos.xz * 1.15 + vec2(4.0, 11.0)));
+	albedo = mix(albedo, dirt_edge, worn * 0.10);
+	float gravel = smoothstep(0.82, 0.96, noise2(world_pos.xz * 3.4 + vec2(2.2, 7.0)));
+	albedo = mix(albedo, gravel_color, gravel * 0.18 * (1.0 - edge));
+	// Two cart ruts at ±0.22R, each ~0.035R.
+	float rut_l = abs(UV.x - (0.5 - 0.22));
+	float rut_r = abs(UV.x - (0.5 + 0.22));
+	float ruts = (1.0 - smoothstep(0.0, 0.035, min(rut_l, rut_r))) * (1.0 - edge);
+	albedo = mix(albedo, dirt_edge, ruts * 0.55);
 	albedo *= mix(0.90, 1.08, noise2(world_pos.xz * 3.2)) * light_tint * (1.0 + value_lift);
 	float rim = min(UV.x, 1.0 - UV.x);
 	float alpha = max(road_color.a, 0.92);

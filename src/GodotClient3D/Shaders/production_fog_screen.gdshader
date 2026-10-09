@@ -1,10 +1,11 @@
 shader_type spatial;
 render_mode unshaded, cull_disabled, skip_vertex_transform, depth_test_disabled, depth_draw_never, blend_mix, fog_disabled;
 
-// The Director: GFX-J screen-composited shroud. Covers the whole viewport
-// so off-map sky / water / AABB cuts cannot print a dark triangle.
+// The Director: GFX-K screen-composited shroud. Viewport overlay so
+// off-map sky / water / AABB cuts cannot print a dark triangle.
 // Texture stores shroud: 0 visible, ~0.45 explored, 1 unexplored.
-// Colour #17272A. Frontier feathers 1–1.5 cells. Off-map alpha is 1.
+// Colour #17272A. Visible 0 / explored 0.55 / unexplored+off-map 1.0.
+// Feather 1.25 cells; noise displacement caps at 0.15 cells.
 
 uniform sampler2D visibility_texture : filter_linear, repeat_disable;
 uniform vec3 unknown_color = vec3(0.090, 0.153, 0.165); // #17272A
@@ -12,10 +13,10 @@ uniform vec3 mist_color = vec3(0.090, 0.153, 0.165);
 uniform vec2 world_min_xz = vec2(-87.5, -87.5);
 uniform vec2 world_size_xz = vec2(175.0, 175.0);
 uniform float unknown_opacity : hint_range(0.0, 1.0) = 1.0;
-uniform float explored_opacity : hint_range(0.0, 1.0) = 0.45;
+uniform float explored_opacity : hint_range(0.0, 1.0) = 0.55;
 uniform float cell_metres = 2.5;
 uniform float feather_cells = 1.25;
-uniform float noise_strength : hint_range(0.0, 1.0) = 0.45;
+uniform float noise_strength : hint_range(0.0, 1.0) = 0.12;
 uniform float ground_height = 0.04;
 
 float hash21(vec2 p) {
@@ -56,9 +57,14 @@ void fragment() {
 	vec2 world_uv = clamp(raw_uv, vec2(0.0), vec2(1.0));
 	float n1 = value_noise(world_xz / max(cell_metres, 0.01) * 0.55);
 	float n2 = value_noise(world_xz / max(cell_metres, 0.01) * 1.35 + vec2(17.0, 9.0));
+	// noise_strength * feather_cells <= 0.15 cells of displacement.
 	vec2 jitter = vec2(n1 - 0.5, n2 - 0.5) * 2.0 * noise_strength * feather_cells * cell_metres;
 	vec2 jitter_uv = jitter / max(world_size_xz, vec2(0.001));
-	float shroud = texture(visibility_texture, clamp(world_uv + jitter_uv, vec2(0.0), vec2(1.0))).r;
+	vec2 sample_uv = clamp(world_uv + jitter_uv, vec2(0.0), vec2(1.0));
+	ivec2 tex_size = textureSize(visibility_texture, 0);
+	float has_mask = step(1.0, float(tex_size.x * tex_size.y));
+	// Missing / invalid mask is unexplored, never visible.
+	float shroud = mix(1.0, texture(visibility_texture, sample_uv).r, has_mask);
 	float explored = mix(0.0, explored_opacity, smoothstep(0.04, 0.42, shroud));
 	float unknown = mix(explored, unknown_opacity, smoothstep(0.58, 0.92, shroud));
 	ALBEDO = unknown_color;

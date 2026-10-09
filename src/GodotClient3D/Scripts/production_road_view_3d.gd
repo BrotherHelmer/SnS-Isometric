@@ -32,8 +32,8 @@ func _rebuild() -> void:
 	for child in get_children():
 		remove_child(child)
 		child.queue_free()
-	var edge_color := Color(0.32, 0.28, 0.22, 0.42) if planned else Color(0.50, 0.39, 0.28, 0.55)
-	var road_color := Color(0.62, 0.58, 0.50, 0.86) if planned else Color("#C8A064")
+	var edge_color := Color(0.32, 0.28, 0.22, 0.42) if planned else Color(0.443, 0.345, 0.243, 0.55)
+	var road_color := Color(0.62, 0.58, 0.50, 0.86) if planned else Color("#9F8260")
 	if faction == "rival":
 		edge_color = Color(0.28, 0.17, 0.18, 0.72)
 		road_color = Color("#805d58")
@@ -106,8 +106,10 @@ func _road_material(color: Color) -> ShaderMaterial:
 		var material := ShaderMaterial.new()
 		material.shader = preload("res://src/GodotClient3D/Shaders/settlement_road.gdshader")
 		material.set_shader_parameter("road_color", color)
-		material.set_shader_parameter("clay_color", Vector3(0.784, 0.627, 0.392))
-		material.set_shader_parameter("dirt_edge", Vector3(0.420, 0.310, 0.200))
+		material.set_shader_parameter("clay_color", Vector3(0.624, 0.510, 0.376))
+		material.set_shader_parameter("dirt_edge", Vector3(0.443, 0.345, 0.243))
+		material.set_shader_parameter("gravel_color", Vector3(0.651, 0.608, 0.502))
+		material.set_shader_parameter("road_width_metres", 1.52 * ScaleProfile.ROAD_WIDTH_SCALE)
 		material.set_shader_parameter("shoulder_lift", 0.0)
 		material.set_shader_parameter("light_tint", _light_tint)
 		material.set_shader_parameter("value_lift", _value_lift)
