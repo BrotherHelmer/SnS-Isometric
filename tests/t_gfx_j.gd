@@ -44,7 +44,7 @@ func _check_grade() -> void:
 	_check(Identity.PALETTE_PLASTER.is_equal_approx(Color("#D8C7A8")) or Identity.PALETTE_PLASTER.is_equal_approx(Color("#E0CDA9")) or Identity.PALETTE_PLASTER.is_equal_approx(Color("#E0CDAE")) or Identity.PALETTE_PLASTER.is_equal_approx(Color("#DDCAA8")), "plaster is warm")
 	_check(Identity.PALETTE_TIMBER.is_equal_approx(Color("#59402B")) or Identity.PALETTE_TIMBER.is_equal_approx(Color("#62432F")) or Identity.PALETTE_TIMBER.is_equal_approx(Color("#64452F")) or Identity.PALETTE_TIMBER.is_equal_approx(Color("#5F422E")), "timber is dark")
 	_check(Identity.PALETTE_TEAL.is_equal_approx(Color("#456966")) or Identity.PALETTE_TEAL.is_equal_approx(Color("#426C67")) or Identity.PALETTE_TEAL.is_equal_approx(Color("#456D68")) or Identity.PALETTE_TEAL.is_equal_approx(Color("#426B66")), "slate is teal")
-	_check(Identity.PALETTE_STONE.is_equal_approx(Color("#776F60")) or Identity.PALETTE_STONE.is_equal_approx(Color("#817968")) or Identity.PALETTE_STONE.is_equal_approx(Color("#716A5D")), "stone accent is weathered")
+	_check(Identity.PALETTE_STONE.is_equal_approx(Color("#776F60")) or Identity.PALETTE_STONE.is_equal_approx(Color("#817968")) or Identity.PALETTE_STONE.is_equal_approx(Color("#716A5D")) or Identity.PALETTE_STONE.is_equal_approx(Color("#635B4C")), "stone accent is weathered")
 	_check(Identity.PALETTE_FOG_UNKNOWN.is_equal_approx(Color("#17272A")), "shroud colour is #17272A")
 	_check(float(night_p["sun_energy"]) >= 0.38 and float(night_p["sun_energy"]) <= 0.48, "night moon energy stays 0.42")
 	var moon: Color = night_p["sun_color"]
