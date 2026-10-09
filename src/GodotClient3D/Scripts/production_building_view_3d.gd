@@ -943,6 +943,22 @@ func _apply_principal_trim() -> void:
 	add_child(fascia)
 	if building_type == "TOWN_HALL" or building_type == "CASTLE":
 		var limestone := _material(BuildingMaterials.CASTLE_LIMESTONE, 0.0)
+		# Broad limestone plates over the dark KayKit body so the hall
+		# reads as pale stone at zoom 26, not a teal box.
+		for side in [
+			{"name": "TrimFacade", "size": Vector3(width * 0.90, wall_h * 0.72, 0.16), "pos": Vector3(0.0, wall_h * 0.42, _model_offset_z() + depth * 0.50)},
+			{"name": "TrimFacadeBack", "size": Vector3(width * 0.90, wall_h * 0.72, 0.16), "pos": Vector3(0.0, wall_h * 0.42, _model_offset_z() - depth * 0.50)},
+			{"name": "TrimFacadeLeft", "size": Vector3(0.16, wall_h * 0.72, depth * 0.88), "pos": Vector3(-width * 0.50, wall_h * 0.42, _model_offset_z())},
+			{"name": "TrimFacadeRight", "size": Vector3(0.16, wall_h * 0.72, depth * 0.88), "pos": Vector3(width * 0.50, wall_h * 0.42, _model_offset_z())},
+		]:
+			var plate_wall := MeshInstance3D.new()
+			plate_wall.name = String(side["name"])
+			var plate_mesh_wall := BoxMesh.new()
+			plate_mesh_wall.size = side["size"]
+			plate_wall.mesh = plate_mesh_wall
+			plate_wall.position = side["pos"]
+			plate_wall.material_override = limestone
+			add_child(plate_wall)
 		var band := MeshInstance3D.new()
 		band.name = "TrimHallBand"
 		var band_mesh := BoxMesh.new()

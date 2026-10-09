@@ -36,6 +36,8 @@ static func apply(root: Node, seed_id: int, building_type: String = "") -> void:
 		return
 	var shift := _instance_shift(seed_id)
 	_walk(root, shift, building_type)
+	if building_type == "TOWN_HALL" or building_type == "CASTLE":
+		_lift_landmark_walls(root)
 
 
 static func classify(albedo: Color) -> String:
@@ -181,6 +183,34 @@ static func _bevel_material(kind: String) -> ShaderMaterial:
 	material.set_shader_parameter("bevel_color", Vector3(color.r, color.g, color.b))
 	material.set_shader_parameter("bevel_amount", amount)
 	_bevel_by_kind[kind] = material
+	return material
+
+
+static func _lift_landmark_walls(node: Node) -> void:
+	# KayKit halls paint walls the same dark teal as the roof. Remap
+	# those dark faces to limestone so the landmark reads pale stone.
+	if node is MeshInstance3D:
+		var instance := node as MeshInstance3D
+		if instance.material_override is StandardMaterial3D:
+			instance.material_override = _limestone_if_dark_teal(instance.material_override as StandardMaterial3D)
+		if instance.mesh != null:
+			for surface in instance.mesh.get_surface_count():
+				var mat := instance.get_active_material(surface)
+				if mat is StandardMaterial3D:
+					instance.set_surface_override_material(surface, _limestone_if_dark_teal(mat as StandardMaterial3D))
+	for child in node.get_children():
+		_lift_landmark_walls(child)
+
+
+static func _limestone_if_dark_teal(source: StandardMaterial3D) -> StandardMaterial3D:
+	var color := source.albedo_color
+	var luma := color.r * 0.2126 + color.g * 0.7152 + color.b * 0.0722
+	if not (color.b > color.r + 0.02 and color.g > color.r and luma < 0.30):
+		return source
+	var material := source.duplicate() as StandardMaterial3D
+	material.albedo_color = CASTLE_LIMESTONE
+	material.roughness = 0.85
+	material.metallic = 0.0
 	return material
 
 

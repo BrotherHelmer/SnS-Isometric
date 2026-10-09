@@ -3067,20 +3067,18 @@ func _spawn_opening_hamlet(host: Node3D, hall: Vector2i, reserved: Dictionary) -
 
 
 func _opening_ridge_tiles(hall: Vector2i) -> Array[Vector2i]:
-	# GFX-J: 1.5–2 Town Hall widths, west of the hall so the default
-	# opening camera cannot miss it. Frames the clearing, not the rim.
+	# GFX-J: +tile.y is toward the camera. Plant the ridge in the near
+	# west lawn so zoom 26 sees 1.5–2 Town Hall widths of rock and creek.
 	return [
-		hall + Vector2i(-6, 2),
-		hall + Vector2i(-7, 2),
-		hall + Vector2i(-6, 3),
-		hall + Vector2i(-7, 3),
-		hall + Vector2i(-5, 3),
-		hall + Vector2i(-6, 4),
-		hall + Vector2i(-7, 4),
-		hall + Vector2i(-5, 4),
+		hall + Vector2i(0, 6),
+		hall + Vector2i(1, 6),
+		hall + Vector2i(2, 6),
+		hall + Vector2i(-1, 6),
+		hall + Vector2i(1, 7),
 		hall + Vector2i(-4, 3),
-		hall + Vector2i(-3, -4),
-		hall + Vector2i(-4, -4),
+		hall + Vector2i(-5, 3),
+		hall + Vector2i(-4, 4),
+		hall + Vector2i(-5, 4),
 	]
 
 
@@ -3105,12 +3103,11 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 			continue
 		var block := MeshInstance3D.new()
 		block.name = "RidgeRock_%d" % index
-		var tall := 2.35 + float(index % 4) * 0.55
-		var wide := 3.35 + float(index % 3) * 0.45
-		if index >= 8:
-			# Foreground boulders, still large but not a wall.
-			tall *= 0.72
-			wide *= 0.78
+		var tall := 3.15 + float(index % 4) * 0.70
+		var wide := 3.85 + float(index % 3) * 0.55
+		if index >= 6:
+			tall *= 0.82
+			wide *= 0.88
 		if index % 3 == 0:
 			var prism := PrismMesh.new()
 			prism.size = Vector3(wide, tall, wide * 0.72)
@@ -3120,9 +3117,9 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 			mesh.size = Vector3(wide, tall, wide * 0.78)
 			block.mesh = mesh
 		var world := tile_to_world(Vector2(tile))
-		block.position = world + Vector3(float(index % 2) * 0.45, tall * 0.42, float((index + 1) % 2) * -0.35)
+		block.position = world + Vector3(float(index % 2) * 0.45, tall * 0.50, float((index + 1) % 2) * -0.35)
 		block.rotation.y = float(index) * 0.37
-		block.material_override = sunlit if index % 2 == 0 else recess
+		block.material_override = sunlit if index % 3 == 0 else recess
 		ridge.add_child(block)
 		if Catalog.ROCKS.size() > 0:
 			_spawn_dress_prop(ridge, "stone_stack", tile, float(index * 18), 1.15, "RidgeStack_%d" % index, Vector3(0.55, 0.0, -0.4))
@@ -3142,7 +3139,7 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 	creek_mesh.size = Vector2(14.5, 2.15)
 	creek.mesh = creek_mesh
 	var pond := hall + Vector2i(-5, -3)
-	var ridge_end := hall + Vector2i(-6, 3)
+	var ridge_end := hall + Vector2i(1, 6)
 	var mid := (Vector2(pond) + Vector2(ridge_end)) * 0.5
 	creek.position = tile_to_world(mid) + Vector3(0.0, 0.06, 0.0)
 	creek.rotation.y = atan2(float(pond.x - ridge_end.x), float(pond.y - ridge_end.y))
@@ -3154,7 +3151,7 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 	var bend_mesh := PlaneMesh.new()
 	bend_mesh.size = Vector2(7.4, 1.85)
 	bend.mesh = bend_mesh
-	var mouth := hall + Vector2i(-3, -4)
+	var mouth := hall + Vector2i(-5, 4)
 	var bend_mid := (Vector2(pond) + Vector2(mouth)) * 0.5
 	bend.position = tile_to_world(bend_mid) + Vector3(0.4, 0.055, 0.0)
 	bend.rotation.y = atan2(float(mouth.x - pond.x), float(mouth.y - pond.y))
