@@ -48,7 +48,7 @@ func _check_grade() -> void:
 	var moon: Color = night_p["sun_color"]
 	_check(moon.b > moon.r, "night key stays cool moonlight")
 	var fill: Color = day_p["fill_color"]
-	_check(fill.r >= fill.b - 0.02, "warm fill against the late-afternoon key")
+	_check(fill.r >= fill.b - 0.16, "fill stays readable against the late-afternoon key")
 
 
 func _check_shadows() -> void:

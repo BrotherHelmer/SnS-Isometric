@@ -659,6 +659,7 @@ func _apply_ground_material(host: MeshInstance3D) -> void:
 	material.set_shader_parameter("coast_jut_metres", COAST_JUT_METRES)
 	material.set_shader_parameter("apron_mode", 0.0)
 	host.material_override = material
+	_bind_landscape_domains(material)
 
 
 func _bind_terrain_textures(material: ShaderMaterial) -> void:
@@ -684,6 +685,21 @@ func _bind_terrain_textures(material: ShaderMaterial) -> void:
 	material.set_shader_parameter("road_control_amount", 1.0)
 	material.set_shader_parameter("road_debug", 1.0 if road_debug_enabled else 0.0)
 	material.set_shader_parameter("terrain_debug", float(terrain_debug_mode))
+
+
+func _bind_landscape_domains(material: ShaderMaterial) -> void:
+	# GFX-U: village clearing vs woodland lobe so large grass
+	# patches follow the three landscape masses, not a random field.
+	var village := Vector2.ZERO
+	var wood := Vector2(-28.0, -32.0)
+	if simulation != null and simulation.is_town_hall_founded():
+		var hall: Vector2i = simulation.town_hall_position
+		var center := tile_to_world(Vector2(hall) + Vector2(1.5, 1.5))
+		village = Vector2(center.x, center.z)
+		var lobe := tile_to_world(Vector2(hall) + Vector2(-1.0, -10.0))
+		wood = Vector2(lobe.x, lobe.z)
+	material.set_shader_parameter("village_xz", village)
+	material.set_shader_parameter("woodland_xz", wood)
 
 
 func _apply_meadow_palette(material: ShaderMaterial) -> void:
@@ -1342,7 +1358,7 @@ func _rebuild_nature_multimeshes() -> void:
 			if index % 2 != 0:
 				continue
 			tree_floors.append(ContactAO.flatten_transform(batch[index], 1.7))
-	ContactAO.spawn_multimesh(resource_visuals_root, tree_floors, 0.34)
+	ContactAO.spawn_multimesh(resource_visuals_root, tree_floors, 0.48)
 
 
 func _sync_grass(force: bool) -> void:
@@ -3107,6 +3123,7 @@ func _rebuild_beach_apron() -> void:
 	material.set_shader_parameter("coast_jut_metres", COAST_JUT_METRES)
 	material.set_shader_parameter("apron_mode", 1.0)
 	beach_apron_instance.material_override = material
+	_bind_landscape_domains(material)
 	terrain_root.add_child(beach_apron_instance)
 
 
@@ -3269,7 +3286,7 @@ func _rebuild_edge_forest(force: bool) -> void:
 			if index % 4 != 0:
 				continue
 			floors.append(ContactAO.flatten_transform(batch[index], 2.1))
-	ContactAO.spawn_multimesh(edge_forest_root, floors, 0.34)
+	ContactAO.spawn_multimesh(edge_forest_root, floors, 0.48)
 
 
 func _append_rim_woodland(groups: Dictionary) -> void:
@@ -3349,6 +3366,10 @@ func _rebuild_opening_dressing() -> void:
 	var leftover := resource_visuals_root.get_node_or_null("OpeningDress")
 	if leftover != null:
 		leftover.queue_free()
+	if terrain_mesh_instance != null and terrain_mesh_instance.material_override is ShaderMaterial:
+		_bind_landscape_domains(terrain_mesh_instance.material_override as ShaderMaterial)
+	if beach_apron_instance != null and beach_apron_instance.material_override is ShaderMaterial:
+		_bind_landscape_domains(beach_apron_instance.material_override as ShaderMaterial)
 	var host := Node3D.new()
 	host.name = "OpeningDress"
 	resource_visuals_root.add_child(host)
@@ -3521,10 +3542,17 @@ func _spawn_opening_hamlet(host: Node3D, hall: Vector2i, reserved: Dictionary) -
 
 
 func _opening_forest_score(tile: Vector2i, hall: Vector2i) -> float:
-	# Camera looks from +Y. Prefer the back (-Y) and west (-X) so the
-	# opening meadow stays readable and the forest frames 40–55%.
+	# GFX-U: one dense woodland mass at the back, not a thin ring.
+	# Camera looks from +Y. Plant the highest-scoring 48% so the
+	# village clearing stays open toward the lens. Coverage is still
+	# planted / candidates (0.38–0.58).
 	var d := tile - hall
-	return -float(d.y) * 1.35 - float(d.x) * 0.40 + float(_tile_hash(tile, 3) % 7) * 0.08
+	var lobe := Vector2(-1.0, -10.0)
+	var to_lobe := Vector2(float(d.x), float(d.y)) - lobe
+	var clump := 11.0 - to_lobe.length()
+	var front_pen := maxf(0.0, float(d.y) + 1.5) * 1.85
+	var side_pen := absf(float(d.x) - lobe.x) * 0.22
+	return clump * 2.20 - front_pen - side_pen + float(_tile_hash(tile, 3) % 7) * 0.05
 
 
 func _opening_ridge_tiles(hall: Vector2i) -> Array[Vector2i]:
@@ -3718,6 +3746,17 @@ func _spawn_meandering_creek(ridge: Node3D, hall: Vector2i, road_w: float) -> vo
 	ridge.add_child(deep_run)
 	_dress_creek_shoreline(ridge, points)
 	_spawn_creek_bridge(ridge, points, width)
+	var foam := MeshInstance3D.new()
+	foam.name = "DressCreekFoam"
+	foam.mesh = _creek_ribbon_mesh(points, width * 0.22, road_w)
+	foam.position.y = 0.030
+	var foam_mat := StandardMaterial3D.new()
+	foam_mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+	foam_mat.albedo_color = Color("#D0E8E4")
+	foam_mat.roughness = 0.38
+	foam.material_override = foam_mat
+	foam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	ridge.add_child(foam)
 
 
 func _dress_creek_shoreline(ridge: Node3D, points: Array[Vector3]) -> void:
@@ -3937,29 +3976,101 @@ func _spawn_dress_pond(host: Node3D, tile: Vector2i, size: Vector2, node_name: S
 
 
 func _spawn_dress_coast(host: Node3D, hall: Vector2i) -> void:
-	# GFX-Q: west water-edge apron so the pond reads into the creek cut.
+	# GFX-U: west rocky shore as the third landscape mass. Turquoise
+	# shallows, darker deep water, irregular rock banks, foam that
+	# reads at the gameplay camera. DressCoastEdge name stays.
+	var origin := tile_to_world(Vector2(hall + Vector2i(-7, 1))) + Vector3(0.15, 0.02, 0.15)
+	var deep := MeshInstance3D.new()
+	deep.name = "DressCoastDeep"
+	var deep_mesh := PlaneMesh.new()
+	deep_mesh.size = Vector2(9.8, 14.5)
+	deep.mesh = deep_mesh
+	deep.position = origin + Vector3(-2.2, 0.008, 0.35)
+	deep.rotation.y = 0.16
+	var deep_mat := StandardMaterial3D.new()
+	deep_mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+	deep_mat.albedo_color = Color("#1A4558")
+	deep_mat.roughness = 0.22
+	deep_mat.metallic = 0.06
+	deep.material_override = deep_mat
+	deep.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	host.add_child(deep)
+	var shallow := MeshInstance3D.new()
+	shallow.name = "DressCoastShallow"
+	var shallow_mesh := PlaneMesh.new()
+	shallow_mesh.size = Vector2(6.4, 11.2)
+	shallow.mesh = shallow_mesh
+	shallow.position = origin + Vector3(0.35, 0.018, 0.10)
+	shallow.rotation.y = 0.20
+	var shallow_mat := StandardMaterial3D.new()
+	shallow_mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+	shallow_mat.albedo_color = Color("#3AA8A4")
+	shallow_mat.roughness = 0.18
+	shallow_mat.metallic = 0.04
+	shallow.material_override = shallow_mat
+	shallow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	host.add_child(shallow)
 	var edge := MeshInstance3D.new()
 	edge.name = "DressCoastEdge"
 	var mesh := PlaneMesh.new()
-	mesh.size = Vector2(4.2, 7.4)
+	mesh.size = Vector2(5.1, 8.6)
 	edge.mesh = mesh
-	edge.position = tile_to_world(Vector2(hall + Vector2i(-6, 1))) + Vector3(0.4, 0.03, 0.0)
+	edge.position = origin + Vector3(0.85, 0.028, 0.0)
 	edge.rotation.y = 0.18
 	var water := StandardMaterial3D.new()
 	water.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
-	water.albedo_color = Color("#345F65")
-	water.roughness = 0.35
-	water.metallic = 0.0
+	water.albedo_color = Color("#2F9A96")
+	water.roughness = 0.20
+	water.metallic = 0.05
 	edge.material_override = water
 	edge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	host.add_child(edge)
+	var foam := MeshInstance3D.new()
+	foam.name = "DressCoastFoam"
+	var foam_mesh := PlaneMesh.new()
+	foam_mesh.size = Vector2(4.4, 0.42)
+	foam.mesh = foam_mesh
+	foam.position = origin + Vector3(2.05, 0.036, -0.15)
+	foam.rotation.y = 0.28
+	var foam_mat := StandardMaterial3D.new()
+	foam_mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+	foam_mat.albedo_color = Color("#D8EEE8")
+	foam_mat.roughness = 0.42
+	foam.material_override = foam_mat
+	foam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	host.add_child(foam)
+	for foam_i in 3:
+		var ripple := MeshInstance3D.new()
+		ripple.name = "DressCoastRipple_%d" % foam_i
+		var ripple_mesh := PlaneMesh.new()
+		ripple_mesh.size = Vector2(1.85 + float(foam_i) * 0.35, 0.18)
+		ripple.mesh = ripple_mesh
+		ripple.position = origin + Vector3(1.15 + float(foam_i) * 0.55, 0.034, -2.4 + float(foam_i) * 2.15)
+		ripple.rotation.y = 0.40 + float(foam_i) * 0.22
+		ripple.material_override = foam_mat
+		ripple.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		host.add_child(ripple)
+	var rock_mat := _ridge_material(Color("#6E6A5C"), 0.94)
+	var rock_lo := _ridge_material(Color("#4E5348"), 0.94)
+	for rock_i in 7:
+		var boulder := MeshInstance3D.new()
+		boulder.name = "DressCoastRock_%d" % rock_i
+		var boulder_mesh := SphereMesh.new()
+		boulder_mesh.radius = 0.38 + float(rock_i % 3) * 0.14
+		boulder_mesh.height = boulder_mesh.radius * 1.15
+		boulder.mesh = boulder_mesh
+		boulder.position = origin + Vector3(2.4 + float(rock_i % 3) * 0.55, 0.10, -3.6 + float(rock_i) * 1.15)
+		boulder.scale = Vector3(1.35, 0.62, 1.08)
+		boulder.rotation.y = float(rock_i) * 0.51
+		boulder.material_override = rock_mat if rock_i % 2 == 0 else rock_lo
+		host.add_child(boulder)
 	var bank := MeshInstance3D.new()
 	bank.name = "DressCoastBank"
 	var bank_mesh := BoxMesh.new()
-	bank_mesh.size = Vector3(4.8, 0.16, 0.55)
+	bank_mesh.size = Vector3(7.2, 0.22, 0.72)
 	bank.mesh = bank_mesh
-	bank.position = edge.position + Vector3(1.6, 0.02, 0.2)
-	bank.rotation.y = 0.22
+	bank.position = origin + Vector3(2.35, 0.04, 0.15)
+	bank.rotation.y = 0.24
 	var mud := StandardMaterial3D.new()
 	mud.albedo_color = Color("#786C50")
 	mud.roughness = 0.92
@@ -3999,7 +4110,7 @@ func _spawn_dress_cottage(host: Node3D, kind: String, tile: Vector2i, width: int
 	_dress_cottage_trim(wrap, kind, width, height)
 	var footprint := Vector2i(width, height)
 	var world_size := ScaleProfile.footprint_world_size(footprint)
-	var disc := ContactAO.make_instance("ContactAO", Vector2(world_size.x * 1.08, world_size.y * 1.08), 0.24)
+	var disc := ContactAO.make_instance("ContactAO", Vector2(world_size.x * 1.08, world_size.y * 1.08), 0.38)
 	disc.position = Vector3(0.0, 0.018, 0.0)
 	wrap.add_child(disc)
 	var light := OmniLight3D.new()
@@ -4281,11 +4392,11 @@ func _foliage_material(mesh: Mesh, path_value: String) -> Material:
 	var tint := Color("#4B6841")
 	var lift := 1.08
 	if String(path_value).contains("spruce") or String(path_value).contains("fir_tall"):
-		tint = Color("#284735")
-		lift = 1.12
+		tint = Color("#355A42")
+		lift = 1.22
 	elif String(path_value).contains("fir"):
-		tint = Color("#34543B")
-		lift = 1.10
+		tint = Color("#3C5E44")
+		lift = 1.20
 	elif String(path_value).contains("birch"):
 		tint = Color("#82945D")
 		lift = 1.16
