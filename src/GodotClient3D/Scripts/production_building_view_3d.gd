@@ -156,17 +156,62 @@ func _create_completed_model() -> void:
 	if building_type == "WALL":
 		_create_wall_model()
 		return
-	var packed := load(Catalog.building_path(building_type)) as PackedScene
-	if packed == null:
+	model_root = _instantiate_building_model(building_type)
+	if model_root == null:
 		return
-	model_root = packed.instantiate()
 	model_root.name = "SemanticModel_%s" % building_type
 	model_root.scale = Vector3.ONE * ScaleProfile.building_scale(building_type)
 	model_root.position.z = _model_offset_z()
 	add_child(model_root)
 	# The Director: GFX-I trim-sheet remap after the mesh is live.
 	BuildingMaterials.apply(model_root, entity_id, building_type)
+	_ensure_civic_front_sections()
 	_apply_principal_trim()
+
+
+func _instantiate_building_model(kind: String) -> Node3D:
+	var path := Catalog.building_path(kind)
+	# GFX-U: civic keep/castle load from the authored GLTF so a stale
+	# .import cache cannot hide FrontL/C/R or the deep arch.
+	if BuildingMaterials._is_civic_keep(kind):
+		var document := GLTFDocument.new()
+		var state := GLTFState.new()
+		if document.append_from_file(path, state) == OK:
+			var scene: Node = document.generate_scene(state)
+			if scene is Node3D:
+				return scene as Node3D
+	var packed := load(path) as PackedScene
+	if packed == null:
+		return null
+	return packed.instantiate() as Node3D
+
+
+func _ensure_civic_front_sections() -> void:
+	if model_root == null or not BuildingMaterials._is_civic_keep(building_type):
+		return
+	if model_root.find_child("CivicWall_FrontL", true, false) != null:
+		return
+	var stone := _material(BuildingMaterials.CASTLE_LIMESTONE, 0.0)
+	var recess := _material(Color("#3A3228"), 0.0)
+	var banner := _material(Color("#8B2E3A"), 0.0)
+	_civic_box("CivicWall_FrontL", Vector3(-1.95, 2.05, 2.42), Vector3(1.95, 3.65, 0.85), stone)
+	_civic_box("CivicWall_FrontC", Vector3(0.0, 3.22, 2.52), Vector3(2.15, 1.55, 0.72), stone)
+	_civic_box("CivicWall_FrontR", Vector3(1.75, 2.05, 2.42), Vector3(1.95, 3.65, 0.85), stone)
+	if model_root.find_child("CivicHerald", true, false) == null:
+		_civic_box("CivicHerald", Vector3(0.12, 4.72, 3.08), Vector3(1.28, 0.82, 0.07), banner)
+	if model_root.find_child("CivicRecess_Gate", true, false) == null:
+		_civic_box("CivicRecess_Gate", Vector3(0.0, 1.52, 3.52), Vector3(1.58, 2.72, 0.92), recess)
+
+
+func _civic_box(node_name: String, pos: Vector3, size: Vector3, mat: Material) -> void:
+	var inst := MeshInstance3D.new()
+	inst.name = node_name
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	inst.mesh = mesh
+	inst.position = pos
+	inst.material_override = mat
+	model_root.add_child(inst)
 
 
 func _create_wall_model() -> void:

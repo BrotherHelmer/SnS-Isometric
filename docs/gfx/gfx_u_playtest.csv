@@ -1,0 +1,10 @@
+elapsed,day,night,event,detail,wait_ms,frame_ms,errors
+1.7,1,0,opening_day,"opening composed on patched meadow, woodland mass and rocky shore",3639.76,204.718,0
+27.3,1,0,build_day,"first house/road placed from the opening",2830.95,247.546,0
+28.9,1,0,scout_day,"guard scouting toward the west fog",3330.24,262.670,0
+343.7,1,1,first_night,"first night after the opening day",2323.14,185.054,0
+345.3,1,1,night_raid,"first night raid banner",2198.10,197.285,0
+901.6,2,0,fifteen_minutes,"first 15 game minutes complete",3101.99,254.787,0
+903.2,2,0,showcase_day,"15-building village after the live opening",3638.26,291.192,0
+904.8,2,0,showcase_wide,"showcase at the 1.5x zoom cap",4162.52,347.388,0
+906.4,2,0,fog_edge,"1.5x zoom at the unknown edge (day)",4305.03,359.234,0

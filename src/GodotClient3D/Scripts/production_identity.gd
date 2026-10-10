@@ -33,9 +33,8 @@ const SIZE_WARNING := 16
 const AUDIO_SETTINGS_PATH := "user://one_shard_audio.json"
 
 # The Director: grade knobs stay sat 1.12 / contrast 1.12 / exposure 0.86.
-# GFX-T brings a little warmth back onto the S cooler fill without
-# collapsing grass / stone / dirt: ambient #A8A088, fill #C8B488,
-# horizon #C8B8A0. Night stays the frozen moonlit blue.
+# GFX-U: warm sun stays #FFD2A0. Cooler fill separates terrain /
+# roads / stone. Night stays the frozen moonlit blue.
 const PALETTE_NAVY := Color("#101A22")
 const PALETTE_NIGHT_TERRAIN := Color("#17262A")
 const PALETTE_FOREST := Color("#3E4E28")
@@ -71,7 +70,7 @@ const PALETTE_WHEAT := Color("#C9A24A")
 const LIGHTING := {
 	"day": {
 		"ambient": 0.40,
-		"ambient_color": Color("#A8A088"),
+		"ambient_color": Color("#A0A8B0"),
 		"fog_density": 0.0,
 		"fog_color": Color("#17272A"),
 		"fog_energy": 0.0,
@@ -89,9 +88,9 @@ const LIGHTING := {
 		"sun_pitch": -30.0,
 		"sun_orbit": 128.0,
 		"fill_energy": 0.14,
-		"fill_color": Color("#C8B488"),
+		"fill_color": Color("#98A8BC"),
 		"sky_top": Color("#4A6574"),
-		"sky_horizon": Color("#C8B8A0"),
+		"sky_horizon": Color("#C0C4B8"),
 		"ground_bottom": Color("#1E2A18"),
 		"ground_horizon": Color("#3A4428"),
 		"ground_tint": Color(1.0, 1.0, 1.0),

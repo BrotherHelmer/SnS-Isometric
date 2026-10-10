@@ -44,13 +44,16 @@ func _export_keep(castle: bool) -> void:
 
 
 func _build_keep(root: Node3D, castle: bool) -> void:
-	# GFX-R: three vertical levels on the 10 m pad. Camera is +Z.
-	# 1 curtain + gate, 2 hall / wing roofs, 3 raised keep + tall tower.
+	# GFX-U: front wall is three sections, not one flat slab. Camera +Z.
+	# CivicWall_Keep stays as the body. Front L / C / R read at 720p.
 	_box(root, "CivicPlinth", Vector3(0.0, 0.18, 0.05), Vector3(7.35, 0.36, 6.35), "stone")
-	_box(root, "CivicWall_Keep", Vector3(-0.15, 2.18, -0.05), Vector3(5.85, 3.85, 5.05), "stone")
-	_box(root, "CivicGate", Vector3(0.0, 1.95, 2.62), Vector3(2.55, 3.55, 1.55), "stone")
-	_box(root, "CivicGate_Arch", Vector3(0.0, 3.86, 2.92), Vector3(2.28, 0.58, 0.72), "stone")
-	_box(root, "CivicRecess_Gate", Vector3(0.0, 1.55, 3.18), Vector3(1.55, 2.55, 0.42), "recess")
+	_box(root, "CivicWall_Keep", Vector3(-0.15, 2.18, -0.42), Vector3(5.85, 3.85, 4.35), "stone")
+	_box(root, "CivicWall_FrontL", Vector3(-1.95, 2.05, 2.42), Vector3(1.95, 3.65, 0.85), "stone")
+	_box(root, "CivicWall_FrontC", Vector3(0.0, 3.22, 2.52), Vector3(2.15, 1.55, 0.72), "stone")
+	_box(root, "CivicWall_FrontR", Vector3(1.75, 2.05, 2.42), Vector3(1.95, 3.65, 0.85), "stone")
+	_box(root, "CivicGate", Vector3(0.0, 1.95, 2.78), Vector3(2.35, 3.55, 1.85), "stone")
+	_box(root, "CivicGate_Arch", Vector3(0.0, 3.72, 3.28), Vector3(2.15, 0.78, 1.15), "stone")
+	_box(root, "CivicRecess_Gate", Vector3(0.0, 1.52, 3.52), Vector3(1.58, 2.72, 0.92), "recess")
 	_facade(root)
 	_door(root)
 	# Level 2 — hall wing (west) and chapel wing (east). Two roof masses.
@@ -114,7 +117,7 @@ func _tall_tower(root: Node3D, origin: Vector3) -> void:
 	_cone(root, "CivicRoof_ConeTall", origin + Vector3(0.0, h + 1.28, 0.0), 1.12, 2.15, "slate")
 	_box(root, "CivicTimber_FinialTall", origin + Vector3(0.0, h + 2.48, 0.0), Vector3(0.08, 0.55, 0.08), "timber")
 	_box(root, "CivicBanner_Pole", origin + Vector3(0.42, h + 2.05, 0.18), Vector3(0.07, 1.85, 0.07), "timber")
-	_box(root, "CivicBanner", origin + Vector3(0.92, h + 2.35, 0.18), Vector3(0.95, 0.62, 0.06), "banner")
+	_box(root, "CivicBanner", origin + Vector3(1.12, h + 2.28, 0.18), Vector3(1.42, 0.98, 0.07), "banner")
 	for i in 4:
 		var a := float(i) * TAU / 4.0 + 0.55
 		_box(root, "CivicWindow_TowerTall_%d" % i,
@@ -123,31 +126,31 @@ func _tall_tower(root: Node3D, origin: Vector3) -> void:
 
 
 func _facade(root: Node3D) -> void:
-	# GFX-S: break the +Z curtain so the gatehouse reads at 720p.
-	# Buttresses, inset panels, string course, slit windows, one banner.
-	_box(root, "CivicButtress_L", Vector3(-1.55, 2.05, 2.72), Vector3(0.48, 3.85, 0.62), "stone")
-	_box(root, "CivicButtress_R", Vector3(1.55, 2.05, 2.72), Vector3(0.48, 3.85, 0.62), "stone")
-	_box(root, "CivicButtress_FarL", Vector3(-2.55, 1.85, 2.58), Vector3(0.38, 3.45, 0.48), "stone")
-	_box(root, "CivicButtress_FarR", Vector3(2.42, 1.85, 2.58), Vector3(0.38, 3.45, 0.48), "stone")
-	_box(root, "CivicFacade_Recess_L", Vector3(-1.95, 2.55, 2.52), Vector3(1.15, 1.85, 0.16), "recess")
-	_box(root, "CivicFacade_Recess_R", Vector3(1.95, 2.55, 2.52), Vector3(1.15, 1.85, 0.16), "recess")
-	_box(root, "CivicString_Course", Vector3(0.0, 3.95, 2.58), Vector3(5.55, 0.16, 0.22), "stone")
-	_box(root, "CivicString_Low", Vector3(0.0, 1.15, 2.58), Vector3(5.35, 0.14, 0.20), "stone")
-	_box(root, "CivicWindow_Gate_L", Vector3(-0.95, 2.85, 3.05), Vector3(0.28, 0.95, 0.16), "recess")
-	_box(root, "CivicWindow_Gate_R", Vector3(0.95, 2.85, 3.05), Vector3(0.28, 0.95, 0.16), "recess")
-	_box(root, "CivicHerald_Pole", Vector3(-0.55, 4.55, 2.88), Vector3(0.06, 0.85, 0.06), "timber")
-	_box(root, "CivicHerald", Vector3(-0.22, 4.62, 2.88), Vector3(0.62, 0.42, 0.05), "banner")
-	_box(root, "CivicTimber_GateTrimL", Vector3(-0.95, 1.55, 3.22), Vector3(0.14, 2.55, 0.14), "timber")
-	_box(root, "CivicTimber_GateTrimR", Vector3(0.95, 1.55, 3.22), Vector3(0.14, 2.55, 0.14), "timber")
+	# GFX-U: recessed panels and projecting supports on the three
+	# front sections. Deep portal. Large herald on the gatehouse.
+	_box(root, "CivicButtress_L", Vector3(-1.05, 2.05, 2.95), Vector3(0.52, 3.85, 0.78), "stone")
+	_box(root, "CivicButtress_R", Vector3(1.05, 2.05, 2.95), Vector3(0.52, 3.85, 0.78), "stone")
+	_box(root, "CivicButtress_FarL", Vector3(-2.72, 1.85, 2.72), Vector3(0.42, 3.45, 0.58), "stone")
+	_box(root, "CivicButtress_FarR", Vector3(2.55, 1.85, 2.72), Vector3(0.42, 3.45, 0.58), "stone")
+	_box(root, "CivicFacade_Recess_L", Vector3(-1.95, 2.35, 2.88), Vector3(1.35, 2.15, 0.42), "recess")
+	_box(root, "CivicFacade_Recess_R", Vector3(1.75, 2.35, 2.88), Vector3(1.35, 2.15, 0.42), "recess")
+	_box(root, "CivicString_Course", Vector3(0.0, 3.95, 2.82), Vector3(5.55, 0.16, 0.28), "stone")
+	_box(root, "CivicString_Low", Vector3(0.0, 1.15, 2.82), Vector3(5.35, 0.14, 0.24), "stone")
+	_box(root, "CivicWindow_Gate_L", Vector3(-0.95, 2.85, 3.28), Vector3(0.28, 0.95, 0.18), "recess")
+	_box(root, "CivicWindow_Gate_R", Vector3(0.95, 2.85, 3.28), Vector3(0.28, 0.95, 0.18), "recess")
+	_box(root, "CivicHerald_Pole", Vector3(-0.95, 4.85, 3.12), Vector3(0.08, 1.35, 0.08), "timber")
+	_box(root, "CivicHerald", Vector3(0.18, 4.95, 3.18), Vector3(1.85, 1.28, 0.08), "banner")
+	_box(root, "CivicTimber_GateTrimL", Vector3(-0.95, 1.55, 3.58), Vector3(0.16, 2.65, 0.16), "timber")
+	_box(root, "CivicTimber_GateTrimR", Vector3(0.95, 1.55, 3.58), Vector3(0.16, 2.65, 0.16), "timber")
 
 
 func _door(root: Node3D) -> void:
-	_box(root, "CivicTimber_Lintel", Vector3(0.0, 2.42, 3.28), Vector3(1.62, 0.24, 0.24), "timber")
-	_box(root, "CivicDoor", Vector3(0.0, 1.22, 3.32), Vector3(1.22, 2.05, 0.14), "timber")
+	_box(root, "CivicTimber_Lintel", Vector3(0.0, 2.48, 3.62), Vector3(1.68, 0.26, 0.28), "timber")
+	_box(root, "CivicDoor", Vector3(0.0, 1.22, 3.68), Vector3(1.22, 2.05, 0.14), "timber")
 	for i in 4:
-		_box(root, "CivicDoor_Plank_%d" % i, Vector3(-0.44 + float(i) * 0.29, 1.22, 3.40), Vector3(0.16, 1.92, 0.05), "timber")
-	_box(root, "CivicTimber_DoorFrameL", Vector3(-0.72, 1.28, 3.30), Vector3(0.16, 2.15, 0.16), "timber")
-	_box(root, "CivicTimber_DoorFrameR", Vector3(0.72, 1.28, 3.30), Vector3(0.16, 2.15, 0.16), "timber")
+		_box(root, "CivicDoor_Plank_%d" % i, Vector3(-0.44 + float(i) * 0.29, 1.22, 3.76), Vector3(0.16, 1.92, 0.05), "timber")
+	_box(root, "CivicTimber_DoorFrameL", Vector3(-0.72, 1.28, 3.66), Vector3(0.16, 2.15, 0.16), "timber")
+	_box(root, "CivicTimber_DoorFrameR", Vector3(0.72, 1.28, 3.66), Vector3(0.16, 2.15, 0.16), "timber")
 
 
 func _windows(root: Node3D, castle: bool) -> void:

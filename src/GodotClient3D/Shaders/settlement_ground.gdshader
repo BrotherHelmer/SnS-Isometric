@@ -1,9 +1,10 @@
 shader_type spatial;
 render_mode diffuse_lambert, specular_disabled;
 
-// The Director: GFX-T. Keep occupy + debug modes and S worn
-// roads. Lusher medium-scale meadow: weeds, blossom clumps,
-// designed reward patches. terrain_debug 1/2/3 unchanged.
+// The Director: GFX-U art-direction. Large organic meadow / dark
+// grass / bare-earth domains so a 300px crop reads as terrain, not
+// a flat olive plane. Occupy, worn roads, meadow_lush #536C3F and
+// terrain_debug 1/2/3 stay. No return in fragment().
 uniform vec3 light_tint : source_color = vec3(1.0);
 uniform float tint_floor = 0.0;
 uniform float tint_wash_lo = 0.70;
@@ -36,6 +37,8 @@ uniform float crop_amount = 1.0;
 uniform float lod_cheap = 0.0;
 uniform vec2 world_min_xz = vec2(-87.5, -87.5);
 uniform vec2 world_size_xz = vec2(175.0, 175.0);
+uniform vec2 village_xz = vec2(0.0, 0.0);
+uniform vec2 woodland_xz = vec2(-28.0, -32.0);
 uniform vec3 beach_color : source_color = vec3(0.090, 0.153, 0.165);
 uniform vec3 rock_shore : source_color = vec3(0.078, 0.125, 0.141);
 uniform vec3 wet_sand : source_color = vec3(0.070, 0.110, 0.125);
@@ -135,31 +138,47 @@ void fragment() {
 	float patch = lod_cheap > 0.5 ? noise2(patch_uv) : fbm(patch_uv);
 	float detail = lod_cheap > 0.5 ? 0.5 : fbm(detail_uv);
 
-	// GFX-Q: meadow / dry grass / exposed soil / rock. Palette still owns hue.
-	vec3 grass = mix(grass_moss, meadow_lush, clamp(broad * 0.58 + patch * 0.42, 0.0, 1.0));
-	grass = mix(grass, grass_sunlit, smoothstep(0.54, 0.90, patch) * 0.34);
+	// GFX-U: 22–32 m organic domains. High-contrast meadow / dark
+	// grass / bare earth so a 300×300 crop is not one olive slab.
+	float domain = lod_cheap > 0.5 ? noise2(world_pos.xz / 26.0) : fbm(world_pos.xz / 26.0 + vec2(1.7, 4.2));
+	float domain2 = lod_cheap > 0.5 ? noise2(world_pos.xz / 32.0 + 3.0) : fbm(world_pos.xz / 32.0 + vec2(9.1, 2.4));
+	float domain3 = lod_cheap > 0.5 ? noise2(world_pos.xz / 22.0 + 7.0) : fbm(world_pos.xz / 22.0 + vec2(3.3, 12.6));
+	float village_w = 1.0 - smoothstep(7.0, 21.0, length(world_pos.xz - village_xz));
+	float wood_w = 1.0 - smoothstep(8.0, 24.0, length(world_pos.xz - woodland_xz));
+	float meadow_mask = clamp(smoothstep(0.28, 0.58, domain) * (0.46 + village_w * 0.54) + village_w * 0.28, 0.0, 1.0);
+	float dark_mask = clamp(smoothstep(0.34, 0.68, domain2) * (0.42 + wood_w * 0.58) + wood_w * 0.34, 0.0, 1.0);
+	float earth_mask = clamp(smoothstep(0.52, 0.78, domain3) * (1.0 - village_w * 0.42), 0.0, 1.0);
+	// Road-margin earth before the worn-path mix.
+	float near_road = smoothstep(0.05, 0.30, control) * (1.0 - smoothstep(0.42, 0.82, control));
+	// Water / field transitions use beach + occupy later.
+
+	vec3 grass = meadow_lush;
+	grass = mix(grass, mix(meadow_lush, grass_sunlit, 0.78), meadow_mask * 0.88);
+	grass = mix(grass, mix(meadow_shade, forest_floor, 0.72), dark_mask * 0.86);
+	grass = mix(grass, mix(dirt_color, road_earth, 0.48), earth_mask * 0.78);
+	grass = mix(grass, mix(road_earth, dirt_color, 0.35), near_road * 0.70);
+	grass = mix(grass, grass_sunlit, smoothstep(0.50, 0.86, patch) * 0.42 * meadow_mask);
+	grass = mix(grass, grass_moss, smoothstep(0.42, 0.82, 1.0 - patch) * 0.32);
 	float shade_macro = fbm(world_pos.xz / max(macro_metres * 1.52, 12.0) + vec2(9.4, 2.1));
-	float shade_w = smoothstep(0.36, 0.72, shade_macro) * 0.44;
-	grass = mix(grass, meadow_shade, shade_w);
-	grass = mix(grass, forest_floor, smoothstep(0.50, 0.88, 1.0 - patch) * 0.28);
-	float soil_n = fbm(world_pos.xz / 13.5 + vec2(4.1, 9.7));
-	float dry_n = fbm(world_pos.xz / 9.2 + vec2(11.0, 3.4));
-	float rock_n = fbm(world_pos.xz / 17.0 + vec2(2.2, 15.3));
+	float shade_w = smoothstep(0.36, 0.72, shade_macro) * 0.36;
+	grass = mix(grass, meadow_shade, shade_w * (1.0 - meadow_mask * 0.35));
 	vec3 dirt_s = texture(dirt_tex, world_pos.xz / 5.1).rgb;
 	vec3 rock_s = texture(rock_tex, world_pos.xz / 6.4).rgb;
 	float dirt_luma = dot(dirt_s, vec3(0.2126, 0.7152, 0.0722));
 	float rock_luma = dot(rock_s, vec3(0.2126, 0.7152, 0.0722));
+	float soil_n = fbm(world_pos.xz / 13.5 + vec2(4.1, 9.7));
+	float dry_n = fbm(world_pos.xz / 9.2 + vec2(11.0, 3.4));
+	float rock_n = fbm(world_pos.xz / 17.0 + vec2(2.2, 15.3));
 	vec3 dry_grass = mix(meadow_warm, dirt_color, 0.38);
-	grass = mix(grass, dry_grass * (0.88 + dirt_luma * 0.22), smoothstep(0.48, 0.78, dry_n) * 0.48);
-	grass = mix(grass, dirt_color * (0.82 + dirt_luma * 0.28), smoothstep(0.56, 0.84, soil_n) * 0.42);
-	grass = mix(grass, mix(vec3(0.42, 0.40, 0.36), rock_s, 0.40), smoothstep(0.68, 0.90, rock_n) * 0.28);
-	grass = mix(grass, dirt_color, smoothstep(0.78, 0.96, noise2(world_pos.xz * 0.19 + vec2(4.2, 8.1))) * 0.08);
+	grass = mix(grass, dry_grass * (0.88 + dirt_luma * 0.22), smoothstep(0.52, 0.82, dry_n) * 0.36);
+	grass = mix(grass, dirt_color * (0.82 + dirt_luma * 0.28), smoothstep(0.60, 0.88, soil_n) * 0.28);
+	grass = mix(grass, mix(vec3(0.42, 0.40, 0.36), rock_s, 0.40), smoothstep(0.70, 0.92, rock_n) * 0.22 * (1.0 - village_w));
 
 	if (tex_mix > 0.01) {
 		vec2 muv = world_pos.xz / max(tex_repeat_meadow, 1.5);
 		float meadow_luma = dot(texture(meadow_tex, muv).rgb, vec3(0.2126, 0.7152, 0.0722));
 		float forest_luma = dot(texture(forest_tex, world_pos.xz / max(tex_repeat_forest, 1.2)).rgb, vec3(0.2126, 0.7152, 0.0722));
-		float detail_luma = mix(meadow_luma, forest_luma, shade_w);
+		float detail_luma = mix(meadow_luma, forest_luma, clamp(dark_mask + shade_w, 0.0, 1.0));
 		detail_luma = clamp(0.46 + (detail_luma - 0.50) * 0.28, 0.32, 0.62);
 		grass *= (0.90 + detail_luma * 0.18);
 		grass = mix(grass, grass * (0.88 + detail * 0.14), tex_mix);
@@ -167,17 +186,17 @@ void fragment() {
 
 	if (lod_cheap < 0.5) {
 		float tuft = abs(fract(world_pos.x * 1.85 + world_pos.z * 0.35 + patch * 0.4) - 0.5);
-		grass = mix(grass, grass * vec3(0.90, 0.94, 0.86), (1.0 - smoothstep(0.08, 0.28, tuft)) * 0.20);
+		grass = mix(grass, grass * vec3(0.90, 0.94, 0.86), (1.0 - smoothstep(0.08, 0.28, tuft)) * 0.16);
 		float bloom = noise2(world_pos.xz / 3.6 + vec2(17.0, 5.0));
-		float blossom_w = smoothstep(0.42, 0.78, patch) * smoothstep(0.38, 0.72, bloom);
+		float blossom_w = smoothstep(0.42, 0.78, patch) * smoothstep(0.38, 0.72, bloom) * meadow_mask;
 		vec3 blossom = mix(flower_warm, flower_cool, step(0.5, noise2(world_pos.xz * 0.37)));
 		grass = mix(grass, mix(grass, blossom, 0.42), blossom_w * flower_amount);
 		float weed_n = fbm(world_pos.xz / 6.4 + vec2(21.0, 8.0));
 		float weed_w = smoothstep(0.58, 0.86, weed_n) * smoothstep(0.28, 0.68, patch);
-		grass = mix(grass, mix(grass, vec3(0.42, 0.52, 0.22), 0.48), weed_w * 0.40);
+		grass = mix(grass, mix(grass, vec3(0.42, 0.52, 0.22), 0.48), weed_w * 0.32);
 		float lush_n = fbm(world_pos.xz / 11.0 + vec2(5.5, 14.2));
-		float lush_w = smoothstep(0.60, 0.88, lush_n);
-		grass = mix(grass, mix(grass, meadow_lush * vec3(0.90, 1.10, 0.88), 0.58), lush_w * 0.36);
+		float lush_w = smoothstep(0.60, 0.88, lush_n) * meadow_mask;
+		grass = mix(grass, mix(grass, meadow_lush * vec3(0.90, 1.10, 0.88), 0.58), lush_w * 0.34);
 	}
 
 	// Occupation: brown vertex (r > g) or the world-space road mask.
@@ -232,8 +251,11 @@ void fragment() {
 	if (lod_cheap > 0.5) {
 		NORMAL = normalize((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
 	} else {
-		float bump_w = mix(0.20, 0.36, road_w);
-		vec3 bump = normalize(vec3((detail - 0.5) * bump_w, 1.0, (patch - 0.5) * bump_w));
+		float bump_w = mix(0.34, 0.52, road_w);
+		vec3 bump = normalize(vec3(
+			(detail - 0.5) * bump_w + (domain - 0.5) * 0.20,
+			1.0,
+			(patch - 0.5) * bump_w + (domain2 - 0.5) * 0.16));
 		NORMAL = normalize((VIEW_MATRIX * vec4(bump, 0.0)).xyz);
 	}
 	ROUGHNESS = 0.94;

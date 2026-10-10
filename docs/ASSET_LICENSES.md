@@ -9,8 +9,9 @@ Attribution is optional. The Nordic diorama look stays KayKit-coherent.
 
 | Asset | Path | Source | Licence | Notes |
 | --- | --- | --- | --- | --- |
-| Authored civic keep | `assets/settlement3d/runtime/buildings/civic_keep.gltf` | Project-authored (`tools/build_civic_keep.gd`) | CC0 | GFX-S live Town Hall. Gatehouse with buttresses, recesses, arch, string courses, herald. Same Q limestone / teal slate. 4×4 / 10 m footprint. |
-| Authored civic castle | `assets/settlement3d/runtime/buildings/civic_castle.gltf` | Project-authored (`tools/build_civic_keep.gd`) | CC0 | GFX-S live Castle. Same articulated keep plus rear towers. |
+| Authored civic keep | `assets/settlement3d/runtime/buildings/civic_keep.gltf` | Project-authored (`tools/build_civic_keep.gd`) | CC0 | GFX-U live Town Hall. Front wall split into three sections, deep arched entrance, large herald. Same Q limestone / teal slate. 4×4 / 10 m footprint. |
+| Authored civic castle | `assets/settlement3d/runtime/buildings/civic_castle.gltf` | Project-authored (`tools/build_civic_keep.gd`) | CC0 | GFX-U live Castle. Same three-section keep plus rear towers. |
+| GFX-U ground / layout / light | large-domain meadow shader + clustered woodland + rocky shore | Project-authored | CC0 | 22–32 m meadow / dark / earth patches. Cooler day fill `#98A8BC`. Night lighting unchanged. |
 | GFX-T lush / creek / hamlet | clustered weeds + scenic creek + gardens | Project-authored | CC0 | Denser 3×3 clumps, creek bridge / reeds, wash-line and garden props. Day ambient `#A8A088`. Night lighting unchanged. |
 | GFX-S ground / roads / light | clustered MultiMesh clumps + worn roads | Project-authored | CC0 | 3×3 tuft clumps, visual_w 0.72, cooler day ambient `#9A9A88`. Night lighting unchanged. |
 | GFX-R ridge / density | procedural ridge slopes + MultiMesh tufts | Project-authored | CC0 | Grassy ridge, three vegetation zones, worn aprons. Night lighting unchanged. |
