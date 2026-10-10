@@ -1,18 +1,18 @@
 shader_type spatial;
 render_mode diffuse_lambert, specular_disabled;
 
-// The Director: GFX-P. Keep occupy + debug modes. Worn path edges
-// and meadow richness sit on the GFX-O distance field.
+// The Director: GFX-S. Keep occupy + debug modes. Narrower worn
+// paths with grass-eating shoulders. Cooler sunlit grass.
 // terrain_debug 1 = magenta, 2 = solid meadow, 3 = red road mask.
 uniform vec3 light_tint : source_color = vec3(1.0);
 uniform float tint_floor = 0.0;
 uniform float tint_wash_lo = 0.70;
 uniform float tint_wash_hi = 0.94;
-uniform vec3 grass_sunlit : source_color = vec3(0.447, 0.533, 0.325); // #728853
+uniform vec3 grass_sunlit : source_color = vec3(0.392, 0.518, 0.345); // #648458
 uniform vec3 grass_moss : source_color = vec3(0.204, 0.294, 0.200); // #344B33
-uniform vec3 dirt_color : source_color = vec3(0.545, 0.439, 0.314); // #8B7050
+uniform vec3 dirt_color : source_color = vec3(0.557, 0.412, 0.282); // #8E6948
 uniform vec3 meadow_lush : source_color = vec3(0.325, 0.424, 0.247); // #536C3F
-uniform vec3 meadow_warm : source_color = vec3(0.447, 0.533, 0.325); // #728853
+uniform vec3 meadow_warm : source_color = vec3(0.400, 0.502, 0.349); // #668059
 uniform vec3 meadow_shade : source_color = vec3(0.251, 0.353, 0.212); // #405A36
 uniform vec3 flower_warm : source_color = vec3(0.820, 0.678, 0.302);
 uniform vec3 flower_cool : source_color = vec3(0.878, 0.831, 0.682);
@@ -20,7 +20,7 @@ uniform vec3 gravel_color : source_color = vec3(0.702, 0.627, 0.518); // #B3A084
 uniform vec3 forest_floor : source_color = vec3(0.204, 0.294, 0.200); // #344B33
 uniform vec3 road_earth : source_color = vec3(0.624, 0.502, 0.357); // #9F805B
 uniform vec3 road_compacted : source_color = vec3(0.506, 0.388, 0.267); // #816344
-uniform vec3 road_shoulder : source_color = vec3(0.467, 0.420, 0.306); // #776B4E
+uniform vec3 road_shoulder : source_color = vec3(0.435, 0.408, 0.322); // #6F6852
 uniform vec3 road_rut : source_color = vec3(0.400, 0.314, 0.224); // #665039
 uniform vec3 wheat_gold : source_color = vec3(0.788, 0.635, 0.290);
 uniform vec3 wheat_furrow : source_color = vec3(0.420, 0.310, 0.165);
@@ -200,19 +200,20 @@ void fragment() {
 
 	// Worn paths. Keep the distance-field graph. Soft shoulders, no
 	// repeating fract lattice, no hard rectangular junctions.
-	float edge_noise = (fbm(world_pos.xz * 0.62 + vec2(2.4, 9.1)) - 0.5) * 2.0;
-	float worn = control + edge_noise * 0.14;
-	float road_w = smoothstep(0.04, 0.78, worn);
-	float center_w = smoothstep(0.28, 0.80, worn);
-	float shoulder_w = smoothstep(0.06, 0.40, worn) * (1.0 - center_w);
+	float edge_noise = (fbm(world_pos.xz * 0.48 + vec2(2.4, 9.1)) - 0.5) * 2.0;
+	float worn = control + edge_noise * 0.22;
+	float road_w = smoothstep(0.12, 0.70, worn);
+	float center_w = smoothstep(0.36, 0.84, worn);
+	float shoulder_w = smoothstep(0.10, 0.38, worn) * (1.0 - center_w);
 	float rut_a = abs(sin(world_pos.x * 0.31 + world_pos.z * 0.19 + fbm(world_pos.xz * 0.22) * 2.4) - 0.18);
 	float rut_b = abs(sin(world_pos.x * 0.27 - world_pos.z * 0.23 + 1.7 + fbm(world_pos.xz * 0.18 + 8.0) * 2.1) + 0.16);
-	float rut = (1.0 - smoothstep(0.0, 0.16, rut_a)) + (1.0 - smoothstep(0.0, 0.16, rut_b));
+	float rut = (1.0 - smoothstep(0.0, 0.14, rut_a)) + (1.0 - smoothstep(0.0, 0.14, rut_b));
 	vec3 road_col = mix(road_compacted, road_earth, center_w);
 	road_col = mix(road_col, road_shoulder, clamp(shoulder_w * 0.90, 0.0, 0.28));
-	road_col = mix(road_col, road_rut, clamp(rut * 0.48 * road_w, 0.0, 0.52));
-	road_col = mix(road_col, gravel_color, smoothstep(0.68, 0.94, noise2(world_pos.xz * 1.7 + vec2(3.1, 8.4))) * 0.30 * road_w);
-	ground = mix(ground, road_col, road_w);
+	road_col = mix(road_col, road_rut, clamp(rut * 0.58 * road_w, 0.0, 0.60));
+	road_col = mix(road_col, gravel_color, smoothstep(0.68, 0.94, noise2(world_pos.xz * 1.7 + vec2(3.1, 8.4))) * 0.22 * road_w);
+	// Grass eats the shoulder so paths sit in the meadow, not on it.
+	ground = mix(ground, road_col, road_w * mix(0.62, 1.0, center_w));
 
 	float wash = smoothstep(tint_wash_lo, max(tint_wash_lo + 0.02, tint_wash_hi), broad);
 	vec3 albedo = ground * mix(vec3(1.0), min(light_tint, vec3(1.0)), mix(tint_floor, 0.12, wash));

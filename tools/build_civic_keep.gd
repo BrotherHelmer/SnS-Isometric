@@ -1,10 +1,9 @@
 extends SceneTree
 
-## The Director: GFX-R. Purpose-built limestone keep as live Town Hall
-## / Castle. Authored at world metres, origin on the ground centre,
-## door facing +Z (gameplay camera). Exports modular glTF with named
-## CivicWall / CivicRoof / CivicTimber / CivicCrenel / CivicDoor /
-## CivicPlinth meshes so the architecture shader can bind by name.
+## The Director: GFX-S. Purpose-built limestone keep as live Town Hall
+## / Castle. Gatehouse is articulated: buttresses, recesses, arch,
+## string courses, slit windows, timber trim, herald. Authored at
+## world metres, origin on the ground centre, door facing +Z.
 
 const OUT_DIR := "res://assets/settlement3d/runtime/buildings"
 
@@ -28,7 +27,7 @@ func _export_keep(castle: bool) -> void:
 	root.add_child(keep)
 	_build_keep(keep, castle)
 	var aabb := _measure(keep)
-	print("GFX_R keep castle=%s aabb=%s" % [str(castle), str(aabb.size)])
+	print("GFX_S keep castle=%s aabb=%s" % [str(castle), str(aabb.size)])
 	var document := GLTFDocument.new()
 	var state := GLTFState.new()
 	var err := document.append_from_scene(keep, state)
@@ -40,7 +39,7 @@ func _export_keep(castle: bool) -> void:
 	if err != OK:
 		push_error("GLTF write failed: %s" % err)
 	else:
-		print("GFX_R wrote %s" % path)
+		print("GFX_S wrote %s" % path)
 	keep.queue_free()
 
 
@@ -50,7 +49,9 @@ func _build_keep(root: Node3D, castle: bool) -> void:
 	_box(root, "CivicPlinth", Vector3(0.0, 0.18, 0.05), Vector3(7.35, 0.36, 6.35), "stone")
 	_box(root, "CivicWall_Keep", Vector3(-0.15, 2.18, -0.05), Vector3(5.85, 3.85, 5.05), "stone")
 	_box(root, "CivicGate", Vector3(0.0, 1.95, 2.62), Vector3(2.55, 3.55, 1.55), "stone")
-	_box(root, "CivicGate_Arch", Vector3(0.0, 3.72, 2.78), Vector3(2.15, 0.42, 0.55), "stone")
+	_box(root, "CivicGate_Arch", Vector3(0.0, 3.86, 2.92), Vector3(2.28, 0.58, 0.72), "stone")
+	_box(root, "CivicRecess_Gate", Vector3(0.0, 1.55, 3.18), Vector3(1.55, 2.55, 0.42), "recess")
+	_facade(root)
 	_door(root)
 	# Level 2 — hall wing (west) and chapel wing (east). Two roof masses.
 	_box(root, "CivicWall_Wing", Vector3(-1.55, 4.55, 0.20), Vector3(3.35, 2.15, 3.45), "plaster")
@@ -79,6 +80,7 @@ func _build_keep(root: Node3D, castle: bool) -> void:
 	_timber(root)
 	_box(root, "CivicPlinth_Stair", Vector3(0.0, 0.12, 3.18), Vector3(2.35, 0.22, 1.05), "stone")
 	_box(root, "CivicPlinth_Step", Vector3(0.0, 0.24, 3.52), Vector3(1.85, 0.16, 0.46), "stone")
+	_box(root, "CivicPlinth_Base", Vector3(0.0, 0.28, 2.72), Vector3(6.15, 0.52, 0.55), "stone")
 
 
 func _tower(root: Node3D, tag: String, origin: Vector3, tall: bool) -> void:
@@ -118,6 +120,25 @@ func _tall_tower(root: Node3D, origin: Vector3) -> void:
 		_box(root, "CivicWindow_TowerTall_%d" % i,
 			origin + Vector3(cos(a) * 1.02, 2.55 + float(i) * 1.45, sin(a) * 1.02),
 			Vector3(0.24, 0.82, 0.14), "recess")
+
+
+func _facade(root: Node3D) -> void:
+	# GFX-S: break the +Z curtain so the gatehouse reads at 720p.
+	# Buttresses, inset panels, string course, slit windows, one banner.
+	_box(root, "CivicButtress_L", Vector3(-1.55, 2.05, 2.72), Vector3(0.48, 3.85, 0.62), "stone")
+	_box(root, "CivicButtress_R", Vector3(1.55, 2.05, 2.72), Vector3(0.48, 3.85, 0.62), "stone")
+	_box(root, "CivicButtress_FarL", Vector3(-2.55, 1.85, 2.58), Vector3(0.38, 3.45, 0.48), "stone")
+	_box(root, "CivicButtress_FarR", Vector3(2.42, 1.85, 2.58), Vector3(0.38, 3.45, 0.48), "stone")
+	_box(root, "CivicFacade_Recess_L", Vector3(-1.95, 2.55, 2.52), Vector3(1.15, 1.85, 0.16), "recess")
+	_box(root, "CivicFacade_Recess_R", Vector3(1.95, 2.55, 2.52), Vector3(1.15, 1.85, 0.16), "recess")
+	_box(root, "CivicString_Course", Vector3(0.0, 3.95, 2.58), Vector3(5.55, 0.16, 0.22), "stone")
+	_box(root, "CivicString_Low", Vector3(0.0, 1.15, 2.58), Vector3(5.35, 0.14, 0.20), "stone")
+	_box(root, "CivicWindow_Gate_L", Vector3(-0.95, 2.85, 3.05), Vector3(0.28, 0.95, 0.16), "recess")
+	_box(root, "CivicWindow_Gate_R", Vector3(0.95, 2.85, 3.05), Vector3(0.28, 0.95, 0.16), "recess")
+	_box(root, "CivicHerald_Pole", Vector3(-0.55, 4.55, 2.88), Vector3(0.06, 0.85, 0.06), "timber")
+	_box(root, "CivicHerald", Vector3(-0.22, 4.62, 2.88), Vector3(0.62, 0.42, 0.05), "banner")
+	_box(root, "CivicTimber_GateTrimL", Vector3(-0.95, 1.55, 3.22), Vector3(0.14, 2.55, 0.14), "timber")
+	_box(root, "CivicTimber_GateTrimR", Vector3(0.95, 1.55, 3.22), Vector3(0.14, 2.55, 0.14), "timber")
 
 
 func _door(root: Node3D) -> void:

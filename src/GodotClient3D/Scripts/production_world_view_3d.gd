@@ -688,16 +688,18 @@ func _bind_terrain_textures(material: ShaderMaterial) -> void:
 
 func _apply_meadow_palette(material: ShaderMaterial) -> void:
 	# GFX-P meadow richness on the O occupy / distance-field baseline.
-	material.set_shader_parameter("grass_sunlit", Vector3(0.447, 0.533, 0.325))
+	# GFX-S: cooler sunlit / warm grass so the meadow is not one
+	# yellow-olive wash. Identity lush #536C3F and shade stay.
+	material.set_shader_parameter("grass_sunlit", Vector3(0.392, 0.518, 0.345))
 	material.set_shader_parameter("grass_moss", Vector3(0.204, 0.294, 0.200))
 	material.set_shader_parameter("meadow_lush", Vector3(0.325, 0.424, 0.247))
-	material.set_shader_parameter("meadow_warm", Vector3(0.447, 0.533, 0.325))
+	material.set_shader_parameter("meadow_warm", Vector3(0.400, 0.502, 0.349))
 	material.set_shader_parameter("meadow_shade", Vector3(0.251, 0.353, 0.212))
 	material.set_shader_parameter("forest_floor", Vector3(0.204, 0.294, 0.200))
-	material.set_shader_parameter("dirt_color", Vector3(0.545, 0.439, 0.314))
+	material.set_shader_parameter("dirt_color", Vector3(0.557, 0.412, 0.282))
 	material.set_shader_parameter("road_earth", Vector3(0.624, 0.502, 0.357))
 	material.set_shader_parameter("road_compacted", Vector3(0.506, 0.388, 0.267))
-	material.set_shader_parameter("road_shoulder", Vector3(0.467, 0.420, 0.306))
+	material.set_shader_parameter("road_shoulder", Vector3(0.435, 0.408, 0.322))
 	material.set_shader_parameter("road_rut", Vector3(0.400, 0.314, 0.224))
 	material.set_shader_parameter("gravel_color", Vector3(0.702, 0.627, 0.518))
 
@@ -769,12 +771,12 @@ func _bake_road_control_texture() -> void:
 	if simulation != null and map_size.x > 0:
 		var min_xz := _fog_world_min_xz()
 		var size_xz := _fog_world_size_xz()
-		var visual_w := ScaleProfile.road_width_metres() * 0.98
-		var spoke_w := ScaleProfile.road_width_metres() * 0.42
+		var visual_w := ScaleProfile.road_width_metres() * 0.72
+		var spoke_w := ScaleProfile.road_width_metres() * 0.30
 		var segments: Array[Vector2] = _collect_road_segments()
 		var i := 0
 		while i + 1 < segments.size():
-			var wobble := 0.88 + float((i * 13) % 9) * 0.025
+			var wobble := 0.70 + float((i * 13) % 9) * 0.045
 			_stamp_segment_distance(img, segments[i], segments[i + 1], min_xz, size_xz, visual_w * wobble)
 			i += 2
 		var spokes: Array[Vector2] = _collect_hamlet_spokes()
@@ -848,8 +850,8 @@ func _stamp_segment_distance(img: Image, a: Vector2, b: Vector2, min_xz: Vector2
 	var x1 := maxi(pa.x, pb.x)
 	var y0 := mini(pa.y, pb.y)
 	var y1 := maxi(pa.y, pb.y)
-	var inner := visual_w * 0.32
-	var outer := visual_w * 0.58
+	var inner := visual_w * 0.26
+	var outer := visual_w * 0.50
 	for y in range(y0, y1 + 1):
 		for x in range(x0, x1 + 1):
 			var world := _control_px_to_world(x, y, min_xz, size_xz)
@@ -879,7 +881,7 @@ func _stamp_road_junctions(img: Image, min_xz: Vector2, size_xz: Vector2, visual
 				continue
 			var world := tile_to_world(Vector2(tile))
 			var px := _world_to_control_px(Vector2(world.x, world.z), min_xz, size_xz)
-			var radius := visual_w * (0.42 + float(n) * 0.08 + float((x * 7 + y * 11) % 5) * 0.03)
+			var radius := visual_w * (0.32 + float(n) * 0.06 + float((x * 7 + y * 11) % 5) * 0.04)
 			_stamp_soft_disk(img, px.x, px.y, radius, min_xz, size_xz)
 
 
@@ -894,11 +896,11 @@ func _stamp_building_aprons(img: Image, min_xz: Vector2, size_xz: Vector2, visua
 		var tile: Vector2i = building.get("tile", Vector2i.ZERO)
 		var world := tile_to_world(Vector2(tile) + Vector2(0.8, 0.8))
 		var px := _world_to_control_px(Vector2(world.x, world.z), min_xz, size_xz)
-		var radius := visual_w * (0.95 + float(absi(tile.x * 3 + tile.y * 5) % 6) * 0.08)
+		var radius := visual_w * (0.62 + float(absi(tile.x * 3 + tile.y * 5) % 6) * 0.07)
 		_stamp_soft_disk(img, px.x, px.y, radius, min_xz, size_xz)
-		var jx := px.x + int((tile.x % 3) - 1) * 3
-		var jy := px.y + int((tile.y % 3) - 1) * 3
-		_stamp_soft_disk(img, jx, jy, radius * 0.55, min_xz, size_xz)
+		var jx := px.x + int((tile.x % 3) - 1) * 4
+		var jy := px.y + int((tile.y % 3) - 1) * 4
+		_stamp_soft_disk(img, jx, jy, radius * 0.42, min_xz, size_xz)
 
 
 func _stamp_soft_disk(img: Image, cx: int, cy: int, radius_m: float, min_xz: Vector2, size_xz: Vector2) -> void:
@@ -1411,7 +1413,9 @@ func _rebuild_grass_multimeshes() -> void:
 				_append_nature_transform(transforms_by_path, meadow_bush, tile, 8, 0.55, 0.96, 0.30)
 			if forest_edge >= 1 and forest_edge <= 3 and _tile_hash(tile, 53) % 2 == 0 and Catalog.UNDERSTORY.size() > 0:
 				var bush_path := String(Catalog.UNDERSTORY[_tile_hash(tile, 71) % Catalog.UNDERSTORY.size()])
-				_append_nature_transform(transforms_by_path, bush_path, tile, 6, 0.50, 0.35, 0.30)
+				_append_nature_transform(transforms_by_path, bush_path, tile, 6, 0.50, 0.55, 0.30)
+			if forest_edge >= 1 and forest_edge <= 2 and _tile_hash(tile, 67) % 3 == 0:
+				_append_nature_transform(transforms_by_path, _tree_path_for_tile(tile, 2, 1), tile, 2, 0.70, 0.42, 0.18)
 			if forest_edge >= 1 and _tile_hash(tile, 101) % 4 == 0 and Catalog.ROCKS.size() > 0:
 				var rock_path := String(Catalog.ROCKS[_tile_hash(tile, 109) % Catalog.ROCKS.size()])
 				_append_nature_transform(transforms_by_path, rock_path, tile, 7, 0.58, 0.50, 0.20)
@@ -1483,9 +1487,9 @@ func _spawn_nature_multimeshes(host: Node3D, transforms_by_path: Dictionary) -> 
 
 
 func _rebuild_ground_patches() -> void:
-	# GFX-I medium-scale meadow clumps. Darker grass / soil / flowers /
-	# stones in 40 m MultiMesh chunks so instances frustum-cull. Not
-	# another generic vegetation scatter — patch sizes track road width.
+	# GFX-S: 3×3 clump seeds so tufts / flowers / stones read as
+	# patches at 720p instead of an even lawn grid. Zones stay
+	# settlement / meadow / forest. MultiMesh only.
 	if ground_patch_root == null or simulation == null:
 		return
 	_refresh_terrain_lookups()
@@ -1519,29 +1523,40 @@ func _rebuild_ground_patches() -> void:
 				zone = "settlement"
 			elif dist < 22.0:
 				zone = "meadow"
+			var cell := Vector2i(int(floor(float(tile.x) / 3.0)), int(floor(float(tile.y) / 3.0)))
+			var in_clump := _tile_hash(cell, 17) % 4 == 0
+			var core := in_clump and seed_h % 5 != 4
 			if zone == "settlement":
-				if seed_h % 3 == 0:
+				if core:
 					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 2, 0.95))
-				if seed_h % 5 == 0 and flower_path != "":
-					_bucket_patch(chunk_buckets, chunk, "flowers", _nature_transform_at(tile, 6, flower_path, 0.55, 1.35, 0.55))
-				if seed_h % 7 == 0 and rock_path != "":
-					_bucket_patch(chunk_buckets, chunk, "stones", _nature_transform_at(tile, 7, rock_path, 0.45, 0.62, 0.28))
+					if seed_h % 2 == 0:
+						_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 12, 0.70))
+					if flower_path != "" and seed_h % 3 == 0:
+						_bucket_patch(chunk_buckets, chunk, "flowers", _nature_transform_at(tile, 6, flower_path, 0.55, 1.35, 0.55))
+					if rock_path != "" and seed_h % 5 == 0:
+						_bucket_patch(chunk_buckets, chunk, "stones", _nature_transform_at(tile, 7, rock_path, 0.45, 0.62, 0.28))
+				elif seed_h % 13 == 0:
+					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 2, 0.78))
 			elif zone == "meadow":
-				if seed_h % 4 == 0:
+				if core:
 					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 3, 1.12))
 					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 4, 0.82))
-				if seed_h % 6 == 0 and flower_path != "":
-					_bucket_patch(chunk_buckets, chunk, "flowers", _nature_transform_at(tile, 6, flower_path, 0.70, 1.45, 0.50))
-					_bucket_patch(chunk_buckets, chunk, "flowers", _nature_transform_at(tile, 8, flower_path, 0.55, 1.10, 0.40))
-				if seed_h % 8 == 0 and rock_path != "":
-					_bucket_patch(chunk_buckets, chunk, "stones", _nature_transform_at(tile, 7, rock_path, 0.50, 0.58, 0.30))
+					if flower_path != "" and seed_h % 3 == 0:
+						_bucket_patch(chunk_buckets, chunk, "flowers", _nature_transform_at(tile, 6, flower_path, 0.70, 1.45, 0.50))
+						_bucket_patch(chunk_buckets, chunk, "flowers", _nature_transform_at(tile, 8, flower_path, 0.55, 1.10, 0.40))
+					if rock_path != "" and seed_h % 5 == 0:
+						_bucket_patch(chunk_buckets, chunk, "stones", _nature_transform_at(tile, 7, rock_path, 0.50, 0.58, 0.30))
+				elif seed_h % 11 == 0:
+					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 3, 0.88))
 			else:
-				if seed_h % 5 == 0:
+				if core:
 					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 5, 1.20))
-				if seed_h % 6 == 0 and Catalog.UNDERSTORY.size() > 0:
-					_bucket_patch(chunk_buckets, chunk, "shrubs", _nature_transform_at(tile, 9, String(Catalog.UNDERSTORY[0]), 0.60, 1.15, 0.45))
-				if seed_h % 9 == 0 and rock_path != "":
-					_bucket_patch(chunk_buckets, chunk, "stones", _nature_transform_at(tile, 7, rock_path, 0.50, 0.70, 0.32))
+					if Catalog.UNDERSTORY.size() > 0 and seed_h % 2 == 0:
+						_bucket_patch(chunk_buckets, chunk, "shrubs", _nature_transform_at(tile, 9, String(Catalog.UNDERSTORY[0]), 0.60, 1.15, 0.45))
+					if rock_path != "" and seed_h % 4 == 0:
+						_bucket_patch(chunk_buckets, chunk, "stones", _nature_transform_at(tile, 7, rock_path, 0.50, 0.70, 0.32))
+				elif seed_h % 9 == 0:
+					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 5, 0.92))
 	for chunk_key in chunk_buckets:
 		var kinds: Dictionary = chunk_buckets[chunk_key]
 		for kind in kinds:
@@ -3361,6 +3376,7 @@ func _rebuild_opening_dressing() -> void:
 	)
 	var target := clampi(int(round(float(candidates.size()) * 0.48)), 1, maxi(candidates.size(), 1))
 	var planted := 0
+	var planted_tiles: Array[Vector2i] = []
 	for tile in candidates:
 		if planted >= target:
 			break
@@ -3370,6 +3386,22 @@ func _rebuild_opening_dressing() -> void:
 		# back and west so the gameplay camera sees meadow + ridge.
 		_append_nature_transform(transforms_by_path, _tree_path_for_tile(tile, 0, 3), tile, 0, 0.70, 1.05, 0.42)
 		planted += 1
+		planted_tiles.append(tile)
+	# GFX-S: understory and saplings soften the ring. Coverage stays
+	# planted / candidates (0.38–0.58). These extras do not count.
+	for tile in planted_tiles:
+		if Catalog.UNDERSTORY.size() > 0 and _tile_hash(tile, 83) % 2 == 0:
+			_append_nature_transform(transforms_by_path, String(Catalog.UNDERSTORY[_tile_hash(tile, 71) % Catalog.UNDERSTORY.size()]), tile, 6, 0.80, 0.72, 0.28)
+		if _tile_hash(tile, 91) % 3 == 0:
+			_append_nature_transform(transforms_by_path, _tree_path_for_tile(tile, 1, 1), tile, 1, 0.55, 0.48, 0.22)
+	for tile in candidates:
+		var fringe := Vector2(float(tile.x - hall.x), float(tile.y - hall.y)).length()
+		if fringe > inner + 1.35 or fringe < inner:
+			continue
+		if _tile_hash(tile, 103) % 4 != 0:
+			continue
+		if Catalog.UNDERSTORY.size() > 0:
+			_append_nature_transform(transforms_by_path, String(Catalog.UNDERSTORY[0]), tile, 9, 0.70, 0.58, 0.22)
 	_spawn_nature_multimeshes(host, transforms_by_path)
 	var coverage := 0.0 if candidates.is_empty() else float(planted) / float(candidates.size())
 	host.set_meta("opening_clearing_cells", inner)

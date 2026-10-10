@@ -33,8 +33,9 @@ const SIZE_WARNING := 16
 const AUDIO_SETTINGS_PATH := "user://one_shard_audio.json"
 
 # The Director: grade knobs stay sat 1.12 / contrast 1.12 / exposure 0.86.
-# GFX-R day light is warm late-afternoon (sun #FFD2A0 1.10 at 30°,
-# ambient #A89878 0.40, fill 0.14). Night stays the frozen moonlit blue.
+# GFX-S day light keeps the late-afternoon key (sun #FFD2A0 1.10 at 30°)
+# but cools the olive wash: ambient #9A9A88, fill #C4B088, horizon
+# #C4B8A4. Night stays the frozen moonlit blue.
 const PALETTE_NAVY := Color("#101A22")
 const PALETTE_NIGHT_TERRAIN := Color("#17262A")
 const PALETTE_FOREST := Color("#3E4E28")
@@ -70,7 +71,7 @@ const PALETTE_WHEAT := Color("#C9A24A")
 const LIGHTING := {
 	"day": {
 		"ambient": 0.40,
-		"ambient_color": Color("#A89878"),
+		"ambient_color": Color("#9A9A88"),
 		"fog_density": 0.0,
 		"fog_color": Color("#17272A"),
 		"fog_energy": 0.0,
@@ -88,9 +89,9 @@ const LIGHTING := {
 		"sun_pitch": -30.0,
 		"sun_orbit": 128.0,
 		"fill_energy": 0.14,
-		"fill_color": Color("#C4A878"),
+		"fill_color": Color("#C4B088"),
 		"sky_top": Color("#4A6574"),
-		"sky_horizon": Color("#D2B48C"),
+		"sky_horizon": Color("#C4B8A4"),
 		"ground_bottom": Color("#1E2A18"),
 		"ground_horizon": Color("#3A4428"),
 		"ground_tint": Color(1.0, 1.0, 1.0),
