@@ -1414,8 +1414,6 @@ func _rebuild_grass_multimeshes() -> void:
 			if forest_edge >= 1 and forest_edge <= 3 and _tile_hash(tile, 53) % 2 == 0 and Catalog.UNDERSTORY.size() > 0:
 				var bush_path := String(Catalog.UNDERSTORY[_tile_hash(tile, 71) % Catalog.UNDERSTORY.size()])
 				_append_nature_transform(transforms_by_path, bush_path, tile, 6, 0.50, 0.55, 0.30)
-			if forest_edge >= 1 and forest_edge <= 2 and _tile_hash(tile, 67) % 3 == 0:
-				_append_nature_transform(transforms_by_path, _tree_path_for_tile(tile, 2, 1), tile, 2, 0.70, 0.42, 0.18)
 			if forest_edge >= 1 and _tile_hash(tile, 101) % 4 == 0 and Catalog.ROCKS.size() > 0:
 				var rock_path := String(Catalog.ROCKS[_tile_hash(tile, 109) % Catalog.ROCKS.size()])
 				_append_nature_transform(transforms_by_path, rock_path, tile, 7, 0.58, 0.50, 0.20)
@@ -3390,15 +3388,15 @@ func _rebuild_opening_dressing() -> void:
 	# GFX-S: understory and saplings soften the ring. Coverage stays
 	# planted / candidates (0.38–0.58). These extras do not count.
 	for tile in planted_tiles:
-		if Catalog.UNDERSTORY.size() > 0 and _tile_hash(tile, 83) % 2 == 0:
+		if Catalog.UNDERSTORY.size() > 0 and _tile_hash(tile, 83) % 3 == 0:
 			_append_nature_transform(transforms_by_path, String(Catalog.UNDERSTORY[_tile_hash(tile, 71) % Catalog.UNDERSTORY.size()]), tile, 6, 0.80, 0.72, 0.28)
-		if _tile_hash(tile, 91) % 3 == 0:
+		if _tile_hash(tile, 91) % 5 == 0:
 			_append_nature_transform(transforms_by_path, _tree_path_for_tile(tile, 1, 1), tile, 1, 0.55, 0.48, 0.22)
 	for tile in candidates:
 		var fringe := Vector2(float(tile.x - hall.x), float(tile.y - hall.y)).length()
 		if fringe > inner + 1.35 or fringe < inner:
 			continue
-		if _tile_hash(tile, 103) % 4 != 0:
+		if _tile_hash(tile, 103) % 5 != 0:
 			continue
 		if Catalog.UNDERSTORY.size() > 0:
 			_append_nature_transform(transforms_by_path, String(Catalog.UNDERSTORY[0]), tile, 9, 0.70, 0.58, 0.22)

@@ -234,6 +234,7 @@ func _check_live_scene() -> void:
 		if view.find_child("ContactAO", true, false) != null:
 			pass
 	_check(smoke_on >= 2, "chimney smoke is emitting on inhabited buildings")
+	game.simulation_host.paused = true
 	await _check_castle_on_camera(game)
 	game.queue_free()
 	await process_frame
