@@ -33,3 +33,5 @@ W = Town Hall 4×4 = **10.0 m**. R = cell × 0.97 = **2.425 m**.
 
 Same cameras as GFX-Q / GFX-P at 1280×720. Showcase frames dismiss the
 raid banner and clear hostiles.
+
+Playtest: `docs/gfx/GFX_R_PLAYTEST.md` + `docs/gfx/gfx_r_playtest.csv`.
