@@ -121,7 +121,7 @@ func _write_grass_crop(wide_path: String, crop_path: String) -> void:
 	if image.load(wide_path) != OK:
 		return
 	# Lower-right meadow, away from the keep and HUD.
-	var crop := image.get_region(Rect2i(820, 360, 300, 300))
+	var crop := image.get_region(Rect2i(160, 150, 300, 300))
 	crop.save_png(crop_path)
 	print("GFX_U_SHOTS wrote grass crop %s" % crop_path)
 

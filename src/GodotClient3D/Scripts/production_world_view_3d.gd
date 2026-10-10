@@ -2940,6 +2940,14 @@ func apply_light_palette(palette: Dictionary) -> void:
 		water_material.set_shader_parameter("wave", 0.055 * water_detail * (0.0 if float(palette.get("terrain_lod_cheap", 0.0)) > 0.5 else 1.0))
 		var horizon: Color = palette.get("ground_bottom", Color("#2A464A"))
 		water_material.set_shader_parameter("horizon_color", Vector3(horizon.r, horizon.g, horizon.b))
+		if float(palette.get("terrain_lod_cheap", 0.0)) > 0.5:
+			water_material.set_shader_parameter("deep_color", Vector3(0.090, 0.149, 0.165))
+			water_material.set_shader_parameter("shallow_color", Vector3(0.090, 0.149, 0.165))
+			water_material.set_shader_parameter("foam_color", Vector3(0.110, 0.165, 0.176))
+		else:
+			water_material.set_shader_parameter("deep_color", Vector3(0.102, 0.271, 0.345))
+			water_material.set_shader_parameter("shallow_color", Vector3(0.229, 0.659, 0.643))
+			water_material.set_shader_parameter("foam_color", Vector3(0.720, 0.860, 0.840))
 	if horizon_root != null:
 		for child in horizon_root.get_children():
 			if child is MeshInstance3D:
@@ -3013,9 +3021,12 @@ func _rebuild_water() -> void:
 	water_material.set_shader_parameter("fade_start", 36.0)
 	water_material.set_shader_parameter("fade_end", 220.0)
 	water_material.set_shader_parameter("horizon_color", Vector3(0.090, 0.149, 0.165))
-	water_material.set_shader_parameter("deep_color", Vector3(0.090, 0.149, 0.165))
-	water_material.set_shader_parameter("shallow_color", Vector3(0.090, 0.149, 0.165))
-	water_material.set_shader_parameter("foam_color", Vector3(0.110, 0.165, 0.176))
+	# GFX-U: turquoise shallows and darker deep so the west shore
+	# is a landscape mass, not a flat teal void. Night restores
+	# the frozen dark water in apply_light_palette.
+	water_material.set_shader_parameter("deep_color", Vector3(0.102, 0.271, 0.345))
+	water_material.set_shader_parameter("shallow_color", Vector3(0.229, 0.659, 0.643))
+	water_material.set_shader_parameter("foam_color", Vector3(0.720, 0.860, 0.840))
 	water_mesh_instance.material_override = water_material
 	water_root.add_child(water_mesh_instance)
 
@@ -3267,9 +3278,11 @@ func _rebuild_edge_forest(force: bool) -> void:
 	# 42/68 cannot read a diamond map cut or a grey void.
 	for ring in range(1, 8):
 		for x in range(-ring, map_size.x + ring, step):
+			# Back rim (low Y) is the woodland mass. Camera-front rim
+			# (high Y) stays thin so the wide shot has a meadow foreground.
 			if _tile_hash(Vector2i(x, -ring), 13 + ring) % 11 != 0:
 				_append_edge_tree(transforms_by_path, _edge_tree_path(x, -ring, ring), Vector2(float(x), float(-ring)), ring)
-			if _tile_hash(Vector2i(x, map_size.y - 1 + ring), 17 + ring) % 11 != 0:
+			if _tile_hash(Vector2i(x, map_size.y - 1 + ring), 17 + ring) % 5 == 0:
 				_append_edge_tree(transforms_by_path, _edge_tree_path(x, map_size.y - 1 + ring, ring), Vector2(float(x), float(map_size.y - 1 + ring)), ring)
 		for y in range(-ring + 1, map_size.y + ring - 1, step):
 			if _tile_hash(Vector2i(-ring, y), 19 + ring) % 11 != 0:
@@ -3299,6 +3312,9 @@ func _append_rim_woodland(groups: Dictionary) -> void:
 			var tile := Vector2i(x, y)
 			var edge := mini(mini(tile.x, tile.y), mini(map_size.x - 1 - tile.x, map_size.y - 1 - tile.y))
 			if edge > 1:
+				continue
+			# Leave the camera-facing half as village clearing.
+			if tile.y > int(round(float(map_size.y) * 0.58)):
 				continue
 			if not simulation.is_revealed(tile):
 				continue

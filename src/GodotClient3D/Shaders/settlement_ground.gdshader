@@ -145,20 +145,20 @@ void fragment() {
 	float domain3 = lod_cheap > 0.5 ? noise2(world_pos.xz / 22.0 + 7.0) : fbm(world_pos.xz / 22.0 + vec2(3.3, 12.6));
 	float village_w = 1.0 - smoothstep(7.0, 21.0, length(world_pos.xz - village_xz));
 	float wood_w = 1.0 - smoothstep(8.0, 24.0, length(world_pos.xz - woodland_xz));
-	float meadow_mask = clamp(smoothstep(0.34, 0.66, domain) * (0.40 + village_w * 0.60) + village_w * 0.24, 0.0, 1.0);
-	float dark_mask = clamp(smoothstep(0.40, 0.74, domain2) * (0.36 + wood_w * 0.64) + wood_w * 0.30, 0.0, 1.0);
-	float earth_mask = clamp(smoothstep(0.60, 0.86, domain3) * (1.0 - village_w * 0.52), 0.0, 1.0);
+	float meadow_mask = clamp(smoothstep(0.28, 0.58, domain) * (0.46 + village_w * 0.54) + village_w * 0.28, 0.0, 1.0);
+	float dark_mask = clamp(smoothstep(0.34, 0.68, domain2) * (0.42 + wood_w * 0.58) + wood_w * 0.34, 0.0, 1.0);
+	float earth_mask = clamp(smoothstep(0.52, 0.78, domain3) * (1.0 - village_w * 0.42), 0.0, 1.0);
 	// Road-margin earth before the worn-path mix.
 	float near_road = smoothstep(0.05, 0.30, control) * (1.0 - smoothstep(0.42, 0.82, control));
 	// Water / field transitions use beach + occupy later.
 
 	vec3 grass = meadow_lush;
-	grass = mix(grass, mix(meadow_lush, meadow_warm, 0.70), meadow_mask * 0.80);
-	grass = mix(grass, mix(meadow_shade, forest_floor, 0.58), dark_mask * 0.76);
-	grass = mix(grass, mix(dirt_color, road_earth, 0.42), earth_mask * 0.64);
-	grass = mix(grass, mix(road_earth, dirt_color, 0.35), near_road * 0.62);
-	grass = mix(grass, grass_sunlit, smoothstep(0.56, 0.90, patch) * 0.30 * meadow_mask);
-	grass = mix(grass, grass_moss, smoothstep(0.48, 0.86, 1.0 - patch) * 0.24);
+	grass = mix(grass, mix(meadow_lush, grass_sunlit, 0.78), meadow_mask * 0.88);
+	grass = mix(grass, mix(meadow_shade, forest_floor, 0.72), dark_mask * 0.86);
+	grass = mix(grass, mix(dirt_color, road_earth, 0.48), earth_mask * 0.78);
+	grass = mix(grass, mix(road_earth, dirt_color, 0.35), near_road * 0.70);
+	grass = mix(grass, grass_sunlit, smoothstep(0.50, 0.86, patch) * 0.42 * meadow_mask);
+	grass = mix(grass, grass_moss, smoothstep(0.42, 0.82, 1.0 - patch) * 0.32);
 	float shade_macro = fbm(world_pos.xz / max(macro_metres * 1.52, 12.0) + vec2(9.4, 2.1));
 	float shade_w = smoothstep(0.36, 0.72, shade_macro) * 0.36;
 	grass = mix(grass, meadow_shade, shade_w * (1.0 - meadow_mask * 0.35));

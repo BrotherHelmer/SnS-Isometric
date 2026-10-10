@@ -99,6 +99,9 @@ func _check_live_scene() -> void:
 	var master_lin := db_to_linear(AudioServer.get_bus_volume_db(master_idx))
 	print("GFX_U master_linear=%.3f" % master_lin)
 	_check(master_lin >= 0.995 and master_lin <= 1.005, "Master volume is 1.0")
+	if game.world_view.water_material != null:
+		var shallow: Vector3 = game.world_view.water_material.get_shader_parameter("shallow_color")
+		_check(shallow.y > shallow.x + 0.15 and shallow.y > 0.50, "day shallows are turquoise")
 	if game.world_view.terrain_mesh_instance != null and game.world_view.terrain_mesh_instance.material_override is ShaderMaterial:
 		var ground := game.world_view.terrain_mesh_instance.material_override as ShaderMaterial
 		var lush: Vector3 = ground.get_shader_parameter("meadow_lush")
