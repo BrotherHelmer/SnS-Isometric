@@ -1,6 +1,6 @@
 extends SceneTree
 
-## The Director: GFX-Q. Purpose-built limestone keep as live Town Hall
+## The Director: GFX-R. Purpose-built limestone keep as live Town Hall
 ## / Castle. Authored at world metres, origin on the ground centre,
 ## door facing +Z (gameplay camera). Exports modular glTF with named
 ## CivicWall / CivicRoof / CivicTimber / CivicCrenel / CivicDoor /
@@ -28,7 +28,7 @@ func _export_keep(castle: bool) -> void:
 	root.add_child(keep)
 	_build_keep(keep, castle)
 	var aabb := _measure(keep)
-	print("GFX_Q keep castle=%s aabb=%s" % [str(castle), str(aabb.size)])
+	print("GFX_R keep castle=%s aabb=%s" % [str(castle), str(aabb.size)])
 	var document := GLTFDocument.new()
 	var state := GLTFState.new()
 	var err := document.append_from_scene(keep, state)
@@ -40,79 +40,111 @@ func _export_keep(castle: bool) -> void:
 	if err != OK:
 		push_error("GLTF write failed: %s" % err)
 	else:
-		print("GFX_Q wrote %s" % path)
+		print("GFX_R wrote %s" % path)
 	keep.queue_free()
 
 
 func _build_keep(root: Node3D, castle: bool) -> void:
-	# 4x4 Town Hall pad is 10 m. Keep sits inside it with a yard.
-	_box(root, "CivicPlinth", Vector3(0.0, 0.17, 0.0), Vector3(7.20, 0.34, 6.20), "stone")
-	_box(root, "CivicWall_Keep", Vector3(0.0, 2.12, -0.10), Vector3(5.60, 3.55, 4.80), "stone")
-	_box(root, "CivicPlaster_Upper", Vector3(0.0, 4.82, -0.12), Vector3(4.40, 2.00, 3.70), "plaster")
-	# Hip / gable slate as geometry, not an atlas classify.
-	_prism(root, "CivicRoof_Hall", Vector3(0.0, 6.72, -0.12), Vector3(4.90, 1.72, 4.00), "slate")
-	_box(root, "CivicRoof_RidgeCap", Vector3(0.0, 7.52, -0.12), Vector3(0.22, 0.10, 3.70), "slate")
-	# Front towers. Camera looks from +Z.
-	_tower(root, "FL", Vector3(-2.90, 0.0, 2.48), castle)
-	_tower(root, "FR", Vector3(2.90, 0.0, 2.48), castle)
-	if castle:
-		_tower(root, "BL", Vector3(-2.90, 0.0, -2.38), true)
-		_tower(root, "BR", Vector3(2.90, 0.0, -2.38), true)
-	_crenel_row(root, "Front", Vector3(0.0, 3.95, 2.28), 5.10, 0.0, 7)
-	_crenel_row(root, "Back", Vector3(0.0, 3.95, -2.48), 5.10, 0.0, 7)
-	_crenel_row(root, "West", Vector3(-2.78, 3.95, -0.10), 4.40, 90.0, 5)
-	_crenel_row(root, "East", Vector3(2.78, 3.95, -0.10), 4.40, 90.0, 5)
+	# GFX-R: three vertical levels on the 10 m pad. Camera is +Z.
+	# 1 curtain + gate, 2 hall / wing roofs, 3 raised keep + tall tower.
+	_box(root, "CivicPlinth", Vector3(0.0, 0.18, 0.05), Vector3(7.35, 0.36, 6.35), "stone")
+	_box(root, "CivicWall_Keep", Vector3(-0.15, 2.18, -0.05), Vector3(5.85, 3.85, 5.05), "stone")
+	_box(root, "CivicGate", Vector3(0.0, 1.95, 2.62), Vector3(2.55, 3.55, 1.55), "stone")
+	_box(root, "CivicGate_Arch", Vector3(0.0, 3.72, 2.78), Vector3(2.15, 0.42, 0.55), "stone")
 	_door(root)
+	# Level 2 — hall wing (west) and chapel wing (east). Two roof masses.
+	_box(root, "CivicWall_Wing", Vector3(-1.55, 4.55, 0.20), Vector3(3.35, 2.15, 3.45), "plaster")
+	_prism(root, "CivicRoof_Hall", Vector3(-1.50, 6.28, 0.20), Vector3(3.85, 1.38, 3.85), "slate")
+	_box(root, "CivicRoof_RidgeHall", Vector3(-1.50, 6.98, 0.20), Vector3(0.18, 0.10, 3.55), "slate")
+	_box(root, "CivicWall_Chapel", Vector3(1.55, 4.35, 0.35), Vector3(2.35, 1.75, 2.55), "stone")
+	_prism(root, "CivicRoof_Wing", Vector3(1.55, 5.85, 0.35), Vector3(2.65, 1.18, 2.85), "slate")
+	# Level 3 — raised keep sits above both wings.
+	_box(root, "CivicWall_KeepRaised", Vector3(0.05, 6.55, -0.85), Vector3(3.25, 3.05, 3.15), "stone")
+	_box(root, "CivicPlaster_Upper", Vector3(0.05, 7.55, -0.85), Vector3(2.85, 1.35, 2.75), "plaster")
+	_prism(root, "CivicRoof_Keep", Vector3(0.05, 8.85, -0.85), Vector3(3.55, 1.58, 3.35), "slate")
+	_box(root, "CivicRoof_RidgeCap", Vector3(0.05, 9.64, -0.85), Vector3(0.20, 0.10, 3.05), "slate")
+	_crenel_row(root, "Keep", Vector3(0.05, 8.02, 0.68), 3.05, 0.0, 5)
+	# Battlements on the curtain, readable at 720p.
+	_crenel_row(root, "Front", Vector3(0.0, 4.18, 2.42), 5.35, 0.0, 7)
+	_crenel_row(root, "Back", Vector3(0.0, 4.18, -2.52), 5.35, 0.0, 7)
+	_crenel_row(root, "West", Vector3(-2.95, 4.18, -0.05), 4.55, 90.0, 5)
+	_crenel_row(root, "East", Vector3(2.65, 4.18, -0.05), 4.55, 90.0, 5)
+	# Short front-left turret. Tall asymmetric tower on the camera-right.
+	_tower(root, "FL", Vector3(-2.95, 0.0, 2.42), false)
+	_tall_tower(root, Vector3(2.88, 0.0, 1.42))
+	if castle:
+		_tower(root, "BL", Vector3(-2.85, 0.0, -2.42), true)
+		_tower(root, "BR", Vector3(2.55, 0.0, -2.42), true)
 	_windows(root, castle)
 	_timber(root)
-	# Front stair / landing so the door reads from the gameplay camera.
-	_box(root, "CivicPlinth_Stair", Vector3(0.0, 0.10, 3.05), Vector3(2.20, 0.20, 0.95), "stone")
-	_box(root, "CivicPlinth_Step", Vector3(0.0, 0.22, 3.38), Vector3(1.70, 0.16, 0.42), "stone")
+	_box(root, "CivicPlinth_Stair", Vector3(0.0, 0.12, 3.18), Vector3(2.35, 0.22, 1.05), "stone")
+	_box(root, "CivicPlinth_Step", Vector3(0.0, 0.24, 3.52), Vector3(1.85, 0.16, 0.46), "stone")
 
 
 func _tower(root: Node3D, tag: String, origin: Vector3, tall: bool) -> void:
-	var h := 5.55 if tall else 5.20
-	_cyl(root, "CivicWall_Tower%s" % tag, origin + Vector3(0.0, h * 0.5, 0.0), 0.86, 0.80, h, "stone")
-	_cyl(root, "CivicWall_Tower%sRing" % tag, origin + Vector3(0.0, h + 0.10, 0.0), 0.94, 0.94, 0.20, "stone")
+	var h := 6.15 if tall else 5.35
+	_cyl(root, "CivicWall_Tower%s" % tag, origin + Vector3(0.0, h * 0.5, 0.0), 0.88, 0.80, h, "stone")
+	_cyl(root, "CivicWall_Tower%sRing" % tag, origin + Vector3(0.0, h + 0.10, 0.0), 0.96, 0.96, 0.20, "stone")
 	for i in 6:
 		var a := float(i) * TAU / 6.0
 		_box(root, "CivicCrenel_Tower%s_%d" % [tag, i],
-			origin + Vector3(cos(a) * 0.82, h + 0.36, sin(a) * 0.82),
-			Vector3(0.34, 0.38, 0.22), "stone")
-	_cone(root, "CivicRoof_Cone%s" % tag, origin + Vector3(0.0, h + 1.05, 0.0), 0.92, 1.70, "slate")
+			origin + Vector3(cos(a) * 0.84, h + 0.36, sin(a) * 0.84),
+			Vector3(0.34, 0.40, 0.22), "stone")
+	_cone(root, "CivicRoof_Cone%s" % tag, origin + Vector3(0.0, h + 1.05, 0.0), 0.94, 1.70, "slate")
 	_box(root, "CivicTimber_Finial%s" % tag, origin + Vector3(0.0, h + 2.02, 0.0), Vector3(0.07, 0.42, 0.07), "timber")
-	# Slit windows around the drum.
 	for i in 3:
 		var a := float(i) * TAU / 3.0 + 0.4
 		_box(root, "CivicWindow_Tower%s_%d" % [tag, i],
-			origin + Vector3(cos(a) * 0.82, 2.35 + float(i) * 0.85, sin(a) * 0.82),
-			Vector3(0.18, 0.62, 0.10), "timber")
+			origin + Vector3(cos(a) * 0.84, 2.35 + float(i) * 0.85, sin(a) * 0.84),
+			Vector3(0.20, 0.68, 0.12), "recess")
+
+
+func _tall_tower(root: Node3D, origin: Vector3) -> void:
+	# Asymmetric landmark. Three storeys above the curtain, banner on top.
+	var h := 9.55
+	_cyl(root, "CivicWall_TowerTall", origin + Vector3(0.0, h * 0.5, 0.0), 1.08, 0.96, h, "stone")
+	_cyl(root, "CivicWall_TowerTallRing", origin + Vector3(0.0, h + 0.12, 0.0), 1.16, 1.16, 0.24, "stone")
+	for i in 7:
+		var a := float(i) * TAU / 7.0
+		_box(root, "CivicCrenel_TowerTall_%d" % i,
+			origin + Vector3(cos(a) * 1.02, h + 0.42, sin(a) * 1.02),
+			Vector3(0.38, 0.46, 0.24), "stone")
+	_cone(root, "CivicRoof_ConeTall", origin + Vector3(0.0, h + 1.28, 0.0), 1.12, 2.15, "slate")
+	_box(root, "CivicTimber_FinialTall", origin + Vector3(0.0, h + 2.48, 0.0), Vector3(0.08, 0.55, 0.08), "timber")
+	_box(root, "CivicBanner_Pole", origin + Vector3(0.42, h + 2.05, 0.18), Vector3(0.07, 1.85, 0.07), "timber")
+	_box(root, "CivicBanner", origin + Vector3(0.92, h + 2.35, 0.18), Vector3(0.95, 0.62, 0.06), "banner")
+	for i in 4:
+		var a := float(i) * TAU / 4.0 + 0.55
+		_box(root, "CivicWindow_TowerTall_%d" % i,
+			origin + Vector3(cos(a) * 1.02, 2.55 + float(i) * 1.45, sin(a) * 1.02),
+			Vector3(0.24, 0.82, 0.14), "recess")
 
 
 func _door(root: Node3D) -> void:
-	_box(root, "CivicTimber_Lintel", Vector3(0.0, 2.28, 2.38), Vector3(1.55, 0.22, 0.22), "timber")
-	_box(root, "CivicDoor", Vector3(0.0, 1.18, 2.42), Vector3(1.18, 1.95, 0.12), "timber")
+	_box(root, "CivicTimber_Lintel", Vector3(0.0, 2.42, 3.28), Vector3(1.62, 0.24, 0.24), "timber")
+	_box(root, "CivicDoor", Vector3(0.0, 1.22, 3.32), Vector3(1.22, 2.05, 0.14), "timber")
 	for i in 4:
-		_box(root, "CivicDoor_Plank_%d" % i, Vector3(-0.42 + float(i) * 0.28, 1.18, 2.50), Vector3(0.16, 1.82, 0.05), "timber")
-	_box(root, "CivicTimber_DoorFrameL", Vector3(-0.68, 1.22, 2.40), Vector3(0.16, 2.05, 0.16), "timber")
-	_box(root, "CivicTimber_DoorFrameR", Vector3(0.68, 1.22, 2.40), Vector3(0.16, 2.05, 0.16), "timber")
+		_box(root, "CivicDoor_Plank_%d" % i, Vector3(-0.44 + float(i) * 0.29, 1.22, 3.40), Vector3(0.16, 1.92, 0.05), "timber")
+	_box(root, "CivicTimber_DoorFrameL", Vector3(-0.72, 1.28, 3.30), Vector3(0.16, 2.15, 0.16), "timber")
+	_box(root, "CivicTimber_DoorFrameR", Vector3(0.72, 1.28, 3.30), Vector3(0.16, 2.15, 0.16), "timber")
 
 
 func _windows(root: Node3D, castle: bool) -> void:
+	# Dark recesses, not flush limestone. Must read at 1280×720.
 	var slits := [
-		Vector3(-1.55, 2.55, 2.32), Vector3(1.55, 2.55, 2.32),
-		Vector3(-1.55, 3.55, 2.32), Vector3(1.55, 3.55, 2.32),
-		Vector3(-2.82, 2.40, 0.55), Vector3(-2.82, 3.35, -0.55),
-		Vector3(2.82, 2.40, 0.55), Vector3(2.82, 3.35, -0.55),
-		Vector3(-1.10, 5.15, 1.72), Vector3(1.10, 5.15, 1.72),
+		Vector3(-1.15, 2.55, 2.48), Vector3(1.15, 2.55, 2.48),
+		Vector3(-1.15, 3.55, 2.48), Vector3(1.15, 3.55, 2.48),
+		Vector3(-3.05, 2.45, 0.55), Vector3(-3.05, 3.40, -0.55),
+		Vector3(2.75, 2.45, -0.35), Vector3(-1.05, 6.85, 0.68),
+		Vector3(1.15, 6.85, 0.68), Vector3(0.05, 7.55, 0.70),
 	]
 	if castle:
-		slits.append(Vector3(0.0, 2.70, -2.48))
-		slits.append(Vector3(-1.40, 3.50, -2.48))
-		slits.append(Vector3(1.40, 3.50, -2.48))
+		slits.append(Vector3(0.0, 2.70, -2.55))
+		slits.append(Vector3(-1.40, 3.50, -2.55))
+		slits.append(Vector3(1.40, 3.50, -2.55))
 	var i := 0
 	for p in slits:
-		_box(root, "CivicWindow_%d" % i, p, Vector3(0.28, 0.72, 0.10), "timber")
+		_box(root, "CivicWindow_%d" % i, p, Vector3(0.36, 0.82, 0.14), "recess")
 		i += 1
 
 
@@ -191,6 +223,10 @@ func _mat(kind: String) -> StandardMaterial3D:
 			material.albedo_color = Color("#5F442F")
 		"plaster":
 			material.albedo_color = Color("#E0D0B2")
+		"recess":
+			material.albedo_color = Color("#3A3228")
+		"banner":
+			material.albedo_color = Color("#8B2E3A")
 		_:
 			material.albedo_color = Color("#CDBFA2")
 	_mats[kind] = material

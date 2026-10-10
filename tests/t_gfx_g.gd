@@ -33,9 +33,9 @@ func _check_grade() -> void:
 	_check(float(day_p["exposure"]) >= 0.82 and float(day_p["exposure"]) <= 0.90, "day exposure is 0.86")
 	_check(float(day_p["sun_energy"]) >= 1.05 and float(day_p["sun_energy"]) <= 1.28, "day sun is 1.10–1.24")
 	_check(float(day_p["sun_pitch"]) <= -26.0 and float(day_p["sun_pitch"]) >= -40.0, "day sun pitch lengthens shadows")
-	_check(float(day_p["ambient"]) >= 0.22 and float(day_p["ambient"]) <= 0.36, "day ambient stays in the GFX-I band")
+	_check(float(day_p["ambient"]) >= 0.22 and float(day_p["ambient"]) <= 0.42, "day ambient stays in the late-afternoon band")
 	var sun: Color = day_p["sun_color"]
-	_check(sun.is_equal_approx(Color("#FFE8CE")) or sun.is_equal_approx(Color("#FFF0DE")), "day key stays warm cream")
+	_check(sun.is_equal_approx(Color("#FFE8CE")) or sun.is_equal_approx(Color("#FFF0DE")) or sun.is_equal_approx(Color("#FFD2A0")), "day key stays warm cream")
 	_check(Identity.PALETTE_MEADOW.is_equal_approx(Color("#68743A")) or Identity.PALETTE_MEADOW.is_equal_approx(Color("#556D3F")) or Identity.PALETTE_MEADOW.is_equal_approx(Color("#536C3F")), "meadow is yellow-olive #68743A")
 	_check(Identity.PALETTE_SUNLIT_GRASS.is_equal_approx(Color("#8A9848")), "sunlit grass is #8A9848")
 	_check(Identity.PALETTE_FOREST.r > Identity.PALETTE_FOREST.b, "forest is olive, not teal")
@@ -48,7 +48,7 @@ func _check_grade() -> void:
 	var moon: Color = night_p["sun_color"]
 	_check(moon.b > moon.r, "night key stays cool moonlight")
 	var fill: Color = day_p["fill_color"]
-	_check(fill.b > fill.r, "cool fill against the warm key")
+	_check(fill.r >= fill.b - 0.02, "warm fill against the late-afternoon key")
 
 
 func _check_shadows() -> void:

@@ -638,9 +638,12 @@ func _create_workyard_grounding() -> void:
 	if workyard_root == null or building_type in ["ROAD", "WALL"]:
 		return
 	var world_size := ScaleProfile.footprint_world_size(footprint)
-	var disc := ContactAO.make_instance("WorkyardDirt", Vector2(world_size.x + 3.2, world_size.y + 3.2), 0.22)
-	disc.position = Vector3(0.0, 0.012, 0.15)
+	var disc := ContactAO.make_instance("WorkyardDirt", Vector2(world_size.x + 1.6, world_size.y + 1.4), 0.28)
+	disc.position = Vector3(0.18, 0.012, 0.22)
 	workyard_root.add_child(disc)
+	var apron := ContactAO.make_instance("WorkyardApron", Vector2(world_size.x * 0.72, world_size.y * 0.55), 0.20)
+	apron.position = Vector3(-0.35, 0.010, 0.55)
+	workyard_root.add_child(apron)
 
 
 func _create_town_hall_civic_mass() -> void:
@@ -789,32 +792,35 @@ func _update_night_presentation(night: bool, occupants: int) -> void:
 		glow_material.emission_energy_multiplier = 2.40
 		window_emission.material_override = glow_material
 		add_child(window_emission)
-	window_light.visible = night and inhabited
+	window_light.visible = inhabited
+	window_light.light_energy = (1.20 if building_type != "TOWN_HALL" else 1.65) if night else 0.42
 	if window_emission != null:
-		window_emission.visible = night and inhabited
+		window_emission.visible = inhabited
+		if window_emission.material_override is StandardMaterial3D:
+			(window_emission.material_override as StandardMaterial3D).emission_energy_multiplier = 2.40 if night else 0.85
 
 
 func _update_activity_presentation(active: bool, night: bool) -> void:
 	if building_type in ["BAKERY", "LUMBER_CAMP", "SAWMILL", "HOUSE", "TOWN_HALL"] and work_smoke == null:
 		work_smoke = CPUParticles3D.new()
 		work_smoke.name = "ChimneySmoke"
-		work_smoke.amount = 8
-		work_smoke.lifetime = 3.2
+		work_smoke.amount = 18
+		work_smoke.lifetime = 3.6
 		work_smoke.emission_shape = CPUParticles3D.EMISSION_SHAPE_POINT
 		work_smoke.direction = Vector3.UP
-		work_smoke.spread = 8.0
-		work_smoke.gravity = Vector3(0.05, 0.35, 0.0)
-		work_smoke.initial_velocity_min = 0.35
-		work_smoke.initial_velocity_max = 0.85
-		work_smoke.scale_amount_min = 0.18
-		work_smoke.scale_amount_max = 0.42
+		work_smoke.spread = 10.0
+		work_smoke.gravity = Vector3(0.05, 0.28, 0.0)
+		work_smoke.initial_velocity_min = 0.45
+		work_smoke.initial_velocity_max = 1.05
+		work_smoke.scale_amount_min = 0.42
+		work_smoke.scale_amount_max = 0.85
 		var smoke_material := StandardMaterial3D.new()
-		smoke_material.albedo_color = Color(0.72, 0.72, 0.70, 0.28)
+		smoke_material.albedo_color = Color(0.78, 0.76, 0.72, 0.46)
 		smoke_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		smoke_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		work_smoke.mesh = SphereMesh.new()
-		(work_smoke.mesh as SphereMesh).radius = 0.16
-		(work_smoke.mesh as SphereMesh).height = 0.32
+		(work_smoke.mesh as SphereMesh).radius = 0.28
+		(work_smoke.mesh as SphereMesh).height = 0.52
 		work_smoke.material_override = smoke_material
 		work_smoke.position = sockets["vfx"].position + Vector3(0.0, 0.85, 0.0)
 		add_child(work_smoke)

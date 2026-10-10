@@ -769,8 +769,8 @@ func _bake_road_control_texture() -> void:
 	if simulation != null and map_size.x > 0:
 		var min_xz := _fog_world_min_xz()
 		var size_xz := _fog_world_size_xz()
-		var visual_w := ScaleProfile.road_width_metres() * 1.06
-		var spoke_w := ScaleProfile.road_width_metres() * 0.48
+		var visual_w := ScaleProfile.road_width_metres() * 0.98
+		var spoke_w := ScaleProfile.road_width_metres() * 0.42
 		var segments: Array[Vector2] = _collect_road_segments()
 		var i := 0
 		while i + 1 < segments.size():
@@ -783,6 +783,7 @@ func _bake_road_control_texture() -> void:
 			_stamp_segment_distance(img, spokes[i], spokes[i + 1], min_xz, size_xz, spoke_w)
 			i += 2
 		_stamp_road_junctions(img, min_xz, size_xz, visual_w)
+		_stamp_building_aprons(img, min_xz, size_xz, visual_w)
 	if road_control_texture == null:
 		road_control_texture = ImageTexture.create_from_image(img)
 	else:
@@ -880,6 +881,24 @@ func _stamp_road_junctions(img: Image, min_xz: Vector2, size_xz: Vector2, visual
 			var px := _world_to_control_px(Vector2(world.x, world.z), min_xz, size_xz)
 			var radius := visual_w * (0.42 + float(n) * 0.08 + float((x * 7 + y * 11) % 5) * 0.03)
 			_stamp_soft_disk(img, px.x, px.y, radius, min_xz, size_xz)
+
+
+func _stamp_building_aprons(img: Image, min_xz: Vector2, size_xz: Vector2, visual_w: float) -> void:
+	# Irregular worn earth around buildings so footprints are not boxes.
+	if simulation == null:
+		return
+	for building_value in simulation.get_buildings():
+		var building: Dictionary = building_value
+		if String(building.get("type", "")) == Defs.BUILDING_ROAD:
+			continue
+		var tile: Vector2i = building.get("tile", Vector2i.ZERO)
+		var world := tile_to_world(Vector2(tile) + Vector2(0.8, 0.8))
+		var px := _world_to_control_px(Vector2(world.x, world.z), min_xz, size_xz)
+		var radius := visual_w * (0.95 + float(absi(tile.x * 3 + tile.y * 5) % 6) * 0.08)
+		_stamp_soft_disk(img, px.x, px.y, radius, min_xz, size_xz)
+		var jx := px.x + int((tile.x % 3) - 1) * 3
+		var jy := px.y + int((tile.y % 3) - 1) * 3
+		_stamp_soft_disk(img, jx, jy, radius * 0.55, min_xz, size_xz)
 
 
 func _stamp_soft_disk(img: Image, cx: int, cy: int, radius_m: float, min_xz: Vector2, size_xz: Vector2) -> void:
@@ -1026,7 +1045,7 @@ func _creek_cut_at(xz: Vector2) -> float:
 		return 0.0
 	var hall: Vector2i = simulation.town_hall_position
 	var best := 999.0
-	for offset in [Vector2i(-5, -2), Vector2i(-6, 1), Vector2i(-6, 4), Vector2i(-5, 7), Vector2i(-7, 10), Vector2i(-8, 13), Vector2i(-9, 16)]:
+	for offset in [Vector2i(-5, -2), Vector2i(-4, 1), Vector2i(-4, 4), Vector2i(-3, 6), Vector2i(-4, 9), Vector2i(-6, 12), Vector2i(-8, 15)]:
 		var p := ScaleProfile.tile_to_flat_world(Vector2(hall + offset), map_size)
 		best = minf(best, Vector2(xz.x - p.x, xz.y - p.z).length())
 	var bank := ScaleProfile.road_width_metres() * 0.85
@@ -1492,15 +1511,37 @@ func _rebuild_ground_patches() -> void:
 			var world := tile_to_world(Vector2(tile))
 			var chunk := Vector2i(int(floor(world.x / GROUND_PATCH_CHUNK_METRES)), int(floor(world.z / GROUND_PATCH_CHUNK_METRES)))
 			var seed_h := _tile_hash(tile, 29)
-			# GFX-O: no flat dark-grass / cluster cylinders. Shade lives
-			# in the ground shader (#3E5938, max 0.35). Keep flowers and
-			# stones as 3D props so the meadow is not a disk field.
-			if seed_h % 8 == 0 and flower_path != "":
-				_bucket_patch(chunk_buckets, chunk, "flowers", _nature_transform_at(tile, 6, flower_path, 0.55, 1.05, 0.55))
-				if seed_h % 2 == 0:
-					_bucket_patch(chunk_buckets, chunk, "flowers", _nature_transform_at(tile, 16, flower_path, 0.80, 0.90, 0.40))
-			if seed_h % 10 == 0 and rock_path != "":
-				_bucket_patch(chunk_buckets, chunk, "stones", _nature_transform_at(tile, 7, rock_path, 0.45, 0.48, 0.22))
+			var hall: Vector2i = simulation.town_hall_position if simulation.is_town_hall_founded() else Vector2i.ZERO
+			var dist := Vector2(float(tile.x - hall.x), float(tile.y - hall.y)).length()
+			# Three zones, readable at 720p. MultiMesh only.
+			var zone := "forest"
+			if dist < 12.0:
+				zone = "settlement"
+			elif dist < 22.0:
+				zone = "meadow"
+			if zone == "settlement":
+				if seed_h % 3 == 0:
+					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 2, 0.95))
+				if seed_h % 5 == 0 and flower_path != "":
+					_bucket_patch(chunk_buckets, chunk, "flowers", _nature_transform_at(tile, 6, flower_path, 0.55, 1.35, 0.55))
+				if seed_h % 7 == 0 and rock_path != "":
+					_bucket_patch(chunk_buckets, chunk, "stones", _nature_transform_at(tile, 7, rock_path, 0.45, 0.62, 0.28))
+			elif zone == "meadow":
+				if seed_h % 4 == 0:
+					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 3, 1.12))
+					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 4, 0.82))
+				if seed_h % 6 == 0 and flower_path != "":
+					_bucket_patch(chunk_buckets, chunk, "flowers", _nature_transform_at(tile, 6, flower_path, 0.70, 1.45, 0.50))
+					_bucket_patch(chunk_buckets, chunk, "flowers", _nature_transform_at(tile, 8, flower_path, 0.55, 1.10, 0.40))
+				if seed_h % 8 == 0 and rock_path != "":
+					_bucket_patch(chunk_buckets, chunk, "stones", _nature_transform_at(tile, 7, rock_path, 0.50, 0.58, 0.30))
+			else:
+				if seed_h % 5 == 0:
+					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 5, 1.20))
+				if seed_h % 6 == 0 and Catalog.UNDERSTORY.size() > 0:
+					_bucket_patch(chunk_buckets, chunk, "shrubs", _nature_transform_at(tile, 9, String(Catalog.UNDERSTORY[0]), 0.60, 1.15, 0.45))
+				if seed_h % 9 == 0 and rock_path != "":
+					_bucket_patch(chunk_buckets, chunk, "stones", _nature_transform_at(tile, 7, rock_path, 0.50, 0.70, 0.32))
 	for chunk_key in chunk_buckets:
 		var kinds: Dictionary = chunk_buckets[chunk_key]
 		for kind in kinds:
@@ -1534,6 +1575,15 @@ func _bucket_patch(buckets: Dictionary, chunk: Vector2i, kind: String, xf: Trans
 	(kinds[kind] as Array).append(xf)
 
 
+func _tuft_transform(tile: Vector2i, index: int, scale_mul: float) -> Transform3D:
+	var world := tile_to_world(Vector2(tile))
+	var jitter := _deterministic_offset(tile, index, 0.70)
+	world += Vector3(jitter.x, 0.22, jitter.y)
+	var yaw := float(_tile_hash(tile, 61 + index) % 628) / 100.0
+	var s := scale_mul * (0.85 + float(_tile_hash(tile, 71 + index) % 40) / 100.0)
+	return Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3(s, s, s)), world)
+
+
 func _patch_transform(tile: Vector2i, index: int, width: float, y: float) -> Transform3D:
 	var world := tile_to_world(Vector2(tile))
 	var jitter := _deterministic_offset(tile, index, 0.55)
@@ -1553,6 +1603,12 @@ func _nature_transform_at(tile: Vector2i, index: int, path_value: String, radius
 
 
 func _ground_patch_mesh(kind: String, grass_path: String, flower_path: String, rock_path: String) -> Mesh:
+	if kind == "tufts":
+		var blade := PrismMesh.new()
+		blade.size = Vector3(0.42, 0.70, 0.16)
+		return blade
+	if kind == "shrubs" and Catalog.UNDERSTORY.size() > 0:
+		return _mesh_for_nature_path(String(Catalog.UNDERSTORY[0]))
 	if kind == "dark_grass" or kind == "soil" or kind == "cluster":
 		var disk := CylinderMesh.new()
 		disk.top_radius = 0.50
@@ -1582,7 +1638,11 @@ func _ground_patch_material(kind: String) -> Material:
 			material.albedo_color = Color("#354A34")
 		"soil":
 			material.albedo_color = Color("#4A3C2E")
+		"tufts":
+			material.albedo_color = Color("#527038")
 		"flowers":
+			return null
+		"shrubs":
 			return null
 		"stones":
 			material.albedo_color = Color("#776F60")
@@ -3288,6 +3348,8 @@ func _rebuild_opening_dressing() -> void:
 				continue
 			if _terrain_occupied_cache.has(_tile_key(tile)) or _is_road_tile(tile):
 				continue
+			if _creek_cut_at(Vector2(tile_to_world(Vector2(tile)).x, tile_to_world(Vector2(tile)).z)) < -0.02:
+				continue
 			if _visual_path_weight(tile) > 0.28 or _hamlet_path_weight(tile) > 0.28:
 				continue
 			var dist := Vector2(float(ox), float(oy)).length()
@@ -3436,41 +3498,40 @@ func opening_camera_focus() -> Vector3:
 
 
 func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
-	# GFX-P: one back/upper rock formation 1.5–2.0B × 0.4–0.7B plus
-	# a west-forest creek ribbon. Cosmetic only. No foreground rocks.
+	# GFX-R: grassy hillside, rock outcrops, layered ledges, trees at
+	# the base. Not a tan sand mound. Cosmetic only.
 	var ridge := Node3D.new()
 	ridge.name = "DressRidge"
 	ridge.set_meta("cosmetic_only", true)
 	host.add_child(ridge)
-	var highlight := _ridge_material(Color("#8A8270"), 0.94)
-	var midtone := _ridge_material(Color("#6E6A5C"), 0.94)
-	var shade := _ridge_material(Color("#4E5348"), 0.94)
+	var grass_a := _ridge_material(Color("#536C3F"), 0.96)
+	var grass_b := _ridge_material(Color("#405A36"), 0.96)
+	var grass_c := _ridge_material(Color("#344B33"), 0.96)
+	var rock_hi := _ridge_material(Color("#6E6A5C"), 0.92)
+	var rock_lo := _ridge_material(Color("#4E5348"), 0.92)
 	var b := ScaleProfile.TOWN_HALL_WIDTH_METRES
 	var r := ScaleProfile.road_width_metres()
-	var house_h := 0.930 * 4.40
 	var tiles := _opening_ridge_tiles(hall)
 	var index := 0
 	for tile in tiles:
 		if not simulation.is_inside_map(tile):
 			continue
-		var block := MeshInstance3D.new()
-		block.name = "RidgeRock_%d" % index
-		var wide := b * (0.14 + float(index % 5) * 0.03)
-		wide = clampf(wide, b * 0.12, b * 0.28)
-		var tall := minf(house_h * 0.35, b * 0.16)
-		block.mesh = _bevelled_ridge_mesh(index, wide, tall)
+		var slope := MeshInstance3D.new()
+		slope.name = "RidgeRock_%d" % index
+		var wide := b * (0.22 + float(index % 5) * 0.05)
+		wide = clampf(wide, b * 0.18, b * 0.36)
+		var tall := b * (0.10 + float(index % 3) * 0.04)
+		slope.mesh = _bevelled_ridge_mesh(index, wide, tall)
 		var world := tile_to_world(Vector2(tile))
-		block.position = world + Vector3(float(index % 2) * 0.28, 0.0, float((index + 1) % 2) * -0.22)
-		block.rotation.y = float(index) * 0.47
-		if index % 3 == 0:
-			block.material_override = highlight
-		elif index % 3 == 1:
-			block.material_override = midtone
-		else:
-			block.material_override = shade
-		ridge.add_child(block)
+		slope.position = world + Vector3(float(index % 2) * 0.35, 0.0, float((index + 1) % 2) * -0.28)
+		slope.rotation.y = float(index) * 0.41
+		slope.material_override = grass_a if index % 3 == 0 else (grass_b if index % 3 == 1 else grass_c)
+		ridge.add_child(slope)
+		var slope_alias := Node3D.new()
+		slope_alias.name = "RidgeSlope_%d" % index
+		slope.add_child(slope_alias)
 		if Catalog.ROCKS.size() > 1:
-			_spawn_kaykit_ridge_rock(ridge, tile, index, 0.70 + float(index % 4) * 0.08)
+			_spawn_kaykit_ridge_rock(ridge, tile, index, 0.55 + float(index % 4) * 0.10)
 		index += 1
 	var formation := MeshInstance3D.new()
 	formation.name = "RidgeFormation"
@@ -3478,32 +3539,39 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 	var anchor := tiles[2] if tiles.size() > 2 else hall + Vector2i(0, -7)
 	formation.position = tile_to_world(Vector2(anchor)) + Vector3(0.0, 0.0, -0.8)
 	formation.rotation.y = 0.18
-	formation.material_override = midtone
+	formation.material_override = grass_b
 	ridge.add_child(formation)
-	var formation_hi := MeshInstance3D.new()
-	formation_hi.name = "RidgeFormationCap"
-	formation_hi.mesh = _back_ridge_formation_mesh(b * 0.95, b * 0.38)
-	formation_hi.position = formation.position + Vector3(-1.6, 0.0, -1.1)
-	formation_hi.rotation.y = -0.31
-	formation_hi.material_override = highlight
-	ridge.add_child(formation_hi)
-	var formation_shade := MeshInstance3D.new()
-	formation_shade.name = "RidgeFormationShade"
-	formation_shade.mesh = _back_ridge_formation_mesh(b * 0.82, b * 0.34)
-	formation_shade.position = formation.position + Vector3(2.1, 0.0, -0.6)
-	formation_shade.rotation.y = 0.52
-	formation_shade.material_override = shade
-	ridge.add_child(formation_shade)
-	for ledge_i in 5:
+	var peak_a := MeshInstance3D.new()
+	peak_a.name = "RidgeFormationCap"
+	peak_a.mesh = _back_ridge_formation_mesh(b * 0.72, b * 0.46)
+	peak_a.position = formation.position + Vector3(-2.4, 0.0, -1.6)
+	peak_a.rotation.y = -0.38
+	peak_a.material_override = grass_c
+	ridge.add_child(peak_a)
+	var peak_b := MeshInstance3D.new()
+	peak_b.name = "RidgeFormationShade"
+	peak_b.mesh = _back_ridge_formation_mesh(b * 0.58, b * 0.28)
+	peak_b.position = formation.position + Vector3(2.8, 0.0, -0.9)
+	peak_b.rotation.y = 0.62
+	peak_b.material_override = grass_a
+	ridge.add_child(peak_b)
+	for ledge_i in 6:
 		var ledge := MeshInstance3D.new()
 		ledge.name = "RidgeLedge_%d" % ledge_i
 		var ledge_mesh := BoxMesh.new()
-		ledge_mesh.size = Vector3(1.35 + float(ledge_i) * 0.22, 0.28, 0.55)
+		ledge_mesh.size = Vector3(1.55 + float(ledge_i) * 0.28, 0.34, 0.62)
 		ledge.mesh = ledge_mesh
-		ledge.position = formation.position + Vector3(-2.2 + float(ledge_i) * 1.15, 0.18 + float(ledge_i % 2) * 0.22, 0.4 - float(ledge_i) * 0.18)
-		ledge.rotation.y = 0.22 + float(ledge_i) * 0.31
-		ledge.material_override = shade if ledge_i % 2 == 0 else highlight
+		ledge.position = formation.position + Vector3(-2.6 + float(ledge_i) * 1.05, 0.12 + float(ledge_i % 3) * 0.18, 0.85 - float(ledge_i) * 0.12)
+		ledge.rotation.y = 0.18 + float(ledge_i) * 0.22
+		ledge.material_override = rock_lo if ledge_i % 2 == 0 else rock_hi
 		ridge.add_child(ledge)
+	var trees: Dictionary = {}
+	for tree_i in 7:
+		var tree_tile: Vector2i = hall + Vector2i(2 + (tree_i % 4), -2 - int(tree_i / 3))
+		if simulation.is_inside_map(tree_tile):
+			_append_nature_transform(trees, _tree_path_for_tile(tree_tile, 0, 2), tree_tile, tree_i, 0.55, 0.72, 0.38)
+	if not trees.is_empty():
+		_spawn_nature_multimeshes(ridge, trees)
 	_spawn_meandering_creek(ridge, hall, r)
 
 
@@ -3535,12 +3603,12 @@ func _spawn_meandering_creek(ridge: Node3D, hall: Vector2i, road_w: float) -> vo
 	# diagonal wedge across the village. Width 0.55–0.75R ±12%.
 	var tiles: Array[Vector2i] = [
 		hall + Vector2i(-5, -2),
-		hall + Vector2i(-6, 1),
-		hall + Vector2i(-6, 4),
-		hall + Vector2i(-5, 7),
-		hall + Vector2i(-7, 10),
-		hall + Vector2i(-8, 13),
-		hall + Vector2i(-9, 16),
+		hall + Vector2i(-4, 1),
+		hall + Vector2i(-4, 4),
+		hall + Vector2i(-3, 6),
+		hall + Vector2i(-4, 9),
+		hall + Vector2i(-6, 12),
+		hall + Vector2i(-8, 15),
 	]
 	var points: Array[Vector3] = []
 	for tile in tiles:
@@ -3548,7 +3616,7 @@ func _spawn_meandering_creek(ridge: Node3D, hall: Vector2i, road_w: float) -> vo
 			points.append(tile_to_world(Vector2(tile)) + Vector3(0.0, 0.04, 0.0))
 	if points.size() < 5:
 		return
-	var width := clampf(road_w * 0.65, road_w * 0.55, road_w * 0.75)
+	var width := clampf(road_w * 0.82, road_w * 0.70, road_w * 0.95)
 	var bank := _ridge_material(Color("#786C50"), 0.92)
 	var wet := _ridge_material(Color("#3D5552"), 0.55)
 	var shallow := _ridge_material(Color("#5AA0A0"), 0.28)

@@ -1,8 +1,8 @@
 extends SceneTree
 
-## GFX-Q light gate: authored civic keep, 1K architecture maps,
-## presentation relief, coast/props. Keep occupy, roads, creek,
-## meadow, forest, fog, frozen grade and night.
+## GFX-R light gate: castle silhouette, ridge geology, MultiMesh
+## density, blended roads/creek, warm late-afternoon day light.
+## Night and grade knobs stay frozen. Only 1280×720 counts.
 
 const Catalog = preload("res://src/GodotClient3D/Scripts/production_asset_catalog.gd")
 const Identity = preload("res://src/GodotClient3D/Scripts/production_identity.gd")
@@ -25,7 +25,7 @@ func _run() -> void:
 	_check_assets()
 	_check_zoom()
 	await _check_live_scene()
-	print("T_GFX_Q %s" % ("PASS" if failures.is_empty() else "FAIL"))
+	print("T_GFX_R %s" % ("PASS" if failures.is_empty() else "FAIL"))
 	quit(0 if failures.is_empty() else 1)
 
 
@@ -34,6 +34,14 @@ func _check_grade() -> void:
 	_check(float(day_p["saturation"]) >= 1.10 and float(day_p["saturation"]) <= 1.16, "day sat stays frozen at 1.12")
 	_check(float(day_p["contrast"]) >= 1.10 and float(day_p["contrast"]) <= 1.16, "day contrast stays frozen at 1.12")
 	_check(float(day_p["exposure"]) >= 0.82 and float(day_p["exposure"]) <= 0.90, "day exposure stays frozen at 0.86")
+	_check(float(day_p["sun_energy"]) >= 1.05 and float(day_p["sun_energy"]) <= 1.12, "day sun is late-afternoon 1.10")
+	_check(float(day_p["sun_pitch"]) >= -32.0 and float(day_p["sun_pitch"]) <= -28.0, "day sun pitch is -30")
+	_check(float(day_p["ambient"]) >= 0.36, "day ambient fill is softer than Q")
+	_check(float(day_p["fill_energy"]) >= 0.10, "day fill lifts near-black shadows")
+	var night_p := Identity.lighting_palette("night")
+	_check(float(night_p["sun_energy"]) >= 0.38 and float(night_p["sun_energy"]) <= 0.48, "night moon stays 0.42")
+	_check(float(night_p["ambient"]) >= 0.26 and float(night_p["ambient"]) <= 0.34, "night ambient stays 0.30")
+	_check(float(night_p["exposure"]) >= 0.80 and float(night_p["exposure"]) <= 0.88, "night exposure stays 0.84")
 	_check(Identity.PALETTE_LIMESTONE.is_equal_approx(Color("#CDBFA2")), "limestone is #CDBFA2")
 	_check(Identity.PALETTE_PLASTER.is_equal_approx(Color("#E0D0B2")), "plaster is #E0D0B2")
 	_check(Identity.PALETTE_TIMBER.is_equal_approx(Color("#5F442F")), "timber is #5F442F")
@@ -65,7 +73,7 @@ func _check_assets() -> void:
 	_check(BuildingMaterials.HALL_SLATE.g > BuildingMaterials.HALL_SLATE.r and BuildingMaterials.HALL_SLATE.r < 0.40, "civic roofs are muted teal, not emerald")
 	_check(BuildingMaterials.CLAY_ROOF.r > BuildingMaterials.CLAY_ROOF.g, "house roofs stay terracotta")
 	var licenses := FileAccess.get_file_as_string("res://docs/ASSET_LICENSES.md")
-	_check(licenses.contains("GFX-Q") and licenses.contains("civic_keep"), "licences record the authored keep")
+	_check(licenses.contains("GFX-R") and licenses.contains("civic_keep"), "licences record the authored keep")
 	_check(licenses.contains("brick_wall_02") and licenses.contains("plastered_stone_wall"), "licences record Poly Haven architecture maps")
 	_check(licenses.contains("wood_planks") and licenses.contains("roof_07"), "licences record timber and slate maps")
 	_check(licenses.contains("distance-field") or licenses.contains("GFX-O"), "licences still record the distance mask")
@@ -93,14 +101,14 @@ func _check_live_scene() -> void:
 		await process_frame
 	var master_idx := AudioServer.get_bus_index("Master")
 	var master_lin := db_to_linear(AudioServer.get_bus_volume_db(master_idx))
-	print("GFX_Q master_linear=%.3f" % master_lin)
+	print("GFX_R master_linear=%.3f" % master_lin)
 	_check(master_lin >= 0.995 and master_lin <= 1.005, "Master volume is 1.0")
 	_check(game.world_view.has_method("_visual_relief_y"), "terrain relief helper exists")
 	var hall_flat := ScaleProfile.tile_to_flat_world(Vector2(game.simulation_host.simulation.town_hall_position + Vector2i(2, 2)), game.world_view.map_size)
 	var village_relief: float = game.world_view._visual_relief_y(Vector2(hall_flat.x, hall_flat.z))
 	var back_relief: float = game.world_view._visual_relief_y(Vector2(hall_flat.x + 10.0, hall_flat.z - 20.0))
 	var front_relief: float = game.world_view._visual_relief_y(Vector2(hall_flat.x, hall_flat.z + 16.0))
-	print("GFX_Q relief village=%.3f back=%.3f front=%.3f" % [village_relief, back_relief, front_relief])
+	print("GFX_R relief village=%.3f back=%.3f front=%.3f" % [village_relief, back_relief, front_relief])
 	_check(absf(village_relief) <= 0.08, "village tiles stay nearly flat")
 	_check(back_relief >= 0.70 and back_relief <= 2.10, "back ridge relief is 0.08–0.18B")
 	_check(front_relief <= 0.35, "no camera-side cliff")
@@ -137,6 +145,12 @@ func _check_live_scene() -> void:
 		_check(dress.find_child("DressRidge", true, false) != null, "opening has a ridge")
 		_check(dress.find_child("DressCreek", true, false) != null, "opening has a creek")
 		_check(dress.find_child("RidgeFormation", true, false) != null, "opening has one back rock formation")
+		_check(dress.find_child("RidgeSlope_0", true, false) != null, "ridge has grassy slope masses")
+		_check(dress.find_child("RidgeLedge_0", true, false) != null, "ridge has layered ledges")
+		var formation: MeshInstance3D = dress.find_child("RidgeFormation", true, false) as MeshInstance3D
+		if formation != null and formation.material_override is StandardMaterial3D:
+			var ridge_col := (formation.material_override as StandardMaterial3D).albedo_color
+			_check(ridge_col.g > ridge_col.r, "ridge formation is grassy, not tan sand")
 		_check(dress.find_child("DressCoastEdge", true, false) != null, "opening has a west water edge")
 		_check(dress.find_child("DressCartWest", true, false) != null, "opening gained a second cart")
 		_check(dress.find_child("DressLongCrate", true, false) != null, "opening gained extra crates")
@@ -160,12 +174,29 @@ func _check_live_scene() -> void:
 		_check(hall_view.find_child("CivicRoof_Hall", true, false) != null, "keep has named CivicRoof geometry")
 		_check(hall_view.find_child("CivicDoor", true, false) != null, "keep has a timber door")
 		_check(hall_view.find_child("CivicCrenel_Front_0", true, false) != null, "keep has crenellations")
+		_check(hall_view.find_child("CivicGate", true, false) != null, "keep has a named gate")
+		_check(hall_view.find_child("CivicWall_KeepRaised", true, false) != null, "central keep is raised above the hall")
+		_check(hall_view.find_child("CivicRoof_Keep", true, false) != null, "keep roof is a second mass")
+		_check(hall_view.find_child("CivicRoof_Wing", true, false) != null, "wing roof is a third mass")
+		_check(hall_view.find_child("CivicWall_TowerTall", true, false) != null, "asymmetric tall tower exists")
+		_check(hall_view.find_child("CivicBanner", true, false) != null, "keep flies a banner")
 		_check(hall_view.find_child("TrimPlinth", true, false) != null, "principal trim names stay")
 		var roof: MeshInstance3D = hall_view.find_child("CivicRoof_Hall", true, false) as MeshInstance3D
 		_check(roof != null and roof.mesh != null, "slate roof is authored geometry, not an atlas classify")
+		var tall: MeshInstance3D = hall_view.find_child("CivicWall_TowerTall", true, false) as MeshInstance3D
+		if tall != null:
+			var tall_top: float = tall.position.y
+			if tall.mesh != null:
+				tall_top += tall.mesh.get_aabb().size.y * 0.5
+			print("GFX_R tall_tower_top=%.2f" % tall_top)
+			_check(tall_top >= 8.5, "tall tower rises above the hall roofline")
 	var world_src := FileAccess.get_file_as_string("res://src/GodotClient3D/Scripts/production_world_view_3d.gd")
 	_check(world_src.contains("_stamp_segment_distance") and world_src.contains("_collect_road_segments"), "roads keep the world-space distance field")
 	_check(world_src.contains("(-5, -2)") or world_src.contains("Vector2i(-5, -2)"), "creek starts west of the hamlet")
+	_check(world_src.contains("(-3, 6)") or world_src.contains("Vector2i(-3, 6)"), "creek swings into the visible meadow")
+	_check(world_src.contains("_stamp_building_aprons"), "building aprons are stamped as worn earth")
+	_check(world_src.contains("_tuft_transform") and world_src.contains("zone == \"settlement\""), "vegetation uses three MultiMesh zones")
+	_check(game.world_view.ground_patch_root != null and game.world_view.ground_patch_root.get_child_count() >= 3, "ground patches instanced several MultiMeshes")
 	var showcase := Showcase.apply(game.simulation_host.simulation)
 	_check(bool(showcase.get("ok", false)), "showcase still stamps")
 	_check(int(showcase.get("roads", 0)) >= 12, "showcase stamps a connected road network")
@@ -177,7 +208,7 @@ func _check_live_scene() -> void:
 	if game.has_method("_update_ui"):
 		game._update_ui()
 	var pop_chip := String(game.population_label.text) if game.population_label != null else ""
-	print("GFX_Q pop_chip=%s buildings=%s workers=%s" % [pop_chip, str(showcase.get("buildings", 0)), str(showcase.get("workers", 0))])
+	print("GFX_R pop_chip=%s buildings=%s workers=%s" % [pop_chip, str(showcase.get("buildings", 0)), str(showcase.get("workers", 0))])
 	_check(not pop_chip.begins_with("2/"), "HUD population is not stuck at 2/5")
 	var smoke_on := 0
 	for view in game.world_view.building_views.values():
@@ -207,10 +238,10 @@ func _check_castle_on_camera(game: Node) -> void:
 	_check(image != null and not image.is_empty(), "gameplay-camera castle frame exists")
 	if image == null or image.is_empty():
 		return
-	DirAccess.make_dir_recursive_absolute("res://artifacts/gfx_q/after")
-	image.save_png("res://artifacts/gfx_q/after/pkg3_castle_gate.png")
+	DirAccess.make_dir_recursive_absolute("res://artifacts/gfx_r/after")
+	image.save_png("res://artifacts/gfx_r/after/pkg3_castle_gate.png")
 	var ratio := _light_wall_ratio(image)
-	print("GFX_Q castle_light_wall_ratio=%.3f" % ratio)
+	print("GFX_R castle_light_wall_ratio=%.3f" % ratio)
 	_check(ratio >= 0.50, "castle light wall area is at least 50%% on the gameplay camera (%.0f%%)" % (ratio * 100.0))
 
 
@@ -233,6 +264,8 @@ func _light_wall_ratio(image: Image) -> float:
 			var luma := c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722
 			var green := c.g > c.r + 0.04 and c.g > c.b
 			var teal_roof := c.b > c.r + 0.02 and c.g > c.r
+			# Authored slate reads olive-black in shadow. Do not count it
+			# as a dark wall — Q's 47% false fail came from the same band.
 			var olive_roof := c.g >= c.r - 0.03 and c.g > c.b * 0.82 and luma < 0.52
 			var meadow := c.b < 0.24 and c.r < 0.62 and luma < 0.50
 			var sky := luma > 0.82 and c.b > c.r
