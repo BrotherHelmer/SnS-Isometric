@@ -97,9 +97,18 @@ static func _apply_civic_architecture(root: Node, building_type: String) -> void
 			mix_amt = 0.34
 			boost = 1.06
 			lift = 1.08
+		elif mesh_name.contains("Banner"):
+			kind = "timber"
+			tint = Color("#8B2E3A")
+			tex = timber_tex
+			uv_scale = 1.4
+			emission = 0.12
+			mix_amt = 0.18
+			boost = 1.08
+			lift = 1.04
 		elif mesh_name.contains("Timber") or mesh_name.contains("Door") or mesh_name.contains("Window"):
 			kind = "timber"
-			tint = DARK_TIMBER
+			tint = Color("#3A3228") if mesh_name.contains("Window") else DARK_TIMBER
 			tex = timber_tex
 			uv_scale = 2.0
 			emission = 0.0

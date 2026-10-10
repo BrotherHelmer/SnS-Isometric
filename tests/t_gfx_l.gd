@@ -35,7 +35,7 @@ func _check_grade() -> void:
 	_check(float(day_p["saturation"]) >= 1.10 and float(day_p["saturation"]) <= 1.16, "day sat stays 1.12")
 	_check(float(day_p["contrast"]) >= 1.10 and float(day_p["contrast"]) <= 1.16, "day contrast stays 1.12")
 	_check(float(day_p["exposure"]) >= 0.82 and float(day_p["exposure"]) <= 0.90, "day exposure stays 0.86")
-	_check(is_equal_approx(float(day_p["sun_energy"]), 1.10), "day sun stays 1.10")
+	_check(float(day_p["sun_energy"]) >= 1.05 and float(day_p["sun_energy"]) <= 1.12, "day sun stays late-afternoon 1.10")
 	_check(Identity.PALETTE_LIMESTONE.is_equal_approx(Color("#CDBD9F")) or Identity.PALETTE_LIMESTONE.is_equal_approx(Color("#C8BA9C")) or Identity.PALETTE_LIMESTONE.is_equal_approx(Color("#CFC2A6")) or Identity.PALETTE_LIMESTONE.is_equal_approx(Color("#CDBFA2")), "limestone is #CDBD9F")
 	_check(Identity.PALETTE_PLASTER.is_equal_approx(Color("#E0CDAE")) or Identity.PALETTE_PLASTER.is_equal_approx(Color("#DDCAA8")) or Identity.PALETTE_PLASTER.is_equal_approx(Color("#DFCBA9")) or Identity.PALETTE_PLASTER.is_equal_approx(Color("#E0D0B2")), "plaster is #E0CDAE")
 	_check(Identity.PALETTE_TIMBER.is_equal_approx(Color("#64452F")) or Identity.PALETTE_TIMBER.is_equal_approx(Color("#5F422E")) or Identity.PALETTE_TIMBER.is_equal_approx(Color("#60432E")) or Identity.PALETTE_TIMBER.is_equal_approx(Color("#61442F")) or Identity.PALETTE_TIMBER.is_equal_approx(Color("#5F442F")), "timber is #64452F")

@@ -207,11 +207,11 @@ void fragment() {
 	float shoulder_w = smoothstep(0.06, 0.40, worn) * (1.0 - center_w);
 	float rut_a = abs(sin(world_pos.x * 0.31 + world_pos.z * 0.19 + fbm(world_pos.xz * 0.22) * 2.4) - 0.18);
 	float rut_b = abs(sin(world_pos.x * 0.27 - world_pos.z * 0.23 + 1.7 + fbm(world_pos.xz * 0.18 + 8.0) * 2.1) + 0.16);
-	float rut = (1.0 - smoothstep(0.0, 0.11, rut_a)) + (1.0 - smoothstep(0.0, 0.11, rut_b));
+	float rut = (1.0 - smoothstep(0.0, 0.16, rut_a)) + (1.0 - smoothstep(0.0, 0.16, rut_b));
 	vec3 road_col = mix(road_compacted, road_earth, center_w);
 	road_col = mix(road_col, road_shoulder, clamp(shoulder_w * 0.90, 0.0, 0.28));
-	road_col = mix(road_col, road_rut, clamp(rut * 0.28 * road_w, 0.0, 0.34));
-	road_col = mix(road_col, gravel_color, smoothstep(0.74, 0.96, noise2(world_pos.xz * 1.7 + vec2(3.1, 8.4))) * 0.22 * road_w);
+	road_col = mix(road_col, road_rut, clamp(rut * 0.48 * road_w, 0.0, 0.52));
+	road_col = mix(road_col, gravel_color, smoothstep(0.68, 0.94, noise2(world_pos.xz * 1.7 + vec2(3.1, 8.4))) * 0.30 * road_w);
 	ground = mix(ground, road_col, road_w);
 
 	float wash = smoothstep(tint_wash_lo, max(tint_wash_lo + 0.02, tint_wash_hi), broad);
