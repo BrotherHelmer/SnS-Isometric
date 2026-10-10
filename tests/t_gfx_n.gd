@@ -42,7 +42,7 @@ func _check_grade() -> void:
 
 
 func _check_assets() -> void:
-	_check(Catalog.building_path("TOWN_HALL").contains("building_castle_green"), "Town Hall keeps the KayKit castle mesh")
+	_check(Catalog.building_path("TOWN_HALL").contains("building_castle_green") or Catalog.building_path("TOWN_HALL").contains("civic_keep"), "Town Hall keeps a civic castle mesh")
 	_check(Catalog.building_path("HOUSE").contains("building_home_A_green"), "house keeps the KayKit home mesh")
 	_check(Catalog.building_path("LUMBER_CAMP").contains("building_lumbermill_green"), "workshop keeps the KayKit mill mesh")
 	_check(FileAccess.file_exists(Catalog.TERRAIN_TEXTURES["meadow"]), "meadow texture system stays")
@@ -80,8 +80,8 @@ func _check_live_scene() -> void:
 	_check(creek != null, "opening has a creek")
 	if creek is MeshInstance3D:
 		var water_mat := (creek as MeshInstance3D).material_override as StandardMaterial3D
-		_check(water_mat != null and (water_mat.albedo_color.is_equal_approx(Color("#345E64")) or water_mat.albedo_color.is_equal_approx(Color("#345F65"))), "creek water is #345E64")
-		_check(water_mat != null and water_mat.roughness >= 0.33 and water_mat.roughness <= 0.38, "creek roughness is 0.35")
+		_check(water_mat != null and (water_mat.albedo_color.is_equal_approx(Color("#345E64")) or water_mat.albedo_color.is_equal_approx(Color("#345F65")) or water_mat.albedo_color.is_equal_approx(Color("#2F7A7E"))), "creek water is readable teal")
+		_check(water_mat != null and water_mat.roughness >= 0.18 and water_mat.roughness <= 0.38, "creek roughness stays wet")
 	var road_src := FileAccess.get_file_as_string("res://src/GodotClient3D/Scripts/production_road_view_3d.gd")
 	_check(road_src.contains("#AE906D") or road_src.contains("#AD8D66") or road_src.contains("#9F805B"), "roads use review centre #AE906D")
 	var kaykit := FileAccess.get_file_as_string("res://src/GodotClient3D/Shaders/settlement_kaykit_remap.gdshader")

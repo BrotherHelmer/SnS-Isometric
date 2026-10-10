@@ -47,8 +47,8 @@ func _rebuild() -> void:
 	var road_width := 1.82 * ScaleProfile.ROAD_WIDTH_SCALE * width_variation
 	# Dirt-edge skirt, not a pale outline. Raised so the packed clay sits
 	# above the meadow at gameplay zoom. Stamps stay batched once.
-	_add_path_mesh(road_width * 1.22, 0.070, _road_material(edge_color), "FeatheredEdge")
-	_add_path_mesh(road_width, 0.128, _road_material(road_color), "ContinuousDirt")
+	_add_path_mesh(road_width * 1.18, 0.042, _road_material(edge_color), "FeatheredEdge")
+	_add_path_mesh(road_width * 0.92, 0.062, _road_material(road_color), "ContinuousDirt")
 	if not planned and _popcount(connection_mask) >= 2 and absi(tile.x * 13 + tile.y * 29) % 2 == 0:
 		_add_rut_decal(road_width)
 

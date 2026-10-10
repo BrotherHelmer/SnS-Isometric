@@ -135,30 +135,41 @@ void fragment() {
 	float patch = lod_cheap > 0.5 ? noise2(patch_uv) : fbm(patch_uv);
 	float detail = lod_cheap > 0.5 ? 0.5 : fbm(detail_uv);
 
-	// Palette owns the meadow. Broad 4R / local 0.8R richness, no chalk.
+	// GFX-Q: meadow / dry grass / exposed soil / rock. Palette still owns hue.
 	vec3 grass = mix(grass_moss, meadow_lush, clamp(broad * 0.58 + patch * 0.42, 0.0, 1.0));
-	grass = mix(grass, grass_sunlit, smoothstep(0.60, 0.92, patch) * 0.28);
+	grass = mix(grass, grass_sunlit, smoothstep(0.54, 0.90, patch) * 0.34);
 	float shade_macro = fbm(world_pos.xz / max(macro_metres * 1.52, 12.0) + vec2(9.4, 2.1));
 	float shade_w = smoothstep(0.36, 0.72, shade_macro) * 0.44;
 	grass = mix(grass, meadow_shade, shade_w);
-	grass = mix(grass, forest_floor, smoothstep(0.58, 0.90, 1.0 - patch) * 0.18);
-	grass = mix(grass, dirt_color, smoothstep(0.78, 0.96, noise2(world_pos.xz * 0.19 + vec2(4.2, 8.1))) * 0.10);
+	grass = mix(grass, forest_floor, smoothstep(0.50, 0.88, 1.0 - patch) * 0.28);
+	float soil_n = fbm(world_pos.xz / 13.5 + vec2(4.1, 9.7));
+	float dry_n = fbm(world_pos.xz / 9.2 + vec2(11.0, 3.4));
+	float rock_n = fbm(world_pos.xz / 17.0 + vec2(2.2, 15.3));
+	vec3 dirt_s = texture(dirt_tex, world_pos.xz / 5.1).rgb;
+	vec3 rock_s = texture(rock_tex, world_pos.xz / 6.4).rgb;
+	float dirt_luma = dot(dirt_s, vec3(0.2126, 0.7152, 0.0722));
+	float rock_luma = dot(rock_s, vec3(0.2126, 0.7152, 0.0722));
+	vec3 dry_grass = mix(meadow_warm, dirt_color, 0.38);
+	grass = mix(grass, dry_grass * (0.88 + dirt_luma * 0.22), smoothstep(0.56, 0.82, dry_n) * 0.36);
+	grass = mix(grass, dirt_color * (0.82 + dirt_luma * 0.28), smoothstep(0.64, 0.88, soil_n) * 0.32);
+	grass = mix(grass, mix(vec3(0.42, 0.40, 0.36), rock_s, 0.40), smoothstep(0.76, 0.94, rock_n) * 0.20);
+	grass = mix(grass, dirt_color, smoothstep(0.78, 0.96, noise2(world_pos.xz * 0.19 + vec2(4.2, 8.1))) * 0.08);
 
 	if (tex_mix > 0.01) {
 		vec2 muv = world_pos.xz / max(tex_repeat_meadow, 1.5);
 		float meadow_luma = dot(texture(meadow_tex, muv).rgb, vec3(0.2126, 0.7152, 0.0722));
 		float forest_luma = dot(texture(forest_tex, world_pos.xz / max(tex_repeat_forest, 1.2)).rgb, vec3(0.2126, 0.7152, 0.0722));
 		float detail_luma = mix(meadow_luma, forest_luma, shade_w);
-		detail_luma = clamp(0.46 + (detail_luma - 0.50) * 0.22, 0.34, 0.58);
-		grass *= (0.94 + detail_luma * 0.12);
-		grass = mix(grass, grass * (0.90 + detail * 0.10), tex_mix);
+		detail_luma = clamp(0.46 + (detail_luma - 0.50) * 0.28, 0.32, 0.62);
+		grass *= (0.90 + detail_luma * 0.18);
+		grass = mix(grass, grass * (0.88 + detail * 0.14), tex_mix);
 	}
 
 	if (lod_cheap < 0.5) {
 		float tuft = abs(fract(world_pos.x * 1.85 + world_pos.z * 0.35 + patch * 0.4) - 0.5);
 		grass = mix(grass, grass * vec3(0.90, 0.94, 0.86), (1.0 - smoothstep(0.08, 0.28, tuft)) * 0.12);
 		float bloom = noise2(world_pos.xz / 3.6 + vec2(17.0, 5.0));
-		float blossom_w = smoothstep(0.78, 0.94, patch) * smoothstep(0.70, 0.90, bloom);
+		float blossom_w = smoothstep(0.62, 0.88, patch) * smoothstep(0.58, 0.84, bloom);
 		vec3 blossom = mix(flower_warm, flower_cool, step(0.5, noise2(world_pos.xz * 0.37)));
 		grass = mix(grass, mix(grass, blossom, 0.35), blossom_w * flower_amount);
 	}
@@ -187,20 +198,20 @@ void fragment() {
 	ground *= macro_var;
 	ground = mix(ground, dirt_color, 0.04 * dirt_amount * (1.0 - occupy) * (1.0 - crop));
 
-	// Worn paths. Keep the distance-field graph. Displace the edge
-	// ±0.07R with noise so the mask is no longer a rectangle.
-	float edge_noise = (fbm(world_pos.xz * 0.85 + vec2(2.4, 9.1)) - 0.5) * 2.0;
-	float worn = control + edge_noise * 0.08;
-	float road_w = smoothstep(0.08, 0.72, worn);
-	float center_w = smoothstep(0.36, 0.74, worn);
-	float shoulder_w = smoothstep(0.10, 0.34, worn) * (1.0 - center_w);
-	float across = abs(fract(world_pos.x * 0.21 + world_pos.z * 0.17) - 0.5);
-	float rut = (1.0 - smoothstep(0.0, 0.07, abs(across - 0.22)))
-		+ (1.0 - smoothstep(0.0, 0.07, abs(across - 0.28)));
+	// Worn paths. Keep the distance-field graph. Soft shoulders, no
+	// repeating fract lattice, no hard rectangular junctions.
+	float edge_noise = (fbm(world_pos.xz * 0.62 + vec2(2.4, 9.1)) - 0.5) * 2.0;
+	float worn = control + edge_noise * 0.14;
+	float road_w = smoothstep(0.04, 0.78, worn);
+	float center_w = smoothstep(0.28, 0.80, worn);
+	float shoulder_w = smoothstep(0.06, 0.40, worn) * (1.0 - center_w);
+	float rut_a = abs(sin(world_pos.x * 0.31 + world_pos.z * 0.19 + fbm(world_pos.xz * 0.22) * 2.4) - 0.18);
+	float rut_b = abs(sin(world_pos.x * 0.27 - world_pos.z * 0.23 + 1.7 + fbm(world_pos.xz * 0.18 + 8.0) * 2.1) + 0.16);
+	float rut = (1.0 - smoothstep(0.0, 0.11, rut_a)) + (1.0 - smoothstep(0.0, 0.11, rut_b));
 	vec3 road_col = mix(road_compacted, road_earth, center_w);
-	road_col = mix(road_col, road_shoulder, clamp(shoulder_w * 0.85, 0.0, 0.175 / max(road_w, 0.08)));
-	road_col = mix(road_col, road_rut, clamp(rut * 0.40 * road_w, 0.0, 0.40));
-	road_col = mix(road_col, gravel_color, smoothstep(0.80, 0.96, noise2(world_pos.xz * 3.1)) * 0.18 * road_w);
+	road_col = mix(road_col, road_shoulder, clamp(shoulder_w * 0.90, 0.0, 0.28));
+	road_col = mix(road_col, road_rut, clamp(rut * 0.28 * road_w, 0.0, 0.34));
+	road_col = mix(road_col, gravel_color, smoothstep(0.74, 0.96, noise2(world_pos.xz * 1.7 + vec2(3.1, 8.4))) * 0.22 * road_w);
 	ground = mix(ground, road_col, road_w);
 
 	float wash = smoothstep(tint_wash_lo, max(tint_wash_lo + 0.02, tint_wash_hi), broad);

@@ -28,8 +28,8 @@ ASSET_CATALOG_GROUPS = {
         "res://assets/settlement3d/runtime/animations/Rig_Medium/Rig_Medium_Tools.glb",
     ],
     "BUILDINGS": [
-        "res://assets/settlement3d/runtime/buildings/building_castle_green.gltf",
-        "res://assets/settlement3d/runtime/buildings/building_castle_green.gltf",
+        "res://assets/settlement3d/runtime/buildings/civic_keep.gltf",
+        "res://assets/settlement3d/runtime/buildings/civic_castle.gltf",
         "res://assets/settlement3d/runtime/buildings/building_home_A_green.gltf",
         "res://assets/settlement3d/runtime/buildings/building_lumbermill_green.gltf",
         "res://assets/settlement3d/runtime/opening_style/quarry.tscn",
@@ -103,6 +103,13 @@ ASSET_CATALOG_GROUPS = {
         "res://assets/settlement3d/runtime/gfx/terrain/forest_diff.jpg",
         "res://assets/settlement3d/runtime/gfx/terrain/dirt_diff.jpg",
         "res://assets/settlement3d/runtime/gfx/terrain/rock_diff.jpg",
+    ],
+    "ARCHITECTURE": [
+        "res://assets/settlement3d/runtime/gfx/architecture/stone_diff.jpg",
+        "res://assets/settlement3d/runtime/gfx/architecture/plaster_diff.jpg",
+        "res://assets/settlement3d/runtime/gfx/architecture/timber_diff.jpg",
+        "res://assets/settlement3d/runtime/gfx/architecture/slate_diff.jpg",
+        "res://src/GodotClient3D/Shaders/settlement_architecture.gdshader",
     ],
     "FLOWERS": [
         "res://assets/settlement3d/runtime/opening_style/flowers.tscn",

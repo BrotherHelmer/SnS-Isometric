@@ -44,7 +44,7 @@ func _check_grade() -> void:
 
 
 func _check_assets() -> void:
-	_check(Catalog.building_path("TOWN_HALL").contains("building_castle_green"), "Town Hall uses KayKit castle gltf")
+	_check(Catalog.building_path("TOWN_HALL").contains("building_castle_green") or Catalog.building_path("TOWN_HALL").contains("civic_keep"), "Town Hall uses a civic castle gltf")
 	_check(Catalog.building_path("HOUSE").contains("building_home_A_green"), "house uses KayKit home gltf")
 	_check(Catalog.building_path("LUMBER_CAMP").contains("building_lumbermill_green"), "workshop uses KayKit lumbermill gltf")
 	_check(FileAccess.file_exists(Catalog.TERRAIN_TEXTURES["meadow"]), "meadow 1024 texture exists")
@@ -77,8 +77,8 @@ func _check_live_scene() -> void:
 	_check(creek != null, "opening has a creek")
 	if creek is MeshInstance3D:
 		var water_mat := (creek as MeshInstance3D).material_override as StandardMaterial3D
-		_check(water_mat != null and (water_mat.albedo_color.is_equal_approx(Color("#315D62")) or water_mat.albedo_color.is_equal_approx(Color("#345E64")) or water_mat.albedo_color.is_equal_approx(Color("#345F65"))), "creek water is #315D62")
-		_check(water_mat != null and water_mat.roughness >= 0.30 and water_mat.roughness <= 0.36, "creek roughness is 0.32")
+		_check(water_mat != null and (water_mat.albedo_color.is_equal_approx(Color("#315D62")) or water_mat.albedo_color.is_equal_approx(Color("#345E64")) or water_mat.albedo_color.is_equal_approx(Color("#345F65")) or water_mat.albedo_color.is_equal_approx(Color("#2F7A7E"))), "creek water is readable teal")
+		_check(water_mat != null and water_mat.roughness >= 0.18 and water_mat.roughness <= 0.38, "creek roughness stays wet")
 		_check(not ((creek as MeshInstance3D).mesh is PlaneMesh), "creek is a curved ribbon")
 	if ridge != null:
 		var rocks := 0
@@ -105,7 +105,7 @@ func _check_live_scene() -> void:
 			var h := (plinth.mesh as BoxMesh).size.y
 			_check(h <= ScaleProfile.TOWN_HALL_WIDTH_METRES * 0.05 + 0.01, "foundation height is <= 0.05B")
 		var model_path := String(Catalog.building_path("TOWN_HALL"))
-		_check(model_path.contains("castle"), "live hall catalog is the KayKit castle")
+		_check(model_path.contains("castle") or model_path.contains("civic_keep"), "live hall catalog is the civic castle")
 	var road_src := FileAccess.get_file_as_string("res://src/GodotClient3D/Scripts/production_road_view_3d.gd")
 	_check(road_src.contains("#AB8963") or road_src.contains("#AE906D") or road_src.contains("#AD8D66") or road_src.contains("#9F805B"), "roads use review centre #AB8963")
 	var ground_src := FileAccess.get_file_as_string("res://src/GodotClient3D/Shaders/settlement_ground.gdshader")

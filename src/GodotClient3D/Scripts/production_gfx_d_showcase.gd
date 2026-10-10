@@ -59,8 +59,34 @@ static func apply(simulation) -> Dictionary:
 	simulation.is_night = false
 	simulation.phase_time = 80.0
 	report["buildings"] = _count_non_road(simulation)
+	_inhabit(simulation)
+	report["population"] = int(simulation.population_current)
+	report["housing"] = int(simulation.housing_capacity)
+	report["workers"] = simulation.workers.size() if simulation.workers != null else 0
 	report["ok"] = int(report["buildings"]) >= 12 and int(report["roads"]) >= 8
 	return report
+
+
+static func _inhabit(simulation) -> void:
+	# Showcase must look like a working hamlet, not 2/5 pop next to a
+	# town of roads. Housing follows completed houses; settlers fill it.
+	if simulation.has_method("_calculate_housing_capacity_from_buildings"):
+		simulation.housing_capacity = simulation._calculate_housing_capacity_from_buildings()
+	var cap := maxi(int(simulation.housing_capacity), 5)
+	simulation.population_current = clampi(maxi(14, int(round(float(cap) * 0.72))), 2, cap)
+	simulation.presentation_opening_active = false
+	if simulation.has_method("_recalculate_workers_assigned"):
+		simulation._recalculate_workers_assigned()
+	for building_value in simulation.get_buildings():
+		var building: Dictionary = building_value
+		if simulation.has_method("_try_staff_building"):
+			simulation._try_staff_building(building)
+	if simulation.has_method("_sync_production_workers"):
+		simulation._sync_production_workers()
+	if simulation.has_method("_ensure_carriers"):
+		simulation._ensure_carriers()
+	if simulation.has_method("_refresh_worker_hunger_flags"):
+		simulation._refresh_worker_hunger_flags()
 
 
 static func _road_plan(hall: Vector2i) -> Array[Vector2i]:

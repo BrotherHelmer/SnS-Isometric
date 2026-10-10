@@ -385,8 +385,8 @@ func _create_workyard() -> void:
 			_add_k_notice_board(Vector3(0.85, 0.0, 2.55))
 			_add_k_flag(Vector3(1.55, 0.0, 2.35))
 			# Issue #5: Castle upgrade - add military features when barracks built
-			if building_type == "CASTLE":
-				# Add battlements/fortifications
+			if building_type == "CASTLE" and not String(Catalog.building_path("CASTLE")).contains("civic_"):
+				# Authored civic_castle already has rear towers.
 				for side in [-1.0, 1.0]:
 					var turret := MeshInstance3D.new()
 					turret.name = "CastleTurret"
@@ -490,6 +490,11 @@ func _create_workyard() -> void:
 				for col in range(5):
 					var plot := Vector3(-0.25 + float(col) * 0.78, 0.0, -0.30 - float(row) * 0.62)
 					_add_prop("wheat_crop", plot + Vector3(0.0, 0.06, 0.0), Vector3.ONE * 1.58, "WheatCrop")
+			# GFX-Q: crop rows continue off the pad so the farm sits in the land.
+			for row in range(2):
+				for col in range(4):
+					var apron := Vector3(-2.35 + float(col) * 0.70, 0.04, 1.85 + float(row) * 0.52)
+					_add_prop("wheat_crop", apron, Vector3.ONE * 1.35, "WheatApron")
 			_add_prop("wheelbarrow", Vector3(3.15, 0.0, -1.20), Vector3.ONE * 0.76, "InventoryIndicatorWheat", "wheat")
 			# Worn-earth paddock, not a pale rectangle over the wheat.
 			var paddock := MeshInstance3D.new()
@@ -633,7 +638,7 @@ func _create_workyard_grounding() -> void:
 	if workyard_root == null or building_type in ["ROAD", "WALL"]:
 		return
 	var world_size := ScaleProfile.footprint_world_size(footprint)
-	var disc := ContactAO.make_instance("WorkyardDirt", Vector2(world_size.x + 3.2, world_size.y + 3.2), 0.10)
+	var disc := ContactAO.make_instance("WorkyardDirt", Vector2(world_size.x + 3.2, world_size.y + 3.2), 0.22)
 	disc.position = Vector3(0.0, 0.012, 0.15)
 	workyard_root.add_child(disc)
 
@@ -814,7 +819,7 @@ func _update_activity_presentation(active: bool, night: bool) -> void:
 		work_smoke.position = sockets["vfx"].position + Vector3(0.0, 0.85, 0.0)
 		add_child(work_smoke)
 	if work_smoke != null:
-		work_smoke.emitting = active or (night and building_type in ["HOUSE", "TOWN_HALL", "BAKERY"])
+		work_smoke.emitting = active or building_type in ["HOUSE", "TOWN_HALL", "BAKERY"]
 	if building_type == "WATCHTOWER":
 		if lantern_light == null:
 			lantern_light = OmniLight3D.new()
@@ -1302,7 +1307,7 @@ func _create_contact_ao() -> void:
 	var visual := _visual_size()
 	var width := maxf(world_size.x, visual.x) * 1.08
 	var depth := maxf(world_size.y, visual.z) * 1.08
-	var intensity := 0.18 if building_type == "WALL" else 0.24
+	var intensity := 0.22 if building_type == "WALL" else 0.42
 	var disc := ContactAO.make_instance("ContactAO", Vector2(width, depth), intensity)
 	disc.position = Vector3(0.0, 0.018, _model_offset_z())
 	add_child(disc)
