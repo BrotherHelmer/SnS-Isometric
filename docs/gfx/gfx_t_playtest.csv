@@ -1,0 +1,10 @@
+elapsed,day,night,event,detail,wait_ms,frame_ms,errors
+1.7,1,0,opening_day,"opening composed on lush meadow, scenic creek and lived-in hamlet",3564.73,196.941,0
+27.3,1,0,build_day,"first house/road placed from the opening",2482.18,206.554,0
+28.9,1,0,scout_day,"guard scouting toward the west fog",2937.47,219.506,0
+343.7,1,1,first_night,"first night after the opening day",2284.22,175.614,0
+345.3,1,1,night_raid,"first night raid banner",2188.97,196.226,0
+901.6,2,0,fifteen_minutes,"first 15 game minutes complete",2912.17,243.316,0
+903.2,2,0,showcase_day,"15-building village after the live opening",3793.77,305.437,0
+904.8,2,0,showcase_wide,"showcase at the 1.5x zoom cap",4356.03,359.584,0
+906.4,2,0,fog_edge,"1.5x zoom at the unknown edge (day)",4360.20,358.820,0
