@@ -310,7 +310,9 @@ func height_at_logical(tile_position: Vector2) -> float:
 	if simulation == null or map_size == Vector2i.ZERO:
 		return 0.0
 	var tile := Vector2i(clampi(roundi(tile_position.x), 0, map_size.x - 1), clampi(roundi(tile_position.y), 0, map_size.y - 1))
-	return float(simulation.get_height(tile)) * ScaleProfile.TERRAIN_ELEVATION_UNIT_METRES
+	var sim_y := float(simulation.get_height(tile)) * ScaleProfile.TERRAIN_ELEVATION_UNIT_METRES
+	var flat := ScaleProfile.tile_to_flat_world(tile_position, map_size)
+	return sim_y + _visual_relief_y(Vector2(flat.x, flat.z))
 
 
 func focus_for_building(id: int) -> Vector3:
@@ -767,18 +769,20 @@ func _bake_road_control_texture() -> void:
 	if simulation != null and map_size.x > 0:
 		var min_xz := _fog_world_min_xz()
 		var size_xz := _fog_world_size_xz()
-		var visual_w := ScaleProfile.road_width_metres() * 1.32
-		var spoke_w := ScaleProfile.road_width_metres() * 0.58
+		var visual_w := ScaleProfile.road_width_metres() * 1.06
+		var spoke_w := ScaleProfile.road_width_metres() * 0.48
 		var segments: Array[Vector2] = _collect_road_segments()
 		var i := 0
 		while i + 1 < segments.size():
-			_stamp_segment_distance(img, segments[i], segments[i + 1], min_xz, size_xz, visual_w)
+			var wobble := 0.88 + float((i * 13) % 9) * 0.025
+			_stamp_segment_distance(img, segments[i], segments[i + 1], min_xz, size_xz, visual_w * wobble)
 			i += 2
 		var spokes: Array[Vector2] = _collect_hamlet_spokes()
 		i = 0
 		while i + 1 < spokes.size():
 			_stamp_segment_distance(img, spokes[i], spokes[i + 1], min_xz, size_xz, spoke_w)
 			i += 2
+		_stamp_road_junctions(img, min_xz, size_xz, visual_w)
 	if road_control_texture == null:
 		road_control_texture = ImageTexture.create_from_image(img)
 	else:
@@ -857,6 +861,48 @@ func _stamp_segment_distance(img: Image, a: Vector2, b: Vector2, min_xz: Vector2
 				img.set_pixel(x, y, Color(mask, prev.g, prev.b, 1.0))
 
 
+func _stamp_road_junctions(img: Image, min_xz: Vector2, size_xz: Vector2, visual_w: float) -> void:
+	# Circular worn pads replace square plus-junctions.
+	if simulation == null:
+		return
+	for y in range(map_size.y):
+		for x in range(map_size.x):
+			var tile := Vector2i(x, y)
+			if not _is_road_tile(tile):
+				continue
+			var n := 0
+			for dir in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+				if _is_road_tile(tile + dir):
+					n += 1
+			if n < 2:
+				continue
+			var world := tile_to_world(Vector2(tile))
+			var px := _world_to_control_px(Vector2(world.x, world.z), min_xz, size_xz)
+			var radius := visual_w * (0.42 + float(n) * 0.08 + float((x * 7 + y * 11) % 5) * 0.03)
+			_stamp_soft_disk(img, px.x, px.y, radius, min_xz, size_xz)
+
+
+func _stamp_soft_disk(img: Image, cx: int, cy: int, radius_m: float, min_xz: Vector2, size_xz: Vector2) -> void:
+	var res := ROAD_CONTROL_RES
+	var px_per_m := float(res) / maxf(size_xz.x, 1.0)
+	var radius_px := maxi(2, int(ceil(radius_m * px_per_m)))
+	for y in range(cy - radius_px, cy + radius_px + 1):
+		if y < 0 or y >= res:
+			continue
+		for x in range(cx - radius_px, cx + radius_px + 1):
+			if x < 0 or x >= res:
+				continue
+			var world := _control_px_to_world(x, y, min_xz, size_xz)
+			var d := Vector2(world.x - _control_px_to_world(cx, cy, min_xz, size_xz).x, world.y - _control_px_to_world(cx, cy, min_xz, size_xz).y).length()
+			var n := (sin(world.x * 1.3 + world.y * 0.9) * 0.12)
+			var mask := 1.0 - smoothstep(radius_m * 0.45, radius_m * (0.92 + n), d)
+			if mask <= 0.02:
+				continue
+			var prev := img.get_pixel(x, y)
+			if mask > prev.r:
+				img.set_pixel(x, y, Color(mask, prev.g, prev.b, 1.0))
+
+
 func _stamp_road_disk(img: Image, cx: int, cy: int, radius_px: int, road_r: float, px_per_m: float) -> void:
 	var res := ROAD_CONTROL_RES
 	var inner := (road_r * 0.65) * px_per_m
@@ -905,13 +951,14 @@ func _rebuild_terrain_collision(mesh: Mesh) -> void:
 func _add_terrain_cell(surface: SurfaceTool, tile: Vector2i) -> void:
 	var center := ScaleProfile.tile_to_flat_world(Vector2(tile), map_size)
 	var half := ScaleProfile.LOGICAL_CELL_METRES * 0.5
-	var top_y := float(simulation.get_height(tile)) * ScaleProfile.TERRAIN_ELEVATION_UNIT_METRES
+	var sim_y := float(simulation.get_height(tile)) * ScaleProfile.TERRAIN_ELEVATION_UNIT_METRES
 	var corners := [
-		Vector3(center.x - half, top_y, center.z - half),
-		Vector3(center.x + half, top_y, center.z - half),
-		Vector3(center.x + half, top_y, center.z + half),
-		Vector3(center.x - half, top_y, center.z + half),
+		Vector3(center.x - half, sim_y + _visual_relief_y(Vector2(center.x - half, center.z - half)), center.z - half),
+		Vector3(center.x + half, sim_y + _visual_relief_y(Vector2(center.x + half, center.z - half)), center.z - half),
+		Vector3(center.x + half, sim_y + _visual_relief_y(Vector2(center.x + half, center.z + half)), center.z + half),
+		Vector3(center.x - half, sim_y + _visual_relief_y(Vector2(center.x - half, center.z + half)), center.z + half),
 	]
+	var top_y: float = (corners[0].y + corners[1].y + corners[2].y + corners[3].y) * 0.25
 	# Shared-corner colours so adjacent tiles cannot print a diamond
 	# checkerboard from the isometric camera.
 	var corner_colors := [
@@ -927,8 +974,8 @@ func _add_terrain_cell(surface: SurfaceTool, tile: Vector2i) -> void:
 		var neighbor: Vector2i = tile + directions[direction_index]
 		if not simulation.is_inside_map(neighbor):
 			continue
-		var neighbor_y := float(simulation.get_height(neighbor)) * ScaleProfile.TERRAIN_ELEVATION_UNIT_METRES
-		if neighbor_y >= top_y - 0.001:
+		var neighbor_sim := float(simulation.get_height(neighbor)) * ScaleProfile.TERRAIN_ELEVATION_UNIT_METRES
+		if neighbor_sim >= sim_y - 0.001:
 			continue
 		var a: Vector3
 		var b: Vector3
@@ -941,10 +988,60 @@ func _add_terrain_cell(surface: SurfaceTool, tile: Vector2i) -> void:
 				a = corners[3]; b = corners[2]
 			_:
 				a = corners[0]; b = corners[3]
-		var down_a := Vector3(a.x, neighbor_y, a.z)
-		var down_b := Vector3(b.x, neighbor_y, b.z)
+		var down_a := Vector3(a.x, neighbor_sim + _visual_relief_y(Vector2(a.x, a.z)), a.z)
+		var down_b := Vector3(b.x, neighbor_sim + _visual_relief_y(Vector2(b.x, b.z)), b.z)
 		var normal := Vector3(float(directions[direction_index].x), 0.0, float(directions[direction_index].y))
 		_add_quad(surface, a, b, down_b, down_a, normal, color.darkened(0.24))
+
+
+func _visual_relief_y(xz: Vector2) -> float:
+	# Presentation only. Simulation height is unchanged. Village stays
+	# nearly flat; the back ridge grows 0.08–0.18B; creek sits in a
+	# shallow cut; worn paths dip 3–6 cm. No camera-side cliff.
+	if simulation == null or map_size == Vector2i.ZERO:
+		return 0.0
+	var b := ScaleProfile.TOWN_HALL_WIDTH_METRES
+	var hall := Vector2i.ZERO
+	if simulation.is_town_hall_founded():
+		hall = simulation.town_hall_position + Vector2i(2, 2)
+	var hall_world := ScaleProfile.tile_to_flat_world(Vector2(hall), map_size)
+	var dx := xz.x - hall_world.x
+	var dz := xz.y - hall_world.z
+	var dist := Vector2(dx, dz).length()
+	var village := 1.0 - smoothstep(7.0, 14.0, dist)
+	var back := smoothstep(-2.0, -14.0, dz)
+	var ridge_h := lerpf(0.08 * b, 0.18 * b, clampf((-dz - 4.0) / 18.0, 0.0, 1.0))
+	var noise := 0.82 + 0.18 * sin(xz.x * 0.11 + xz.y * 0.07)
+	var ridge := back * ridge_h * noise * (1.0 - village)
+	var peri := smoothstep(22.0, 48.0, dist) * 0.07 * b
+	if dz > 3.0:
+		peri *= 0.15
+		ridge = 0.0
+	peri *= (1.0 - village)
+	return ridge + peri + _creek_cut_at(xz) + _road_dip_at(xz)
+
+
+func _creek_cut_at(xz: Vector2) -> float:
+	if simulation == null or not simulation.is_town_hall_founded():
+		return 0.0
+	var hall: Vector2i = simulation.town_hall_position
+	var best := 999.0
+	for offset in [Vector2i(-5, -2), Vector2i(-6, 1), Vector2i(-6, 4), Vector2i(-5, 7), Vector2i(-7, 10), Vector2i(-8, 13), Vector2i(-9, 16)]:
+		var p := ScaleProfile.tile_to_flat_world(Vector2(hall + offset), map_size)
+		best = minf(best, Vector2(xz.x - p.x, xz.y - p.z).length())
+	var bank := ScaleProfile.road_width_metres() * 0.85
+	if best > bank + 1.6:
+		return 0.0
+	return -0.12 * (1.0 - smoothstep(0.35, bank + 1.2, best))
+
+
+func _road_dip_at(xz: Vector2) -> float:
+	var tile := world_to_tile(Vector3(xz.x, 0.0, xz.y))
+	if _is_road_tile(tile):
+		return -0.045
+	if _is_road_shoulder(tile):
+		return -0.022
+	return 0.0
 
 
 func _add_quad(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, normal: Vector3, color: Color) -> void:
@@ -1224,7 +1321,7 @@ func _rebuild_nature_multimeshes() -> void:
 			if index % 2 != 0:
 				continue
 			tree_floors.append(ContactAO.flatten_transform(batch[index], 1.7))
-	ContactAO.spawn_multimesh(resource_visuals_root, tree_floors, 0.22)
+	ContactAO.spawn_multimesh(resource_visuals_root, tree_floors, 0.34)
 
 
 func _sync_grass(force: bool) -> void:
@@ -2952,12 +3049,12 @@ func _add_rim_face(surface: SurfaceTool, tile: Vector2i, outward: Vector2i) -> i
 		return 0
 	var center := ScaleProfile.tile_to_flat_world(Vector2(tile), map_size)
 	var half := ScaleProfile.LOGICAL_CELL_METRES * 0.5
-	var top_y := float(simulation.get_height(tile)) * ScaleProfile.TERRAIN_ELEVATION_UNIT_METRES
+	var sim_y := float(simulation.get_height(tile)) * ScaleProfile.TERRAIN_ELEVATION_UNIT_METRES
 	var corners := [
-		Vector3(center.x - half, top_y, center.z - half),
-		Vector3(center.x + half, top_y, center.z - half),
-		Vector3(center.x + half, top_y, center.z + half),
-		Vector3(center.x - half, top_y, center.z + half),
+		Vector3(center.x - half, sim_y + _visual_relief_y(Vector2(center.x - half, center.z - half)), center.z - half),
+		Vector3(center.x + half, sim_y + _visual_relief_y(Vector2(center.x + half, center.z - half)), center.z - half),
+		Vector3(center.x + half, sim_y + _visual_relief_y(Vector2(center.x + half, center.z + half)), center.z + half),
+		Vector3(center.x - half, sim_y + _visual_relief_y(Vector2(center.x - half, center.z + half)), center.z + half),
 	]
 	var a: Vector3
 	var b: Vector3
@@ -3090,7 +3187,7 @@ func _rebuild_edge_forest(force: bool) -> void:
 			if index % 4 != 0:
 				continue
 			floors.append(ContactAO.flatten_transform(batch[index], 2.1))
-	ContactAO.spawn_multimesh(edge_forest_root, floors, 0.22)
+	ContactAO.spawn_multimesh(edge_forest_root, floors, 0.34)
 
 
 func _append_rim_woodland(groups: Dictionary) -> void:
@@ -3288,10 +3385,17 @@ func _spawn_opening_hamlet(host: Node3D, hall: Vector2i, reserved: Dictionary) -
 	_spawn_dress_prop(host, "barrel", hall + Vector2i(5, 1), 25.0, 0.88, "DressBarrelEast", Vector3(-0.8, 0.0, 1.1))
 	_spawn_dress_prop(host, "stone_stack", hall + Vector2i(4, 3), 12.0, 0.55, "DressCrossroadsStone")
 	_spawn_dress_prop(host, "crate", hall + Vector2i(4, 2), -8.0, 0.72, "DressSignCrate", Vector3(0.4, 0.0, 0.2))
+	_spawn_dress_prop(host, "fence", hall + Vector2i(-2, 3), 0.0, 1.0, "DressFenceNorthA")
+	_spawn_dress_prop(host, "fence", hall + Vector2i(3, 3), 0.0, 1.0, "DressFenceNorthB")
+	_spawn_dress_prop(host, "cart", hall + Vector2i(-2, 4), 22.0, 0.70, "DressCartWest")
+	_spawn_dress_prop(host, "crate", hall + Vector2i(3, 2), 12.0, 0.68, "DressCrateEast")
+	_spawn_dress_prop(host, "long_crate", hall + Vector2i(5, 2), -6.0, 0.70, "DressLongCrate")
+	_spawn_dress_prop(host, "crate", hall + Vector2i(-4, 2), 8.0, 0.65, "DressCrateWest")
 	_spawn_opening_crops(host, hall + Vector2i(3, -4))
 	_spawn_dress_pond(host, hall + Vector2i(-5, -3), Vector2(5.4, 3.6), "DressPond")
 	_spawn_dress_prop(host, "stone_stack", hall + Vector2i(-5, -2), 22.0, 0.70, "DressPondStoneA", Vector3(1.6, 0.0, 0.8))
 	_spawn_dress_prop(host, "fence", hall + Vector2i(-6, -4), 0.0, 0.92, "DressPondFence")
+	_spawn_dress_coast(host, hall)
 	_spawn_opening_ridge(host, hall)
 	host.set_meta("hamlet_cottages", cottages)
 	host.set_meta("hamlet_reserved", reserved.size())
@@ -3338,9 +3442,9 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 	ridge.name = "DressRidge"
 	ridge.set_meta("cosmetic_only", true)
 	host.add_child(ridge)
-	var highlight := _ridge_material(Color("#B9AC92"), 0.92)
-	var midtone := _ridge_material(Color("#918C79"), 0.92)
-	var shade := _ridge_material(Color("#61675B"), 0.92)
+	var highlight := _ridge_material(Color("#8A8270"), 0.94)
+	var midtone := _ridge_material(Color("#6E6A5C"), 0.94)
+	var shade := _ridge_material(Color("#4E5348"), 0.94)
 	var b := ScaleProfile.TOWN_HALL_WIDTH_METRES
 	var r := ScaleProfile.road_width_metres()
 	var house_h := 0.930 * 4.40
@@ -3390,6 +3494,16 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 	formation_shade.rotation.y = 0.52
 	formation_shade.material_override = shade
 	ridge.add_child(formation_shade)
+	for ledge_i in 5:
+		var ledge := MeshInstance3D.new()
+		ledge.name = "RidgeLedge_%d" % ledge_i
+		var ledge_mesh := BoxMesh.new()
+		ledge_mesh.size = Vector3(1.35 + float(ledge_i) * 0.22, 0.28, 0.55)
+		ledge.mesh = ledge_mesh
+		ledge.position = formation.position + Vector3(-2.2 + float(ledge_i) * 1.15, 0.18 + float(ledge_i % 2) * 0.22, 0.4 - float(ledge_i) * 0.18)
+		ledge.rotation.y = 0.22 + float(ledge_i) * 0.31
+		ledge.material_override = shade if ledge_i % 2 == 0 else highlight
+		ridge.add_child(ledge)
 	_spawn_meandering_creek(ridge, hall, r)
 
 
@@ -3403,9 +3517,9 @@ func _spawn_kaykit_ridge_rock(ridge: Node3D, tile: Vector2i, index: int, scale_m
 	prop.position = tile_to_world(Vector2(tile)) + Vector3(0.55, 0.0, -0.40)
 	prop.rotation.y = float(index) * 0.73
 	prop.scale = Vector3.ONE * clampf(scale_mul, 0.55, 1.15)
-	var tint := Color("#918C79") if index % 3 != 0 else Color("#B9AC92")
+	var tint := Color("#6E6A5C") if index % 3 != 0 else Color("#8A8270")
 	if index % 3 == 2:
-		tint = Color("#61675B")
+		tint = Color("#4E5348")
 	for child in prop.find_children("*", "MeshInstance3D", true, false):
 		var mesh_i := child as MeshInstance3D
 		var mat := StandardMaterial3D.new()
@@ -3436,32 +3550,70 @@ func _spawn_meandering_creek(ridge: Node3D, hall: Vector2i, road_w: float) -> vo
 		return
 	var width := clampf(road_w * 0.65, road_w * 0.55, road_w * 0.75)
 	var bank := _ridge_material(Color("#786C50"), 0.92)
-	var shallow := _ridge_material(Color("#668F89"), 0.42)
+	var wet := _ridge_material(Color("#3D5552"), 0.55)
+	var shallow := _ridge_material(Color("#5AA0A0"), 0.28)
 	var water := StandardMaterial3D.new()
 	water.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
-	water.albedo_color = Color("#345F65")
-	water.roughness = 0.35
-	water.metallic = 0.0
+	water.albedo_color = Color("#2F7A7E")
+	water.roughness = 0.22
+	water.metallic = 0.08
+	water.specular_mode = BaseMaterial3D.SPECULAR_SCHLICK_GGX
 	var mud := MeshInstance3D.new()
 	mud.name = "DressCreekBank"
-	mud.mesh = _creek_ribbon_mesh(points, width + road_w * 0.40, road_w)
+	mud.mesh = _creek_ribbon_mesh(points, width + road_w * 0.52, road_w)
 	mud.material_override = bank
 	mud.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	ridge.add_child(mud)
+	var wet_edge := MeshInstance3D.new()
+	wet_edge.name = "DressCreekShore"
+	wet_edge.mesh = _creek_ribbon_mesh(points, width + road_w * 0.22, road_w)
+	wet_edge.position.y = 0.008
+	wet_edge.material_override = wet
+	wet_edge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	ridge.add_child(wet_edge)
 	var shallows := MeshInstance3D.new()
 	shallows.name = "DressCreekShallow"
 	shallows.mesh = _creek_ribbon_mesh(points, width * 1.18, road_w)
-	shallows.position.y = 0.012
+	shallows.position.y = 0.014
 	shallows.material_override = shallow
 	shallows.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	ridge.add_child(shallows)
 	var creek := MeshInstance3D.new()
 	creek.name = "DressCreek"
 	creek.mesh = _creek_ribbon_mesh(points, width, road_w)
-	creek.position.y = 0.022
+	creek.position.y = 0.024
 	creek.material_override = water
 	creek.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	ridge.add_child(creek)
+	_dress_creek_shoreline(ridge, points)
+
+
+func _dress_creek_shoreline(ridge: Node3D, points: Array[Vector3]) -> void:
+	# Irregular stones and reeds so the channel reads as a shoreline.
+	var stone := _ridge_material(Color("#6E6A5C"), 0.94)
+	var reed := _ridge_material(Color("#4A6A3C"), 0.88)
+	for i in points.size():
+		var p: Vector3 = points[i]
+		var side := 1.0 if i % 2 == 0 else -1.0
+		var rock := MeshInstance3D.new()
+		rock.name = "CreekStone_%d" % i
+		var mesh := SphereMesh.new()
+		mesh.radius = 0.22 + float(i % 3) * 0.06
+		mesh.height = mesh.radius * 1.35
+		rock.mesh = mesh
+		rock.position = p + Vector3(side * (0.85 + float(i % 3) * 0.18), 0.08, float((i * 3) % 5) * 0.08)
+		rock.scale = Vector3(1.15, 0.62, 0.90)
+		rock.material_override = stone
+		ridge.add_child(rock)
+		if i % 2 == 0:
+			var blade := MeshInstance3D.new()
+			blade.name = "CreekReed_%d" % i
+			var reed_mesh := BoxMesh.new()
+			reed_mesh.size = Vector3(0.06, 0.55 + float(i % 3) * 0.12, 0.06)
+			blade.mesh = reed_mesh
+			blade.position = p + Vector3(-side * 0.72, 0.28, 0.10)
+			blade.material_override = reed
+			ridge.add_child(blade)
 
 
 func _creek_ribbon_mesh(points: Array[Vector3], width: float, road_w: float = 2.425) -> ArrayMesh:
@@ -3601,6 +3753,38 @@ func _spawn_dress_pond(host: Node3D, tile: Vector2i, size: Vector2, node_name: S
 	pond.material_override = water
 	pond.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	host.add_child(pond)
+
+
+func _spawn_dress_coast(host: Node3D, hall: Vector2i) -> void:
+	# GFX-Q: west water-edge apron so the pond reads into the creek cut.
+	var edge := MeshInstance3D.new()
+	edge.name = "DressCoastEdge"
+	var mesh := PlaneMesh.new()
+	mesh.size = Vector2(4.2, 7.4)
+	edge.mesh = mesh
+	edge.position = tile_to_world(Vector2(hall + Vector2i(-6, 1))) + Vector3(0.4, 0.03, 0.0)
+	edge.rotation.y = 0.18
+	var water := StandardMaterial3D.new()
+	water.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+	water.albedo_color = Color("#345F65")
+	water.roughness = 0.35
+	water.metallic = 0.0
+	edge.material_override = water
+	edge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	host.add_child(edge)
+	var bank := MeshInstance3D.new()
+	bank.name = "DressCoastBank"
+	var bank_mesh := BoxMesh.new()
+	bank_mesh.size = Vector3(4.8, 0.16, 0.55)
+	bank.mesh = bank_mesh
+	bank.position = edge.position + Vector3(1.6, 0.02, 0.2)
+	bank.rotation.y = 0.22
+	var mud := StandardMaterial3D.new()
+	mud.albedo_color = Color("#786C50")
+	mud.roughness = 0.92
+	bank.material_override = mud
+	host.add_child(bank)
+	host.set_meta("hamlet_coast", 1)
 
 
 func _dress_footprint_free(tile: Vector2i, width: int, height: int) -> bool:

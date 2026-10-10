@@ -1,13 +1,14 @@
 class_name ProductionBuildingMaterials
 extends RefCounted
 
-## GFX-P landmark remap. Walks imported meshes. Does not remodel.
-## Civic walls ignore the green atlas. Light stone #CDBFA2 / #E0D0B2 /
-## #82796A, timber #5F442F, slate #456B68. Civic roughness 0.90.
-## Castle / hall wall_lift is 1.22.
+## GFX-Q civic architecture. Town Hall / Castle use named-mesh glTF
+## plus 1K CC0 maps under the P palettes. Houses / mill stay KayKit.
+## Light stone #CDBFA2 / #E0D0B2 / #82796A, timber #5F442F, slate #456B68.
 
 const BevelShader = preload("res://src/GodotClient3D/Shaders/settlement_bevel.gdshader")
 const KaykitRemap = preload("res://src/GodotClient3D/Shaders/settlement_kaykit_remap.gdshader")
+const ArchShader = preload("res://src/GodotClient3D/Shaders/settlement_architecture.gdshader")
+const Catalog = preload("res://src/GodotClient3D/Scripts/production_asset_catalog.gd")
 
 const ROUGHNESS := {
 	"plaster": 0.95,
@@ -39,6 +40,9 @@ static var _bevel_by_kind: Dictionary = {}
 static func apply(root: Node, seed_id: int, building_type: String = "") -> void:
 	if root == null:
 		return
+	if _is_civic_keep(building_type):
+		_apply_civic_architecture(root, building_type)
+		return
 	if _is_kaykit_hexagon(building_type):
 		_apply_kaykit_remap(root, building_type)
 		return
@@ -48,8 +52,83 @@ static func apply(root: Node, seed_id: int, building_type: String = "") -> void:
 		_lift_landmark_walls(root)
 
 
+static func _is_civic_keep(building_type: String) -> bool:
+	return building_type == "TOWN_HALL" or building_type == "CASTLE"
+
+
 static func _is_kaykit_hexagon(building_type: String) -> bool:
-	return building_type == "TOWN_HALL" or building_type == "CASTLE" or building_type == "HOUSE" or building_type == "LUMBER_CAMP" or building_type == "SAWMILL"
+	return building_type == "HOUSE" or building_type == "LUMBER_CAMP" or building_type == "SAWMILL"
+
+
+static func _apply_civic_architecture(root: Node, building_type: String) -> void:
+	# Bind by mesh name. Roof is geometry, not an atlas classify.
+	var stone_tex: Texture2D = load(String(Catalog.ARCH_TEXTURES["stone"])) as Texture2D
+	var plaster_tex: Texture2D = load(String(Catalog.ARCH_TEXTURES["plaster"])) as Texture2D
+	var timber_tex: Texture2D = load(String(Catalog.ARCH_TEXTURES["timber"])) as Texture2D
+	var slate_tex: Texture2D = load(String(Catalog.ARCH_TEXTURES["slate"])) as Texture2D
+	for node in root.find_children("*", "MeshInstance3D", true, false):
+		var instance := node as MeshInstance3D
+		if instance == null:
+			continue
+		var mesh_name := String(instance.name)
+		var kind := "stone"
+		var tint := Color("#CDBFA2")
+		var tex: Texture2D = stone_tex
+		var uv_scale := 2.8
+		var emission := 0.08
+		var mix_amt := 0.30
+		var boost := 1.10
+		var lift := 1.12
+		if mesh_name.contains("Roof") or mesh_name.contains("Cone"):
+			kind = "slate"
+			tint = HALL_SLATE
+			tex = slate_tex
+			uv_scale = 3.2
+			emission = 0.0
+			mix_amt = 0.48
+			boost = 1.0
+			lift = 0.92
+		elif mesh_name.contains("Plaster"):
+			kind = "plaster"
+			tint = WARM_PLASTER.lerp(CASTLE_LIMESTONE, 0.28)
+			tex = plaster_tex
+			uv_scale = 2.2
+			emission = 0.04
+			mix_amt = 0.34
+			boost = 1.06
+			lift = 1.08
+		elif mesh_name.contains("Timber") or mesh_name.contains("Door") or mesh_name.contains("Window"):
+			kind = "timber"
+			tint = DARK_TIMBER
+			tex = timber_tex
+			uv_scale = 2.0
+			emission = 0.0
+			mix_amt = 0.40
+			boost = 1.0
+			lift = 0.96
+		elif mesh_name.contains("Crenel") or mesh_name.contains("Plinth"):
+			kind = "stone"
+			tint = CASTLE_LIMESTONE.lerp(CASTLE_MASONRY, 0.34)
+			tex = stone_tex
+			uv_scale = 2.4
+			emission = 0.04
+			mix_amt = 0.36
+			boost = 1.04
+			lift = 1.06
+		var material := ShaderMaterial.new()
+		material.shader = ArchShader
+		if tex != null:
+			material.set_shader_parameter("albedo_tex", tex)
+		material.set_shader_parameter("tint", tint)
+		material.set_shader_parameter("tex_mix", mix_amt)
+		material.set_shader_parameter("roughness", 0.90)
+		material.set_shader_parameter("uv_scale", uv_scale)
+		material.set_shader_parameter("luma_lift", lift)
+		material.set_shader_parameter("emission_amt", emission)
+		material.set_shader_parameter("value_boost", boost)
+		instance.material_override = material
+		instance.set_meta("civic_kind", kind)
+		instance.set_meta("civic_building", building_type)
 
 
 static func _apply_kaykit_remap(root: Node, building_type: String) -> void:

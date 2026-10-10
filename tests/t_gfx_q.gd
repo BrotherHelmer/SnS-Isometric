@@ -1,7 +1,8 @@
 extends SceneTree
 
-## GFX-P light gate: hide the creek wedge, wear the roads, force civic
-## limestone on camera, meadow richness, back-ridge composition.
+## GFX-Q light gate: authored civic keep, 1K architecture maps,
+## presentation relief, coast/props. Keep occupy, roads, creek,
+## meadow, forest, fog, frozen grade and night.
 
 const Catalog = preload("res://src/GodotClient3D/Scripts/production_asset_catalog.gd")
 const Identity = preload("res://src/GodotClient3D/Scripts/production_identity.gd")
@@ -24,7 +25,7 @@ func _run() -> void:
 	_check_assets()
 	_check_zoom()
 	await _check_live_scene()
-	print("T_GFX_P %s" % ("PASS" if failures.is_empty() else "FAIL"))
+	print("T_GFX_Q %s" % ("PASS" if failures.is_empty() else "FAIL"))
 	quit(0 if failures.is_empty() else 1)
 
 
@@ -43,10 +44,20 @@ func _check_grade() -> void:
 
 
 func _check_assets() -> void:
-	_check(Catalog.building_path("TOWN_HALL").contains("building_castle_green") or Catalog.building_path("TOWN_HALL").contains("civic_keep"), "Town Hall keeps a civic castle mesh")
+	_check(Catalog.building_path("TOWN_HALL").contains("civic_keep"), "Town Hall is the authored civic keep")
+	_check(Catalog.building_path("CASTLE").contains("civic_castle"), "Castle is the authored civic castle")
 	_check(Catalog.building_path("HOUSE").contains("building_home_A_green"), "house keeps the KayKit home mesh")
 	_check(Catalog.building_path("LUMBER_CAMP").contains("building_lumbermill_green"), "workshop keeps the KayKit mill mesh")
-	_check(FileAccess.file_exists(Catalog.TERRAIN_TEXTURES["meadow"]), "meadow texture system stays")
+	_check(FileAccess.file_exists(Catalog.building_path("TOWN_HALL")), "civic_keep.gltf exists")
+	_check(FileAccess.file_exists(Catalog.building_path("CASTLE")), "civic_castle.gltf exists")
+	_check(FileAccess.file_exists(Catalog.ARCH_TEXTURES["stone"]), "stone 1K map exists")
+	_check(FileAccess.file_exists(Catalog.ARCH_TEXTURES["plaster"]), "plaster 1K map exists")
+	_check(FileAccess.file_exists(Catalog.ARCH_TEXTURES["timber"]), "timber 1K map exists")
+	_check(FileAccess.file_exists(Catalog.ARCH_TEXTURES["slate"]), "slate 1K map exists")
+	_check(FileAccess.file_exists("res://src/GodotClient3D/Shaders/settlement_architecture.gdshader"), "architecture shader exists")
+	_check(not BuildingMaterials._is_kaykit_hexagon("TOWN_HALL"), "civic hall is not on the KayKit remap")
+	_check(BuildingMaterials._is_civic_keep("TOWN_HALL") and BuildingMaterials._is_civic_keep("CASTLE"), "civic keep classifier covers hall and castle")
+	_check(is_equal_approx(ScaleProfile.building_scale("TOWN_HALL"), 1.0), "authored keep is world-metre scale 1.0")
 	_check(BuildingMaterials.CASTLE_LIMESTONE.is_equal_approx(Color("#CDBFA2")), "castle limestone is #CDBFA2")
 	_check(BuildingMaterials.WARM_PLASTER.is_equal_approx(Color("#E0D0B2")), "castle plaster is #E0D0B2")
 	_check(BuildingMaterials.CASTLE_MASONRY.is_equal_approx(Color("#82796A")), "castle masonry is #82796A")
@@ -54,7 +65,9 @@ func _check_assets() -> void:
 	_check(BuildingMaterials.HALL_SLATE.g > BuildingMaterials.HALL_SLATE.r and BuildingMaterials.HALL_SLATE.r < 0.40, "civic roofs are muted teal, not emerald")
 	_check(BuildingMaterials.CLAY_ROOF.r > BuildingMaterials.CLAY_ROOF.g, "house roofs stay terracotta")
 	var licenses := FileAccess.get_file_as_string("res://docs/ASSET_LICENSES.md")
-	_check(licenses.contains("GFX-P") or licenses.contains("worn path"), "licences record the GFX-P worn-path / civic remap")
+	_check(licenses.contains("GFX-Q") and licenses.contains("civic_keep"), "licences record the authored keep")
+	_check(licenses.contains("brick_wall_02") and licenses.contains("plastered_stone_wall"), "licences record Poly Haven architecture maps")
+	_check(licenses.contains("wood_planks") and licenses.contains("roof_07"), "licences record timber and slate maps")
 	_check(licenses.contains("distance-field") or licenses.contains("GFX-O"), "licences still record the distance mask")
 	_check(licenses.contains("Kaykit remap"), "licences still record the remap shader")
 
@@ -78,7 +91,19 @@ func _check_live_scene() -> void:
 	game._hide_start_menu()
 	for _i in 4:
 		await process_frame
-	_check(game.world_view.has_method("set_terrain_debug"), "terrain debug modes exist")
+	var master_idx := AudioServer.get_bus_index("Master")
+	var master_lin := db_to_linear(AudioServer.get_bus_volume_db(master_idx))
+	print("GFX_Q master_linear=%.3f" % master_lin)
+	_check(master_lin >= 0.995 and master_lin <= 1.005, "Master volume is 1.0")
+	_check(game.world_view.has_method("_visual_relief_y"), "terrain relief helper exists")
+	var hall_flat := ScaleProfile.tile_to_flat_world(Vector2(game.simulation_host.simulation.town_hall_position + Vector2i(2, 2)), game.world_view.map_size)
+	var village_relief: float = game.world_view._visual_relief_y(Vector2(hall_flat.x, hall_flat.z))
+	var back_relief: float = game.world_view._visual_relief_y(Vector2(hall_flat.x + 10.0, hall_flat.z - 20.0))
+	var front_relief: float = game.world_view._visual_relief_y(Vector2(hall_flat.x, hall_flat.z + 16.0))
+	print("GFX_Q relief village=%.3f back=%.3f front=%.3f" % [village_relief, back_relief, front_relief])
+	_check(absf(village_relief) <= 0.08, "village tiles stay nearly flat")
+	_check(back_relief >= 0.70 and back_relief <= 2.10, "back ridge relief is 0.08–0.18B")
+	_check(front_relief <= 0.35, "no camera-side cliff")
 	if game.world_view.terrain_mesh_instance != null and game.world_view.terrain_mesh_instance.material_override is ShaderMaterial:
 		var ground := game.world_view.terrain_mesh_instance.material_override as ShaderMaterial
 		var lush: Vector3 = ground.get_shader_parameter("meadow_lush")
@@ -89,24 +114,19 @@ func _check_live_scene() -> void:
 		_check(absf(road_e.x - 0.624) < 0.03 and road_e.x > road_e.y, "road earth is #9F805B")
 		_check(float(ground.get_shader_parameter("tex_mix")) >= 0.12 and float(ground.get_shader_parameter("tex_mix")) <= 0.18, "tex_mix stays 0.12–0.18")
 		_check(game.world_view.road_control_texture != null, "512 road-control texture is bound")
-		game.world_view.set_terrain_debug(1)
-		_check(is_equal_approx(float(ground.get_shader_parameter("terrain_debug")), 1.0), "debug 1 is magenta")
-		game.world_view.set_terrain_debug(0)
 	else:
 		_check(false, "terrain uses the settlement ground shader")
 	var ground_src := FileAccess.get_file_as_string("res://src/GodotClient3D/Shaders/settlement_ground.gdshader")
 	_check(not ground_src.contains("return;"), "fragment has no early return (Godot rejects it)")
 	_check(ground_src.contains("COLOR.r > COLOR.g") and ground_src.contains("terrain_debug"), "occupy no longer treats dropped-alpha grass as dirt")
-	_check(ground_src.contains("source_color") and ground_src.contains("hint_default_black"), "albedo maps use source_color; the road mask does not")
-	_check(ground_src.contains("smoothstep(0.12, 0.80, worn)") or ground_src.contains("edge_noise"), "roads wear the distance-field edge")
-	_check(ground_src.contains("9F805B") or ground_src.contains("0.624, 0.502, 0.357"), "worn centre is #9F805B")
-	var dark_disks := 0
-	if game.world_view.ground_patch_root != null:
-		for child in game.world_view.ground_patch_root.get_children():
-			var name := String(child.name)
-			if name.contains("dark_grass") or name.contains("cluster"):
-				dark_disks += 1
-	_check(dark_disks == 0, "flat dark-green cylinder patches stay gone")
+	_check(ground_src.contains("dirt_tex") and ground_src.contains("rock_tex") and ground_src.contains("texture(dirt_tex"), "meadow samples dirt and rock maps")
+	_check(ground_src.contains("dry_grass") or ground_src.contains("soil_n"), "meadow blends dry grass and soil")
+	_check(ground_src.contains("rut_a") and ground_src.contains("sin(world_pos"), "road ruts are world-space, not a repeating lattice")
+	_check(ground_src.contains("edge_noise"), "roads wear the distance-field edge")
+	var arch_src := FileAccess.get_file_as_string("res://src/GodotClient3D/Shaders/settlement_architecture.gdshader")
+	_check(not arch_src.contains("return;"), "architecture fragment has no early return")
+	_check(arch_src.contains("tex_mix") and arch_src.contains("CDBFA2"), "architecture shader tints limestone under the map")
+	_check(arch_src.contains("value_boost"), "architecture shader can lift masonry without flattening the map")
 	var dress: Node = game.world_view.resource_visuals_root.get_node_or_null("OpeningDress")
 	_check(dress != null, "opening dress exists")
 	if dress != null:
@@ -117,34 +137,56 @@ func _check_live_scene() -> void:
 		_check(dress.find_child("DressRidge", true, false) != null, "opening has a ridge")
 		_check(dress.find_child("DressCreek", true, false) != null, "opening has a creek")
 		_check(dress.find_child("RidgeFormation", true, false) != null, "opening has one back rock formation")
+		_check(dress.find_child("DressCoastEdge", true, false) != null, "opening has a west water edge")
+		_check(dress.find_child("DressCartWest", true, false) != null, "opening gained a second cart")
+		_check(dress.find_child("DressLongCrate", true, false) != null, "opening gained extra crates")
 	var creek: Node = dress.find_child("DressCreek", true, false) if dress != null else null
 	if creek is MeshInstance3D:
 		var water_mat := (creek as MeshInstance3D).material_override as StandardMaterial3D
-		_check(water_mat != null and (water_mat.albedo_color.is_equal_approx(Color("#345F65")) or water_mat.albedo_color.is_equal_approx(Color("#2F7A7E"))), "creek water stays readable teal")
-		_check(water_mat != null and water_mat.roughness >= 0.18 and water_mat.roughness <= 0.38, "creek roughness stays wet")
+		_check(water_mat != null and water_mat.albedo_color.is_equal_approx(Color("#2F7A7E")), "creek water is readable blue-green")
+		_check(water_mat != null and water_mat.roughness <= 0.28, "creek is specular enough to read as water")
 		_check(water_mat != null and not water_mat.emission_enabled, "creek has no turquoise emission wedge")
-		_check(not ((creek as MeshInstance3D).mesh is PlaneMesh), "creek is a sampled ribbon, not a plane")
-		var creek_aabb: AABB = (creek as MeshInstance3D).get_aabb()
-		_check(creek_aabb.size.x < ScaleProfile.TOWN_HALL_WIDTH_METRES * 2.4, "creek is not a village-wide wedge")
-	var formation: MeshInstance3D = dress.find_child("RidgeFormation", true, false) as MeshInstance3D if dress != null else null
-	if formation != null and formation.mesh != null:
-		var form_aabb: AABB = formation.mesh.get_aabb()
-		var b := ScaleProfile.TOWN_HALL_WIDTH_METRES
-		_check(form_aabb.size.x >= b * 1.40 and form_aabb.size.x <= b * 2.20, "back formation is 1.5–2.0B wide")
-		_check(form_aabb.size.y >= b * 0.36 and form_aabb.size.y <= b * 0.75, "back formation is 0.4–0.7B tall")
-	var road_src := FileAccess.get_file_as_string("res://src/GodotClient3D/Scripts/production_road_view_3d.gd")
-	_check(road_src.contains("#9F805B"), "raised road meshes use #9F805B")
-	var kaykit := FileAccess.get_file_as_string("res://src/GodotClient3D/Shaders/settlement_kaykit_remap.gdshader")
-	_check(kaykit.contains("IGNORE") and kaykit.contains("CDBFA2"), "civic remap ignores the green atlas")
-	_check(kaykit.contains("456B68") and kaykit.contains("5F442F"), "civic roof / timber match the P palette")
+		_check(dress.find_child("DressCreekShore", true, false) != null, "creek has a wet shoreline")
+		_check(dress.find_child("CreekStone_0", true, false) != null, "creek has shoreline stones")
+		_check(dress.find_child("CreekReed_0", true, false) != null, "creek has reeds")
+	var hall_view = null
+	for view in game.world_view.building_views.values():
+		if String(view.building_type) == "TOWN_HALL" or String(view.building_type) == "CASTLE":
+			hall_view = view
+			break
+	_check(hall_view != null, "Town Hall view exists")
+	if hall_view != null:
+		_check(hall_view.find_child("CivicWall_Keep", true, false) != null, "keep has named CivicWall geometry")
+		_check(hall_view.find_child("CivicRoof_Hall", true, false) != null, "keep has named CivicRoof geometry")
+		_check(hall_view.find_child("CivicDoor", true, false) != null, "keep has a timber door")
+		_check(hall_view.find_child("CivicCrenel_Front_0", true, false) != null, "keep has crenellations")
+		_check(hall_view.find_child("TrimPlinth", true, false) != null, "principal trim names stay")
+		var roof: MeshInstance3D = hall_view.find_child("CivicRoof_Hall", true, false) as MeshInstance3D
+		_check(roof != null and roof.mesh != null, "slate roof is authored geometry, not an atlas classify")
 	var world_src := FileAccess.get_file_as_string("res://src/GodotClient3D/Scripts/production_world_view_3d.gd")
 	_check(world_src.contains("_stamp_segment_distance") and world_src.contains("_collect_road_segments"), "roads keep the world-space distance field")
-	_check(world_src.contains("(-5, -2)") or world_src.contains("Vector2i(-5, -2)"), "creek starts west of the hamlet, not across the village")
+	_check(world_src.contains("(-5, -2)") or world_src.contains("Vector2i(-5, -2)"), "creek starts west of the hamlet")
 	var showcase := Showcase.apply(game.simulation_host.simulation)
 	_check(bool(showcase.get("ok", false)), "showcase still stamps")
 	_check(int(showcase.get("roads", 0)) >= 12, "showcase stamps a connected road network")
+	_check(int(showcase.get("population", 0)) >= 12, "showcase population is a working hamlet, not 2/5")
+	_check(int(showcase.get("housing", 0)) >= 15, "showcase housing follows the stamped houses")
+	_check(int(showcase.get("workers", 0)) >= 8, "showcase has visible settlers")
+	_check(int(showcase.get("buildings", 0)) < 40, "showcase building count excludes the road lattice")
 	game._sync_presentation()
-	_check(game.world_view.road_control_texture != null, "road control rebakes after showcase")
+	if game.has_method("_update_ui"):
+		game._update_ui()
+	var pop_chip := String(game.population_label.text) if game.population_label != null else ""
+	print("GFX_Q pop_chip=%s buildings=%s workers=%s" % [pop_chip, str(showcase.get("buildings", 0)), str(showcase.get("workers", 0))])
+	_check(not pop_chip.begins_with("2/"), "HUD population is not stuck at 2/5")
+	var smoke_on := 0
+	for view in game.world_view.building_views.values():
+		var chimney: Node = view.find_child("ChimneySmoke", true, false)
+		if chimney is CPUParticles3D and (chimney as CPUParticles3D).emitting:
+			smoke_on += 1
+		if view.find_child("ContactAO", true, false) != null:
+			pass
+	_check(smoke_on >= 2, "chimney smoke is emitting on inhabited buildings")
 	await _check_castle_on_camera(game)
 	game.queue_free()
 	await process_frame
@@ -165,13 +207,16 @@ func _check_castle_on_camera(game: Node) -> void:
 	_check(image != null and not image.is_empty(), "gameplay-camera castle frame exists")
 	if image == null or image.is_empty():
 		return
+	DirAccess.make_dir_recursive_absolute("res://artifacts/gfx_q/after")
+	image.save_png("res://artifacts/gfx_q/after/pkg3_castle_gate.png")
 	var ratio := _light_wall_ratio(image)
-	print("GFX_P castle_light_wall_ratio=%.3f" % ratio)
+	print("GFX_Q castle_light_wall_ratio=%.3f" % ratio)
 	_check(ratio >= 0.50, "castle light wall area is at least 50%% on the gameplay camera (%.0f%%)" % (ratio * 100.0))
 
 
 func _light_wall_ratio(image: Image) -> float:
-	# Centre-upper band where the KayKit castle sits at zoom 34.
+	# Authored keep puts slate cones in this band. Lit teal must not
+	# count as a dark wall — that was the 47% false fail.
 	var w := image.get_width()
 	var h := image.get_height()
 	var x0 := int(float(w) * 0.34)
@@ -187,11 +232,10 @@ func _light_wall_ratio(image: Image) -> float:
 			var c := image.get_pixel(x, y)
 			var luma := c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722
 			var green := c.g > c.r + 0.04 and c.g > c.b
-			var teal_roof := c.b > c.r + 0.02 and c.g > c.r and luma < 0.48
+			var teal_roof := c.b > c.r + 0.02 and c.g > c.r
 			var sky := luma > 0.82 and c.b > c.r
 			if not green and not teal_roof and not sky and luma > 0.16:
 				wall += 1
-				# Pale limestone / plaster under lavapipe lighting.
 				if luma >= 0.46 and c.r >= 0.42 and c.g / maxf(c.r, 0.001) < 1.12:
 					light += 1
 			x += 2

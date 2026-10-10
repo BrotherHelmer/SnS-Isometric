@@ -36,9 +36,9 @@ const ANIMATION_LIBRARIES := {
 }
 
 const BUILDINGS := {
-	# GFX-M: live KayKit Medieval Hexagon meshes, not opening-style boxes.
-	"TOWN_HALL": ROOT + "/buildings/building_castle_green.gltf",
-	"CASTLE": ROOT + "/buildings/building_castle_green.gltf",
+	# GFX-Q: authored limestone keep. Houses / mill stay KayKit Hexagon.
+	"TOWN_HALL": ROOT + "/buildings/civic_keep.gltf",
+	"CASTLE": ROOT + "/buildings/civic_castle.gltf",
 	"HOUSE": ROOT + "/buildings/building_home_A_green.gltf",
 	"LUMBER_CAMP": ROOT + "/buildings/building_lumbermill_green.gltf",
 	"SAWMILL": ROOT + "/buildings/building_lumbermill_green.gltf",
@@ -170,6 +170,14 @@ const TERRAIN_TEXTURES := {
 	"rock": ROOT + "/gfx/terrain/rock_diff.jpg",
 }
 
+# GFX-Q: Poly Haven 1K CC0 architecture maps. Luma/detail only under P palettes.
+const ARCH_TEXTURES := {
+	"stone": ROOT + "/gfx/architecture/stone_diff.jpg",
+	"plaster": ROOT + "/gfx/architecture/plaster_diff.jpg",
+	"timber": ROOT + "/gfx/architecture/timber_diff.jpg",
+	"slate": ROOT + "/gfx/architecture/slate_diff.jpg",
+}
+
 
 static func building_path(building_type: String) -> String:
 	return String(BUILDINGS.get(building_type, BUILDINGS["HOUSE"]))
@@ -181,7 +189,7 @@ static func character_path(worker_type: String) -> String:
 
 static func all_runtime_paths() -> Array[String]:
 	var paths: Array[String] = []
-	for group in [CHARACTERS, ANIMATION_LIBRARIES, BUILDINGS, TOOLS, CARGO, WORKYARD_PROPS, HALO_PROPS, TERRAIN_TEXTURES]:
+	for group in [CHARACTERS, ANIMATION_LIBRARIES, BUILDINGS, TOOLS, CARGO, WORKYARD_PROPS, HALO_PROPS, TERRAIN_TEXTURES, ARCH_TEXTURES]:
 		for path_value in group.values():
 			if not paths.has(String(path_value)):
 				paths.append(String(path_value))

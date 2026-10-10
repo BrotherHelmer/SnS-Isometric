@@ -2714,7 +2714,10 @@ func _update_realm_overview() -> void:
 	var buildings := 0
 	var constructing := 0
 	for building_value in sim.buildings:
-		if bool(Dictionary(building_value).get("construction", false)):
+		var typed := Dictionary(building_value)
+		if String(typed.get("type", "")) == Defs.BUILDING_ROAD:
+			continue
+		if bool(typed.get("construction", false)):
 			constructing += 1
 		else:
 			buildings += 1
