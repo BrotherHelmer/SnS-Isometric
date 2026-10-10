@@ -1,0 +1,10 @@
+elapsed,day,night,event,detail,wait_ms,frame_ms,errors
+1.7,1,0,opening_day,"opening composed on the authored keep, ridge and west creek",3730.99,209.033,0
+27.3,1,0,build_day,"first house/road placed from the opening",2659.21,219.885,0
+28.9,1,0,scout_day,"guard scouting toward the west fog",3091.42,231.680,0
+343.7,1,1,first_night,"first night after the opening day",2320.20,197.695,0
+345.3,1,1,night_raid,"first night raid banner",2171.44,196.602,0
+901.6,2,0,fifteen_minutes,"first 15 game minutes complete",2929.41,244.438,0
+903.2,2,0,showcase_day,"15-building village after the live opening",4073.01,342.803,0
+904.8,2,0,showcase_wide,"showcase at the 1.5x zoom cap",4366.38,362.111,0
+906.4,2,0,fog_edge,"1.5x zoom at the unknown edge (day)",4396.35,362.166,0
