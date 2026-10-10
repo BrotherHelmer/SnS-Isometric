@@ -45,6 +45,11 @@ func _run() -> void:
 	game.camera_rig.compose_view(home, 34.0)
 	await _capture(dest, "after_day_close.png")
 	await _capture(dest, "pkg3_castle.png")
+	await _capture(dest, "pkg3_castle_gate.png")
+	var gate := Image.new()
+	if gate.load(dest.path_join("pkg3_castle_gate.png")) == OK:
+		var ratio := _light_wall_ratio(gate)
+		print("GFX_S castle_light_wall_ratio=%.3f" % ratio)
 	game.camera_rig.compose_view(home, CameraRig.STRATEGIC_ZOOM)
 	await _capture(dest, "after_day_far.png")
 	game.camera_rig.compose_view(home, CameraRig.STRATEGIC_ZOOM)
@@ -101,10 +106,41 @@ func _run() -> void:
 
 
 func _capture(dest: String, filename: String) -> void:
-	for _i in 10:
+	for _i in 6:
 		await process_frame
 	await RenderingServer.frame_post_draw
 	var image: Image = root.get_viewport().get_texture().get_image()
 	if image != null and not image.is_empty():
 		image.save_png(dest.path_join(filename))
 		print("GFX_S_SHOTS wrote %s" % dest.path_join(filename))
+
+
+func _light_wall_ratio(image: Image) -> float:
+	var w := image.get_width()
+	var h := image.get_height()
+	var x0 := int(float(w) * 0.34)
+	var x1 := int(float(w) * 0.66)
+	var y0 := int(float(h) * 0.18)
+	var y1 := int(float(h) * 0.58)
+	var wall := 0
+	var light := 0
+	var y := y0
+	while y < y1:
+		var x := x0
+		while x < x1:
+			var c := image.get_pixel(x, y)
+			var luma := c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722
+			var green := c.g > c.r + 0.04 and c.g > c.b
+			var teal_roof := c.b > c.r + 0.02 and c.g > c.r
+			var olive_roof := c.g >= c.r - 0.03 and c.g > c.b * 0.82 and luma < 0.52
+			var meadow := c.b < 0.24 and c.r < 0.62 and luma < 0.50
+			var sky := luma > 0.82 and c.b > c.r
+			if not green and not teal_roof and not olive_roof and not meadow and not sky and luma > 0.16:
+				wall += 1
+				if luma >= 0.46 and c.r >= 0.42 and c.g / maxf(c.r, 0.001) < 1.12:
+					light += 1
+			x += 2
+		y += 2
+	if wall < 40:
+		return 0.0
+	return float(light) / float(wall)

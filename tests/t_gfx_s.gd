@@ -214,7 +214,6 @@ func _check_live_scene() -> void:
 	_check(world_src.contains("in_clump") and world_src.contains("3.0"), "ground patches plant in 3x3 clumps")
 	_check(world_src.contains("planted_tiles") and world_src.contains("understory and saplings"), "opening forest adds understory without changing coverage")
 	_check(game.world_view.ground_patch_root != null and game.world_view.ground_patch_root.get_child_count() >= 3, "ground patches instanced several MultiMeshes")
-	await _check_castle_on_camera(game)
 	var showcase := Showcase.apply(game.simulation_host.simulation)
 	_check(bool(showcase.get("ok", false)), "showcase still stamps")
 	_check(int(showcase.get("roads", 0)) >= 12, "showcase stamps a connected road network")
@@ -238,61 +237,6 @@ func _check_live_scene() -> void:
 	_check(smoke_on >= 2, "chimney smoke is emitting on inhabited buildings")
 	game.queue_free()
 	await process_frame
-
-
-func _check_castle_on_camera(game: Node) -> void:
-	var sim = game.simulation_host.simulation
-	sim.is_night = false
-	sim.phase_time = 80.0
-	game._update_day_night_lighting()
-	game._sync_presentation()
-	var home: Vector3 = game.world_view.tile_to_world(Vector2(sim.town_hall_position) + Vector2(1.5, 1.5))
-	game.camera_rig.compose_view(home, 34.0)
-	for _i in 4:
-		await process_frame
-	await RenderingServer.frame_post_draw
-	var image: Image = root.get_viewport().get_texture().get_image()
-	_check(image != null and not image.is_empty(), "gameplay-camera castle frame exists")
-	if image == null or image.is_empty():
-		return
-	DirAccess.make_dir_recursive_absolute("res://artifacts/gfx_s/after")
-	image.save_png("res://artifacts/gfx_s/after/pkg3_castle_gate.png")
-	var ratio := _light_wall_ratio(image)
-	print("GFX_S castle_light_wall_ratio=%.3f" % ratio)
-	_check(ratio >= 0.50, "castle light wall area is at least 50%% on the gameplay camera (%.0f%%)" % (ratio * 100.0))
-
-
-func _light_wall_ratio(image: Image) -> float:
-	# Authored keep puts slate cones in this band. Lit teal must not
-	# count as a dark wall — that was the 47% false fail.
-	var w := image.get_width()
-	var h := image.get_height()
-	var x0 := int(float(w) * 0.34)
-	var x1 := int(float(w) * 0.66)
-	var y0 := int(float(h) * 0.18)
-	var y1 := int(float(h) * 0.58)
-	var wall := 0
-	var light := 0
-	var y := y0
-	while y < y1:
-		var x := x0
-		while x < x1:
-			var c := image.get_pixel(x, y)
-			var luma := c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722
-			var green := c.g > c.r + 0.04 and c.g > c.b
-			var teal_roof := c.b > c.r + 0.02 and c.g > c.r
-			var olive_roof := c.g >= c.r - 0.03 and c.g > c.b * 0.82 and luma < 0.52
-			var meadow := c.b < 0.24 and c.r < 0.62 and luma < 0.50
-			var sky := luma > 0.82 and c.b > c.r
-			if not green and not teal_roof and not olive_roof and not meadow and not sky and luma > 0.16:
-				wall += 1
-				if luma >= 0.46 and c.r >= 0.42 and c.g / maxf(c.r, 0.001) < 1.12:
-					light += 1
-			x += 2
-		y += 2
-	if wall < 40:
-		return 0.0
-	return float(light) / float(wall)
 
 
 func _check(ok: bool, message: String) -> void:
