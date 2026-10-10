@@ -430,6 +430,9 @@ func _create_workyard() -> void:
 		"HOUSE":
 			_add_prop("wood_stack", Vector3(-1.85, 0.0, 1.55), Vector3.ONE * 0.72, "HouseWoodpile")
 			_add_prop("barrel", Vector3(1.65, 0.0, 1.45), Vector3.ONE * 2.4, "HouseBarrel")
+			_add_prop("crate", Vector3(1.15, 0.0, 1.85), Vector3.ONE * 0.72, "HouseCrate")
+			_add_prop("lettuce", Vector3(-1.25, 0.0, 2.05), Vector3.ONE * 1.05, "HouseGarden")
+			_add_prop("fence", Vector3(-1.55, 0.0, 2.35), Vector3.ONE * 0.72, "HouseGardenFence")
 		"LUMBER_CAMP":
 			# Issue #2 fix: Lumber Camp - more rustic forest camp with stacks and tools
 			_add_prop("wood_stack", Vector3(-2.75, 0.0, 0.55), Vector3.ONE * 1.2, "DecorativeLumber")
@@ -437,6 +440,7 @@ func _create_workyard() -> void:
 			_add_prop("wood_stack", Vector3(-0.45, 0.0, -1.65), Vector3.ONE * 0.85, "InventoryIndicatorWood", "wood")
 			_add_prop("plank_stack", Vector3(1.85, 0.0, 1.35), Vector3.ONE * 0.88, "CampPlanks")
 			_add_prop("work_axe", Vector3(-2.00, 0.55, 1.35), Vector3.ONE * 1.15, "DecorativeWorkAxe", "", Vector3(0.0, 0.0, -24.0))
+			_add_prop("crate", Vector3(2.15, 0.0, -0.85), Vector3.ONE * 0.78, "CampCrate")
 			_add_prop("wheelbarrow", Vector3(2.8, 0.0, 0.35), Vector3.ONE * 0.75, "CampWheelbarrow", "", Vector3(0.0, 45.0, 0.0))
 			# Add a simple tent-like structure marker
 			var tent := MeshInstance3D.new()
@@ -496,6 +500,9 @@ func _create_workyard() -> void:
 					var apron := Vector3(-2.35 + float(col) * 0.70, 0.04, 1.85 + float(row) * 0.52)
 					_add_prop("wheat_crop", apron, Vector3.ONE * 1.35, "WheatApron")
 			_add_prop("wheelbarrow", Vector3(3.15, 0.0, -1.20), Vector3.ONE * 0.76, "InventoryIndicatorWheat", "wheat")
+			_add_prop("pitchfork", Vector3(2.05, 0.0, 1.85), Vector3.ONE * 1.05, "FarmFork", "", Vector3(0.0, 35.0, 0.0))
+			_add_prop("lettuce", Vector3(-2.15, 0.0, 2.15), Vector3.ONE * 1.10, "FarmGarden")
+			_add_prop("carrot", Vector3(-1.55, 0.0, 2.35), Vector3.ONE * 1.00, "FarmCarrot")
 			# Worn-earth paddock, not a pale rectangle over the wheat.
 			var paddock := MeshInstance3D.new()
 			paddock.name = "FarmPaddock"
@@ -975,7 +982,7 @@ func _foundation_material(color: Color) -> StandardMaterial3D:
 func _apply_principal_trim() -> void:
 	# GFX-L: three archetypes. Keep K trim names. Replace the bunker wrap
 	# with a low fitted foundation and modular stone / plaster façades.
-	if building_type != "TOWN_HALL" and building_type != "CASTLE" and building_type != "HOUSE" and building_type != "BAKERY" and building_type != "LUMBER_CAMP" and building_type != "SAWMILL":
+	if building_type != "TOWN_HALL" and building_type != "CASTLE" and building_type != "HOUSE" and building_type != "BAKERY" and building_type != "LUMBER_CAMP" and building_type != "SAWMILL" and building_type != "FARM":
 		return
 	var plaster := _material(BuildingMaterials.WARM_PLASTER, 0.0)
 	var timber := _material(BuildingMaterials.DARK_TIMBER, 0.0)
@@ -1194,6 +1201,31 @@ func _apply_principal_trim() -> void:
 			add_child(shutter)
 		if building_type == "HOUSE":
 			_create_chimney_marker(Vector3(width * 0.09, wall_h + 0.20 * width, _model_offset_z() - depth * 0.18))
+		var porch := MeshInstance3D.new()
+		porch.name = "TrimPorch"
+		var porch_mesh := BoxMesh.new()
+		porch_mesh.size = Vector3(width * 0.55, 0.08, 0.62)
+		porch.mesh = porch_mesh
+		porch.position = Vector3(0.0, 0.08, _model_offset_z() + depth * 0.62)
+		porch.material_override = stone
+		add_child(porch)
+		var door := MeshInstance3D.new()
+		door.name = "TrimCottageDoor"
+		var door_mesh := BoxMesh.new()
+		door_mesh.size = Vector3(0.48, 0.95, 0.08)
+		door.mesh = door_mesh
+		door.position = Vector3(0.0, 0.58, _model_offset_z() + depth * 0.52)
+		door.material_override = timber
+		add_child(door)
+		for box_side in [-1.0, 1.0]:
+			var box := MeshInstance3D.new()
+			box.name = "TrimWindowBox"
+			var box_mesh := BoxMesh.new()
+			box_mesh.size = Vector3(0.42, 0.10, 0.16)
+			box.mesh = box_mesh
+			box.position = Vector3(box_side * width * 0.22, wall_h * 0.42, _model_offset_z() + depth * 0.54)
+			box.material_override = timber
+			add_child(box)
 	if building_type == "LUMBER_CAMP" or building_type == "SAWMILL":
 		var shop_awning := MeshInstance3D.new()
 		shop_awning.name = "TrimAwning"
@@ -1212,6 +1244,47 @@ func _apply_principal_trim() -> void:
 		shop_fascia.position = Vector3(0.0, wall_h + 0.18, _model_offset_z() + depth * 0.50)
 		shop_fascia.material_override = timber
 		add_child(shop_fascia)
+		var dock := MeshInstance3D.new()
+		dock.name = "TrimLoadingDock"
+		var dock_mesh := BoxMesh.new()
+		dock_mesh.size = Vector3(width * 0.62, 0.12, 0.72)
+		dock.mesh = dock_mesh
+		dock.position = Vector3(0.0, 0.10, _model_offset_z() + depth * 0.62)
+		dock.material_override = timber
+		add_child(dock)
+		var shop_door := MeshInstance3D.new()
+		shop_door.name = "TrimShopDoor"
+		var shop_door_mesh := BoxMesh.new()
+		shop_door_mesh.size = Vector3(0.62, 1.05, 0.08)
+		shop_door.mesh = shop_door_mesh
+		shop_door.position = Vector3(0.0, 0.62, _model_offset_z() + depth * 0.52)
+		shop_door.material_override = timber
+		add_child(shop_door)
+	if building_type == "FARM":
+		var farm_porch := MeshInstance3D.new()
+		farm_porch.name = "TrimPorch"
+		var farm_porch_mesh := BoxMesh.new()
+		farm_porch_mesh.size = Vector3(width * 0.58, 0.08, 0.55)
+		farm_porch.mesh = farm_porch_mesh
+		farm_porch.position = Vector3(0.0, 0.08, _model_offset_z() + depth * 0.60)
+		farm_porch.material_override = stone
+		add_child(farm_porch)
+		var farm_door := MeshInstance3D.new()
+		farm_door.name = "TrimCottageDoor"
+		var farm_door_mesh := BoxMesh.new()
+		farm_door_mesh.size = Vector3(0.50, 0.98, 0.08)
+		farm_door.mesh = farm_door_mesh
+		farm_door.position = Vector3(0.0, 0.58, _model_offset_z() + depth * 0.52)
+		farm_door.material_override = timber
+		add_child(farm_door)
+		var farm_beam := MeshInstance3D.new()
+		farm_beam.name = "TrimFarmBeam"
+		var farm_beam_mesh := BoxMesh.new()
+		farm_beam_mesh.size = Vector3(width * 0.88, 0.10, 0.10)
+		farm_beam.mesh = farm_beam_mesh
+		farm_beam.position = Vector3(0.0, wall_h * 0.78, _model_offset_z() + depth * 0.50)
+		farm_beam.material_override = timber
+		add_child(farm_beam)
 
 
 func _create_building_identity_markers() -> void:

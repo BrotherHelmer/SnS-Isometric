@@ -1387,16 +1387,16 @@ func _rebuild_grass_multimeshes() -> void:
 			var path_w := _visual_path_weight(tile)
 			if path_w > 0.45:
 				continue
-			# GFX-N: cluster at forest edges and landmarks. Sparse meadow
-			# center so construction stays readable.
+			# GFX-T: denser meadow and yard clusters so large green
+			# regions read as authored, not a sparse lawn.
 			var patch := _tile_hash(tile, 19) % 5
 			var tufts := 0
 			if forest_edge >= 1:
-				tufts = 5 if forest_edge >= 2 else 4
+				tufts = 6 if forest_edge >= 2 else 5
 			elif near_yard and patch <= 3:
-				tufts = 3
-			elif meadow > 0.22 and patch == 0:
-				tufts = 1
+				tufts = 4
+			elif meadow > 0.18 and patch <= 1:
+				tufts = 2
 			if tufts == 0:
 				if forest_edge >= 1 and _tile_hash(tile, 47) % 2 == 0 and Catalog.FLOWERS.size() > 0:
 					var lone_flower := String(Catalog.FLOWERS[_tile_hash(tile, 61) % Catalog.FLOWERS.size()])
@@ -1405,7 +1405,7 @@ func _rebuild_grass_multimeshes() -> void:
 			for index in tufts:
 				var grass_path := String(Catalog.GRASS[_tile_hash(tile, 83 + index) % Catalog.GRASS.size()])
 				_append_nature_transform(transforms_by_path, grass_path, tile, index, 0.95, 1.48, 0.86)
-			if (forest_edge >= 1 or near_yard) and _tile_hash(tile, 47) % 3 == 0 and Catalog.FLOWERS.size() > 0:
+			if (forest_edge >= 1 or near_yard or (meadow > 0.20 and patch <= 1)) and _tile_hash(tile, 47) % 3 == 0 and Catalog.FLOWERS.size() > 0:
 				var flower_path := String(Catalog.FLOWERS[_tile_hash(tile, 61) % Catalog.FLOWERS.size()])
 				_append_nature_transform(transforms_by_path, flower_path, tile, 4, 0.60, 1.12, 0.46)
 			if meadow > 0.20 and forest_edge == 0 and near_yard and _tile_hash(tile, 59) % 6 == 0 and Catalog.UNDERSTORY.size() > 0:
@@ -1485,9 +1485,9 @@ func _spawn_nature_multimeshes(host: Node3D, transforms_by_path: Dictionary) -> 
 
 
 func _rebuild_ground_patches() -> void:
-	# GFX-S: 3×3 clump seeds so tufts / flowers / stones read as
-	# patches at 720p instead of an even lawn grid. Zones stay
-	# settlement / meadow / forest. MultiMesh only.
+	# GFX-T: 3×3 clump seeds so tufts / flowers / weeds / stones
+	# read as lush patches at 720p. Zones stay settlement / meadow
+	# / forest. MultiMesh only.
 	if ground_patch_root == null or simulation == null:
 		return
 	_refresh_terrain_lookups()
@@ -1522,39 +1522,42 @@ func _rebuild_ground_patches() -> void:
 			elif dist < 22.0:
 				zone = "meadow"
 			var cell := Vector2i(int(floor(float(tile.x) / 3.0)), int(floor(float(tile.y) / 3.0)))
-			var in_clump := _tile_hash(cell, 17) % 4 == 0
+			var in_clump := _tile_hash(cell, 17) % 3 == 0
 			var core := in_clump and seed_h % 5 != 4
 			if zone == "settlement":
 				if core:
-					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 2, 0.95))
+					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 2, 1.05))
+					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 12, 0.78))
 					if seed_h % 2 == 0:
-						_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 12, 0.70))
-					if flower_path != "" and seed_h % 3 == 0:
+						_bucket_patch(chunk_buckets, chunk, "weeds", _tuft_transform(tile, 14, 0.62))
+					if flower_path != "" and seed_h % 2 == 0:
 						_bucket_patch(chunk_buckets, chunk, "flowers", _nature_transform_at(tile, 6, flower_path, 0.55, 1.35, 0.55))
-					if rock_path != "" and seed_h % 5 == 0:
+					if rock_path != "" and seed_h % 4 == 0:
 						_bucket_patch(chunk_buckets, chunk, "stones", _nature_transform_at(tile, 7, rock_path, 0.45, 0.62, 0.28))
-				elif seed_h % 13 == 0:
-					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 2, 0.78))
+				elif seed_h % 9 == 0:
+					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 2, 0.82))
 			elif zone == "meadow":
 				if core:
-					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 3, 1.12))
-					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 4, 0.82))
-					if flower_path != "" and seed_h % 3 == 0:
+					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 3, 1.22))
+					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 4, 0.92))
+					_bucket_patch(chunk_buckets, chunk, "weeds", _tuft_transform(tile, 15, 0.70))
+					if flower_path != "" and seed_h % 2 == 0:
 						_bucket_patch(chunk_buckets, chunk, "flowers", _nature_transform_at(tile, 6, flower_path, 0.70, 1.45, 0.50))
 						_bucket_patch(chunk_buckets, chunk, "flowers", _nature_transform_at(tile, 8, flower_path, 0.55, 1.10, 0.40))
-					if rock_path != "" and seed_h % 5 == 0:
+					if rock_path != "" and seed_h % 4 == 0:
 						_bucket_patch(chunk_buckets, chunk, "stones", _nature_transform_at(tile, 7, rock_path, 0.50, 0.58, 0.30))
-				elif seed_h % 11 == 0:
-					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 3, 0.88))
+				elif seed_h % 8 == 0:
+					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 3, 0.94))
 			else:
 				if core:
-					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 5, 1.20))
+					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 5, 1.28))
+					_bucket_patch(chunk_buckets, chunk, "weeds", _tuft_transform(tile, 16, 0.80))
 					if Catalog.UNDERSTORY.size() > 0 and seed_h % 2 == 0:
 						_bucket_patch(chunk_buckets, chunk, "shrubs", _nature_transform_at(tile, 9, String(Catalog.UNDERSTORY[0]), 0.60, 1.15, 0.45))
-					if rock_path != "" and seed_h % 4 == 0:
+					if rock_path != "" and seed_h % 3 == 0:
 						_bucket_patch(chunk_buckets, chunk, "stones", _nature_transform_at(tile, 7, rock_path, 0.50, 0.70, 0.32))
-				elif seed_h % 9 == 0:
-					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 5, 0.92))
+				elif seed_h % 7 == 0:
+					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 5, 0.96))
 	for chunk_key in chunk_buckets:
 		var kinds: Dictionary = chunk_buckets[chunk_key]
 		for kind in kinds:
@@ -1616,9 +1619,9 @@ func _nature_transform_at(tile: Vector2i, index: int, path_value: String, radius
 
 
 func _ground_patch_mesh(kind: String, grass_path: String, flower_path: String, rock_path: String) -> Mesh:
-	if kind == "tufts":
+	if kind == "tufts" or kind == "weeds":
 		var blade := PrismMesh.new()
-		blade.size = Vector3(0.42, 0.70, 0.16)
+		blade.size = Vector3(0.42, 0.70, 0.16) if kind == "tufts" else Vector3(0.28, 0.48, 0.12)
 		return blade
 	if kind == "shrubs" and Catalog.UNDERSTORY.size() > 0:
 		return _mesh_for_nature_path(String(Catalog.UNDERSTORY[0]))
@@ -1653,6 +1656,8 @@ func _ground_patch_material(kind: String) -> Material:
 			material.albedo_color = Color("#4A3C2E")
 		"tufts":
 			material.albedo_color = Color("#527038")
+		"weeds":
+			material.albedo_color = Color("#6A7A38")
 		"flowers":
 			return null
 		"shrubs":
@@ -3382,21 +3387,27 @@ func _rebuild_opening_dressing() -> void:
 			continue
 		# GFX-O: 2.5–3W clearing. Forest on ~48% of the perimeter arc,
 		# back and west so the gameplay camera sees meadow + ridge.
-		_append_nature_transform(transforms_by_path, _tree_path_for_tile(tile, 0, 3), tile, 0, 0.70, 1.05, 0.42)
+		# GFX-T: more scale and species mix so the ring is not one
+		# conifer rhythm. Coverage stays planted / candidates.
+		var neighbors := 1 if _tile_hash(tile, 19) % 3 == 0 else 3
+		_append_nature_transform(transforms_by_path, _tree_path_for_tile(tile, 0, neighbors), tile, 0, 0.85, 0.68, 0.92)
 		planted += 1
 		planted_tiles.append(tile)
 	# GFX-S: understory and saplings soften the ring. Coverage stays
 	# planted / candidates (0.38–0.58). These extras do not count.
+	# GFX-T: denser mid-story and broken nested clusters.
 	for tile in planted_tiles:
-		if Catalog.UNDERSTORY.size() > 0 and _tile_hash(tile, 83) % 3 == 0:
+		if Catalog.UNDERSTORY.size() > 0 and _tile_hash(tile, 83) % 2 == 0:
 			_append_nature_transform(transforms_by_path, String(Catalog.UNDERSTORY[_tile_hash(tile, 71) % Catalog.UNDERSTORY.size()]), tile, 6, 0.80, 0.72, 0.28)
-		if _tile_hash(tile, 91) % 5 == 0:
-			_append_nature_transform(transforms_by_path, _tree_path_for_tile(tile, 1, 1), tile, 1, 0.55, 0.48, 0.22)
+		if _tile_hash(tile, 91) % 3 == 0:
+			_append_nature_transform(transforms_by_path, _tree_path_for_tile(tile, 1, 1), tile, 1, 0.55, 0.42, 0.28)
+		if Catalog.DECIDUOUS.size() > 0 and _tile_hash(tile, 97) % 4 == 0:
+			_append_nature_transform(transforms_by_path, String(Catalog.DECIDUOUS[_tile_hash(tile, 59) % Catalog.DECIDUOUS.size()]), tile, 3, 0.65, 0.38, 0.22)
 	for tile in candidates:
 		var fringe := Vector2(float(tile.x - hall.x), float(tile.y - hall.y)).length()
-		if fringe > inner + 1.35 or fringe < inner:
+		if fringe > inner + 1.55 or fringe < inner:
 			continue
-		if _tile_hash(tile, 103) % 5 != 0:
+		if _tile_hash(tile, 103) % 4 != 0:
 			continue
 		if Catalog.UNDERSTORY.size() > 0:
 			_append_nature_transform(transforms_by_path, String(Catalog.UNDERSTORY[0]), tile, 9, 0.70, 0.58, 0.22)
@@ -3426,7 +3437,7 @@ func _opening_hamlet_tiles(hall: Vector2i) -> Dictionary:
 		for oy in range(int(spec["h"])):
 			for ox in range(int(spec["w"])):
 				reserved[_tile_key(hall + Vector2i(int(spec["ox"]) + ox, int(spec["oy"]) + oy))] = true
-	for pad in [Vector2i(-1, -2), Vector2i(4, -1), Vector2i(-1, 4), Vector2i(2, 5)]:
+	for pad in [Vector2i(-1, -2), Vector2i(4, -1), Vector2i(-1, 4), Vector2i(2, 5), Vector2i(-4, 0), Vector2i(6, 1), Vector2i(0, 6), Vector2i(-3, 6)]:
 		reserved[_tile_key(hall + pad)] = true
 	for spec_value in _opening_ridge_tiles(hall):
 		reserved[_tile_key(spec_value)] = true
@@ -3483,6 +3494,16 @@ func _spawn_opening_hamlet(host: Node3D, hall: Vector2i, reserved: Dictionary) -
 	_spawn_dress_prop(host, "crate", hall + Vector2i(3, 2), 12.0, 0.68, "DressCrateEast")
 	_spawn_dress_prop(host, "long_crate", hall + Vector2i(5, 2), -6.0, 0.70, "DressLongCrate")
 	_spawn_dress_prop(host, "crate", hall + Vector2i(-4, 2), 8.0, 0.65, "DressCrateWest")
+	_spawn_dress_prop(host, "lettuce", hall + Vector2i(-4, 0), 8.0, 1.15, "DressGardenA")
+	_spawn_dress_prop(host, "carrot", hall + Vector2i(-4, 0), 22.0, 1.05, "DressGardenCarrot", Vector3(0.45, 0.0, 0.32))
+	_spawn_dress_prop(host, "fence", hall + Vector2i(-4, 0), 0.0, 0.82, "DressGardenFenceA", Vector3(-0.55, 0.0, 0.0))
+	_spawn_dress_prop(host, "lettuce", hall + Vector2i(6, 1), 14.0, 1.08, "DressGardenB")
+	_spawn_dress_prop(host, "fence", hall + Vector2i(6, 1), 90.0, 0.80, "DressGardenFenceB", Vector3(0.55, 0.0, 0.0))
+	_spawn_dress_prop(host, "pitchfork", hall + Vector2i(3, -4), 38.0, 1.05, "DressFarmFork")
+	_spawn_dress_prop(host, "wheelbarrow", hall + Vector2i(2, 6), 16.0, 0.70, "DressBarro")
+	_spawn_dress_prop(host, "wood_stack", hall + Vector2i(-3, 6), 10.0, 0.88, "DressWoodWest")
+	_spawn_dress_prop(host, "barrel", hall + Vector2i(0, 6), -12.0, 0.80, "DressBarrelNorth")
+	_spawn_wash_line(host, hall + Vector2i(-2, 6), "DressWash")
 	_spawn_opening_crops(host, hall + Vector2i(3, -4))
 	_spawn_dress_pond(host, hall + Vector2i(-5, -3), Vector2(5.4, 3.6), "DressPond")
 	_spawn_dress_prop(host, "stone_stack", hall + Vector2i(-5, -2), 22.0, 0.70, "DressPondStoneA", Vector3(1.6, 0.0, 0.8))
@@ -3650,6 +3671,7 @@ func _spawn_meandering_creek(ridge: Node3D, hall: Vector2i, road_w: float) -> vo
 	var bank := _ridge_material(Color("#786C50"), 0.92)
 	var wet := _ridge_material(Color("#3D5552"), 0.55)
 	var shallow := _ridge_material(Color("#5AA0A0"), 0.28)
+	var deep := _ridge_material(Color("#24686C"), 0.18)
 	var water := StandardMaterial3D.new()
 	water.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
 	water.albedo_color = Color("#2F7A7E")
@@ -3658,20 +3680,20 @@ func _spawn_meandering_creek(ridge: Node3D, hall: Vector2i, road_w: float) -> vo
 	water.specular_mode = BaseMaterial3D.SPECULAR_SCHLICK_GGX
 	var mud := MeshInstance3D.new()
 	mud.name = "DressCreekBank"
-	mud.mesh = _creek_ribbon_mesh(points, width + road_w * 0.52, road_w)
+	mud.mesh = _creek_ribbon_mesh(points, width + road_w * 0.68, road_w)
 	mud.material_override = bank
 	mud.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	ridge.add_child(mud)
 	var wet_edge := MeshInstance3D.new()
 	wet_edge.name = "DressCreekShore"
-	wet_edge.mesh = _creek_ribbon_mesh(points, width + road_w * 0.22, road_w)
+	wet_edge.mesh = _creek_ribbon_mesh(points, width + road_w * 0.34, road_w)
 	wet_edge.position.y = 0.008
 	wet_edge.material_override = wet
 	wet_edge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	ridge.add_child(wet_edge)
 	var shallows := MeshInstance3D.new()
 	shallows.name = "DressCreekShallow"
-	shallows.mesh = _creek_ribbon_mesh(points, width * 1.18, road_w)
+	shallows.mesh = _creek_ribbon_mesh(points, width * 1.28, road_w)
 	shallows.position.y = 0.014
 	shallows.material_override = shallow
 	shallows.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -3683,13 +3705,23 @@ func _spawn_meandering_creek(ridge: Node3D, hall: Vector2i, road_w: float) -> vo
 	creek.material_override = water
 	creek.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	ridge.add_child(creek)
+	var deep_run := MeshInstance3D.new()
+	deep_run.name = "DressCreekDeep"
+	deep_run.mesh = _creek_ribbon_mesh(points, width * 0.52, road_w)
+	deep_run.position.y = 0.018
+	deep_run.material_override = deep
+	deep_run.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	ridge.add_child(deep_run)
 	_dress_creek_shoreline(ridge, points)
+	_spawn_creek_bridge(ridge, points, width)
 
 
 func _dress_creek_shoreline(ridge: Node3D, points: Array[Vector3]) -> void:
-	# Irregular stones and reeds so the channel reads as a shoreline.
+	# Irregular stones, reed clumps and bank tufts so the channel
+	# reads as a scenic shoreline the hamlet grew around.
 	var stone := _ridge_material(Color("#6E6A5C"), 0.94)
 	var reed := _ridge_material(Color("#4A6A3C"), 0.88)
+	var wet_grass := _ridge_material(Color("#3E5A34"), 0.90)
 	for i in points.size():
 		var p: Vector3 = points[i]
 		var side := 1.0 if i % 2 == 0 else -1.0
@@ -3699,19 +3731,66 @@ func _dress_creek_shoreline(ridge: Node3D, points: Array[Vector3]) -> void:
 		mesh.radius = 0.22 + float(i % 3) * 0.06
 		mesh.height = mesh.radius * 1.35
 		rock.mesh = mesh
-		rock.position = p + Vector3(side * (0.85 + float(i % 3) * 0.18), 0.08, float((i * 3) % 5) * 0.08)
-		rock.scale = Vector3(1.15, 0.62, 0.90)
+		rock.position = p + Vector3(side * (0.92 + float(i % 3) * 0.22), 0.08, float((i * 3) % 5) * 0.10)
+		rock.scale = Vector3(1.22, 0.58, 0.94)
 		rock.material_override = stone
 		ridge.add_child(rock)
-		if i % 2 == 0:
+		var mate := MeshInstance3D.new()
+		mate.name = "CreekStonePair_%d" % i
+		var mate_mesh := SphereMesh.new()
+		mate_mesh.radius = 0.14 + float((i + 1) % 3) * 0.04
+		mate_mesh.height = mate_mesh.radius * 1.20
+		mate.mesh = mate_mesh
+		mate.position = p + Vector3(-side * (0.70 + float(i % 2) * 0.16), 0.06, float((i * 5) % 4) * 0.08)
+		mate.scale = Vector3(1.05, 0.52, 0.88)
+		mate.material_override = stone
+		ridge.add_child(mate)
+		for reed_i in 3:
 			var blade := MeshInstance3D.new()
-			blade.name = "CreekReed_%d" % i
+			blade.name = "CreekReed_%d" % (i * 3 + reed_i) if reed_i > 0 or i == 0 else "CreekReed_%d" % i
+			if i == 0 and reed_i == 0:
+				blade.name = "CreekReed_0"
 			var reed_mesh := BoxMesh.new()
-			reed_mesh.size = Vector3(0.06, 0.55 + float(i % 3) * 0.12, 0.06)
+			reed_mesh.size = Vector3(0.055, 0.52 + float((i + reed_i) % 4) * 0.14, 0.055)
 			blade.mesh = reed_mesh
-			blade.position = p + Vector3(-side * 0.72, 0.28, 0.10)
+			blade.position = p + Vector3(-side * (0.62 + float(reed_i) * 0.14), reed_mesh.size.y * 0.48, float(reed_i - 1) * 0.12)
+			blade.rotation.y = float(reed_i) * 0.40
 			blade.material_override = reed
 			ridge.add_child(blade)
+		var tuft := MeshInstance3D.new()
+		tuft.name = "CreekBankTuft_%d" % i
+		var tuft_mesh := PrismMesh.new()
+		tuft_mesh.size = Vector3(0.34, 0.28, 0.12)
+		tuft.mesh = tuft_mesh
+		tuft.position = p + Vector3(side * 1.18, 0.14, 0.06)
+		tuft.material_override = wet_grass
+		ridge.add_child(tuft)
+
+
+func _spawn_creek_bridge(ridge: Node3D, points: Array[Vector3], width: float) -> void:
+	if points.size() < 3:
+		return
+	var mid: Vector3 = points[2]
+	var timber := _ridge_material(BuildingMaterials.DARK_TIMBER, 0.90)
+	var deck := MeshInstance3D.new()
+	deck.name = "CreekBridge"
+	var deck_mesh := BoxMesh.new()
+	deck_mesh.size = Vector3(width * 2.15, 0.08, 0.72)
+	deck.mesh = deck_mesh
+	deck.position = mid + Vector3(0.15, 0.10, 0.0)
+	deck.rotation.y = 0.35
+	deck.material_override = timber
+	ridge.add_child(deck)
+	for side in [-1.0, 1.0]:
+		var rail := MeshInstance3D.new()
+		rail.name = "CreekBridgeRail"
+		var rail_mesh := BoxMesh.new()
+		rail_mesh.size = Vector3(width * 2.05, 0.06, 0.06)
+		rail.mesh = rail_mesh
+		rail.position = mid + Vector3(0.15, 0.28, side * 0.30)
+		rail.rotation.y = 0.35
+		rail.material_override = timber
+		ridge.add_child(rail)
 
 
 func _creek_ribbon_mesh(points: Array[Vector3], width: float, road_w: float = 2.425) -> ArrayMesh:
@@ -3736,7 +3815,7 @@ func _creek_ribbon_mesh(points: Array[Vector3], width: float, road_w: float = 2.
 		tangent.y = 0.0
 		if tangent.length() < 0.001:
 			tangent = Vector3(0.0, 0.0, 1.0)
-		var wobble := 1.0 + sin(float(i) * 0.61 + width) * 0.12
+		var wobble := 1.0 + sin(float(i) * 0.61 + width) * 0.20 + sin(float(i) * 1.17) * 0.08
 		var side := Vector3(-tangent.z, 0.0, tangent.x).normalized() * (width * 0.5 * wobble)
 		var left := pos + side
 		var right := pos - side
@@ -3987,6 +4066,39 @@ func _dress_cottage_trim(wrap: Node3D, kind: String, width: int, height: int) ->
 		awning.rotation.x = -0.26
 		awning.material_override = timber
 		wrap.add_child(awning)
+		var porch := MeshInstance3D.new()
+		porch.name = "DressTrimPorch"
+		var porch_mesh := BoxMesh.new()
+		porch_mesh.size = Vector3(w * 1.05, 0.08, 0.48)
+		porch.mesh = porch_mesh
+		porch.position = Vector3(0.0, 0.10, d * 1.12)
+		porch.material_override = stone
+		wrap.add_child(porch)
+		var door := MeshInstance3D.new()
+		door.name = "DressTrimDoor"
+		var door_mesh := BoxMesh.new()
+		door_mesh.size = Vector3(0.42, 0.88, 0.07)
+		door.mesh = door_mesh
+		door.position = Vector3(0.0, 0.58, d * 1.02)
+		door.material_override = timber
+		wrap.add_child(door)
+		var chimney := MeshInstance3D.new()
+		chimney.name = "DressTrimChimney"
+		var chimney_mesh := BoxMesh.new()
+		chimney_mesh.size = Vector3(0.28, 0.72, 0.28)
+		chimney.mesh = chimney_mesh
+		chimney.position = Vector3(w * 0.35, 1.85, -d * 0.15)
+		chimney.material_override = stone
+		wrap.add_child(chimney)
+	if kind == "LUMBER_CAMP" or kind == "SAWMILL":
+		var dock := MeshInstance3D.new()
+		dock.name = "DressTrimDock"
+		var dock_mesh := BoxMesh.new()
+		dock_mesh.size = Vector3(w * 1.15, 0.10, 0.55)
+		dock.mesh = dock_mesh
+		dock.position = Vector3(0.0, 0.12, d * 1.15)
+		dock.material_override = timber
+		wrap.add_child(dock)
 	var band := MeshInstance3D.new()
 	band.name = "DressTrimPlaster"
 	var band_mesh := BoxMesh.new()
@@ -3995,6 +4107,41 @@ func _dress_cottage_trim(wrap: Node3D, kind: String, width: int, height: int) ->
 	band.position = Vector3(0.0, 0.72, d * 0.98)
 	band.material_override = plaster
 	wrap.add_child(band)
+
+
+func _spawn_wash_line(host: Node3D, tile: Vector2i, node_name: String) -> void:
+	var wrap := Node3D.new()
+	wrap.name = node_name
+	wrap.position = tile_to_world(Vector2(tile))
+	var timber := _ridge_material(BuildingMaterials.DARK_TIMBER, 0.90)
+	var cloth := _ridge_material(Color("#D8C8A8"), 0.82)
+	for side in [-1.0, 1.0]:
+		var pole := MeshInstance3D.new()
+		pole.name = "WashPole"
+		var pole_mesh := BoxMesh.new()
+		pole_mesh.size = Vector3(0.07, 1.15, 0.07)
+		pole.mesh = pole_mesh
+		pole.position = Vector3(side * 0.85, 0.58, 0.0)
+		pole.material_override = timber
+		wrap.add_child(pole)
+	var line := MeshInstance3D.new()
+	line.name = "WashLine"
+	var line_mesh := BoxMesh.new()
+	line_mesh.size = Vector3(1.72, 0.03, 0.03)
+	line.mesh = line_mesh
+	line.position = Vector3(0.0, 1.08, 0.0)
+	line.material_override = timber
+	wrap.add_child(line)
+	for sheet_i in 3:
+		var sheet := MeshInstance3D.new()
+		sheet.name = "WashSheet_%d" % sheet_i
+		var sheet_mesh := BoxMesh.new()
+		sheet_mesh.size = Vector3(0.38, 0.48, 0.03)
+		sheet.mesh = sheet_mesh
+		sheet.position = Vector3(-0.55 + float(sheet_i) * 0.55, 0.82, 0.02)
+		sheet.material_override = cloth
+		wrap.add_child(sheet)
+	host.add_child(wrap)
 
 
 func _spawn_dress_prop(host: Node3D, prop_key: String, tile: Vector2i, yaw_deg: float, scale_mul: float, node_name: String, nudge := Vector3.ZERO) -> void:
