@@ -101,6 +101,7 @@ func _check_live_scene() -> void:
 		return
 	game.start_new_3d(game.DEFAULT_SEED)
 	game._hide_start_menu()
+	game.simulation_host.paused = true
 	for _i in 4:
 		await process_frame
 	var master_idx := AudioServer.get_bus_index("Master")
@@ -213,6 +214,7 @@ func _check_live_scene() -> void:
 	_check(world_src.contains("in_clump") and world_src.contains("3.0"), "ground patches plant in 3x3 clumps")
 	_check(world_src.contains("planted_tiles") and world_src.contains("understory and saplings"), "opening forest adds understory without changing coverage")
 	_check(game.world_view.ground_patch_root != null and game.world_view.ground_patch_root.get_child_count() >= 3, "ground patches instanced several MultiMeshes")
+	await _check_castle_on_camera(game)
 	var showcase := Showcase.apply(game.simulation_host.simulation)
 	_check(bool(showcase.get("ok", false)), "showcase still stamps")
 	_check(int(showcase.get("roads", 0)) >= 12, "showcase stamps a connected road network")
@@ -234,8 +236,6 @@ func _check_live_scene() -> void:
 		if view.find_child("ContactAO", true, false) != null:
 			pass
 	_check(smoke_on >= 2, "chimney smoke is emitting on inhabited buildings")
-	game.simulation_host.paused = true
-	await _check_castle_on_camera(game)
 	game.queue_free()
 	await process_frame
 
@@ -248,7 +248,7 @@ func _check_castle_on_camera(game: Node) -> void:
 	game._sync_presentation()
 	var home: Vector3 = game.world_view.tile_to_world(Vector2(sim.town_hall_position) + Vector2(1.5, 1.5))
 	game.camera_rig.compose_view(home, 34.0)
-	for _i in 12:
+	for _i in 4:
 		await process_frame
 	await RenderingServer.frame_post_draw
 	var image: Image = root.get_viewport().get_texture().get_image()
