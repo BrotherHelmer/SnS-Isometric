@@ -3535,7 +3535,7 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 		index += 1
 	var formation := MeshInstance3D.new()
 	formation.name = "RidgeFormation"
-	formation.mesh = _back_ridge_formation_mesh(b * 1.55, b * 0.38)
+	formation.mesh = _back_ridge_formation_mesh(b * 1.72, b * 0.52)
 	var anchor := tiles[2] if tiles.size() > 2 else hall + Vector2i(0, -7)
 	formation.position = tile_to_world(Vector2(anchor)) + Vector3(0.0, 0.0, -0.8)
 	formation.rotation.y = 0.18

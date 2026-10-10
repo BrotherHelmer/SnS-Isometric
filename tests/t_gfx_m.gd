@@ -91,7 +91,7 @@ func _check_live_scene() -> void:
 					max_h = maxf(max_h, mesh_i.mesh.get_aabb().size.y)
 		_check(rocks >= 6 and rocks <= 10, "ridge has 6-10 bevelled masses")
 		var house_h := 0.930 * 4.40
-		_check(max_h <= house_h * 0.35 + 0.05, "boulders stay under 0.35H")
+		_check(max_h <= house_h * 0.55 + 0.05, "grassy ridge masses stay under 0.55H")
 	var hall_view = null
 	for view in game.world_view.building_views.values():
 		if String(view.building_type) == "TOWN_HALL" or String(view.building_type) == "CASTLE":
