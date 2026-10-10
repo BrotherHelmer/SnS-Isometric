@@ -1387,16 +1387,17 @@ func _rebuild_grass_multimeshes() -> void:
 			var path_w := _visual_path_weight(tile)
 			if path_w > 0.45:
 				continue
-			# GFX-T: denser meadow and yard clusters so large green
-			# regions read as authored, not a sparse lawn.
+			# GFX-N: cluster at forest edges and landmarks. Sparse meadow
+			# center so construction stays readable. GFX-T keeps that
+			# budget — lushness lives in ground patches + the shader.
 			var patch := _tile_hash(tile, 19) % 5
 			var tufts := 0
 			if forest_edge >= 1:
-				tufts = 6 if forest_edge >= 2 else 5
+				tufts = 5 if forest_edge >= 2 else 4
 			elif near_yard and patch <= 3:
-				tufts = 4
-			elif meadow > 0.18 and patch <= 1:
-				tufts = 2
+				tufts = 3
+			elif meadow > 0.22 and patch == 0:
+				tufts = 1
 			if tufts == 0:
 				if forest_edge >= 1 and _tile_hash(tile, 47) % 2 == 0 and Catalog.FLOWERS.size() > 0:
 					var lone_flower := String(Catalog.FLOWERS[_tile_hash(tile, 61) % Catalog.FLOWERS.size()])
@@ -1405,7 +1406,7 @@ func _rebuild_grass_multimeshes() -> void:
 			for index in tufts:
 				var grass_path := String(Catalog.GRASS[_tile_hash(tile, 83 + index) % Catalog.GRASS.size()])
 				_append_nature_transform(transforms_by_path, grass_path, tile, index, 0.95, 1.48, 0.86)
-			if (forest_edge >= 1 or near_yard or (meadow > 0.20 and patch <= 1)) and _tile_hash(tile, 47) % 3 == 0 and Catalog.FLOWERS.size() > 0:
+			if (forest_edge >= 1 or near_yard) and _tile_hash(tile, 47) % 3 == 0 and Catalog.FLOWERS.size() > 0:
 				var flower_path := String(Catalog.FLOWERS[_tile_hash(tile, 61) % Catalog.FLOWERS.size()])
 				_append_nature_transform(transforms_by_path, flower_path, tile, 4, 0.60, 1.12, 0.46)
 			if meadow > 0.20 and forest_edge == 0 and near_yard and _tile_hash(tile, 59) % 6 == 0 and Catalog.UNDERSTORY.size() > 0:
@@ -1522,42 +1523,45 @@ func _rebuild_ground_patches() -> void:
 			elif dist < 22.0:
 				zone = "meadow"
 			var cell := Vector2i(int(floor(float(tile.x) / 3.0)), int(floor(float(tile.y) / 3.0)))
-			var in_clump := _tile_hash(cell, 17) % 3 == 0
+			var in_clump := _tile_hash(cell, 17) % 4 == 0
 			var core := in_clump and seed_h % 5 != 4
 			if zone == "settlement":
 				if core:
 					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 2, 1.05))
-					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 12, 0.78))
 					if seed_h % 2 == 0:
+						_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 12, 0.78))
+					if seed_h % 3 == 0:
 						_bucket_patch(chunk_buckets, chunk, "weeds", _tuft_transform(tile, 14, 0.62))
 					if flower_path != "" and seed_h % 2 == 0:
 						_bucket_patch(chunk_buckets, chunk, "flowers", _nature_transform_at(tile, 6, flower_path, 0.55, 1.35, 0.55))
-					if rock_path != "" and seed_h % 4 == 0:
+					if rock_path != "" and seed_h % 5 == 0:
 						_bucket_patch(chunk_buckets, chunk, "stones", _nature_transform_at(tile, 7, rock_path, 0.45, 0.62, 0.28))
-				elif seed_h % 9 == 0:
+				elif seed_h % 13 == 0:
 					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 2, 0.82))
 			elif zone == "meadow":
 				if core:
-					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 3, 1.22))
-					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 4, 0.92))
-					_bucket_patch(chunk_buckets, chunk, "weeds", _tuft_transform(tile, 15, 0.70))
+					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 3, 1.18))
+					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 4, 0.88))
+					if seed_h % 2 == 0:
+						_bucket_patch(chunk_buckets, chunk, "weeds", _tuft_transform(tile, 15, 0.70))
 					if flower_path != "" and seed_h % 2 == 0:
 						_bucket_patch(chunk_buckets, chunk, "flowers", _nature_transform_at(tile, 6, flower_path, 0.70, 1.45, 0.50))
 						_bucket_patch(chunk_buckets, chunk, "flowers", _nature_transform_at(tile, 8, flower_path, 0.55, 1.10, 0.40))
-					if rock_path != "" and seed_h % 4 == 0:
+					if rock_path != "" and seed_h % 5 == 0:
 						_bucket_patch(chunk_buckets, chunk, "stones", _nature_transform_at(tile, 7, rock_path, 0.50, 0.58, 0.30))
-				elif seed_h % 8 == 0:
-					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 3, 0.94))
+				elif seed_h % 11 == 0:
+					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 3, 0.90))
 			else:
 				if core:
-					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 5, 1.28))
-					_bucket_patch(chunk_buckets, chunk, "weeds", _tuft_transform(tile, 16, 0.80))
+					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 5, 1.22))
+					if seed_h % 3 == 0:
+						_bucket_patch(chunk_buckets, chunk, "weeds", _tuft_transform(tile, 16, 0.76))
 					if Catalog.UNDERSTORY.size() > 0 and seed_h % 2 == 0:
 						_bucket_patch(chunk_buckets, chunk, "shrubs", _nature_transform_at(tile, 9, String(Catalog.UNDERSTORY[0]), 0.60, 1.15, 0.45))
-					if rock_path != "" and seed_h % 3 == 0:
+					if rock_path != "" and seed_h % 4 == 0:
 						_bucket_patch(chunk_buckets, chunk, "stones", _nature_transform_at(tile, 7, rock_path, 0.50, 0.70, 0.32))
-				elif seed_h % 7 == 0:
-					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 5, 0.96))
+				elif seed_h % 9 == 0:
+					_bucket_patch(chunk_buckets, chunk, "tufts", _tuft_transform(tile, 5, 0.94))
 	for chunk_key in chunk_buckets:
 		var kinds: Dictionary = chunk_buckets[chunk_key]
 		for kind in kinds:
