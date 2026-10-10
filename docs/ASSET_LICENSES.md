@@ -9,8 +9,9 @@ Attribution is optional. The Nordic diorama look stays KayKit-coherent.
 
 | Asset | Path | Source | Licence | Notes |
 | --- | --- | --- | --- | --- |
-| Authored civic keep | `assets/settlement3d/runtime/buildings/civic_keep.gltf` | Project-authored (`tools/build_civic_keep.gd`) | CC0 | GFX-R live Town Hall. Raised keep, three roof masses, tall asymmetric tower, gate, banner. Same Q limestone / teal slate. 4×4 / 10 m footprint. |
-| Authored civic castle | `assets/settlement3d/runtime/buildings/civic_castle.gltf` | Project-authored (`tools/build_civic_keep.gd`) | CC0 | GFX-R live Castle. Same keep plus rear towers. |
+| Authored civic keep | `assets/settlement3d/runtime/buildings/civic_keep.gltf` | Project-authored (`tools/build_civic_keep.gd`) | CC0 | GFX-S live Town Hall. Gatehouse with buttresses, recesses, arch, string courses, herald. Same Q limestone / teal slate. 4×4 / 10 m footprint. |
+| Authored civic castle | `assets/settlement3d/runtime/buildings/civic_castle.gltf` | Project-authored (`tools/build_civic_keep.gd`) | CC0 | GFX-S live Castle. Same articulated keep plus rear towers. |
+| GFX-S ground / roads / light | clustered MultiMesh clumps + worn roads | Project-authored | CC0 | 3×3 tuft clumps, visual_w 0.72, cooler day ambient `#9A9A88`. Night lighting unchanged. |
 | GFX-R ridge / density | procedural ridge slopes + MultiMesh tufts | Project-authored | CC0 | Grassy ridge, three vegetation zones, worn aprons. Night lighting unchanged. |
 | Architecture stone 1024² | `assets/settlement3d/runtime/gfx/architecture/stone_diff.jpg` | Poly Haven — brick_wall_02 1K diff | CC0 1.0 | https://polyhaven.com/a/brick_wall_02 — luma/detail under `#CDBFA2`. |
 | Architecture plaster 1024² | `assets/settlement3d/runtime/gfx/architecture/plaster_diff.jpg` | Poly Haven — plastered_stone_wall 1K diff | CC0 1.0 | https://polyhaven.com/a/plastered_stone_wall — luma/detail under `#E0D0B2`. |

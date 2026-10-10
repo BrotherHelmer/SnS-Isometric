@@ -97,7 +97,7 @@ static func _apply_civic_architecture(root: Node, building_type: String) -> void
 			mix_amt = 0.34
 			boost = 1.06
 			lift = 1.08
-		elif mesh_name.contains("Banner"):
+		elif mesh_name.contains("Banner") or mesh_name.contains("Herald"):
 			kind = "timber"
 			tint = Color("#8B2E3A")
 			tex = timber_tex
@@ -106,6 +106,15 @@ static func _apply_civic_architecture(root: Node, building_type: String) -> void
 			mix_amt = 0.18
 			boost = 1.08
 			lift = 1.04
+		elif mesh_name.contains("Recess") or mesh_name.contains("Facade"):
+			kind = "timber"
+			tint = Color("#3A3228")
+			tex = timber_tex
+			uv_scale = 1.8
+			emission = 0.0
+			mix_amt = 0.22
+			boost = 0.92
+			lift = 0.88
 		elif mesh_name.contains("Timber") or mesh_name.contains("Door") or mesh_name.contains("Window"):
 			kind = "timber"
 			tint = Color("#3A3228") if mesh_name.contains("Window") else DARK_TIMBER
@@ -115,6 +124,15 @@ static func _apply_civic_architecture(root: Node, building_type: String) -> void
 			mix_amt = 0.40
 			boost = 1.0
 			lift = 0.96
+		elif mesh_name.contains("Buttress") or mesh_name.contains("String"):
+			kind = "stone"
+			tint = CASTLE_LIMESTONE.lerp(CASTLE_MASONRY, 0.48)
+			tex = stone_tex
+			uv_scale = 2.0
+			emission = 0.03
+			mix_amt = 0.40
+			boost = 1.08
+			lift = 1.08
 		elif mesh_name.contains("Crenel") or mesh_name.contains("Plinth"):
 			kind = "stone"
 			tint = CASTLE_LIMESTONE.lerp(CASTLE_MASONRY, 0.34)
