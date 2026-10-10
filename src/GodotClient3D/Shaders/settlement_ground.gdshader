@@ -1,9 +1,9 @@
 shader_type spatial;
 render_mode diffuse_lambert, specular_disabled;
 
-// The Director: GFX-S. Keep occupy + debug modes. Narrower worn
-// paths with grass-eating shoulders. Cooler sunlit grass.
-// terrain_debug 1 = magenta, 2 = solid meadow, 3 = red road mask.
+// The Director: GFX-T. Keep occupy + debug modes and S worn
+// roads. Lusher medium-scale meadow: weeds, blossom clumps,
+// designed reward patches. terrain_debug 1/2/3 unchanged.
 uniform vec3 light_tint : source_color = vec3(1.0);
 uniform float tint_floor = 0.0;
 uniform float tint_wash_lo = 0.70;
@@ -30,7 +30,7 @@ uniform float detail_metres = 1.10;
 uniform float macro_amount = 0.12;
 uniform float detail_amount = 0.12;
 uniform float dirt_amount = 0.56;
-uniform float flower_amount = 0.22;
+uniform float flower_amount = 0.36;
 uniform float stone_amount = 0.22;
 uniform float crop_amount = 1.0;
 uniform float lod_cheap = 0.0;
@@ -167,11 +167,17 @@ void fragment() {
 
 	if (lod_cheap < 0.5) {
 		float tuft = abs(fract(world_pos.x * 1.85 + world_pos.z * 0.35 + patch * 0.4) - 0.5);
-		grass = mix(grass, grass * vec3(0.90, 0.94, 0.86), (1.0 - smoothstep(0.08, 0.28, tuft)) * 0.12);
+		grass = mix(grass, grass * vec3(0.90, 0.94, 0.86), (1.0 - smoothstep(0.08, 0.28, tuft)) * 0.20);
 		float bloom = noise2(world_pos.xz / 3.6 + vec2(17.0, 5.0));
-		float blossom_w = smoothstep(0.52, 0.82, patch) * smoothstep(0.50, 0.80, bloom);
+		float blossom_w = smoothstep(0.42, 0.78, patch) * smoothstep(0.38, 0.72, bloom);
 		vec3 blossom = mix(flower_warm, flower_cool, step(0.5, noise2(world_pos.xz * 0.37)));
-		grass = mix(grass, mix(grass, blossom, 0.35), blossom_w * flower_amount);
+		grass = mix(grass, mix(grass, blossom, 0.42), blossom_w * flower_amount);
+		float weed_n = fbm(world_pos.xz / 6.4 + vec2(21.0, 8.0));
+		float weed_w = smoothstep(0.58, 0.86, weed_n) * smoothstep(0.28, 0.68, patch);
+		grass = mix(grass, mix(grass, vec3(0.42, 0.52, 0.22), 0.48), weed_w * 0.40);
+		float lush_n = fbm(world_pos.xz / 11.0 + vec2(5.5, 14.2));
+		float lush_w = smoothstep(0.60, 0.88, lush_n);
+		grass = mix(grass, mix(grass, meadow_lush * vec3(0.90, 1.10, 0.88), 0.58), lush_w * 0.36);
 	}
 
 	// Occupation: brown vertex (r > g) or the world-space road mask.
