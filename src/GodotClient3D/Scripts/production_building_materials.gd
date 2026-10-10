@@ -77,17 +77,17 @@ static func _apply_civic_architecture(root: Node, building_type: String) -> void
 		var uv_scale := 2.8
 		var emission := 0.08
 		var mix_amt := 0.30
-		var boost := 1.10
-		var lift := 1.12
+		var boost := 1.16
+		var lift := 1.16
 		if mesh_name.contains("Roof") or mesh_name.contains("Cone"):
 			kind = "slate"
 			tint = HALL_SLATE
 			tex = slate_tex
 			uv_scale = 3.2
-			emission = 0.0
-			mix_amt = 0.48
-			boost = 1.0
-			lift = 0.92
+			emission = 0.03
+			mix_amt = 0.34
+			boost = 1.08
+			lift = 1.04
 		elif mesh_name.contains("Plaster"):
 			kind = "plaster"
 			tint = WARM_PLASTER.lerp(CASTLE_LIMESTONE, 0.28)

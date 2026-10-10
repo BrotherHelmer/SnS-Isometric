@@ -233,8 +233,10 @@ func _light_wall_ratio(image: Image) -> float:
 			var luma := c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722
 			var green := c.g > c.r + 0.04 and c.g > c.b
 			var teal_roof := c.b > c.r + 0.02 and c.g > c.r
+			var olive_roof := c.g >= c.r - 0.03 and c.g > c.b * 0.82 and luma < 0.52
+			var meadow := c.b < 0.24 and c.r < 0.62 and luma < 0.50
 			var sky := luma > 0.82 and c.b > c.r
-			if not green and not teal_roof and not sky and luma > 0.16:
+			if not green and not teal_roof and not olive_roof and not meadow and not sky and luma > 0.16:
 				wall += 1
 				if luma >= 0.46 and c.r >= 0.42 and c.g / maxf(c.r, 0.001) < 1.12:
 					light += 1
