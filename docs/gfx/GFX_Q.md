@@ -24,10 +24,10 @@ Hard rule: every package is proven from the **same GFX-P gameplay cameras**.
    embedded rocks. Presentation relief 0.08–0.18B on the back slope
    only. No camera-side cliff.
 2. **Castle stone.** Authored `civic_keep.gltf` / `civic_castle.gltf`
-   with 1K Poly Haven stone / plaster / timber / slate under warmer,
-   slightly darker limestone (`#C2B394`) and foundation masonry.
-   Texture mix 0.42, almost no emission. Roof is geometry, not an
-   atlas classify. Houses / mill stay KayKit.
+   with 1K Poly Haven stone / plaster / timber / slate under identity
+   limestone `#CDBFA2`. Plinth / crenel lean toward masonry `#82796A`.
+   Texture mix ~0.30 on walls (luma-only, not chalk). Roof is
+   geometry, not an atlas classify. Houses / mill stay KayKit.
 3. **Worn roads.** Keep the 512² distance field. Narrower stamps,
    circular junction pads, world-space ruts (no repeating lattice),
    softer shoulders. Raised meshes sit in the 3–6 cm dip.

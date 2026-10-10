@@ -150,9 +150,9 @@ void fragment() {
 	float dirt_luma = dot(dirt_s, vec3(0.2126, 0.7152, 0.0722));
 	float rock_luma = dot(rock_s, vec3(0.2126, 0.7152, 0.0722));
 	vec3 dry_grass = mix(meadow_warm, dirt_color, 0.38);
-	grass = mix(grass, dry_grass * (0.88 + dirt_luma * 0.22), smoothstep(0.56, 0.82, dry_n) * 0.36);
-	grass = mix(grass, dirt_color * (0.82 + dirt_luma * 0.28), smoothstep(0.64, 0.88, soil_n) * 0.32);
-	grass = mix(grass, mix(vec3(0.42, 0.40, 0.36), rock_s, 0.40), smoothstep(0.76, 0.94, rock_n) * 0.20);
+	grass = mix(grass, dry_grass * (0.88 + dirt_luma * 0.22), smoothstep(0.48, 0.78, dry_n) * 0.48);
+	grass = mix(grass, dirt_color * (0.82 + dirt_luma * 0.28), smoothstep(0.56, 0.84, soil_n) * 0.42);
+	grass = mix(grass, mix(vec3(0.42, 0.40, 0.36), rock_s, 0.40), smoothstep(0.68, 0.90, rock_n) * 0.28);
 	grass = mix(grass, dirt_color, smoothstep(0.78, 0.96, noise2(world_pos.xz * 0.19 + vec2(4.2, 8.1))) * 0.08);
 
 	if (tex_mix > 0.01) {
@@ -169,7 +169,7 @@ void fragment() {
 		float tuft = abs(fract(world_pos.x * 1.85 + world_pos.z * 0.35 + patch * 0.4) - 0.5);
 		grass = mix(grass, grass * vec3(0.90, 0.94, 0.86), (1.0 - smoothstep(0.08, 0.28, tuft)) * 0.12);
 		float bloom = noise2(world_pos.xz / 3.6 + vec2(17.0, 5.0));
-		float blossom_w = smoothstep(0.62, 0.88, patch) * smoothstep(0.58, 0.84, bloom);
+		float blossom_w = smoothstep(0.52, 0.82, patch) * smoothstep(0.50, 0.80, bloom);
 		vec3 blossom = mix(flower_warm, flower_cool, step(0.5, noise2(world_pos.xz * 0.37)));
 		grass = mix(grass, mix(grass, blossom, 0.35), blossom_w * flower_amount);
 	}

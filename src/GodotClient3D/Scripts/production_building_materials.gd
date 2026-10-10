@@ -72,11 +72,13 @@ static func _apply_civic_architecture(root: Node, building_type: String) -> void
 			continue
 		var mesh_name := String(instance.name)
 		var kind := "stone"
-		var tint := Color("#C2B394")
+		var tint := Color("#CDBFA2")
 		var tex: Texture2D = stone_tex
 		var uv_scale := 2.8
-		var emission := 0.02
-		var mix_amt := 0.42
+		var emission := 0.08
+		var mix_amt := 0.30
+		var boost := 1.10
+		var lift := 1.12
 		if mesh_name.contains("Roof") or mesh_name.contains("Cone"):
 			kind = "slate"
 			tint = HALL_SLATE
@@ -84,13 +86,17 @@ static func _apply_civic_architecture(root: Node, building_type: String) -> void
 			uv_scale = 3.2
 			emission = 0.0
 			mix_amt = 0.48
+			boost = 1.0
+			lift = 0.92
 		elif mesh_name.contains("Plaster"):
 			kind = "plaster"
 			tint = WARM_PLASTER.lerp(CASTLE_LIMESTONE, 0.28)
 			tex = plaster_tex
 			uv_scale = 2.2
-			emission = 0.03
-			mix_amt = 0.36
+			emission = 0.04
+			mix_amt = 0.34
+			boost = 1.06
+			lift = 1.08
 		elif mesh_name.contains("Timber") or mesh_name.contains("Door") or mesh_name.contains("Window"):
 			kind = "timber"
 			tint = DARK_TIMBER
@@ -98,13 +104,17 @@ static func _apply_civic_architecture(root: Node, building_type: String) -> void
 			uv_scale = 2.0
 			emission = 0.0
 			mix_amt = 0.40
+			boost = 1.0
+			lift = 0.96
 		elif mesh_name.contains("Crenel") or mesh_name.contains("Plinth"):
 			kind = "stone"
-			tint = CASTLE_MASONRY.lerp(Color("#C2B394"), 0.35)
+			tint = CASTLE_LIMESTONE.lerp(CASTLE_MASONRY, 0.34)
 			tex = stone_tex
 			uv_scale = 2.4
-			emission = 0.0
-			mix_amt = 0.46
+			emission = 0.04
+			mix_amt = 0.36
+			boost = 1.04
+			lift = 1.06
 		var material := ShaderMaterial.new()
 		material.shader = ArchShader
 		if tex != null:
@@ -113,8 +123,9 @@ static func _apply_civic_architecture(root: Node, building_type: String) -> void
 		material.set_shader_parameter("tex_mix", mix_amt)
 		material.set_shader_parameter("roughness", 0.90)
 		material.set_shader_parameter("uv_scale", uv_scale)
-		material.set_shader_parameter("luma_lift", 0.92)
+		material.set_shader_parameter("luma_lift", lift)
 		material.set_shader_parameter("emission_amt", emission)
+		material.set_shader_parameter("value_boost", boost)
 		instance.material_override = material
 		instance.set_meta("civic_kind", kind)
 		instance.set_meta("civic_building", building_type)
