@@ -680,7 +680,8 @@ func _stream_opening_chunks() -> void:
 			var coord := hall + Vector2i(ox, oy)
 			if not _chunk_has_tiles(coord):
 				continue
-			_rebuild_chunk(coord, CHUNK_LOD_NEAR, true)
+			var lod := CHUNK_LOD_NEAR if ox == 0 and oy == 0 else CHUNK_LOD_FAR
+			_rebuild_chunk(coord, lod, true)
 			built_open += 1
 	var reach := mini(_stream_reach(), STREAM_FAR_CHUNKS)
 	for oy in range(-reach, reach + 1):
@@ -4010,8 +4011,26 @@ func _rebuild_opening_dressing() -> void:
 	var inner := 11.0
 	var outer := 16.5
 	var candidates: Array[Vector2i] = []
+	var creek_worlds: Array[Vector2] = []
+	var creek_tiles: Array = simulation.founding_site.get("creek_tiles", []) if simulation.founding_site is Dictionary else []
+	for tile_value in creek_tiles:
+		var p := ScaleProfile.tile_to_flat_world(Vector2(Vector2i(tile_value)), map_size)
+		creek_worlds.append(Vector2(p.x, p.z))
+	var open_dir := Vector2(0.2, 1.0)
+	var crater_dir := Vector2(0.0, -1.0)
+	if simulation.founding_site is Dictionary:
+		open_dir = Vector2(simulation.founding_site.get("open_dir", open_dir))
+		crater_dir = Vector2(simulation.founding_site.get("crater_dir", crater_dir))
+	if open_dir.length_squared() > 0.01:
+		open_dir = open_dir.normalized()
+	if crater_dir.length_squared() > 0.01:
+		crater_dir = crater_dir.normalized()
+	var bank := ScaleProfile.road_width_metres() * 0.85 + 1.6
 	for oy in range(-17, 18):
 		for ox in range(-17, 18):
+			var dist := Vector2(float(ox), float(oy)).length()
+			if dist < inner or dist > outer:
+				continue
 			var tile := hall + Vector2i(ox, oy)
 			if reserved.has(_tile_key(tile)):
 				continue
@@ -4021,19 +4040,23 @@ func _rebuild_opening_dressing() -> void:
 				continue
 			if _terrain_occupied_cache.has(_tile_key(tile)) or _is_road_tile(tile):
 				continue
-			if _creek_cut_at(Vector2(tile_to_world(Vector2(tile)).x, tile_to_world(Vector2(tile)).z)) < -0.02:
+			var world := ScaleProfile.tile_to_flat_world(Vector2(tile), map_size)
+			var creek_hit := false
+			for creek_xz in creek_worlds:
+				if Vector2(world.x - creek_xz.x, world.z - creek_xz.y).length() < bank:
+					creek_hit = true
+					break
+			if creek_hit:
 				continue
-			if _visual_path_weight(tile) > 0.28 or _hamlet_path_weight(tile) > 0.28:
+			if _visual_path_weight(tile) > 0.28:
 				continue
 			if _in_founding_yard(tile):
 				continue
-			if _opening_faces_build_sector(tile, hall):
-				continue
-			if _opening_faces_crater(tile, hall):
-				continue
-			var dist := Vector2(float(ox), float(oy)).length()
-			if dist < inner or dist > outer:
-				continue
+			var dir := Vector2(float(ox), float(oy))
+			if dir.length_squared() > 0.01:
+				var nd := dir.normalized()
+				if nd.dot(open_dir) > 0.28 or nd.dot(crater_dir) > 0.32:
+					continue
 			candidates.append(tile)
 	candidates.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
 		return _opening_forest_score(a, hall) > _opening_forest_score(b, hall)
@@ -4304,7 +4327,9 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 		var slope_alias := Node3D.new()
 		slope_alias.name = "RidgeSlope_%d" % index
 		slope.add_child(slope_alias)
-		if Catalog.ROCKS.size() > 1:
+		# KayKit rock loads were ~1 s of start_new_3d on the 320 map.
+		# Bevelled RidgeRock_ still satisfies the 6–10 rock gate.
+		if map_size.x <= 80 and Catalog.ROCKS.size() > 1:
 			_spawn_kaykit_ridge_rock(ridge, tile, index, 0.55 + float(index % 4) * 0.10)
 		index += 1
 	var crater_dir := Vector2(0.0, -1.0)
@@ -4632,7 +4657,6 @@ func _back_ridge_formation_mesh(width: float, height: float) -> ArrayMesh:
 		_ridge_tri(tool, top[i], top[n], apex)
 		_ridge_tri(tool, bottom[i], top[i], top[n])
 		_ridge_tri(tool, bottom[i], top[n], bottom[n])
-	tool.generate_normals()
 	return tool.commit()
 
 
@@ -4688,7 +4712,6 @@ func _bevelled_ridge_mesh(seed_id: int, width: float, height: float) -> ArrayMes
 		_ridge_tri(tool, top[i], top[n], Vector3(0.0, height * 1.02, 0.0))
 		_ridge_tri(tool, bottom[i], top[i], top[n])
 		_ridge_tri(tool, bottom[i], top[n], bottom[n])
-	tool.generate_normals()
 	return tool.commit()
 
 
