@@ -1399,6 +1399,8 @@ func _rebuild_grass_multimeshes() -> void:
 				continue
 			if _is_road_tile(tile) or _is_farm_field_tile(tile):
 				continue
+			if _in_founding_yard(tile) or _forecourt_weight(tile) > 0.12:
+				continue
 			if density < 0.55 and _tile_hash(tile, 11) % 3 == 0:
 				continue
 			var meadow := _meadow_weight(tile)
@@ -1406,6 +1408,8 @@ func _rebuild_grass_multimeshes() -> void:
 			var near_yard := yard.has(_tile_key(tile))
 			var path_w := _visual_path_weight(tile)
 			if path_w > 0.45:
+				continue
+			if _near_founding_meadow(tile) and forest_edge == 0:
 				continue
 			# GFX-N: cluster at forest edges and landmarks. Sparse meadow
 			# center so construction stays readable.
@@ -1527,6 +1531,8 @@ func _rebuild_ground_patches() -> void:
 			if occupied.has(_tile_key(tile)) or _is_road_tile(tile) or _is_farm_field_tile(tile):
 				continue
 			if not simulation.is_revealed(tile):
+				continue
+			if _in_founding_yard(tile) or _forecourt_weight(tile) > 0.12:
 				continue
 			if _visual_path_weight(tile) > 0.40 or _hamlet_path_weight(tile) > 0.40:
 				continue
@@ -3809,21 +3815,23 @@ func _spawn_founding_bridges(ridge: Node3D, width: float) -> void:
 	var index := 0
 	for tile_value in simulation.founding_site.get("bridge_tiles", []):
 		var tile := Vector2i(tile_value)
+		if simulation.has_method("is_founding_creek_tile") and not bool(simulation.is_founding_creek_tile(tile)):
+			continue
 		var deck := MeshInstance3D.new()
 		deck.name = "DressBridge_%d" % index
 		var deck_mesh := BoxMesh.new()
-		deck_mesh.size = Vector3(maxf(width + 0.85, 2.4), 0.16, maxf(width + 0.55, 1.8))
+		deck_mesh.size = Vector3(maxf(width + 0.70, 3.1), 0.16, maxf(width * 0.42, 1.25))
 		deck.mesh = deck_mesh
-		deck.position = tile_to_world(Vector2(tile)) + Vector3(0.0, 0.12, 0.0)
+		deck.position = tile_to_world(Vector2(tile)) + Vector3(0.0, 0.14, 0.0)
 		deck.material_override = wood
 		ridge.add_child(deck)
 		for side in [-1.0, 1.0]:
 			var post := MeshInstance3D.new()
 			post.name = "DressBridgeRail_%d_%d" % [index, int(side)]
 			var post_mesh := BoxMesh.new()
-			post_mesh.size = Vector3(0.10, 0.55, maxf(width + 0.35, 1.6))
+			post_mesh.size = Vector3(0.10, 0.52, maxf(width * 0.38, 1.15))
 			post.mesh = post_mesh
-			post.position = deck.position + Vector3(side * 1.05, 0.28, 0.0)
+			post.position = deck.position + Vector3(side * (width * 0.42 + 0.22), 0.30, 0.0)
 			post.material_override = rail
 			ridge.add_child(post)
 		index += 1

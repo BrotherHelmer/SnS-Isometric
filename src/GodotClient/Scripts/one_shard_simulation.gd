@@ -3265,6 +3265,7 @@ func _generate_map() -> void:
 	_clear_founding_yard(rival_center, FOUNDING_YARD_RADIUS)
 	_place_founding_nearby_resources(town_center)
 	_generate_founding_creek(town_center)
+	_ensure_founding_food(town_center)
 	_strip_founding_isolates(town_center)
 
 	_set_tile(shard_position, Defs.TILE_SHARD)
@@ -3297,6 +3298,7 @@ func _generate_map() -> void:
 	_clear_founding_yard(rival_center, FOUNDING_YARD_RADIUS)
 	_place_founding_nearby_resources(town_center)
 	_generate_founding_creek(town_center)
+	_ensure_founding_food(town_center)
 	_strip_founding_isolates(town_center)
 
 
@@ -3728,7 +3730,7 @@ func _place_founding_nearby_resources(center: Vector2i) -> void:
 	var food_tiles: Array[Vector2i] = []
 	for i in 4:
 		var tile := food_c + Vector2i(site_rng.randi_range(-1, 1), site_rng.randi_range(-1, 1))
-		if not is_inside_map(tile) or _in_founding_clearing(tile):
+		if not is_inside_map(tile) or _in_founding_clearing(tile) or is_founding_creek_tile(tile):
 			continue
 		if get_tile(tile) != Defs.TILE_GRASS:
 			_set_tile(tile, Defs.TILE_GRASS)
@@ -3736,11 +3738,50 @@ func _place_founding_nearby_resources(center: Vector2i) -> void:
 			rock_deposits.erase(_tile_key(tile))
 		if not food_tiles.has(tile):
 			food_tiles.append(tile)
-	if food_tiles.is_empty() and is_inside_map(food_c):
+	if food_tiles.is_empty() and is_inside_map(food_c) and not is_founding_creek_tile(food_c):
 		food_tiles.append(food_c)
 	founding_site["food_tiles"] = food_tiles
 	_ensure_nearby_resource(center, Defs.TILE_TREE, 10)
 	_ensure_nearby_resource(center, Defs.TILE_ROCK, 10)
+
+
+func _ensure_founding_food(center: Vector2i) -> void:
+	var food_tiles: Array[Vector2i] = []
+	for food in founding_site.get("food_tiles", []):
+		var tile := Vector2i(food)
+		if is_inside_map(tile) and not is_founding_creek_tile(tile) and _resource_reachable(center, tile):
+			food_tiles.append(tile)
+	if not food_tiles.is_empty():
+		founding_site["food_tiles"] = food_tiles
+		return
+	var open_dir: Vector2 = founding_site.get("open_dir", Vector2(0.2, 1.0))
+	if open_dir.length_squared() < 0.01:
+		open_dir = Vector2(0.2, 1.0)
+	open_dir = open_dir.normalized()
+	for dist in [6, 7, 8, 5, 9]:
+		var tile := center + Vector2i(roundi(open_dir.x * float(dist)), roundi(open_dir.y * float(dist)))
+		tile.x = clampi(tile.x, 1, map_size.x - 2)
+		tile.y = clampi(tile.y, 1, map_size.y - 2)
+		if not is_inside_map(tile) or is_founding_creek_tile(tile):
+			continue
+		if _in_founding_clearing(tile):
+			tile += Vector2i(roundi(open_dir.x * 2.0), roundi(open_dir.y * 2.0))
+		if not is_inside_map(tile) or is_founding_creek_tile(tile):
+			continue
+		_set_tile(tile, Defs.TILE_GRASS)
+		tree_deposits.erase(_tile_key(tile))
+		rock_deposits.erase(_tile_key(tile))
+		if _resource_reachable(center, tile):
+			food_tiles.append(tile)
+			break
+	if food_tiles.is_empty():
+		var fallback := _town_hall_entrance_tile() + Vector2i(2, 2)
+		if is_inside_map(fallback):
+			_set_tile(fallback, Defs.TILE_GRASS)
+			tree_deposits.erase(_tile_key(fallback))
+			rock_deposits.erase(_tile_key(fallback))
+			food_tiles.append(fallback)
+	founding_site["food_tiles"] = food_tiles
 
 
 func _ensure_nearby_resource(center: Vector2i, tile_type: String, max_dist: int) -> void:
