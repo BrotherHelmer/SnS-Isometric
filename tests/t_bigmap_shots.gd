@@ -92,7 +92,7 @@ func _write_composite(dest: String, cells: Array[Image]) -> void:
 	var board := Image.create(1920, 1080, false, Image.FORMAT_RGB8)
 	board.fill(Color("#0a1210"))
 	var cell_w := 640
-	var cell_h := 360
+	var cell_h := 540
 	for index in cells.size():
 		var src: Image = cells[index].duplicate()
 		src.resize(cell_w, cell_h, Image.INTERPOLATE_BILINEAR)

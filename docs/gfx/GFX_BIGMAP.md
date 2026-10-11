@@ -67,11 +67,11 @@ Filled by `tests/t_bigmap.gd` on lavapipe (proxy for Shard). See
 
 | metric | target | measured |
 | --- | --- | --- |
-| start_new_3d | ≤ 2 s | pending re-measure |
-| first frame (warm) | ≤ 2 s | pending re-measure |
-| pan avg / p95 / max | no hitch > 100 ms | pending re-measure |
-| memory | logged | pending re-measure |
-| chunks at opening | near-camera only, not 100 | pending re-measure |
+| start_new_3d | ≤ 2 s | **796.0 ms** |
+| first frame (warm) | ≤ 2 s | **704.0 ms** |
+| pan avg / p95 / max | no hitch > 100 ms | **16.26 / 27.63 / 27.63 ms** |
+| memory | logged | **102.2 MB** |
+| chunks at opening | near-camera only, not 100 | **4 near + 8 far = 12 built** |
 
 ## Shots
 
