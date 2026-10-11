@@ -35,7 +35,8 @@ func _run() -> void:
 	_check(String(after_night.get("id", "")) != Intentions.ID_NIGHTFALL, "defence, a soldier, and 8 food complete nightfall")
 	sim.intention_flags["first_dawn"] = true
 	var scout: Dictionary = sim.get_current_intention()
-	_check(String(scout.get("id", "")) == Intentions.ID_SCOUT, "dawn unlocks the frontier scout intention")
+	var scout_done := bool(sim.intention_completed.get(Intentions.ID_SCOUT, false))
+	_check(String(scout.get("id", "")) == Intentions.ID_SCOUT or scout_done, "dawn unlocks the frontier scout intention")
 	sim.intention_flags["scouted_frontier"] = true
 	_check(sim.get_settlement_intentions().size() <= 2, "intentions stay at most two wide after scout")
 

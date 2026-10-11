@@ -10,8 +10,6 @@ const ID_FEED := "feed"
 const ID_NIGHTFALL := "nightfall"
 const ID_SCOUT := "scout_frontier"
 const ID_STONE := "stone_shortage"
-const ID_STOREHOUSE := "plank_store"
-const ID_CRATER := "crater_war"
 
 const FOOD_NIGHTFALL := 8
 
@@ -160,28 +158,6 @@ static func _catalog() -> Array:
 			"require_flag": "stone_deposit_found",
 			"criteria": [
 				{"kind": "flag", "flag": "quarry_near_deposit", "label": "Establish a quarry near the deposit"}
-			]
-		},
-		{
-			"id": ID_STOREHOUSE,
-			"title": "The Plank Loop",
-			"detail": "A Sawmill turns Wood into Planks so the Storehouse can rise.",
-			"requires": [ID_ESTABLISH],
-			"criteria": [
-				{"kind": "building", "type": "SAWMILL", "label": "Build a Sawmill"},
-				{"kind": "building", "type": "STOREHOUSE", "label": "Build a Storehouse"}
-			]
-		},
-		{
-			"id": ID_CRATER,
-			"title": "The Crater War",
-			"detail": "Capture the rival's vent, harvest Stabilized Wyrd, and Bind.",
-			"requires": [ID_NIGHTFALL],
-			"require_flag": "surveyed_fissure",
-			"criteria": [
-				{"kind": "building", "type": "WYRD_HARVESTER", "label": "Raise a Wyrd Harvester"},
-				{"kind": "building", "type": "WYRD_REFINER", "label": "Raise a Wyrd Refiner"},
-				{"kind": "flag", "flag": "captured_outpost", "label": "Resolve the rival at the fissure"}
 			]
 		}
 	]

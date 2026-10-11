@@ -109,6 +109,7 @@ func _run() -> void:
 		var thought: Dictionary = player.think(sim)
 		_watch_commands(sim, thought)
 		_watch_journal(sim)
+		_watch_crater_state(sim)
 		await _watch_phase(game, sim)
 		var actions: Array = thought.get("actions", [])
 		if not actions.is_empty():
@@ -117,6 +118,7 @@ func _run() -> void:
 		sim._simulate_seconds_for_test(STEP_SECONDS)
 		step_index += 1
 		_watch_journal(sim)
+		_watch_crater_state(sim)
 		await _watch_phase(game, sim)
 		_log_row(sim, _event_tag(sim, thought))
 		if _should_snapshot_minute(before, float(sim.elapsed_seconds)):
@@ -267,6 +269,26 @@ func _watch_phase(game, sim) -> void:
 	if captured.get("pending_ritual", false):
 		captured["pending_ritual"] = false
 		await _capture(game, sim, "t%02d_ritual" % _mm(sim), "Binding ritual begun.")
+
+
+func _watch_crater_state(sim) -> void:
+	if sim.crater_war == null:
+		return
+	if not saw_storehouse and sim.crater_war.storehouse_completed_at >= 0.0:
+		saw_storehouse = true
+		_note_event(sim, "storehouse", "Storehouse completed.")
+		captured["pending_storehouse"] = true
+	if not saw_capture and sim.crater_war.capture_at >= 0.0:
+		saw_capture = true
+		_note_event(sim, "capture", String(sim.last_message) if String(sim.last_message).contains("CAPTURED") else "CLAIMANT OUTPOST CAPTURED — the fissure is yours.")
+		captured["pending_capture"] = true
+	elif not saw_capture and sim.crater_war.rival_resolution != "":
+		saw_capture = true
+		_note_event(sim, sim.crater_war.rival_resolution, "Rival resolved: %s." % sim.crater_war.rival_resolution)
+	if not saw_ritual and sim.crater_war.ritual_started_at >= 0.0:
+		saw_ritual = true
+		_note_event(sim, "ritual", "BINDING BEGUN — defend the fissure ritual for 120 seconds.")
+		captured["pending_ritual"] = true
 
 
 func _maybe_rival(sim) -> void:
@@ -421,6 +443,19 @@ func _write_notes(sim, player) -> void:
 	if sim.rivalry != null:
 		notes["claim"] = sim.rivalry.claim_requirements("player")
 		notes["rival_line"] = String(sim.rivalry.get_rival_status_line())
+	if sim.crater_war != null:
+		notes["crater_war"] = {
+			"storehouse_at": sim.crater_war.storehouse_completed_at,
+			"capture_at": sim.crater_war.capture_at,
+			"resolution": sim.crater_war.rival_resolution,
+			"ritual_at": sim.crater_war.ritual_started_at,
+			"surveyed": sim.crater_war.geologist_surveyed,
+			"fissure": str(sim.crater_war.primary_fissure),
+			"secondary": str(sim.crater_war.secondary_fissure),
+			"exposure": sim.crater_war.exposure,
+			"stabilized": sim.crater_war.stabilized_stock(),
+			"interacted": sim.crater_war.rival_interacted
+		}
 	var notes_name := "notes.json" if seed_value == SEED_DEFAULT else "notes_%d.json" % seed_value
 	var file := FileAccess.open(dest.path_join(notes_name), FileAccess.WRITE)
 	file.store_string(JSON.stringify(notes, "\t"))

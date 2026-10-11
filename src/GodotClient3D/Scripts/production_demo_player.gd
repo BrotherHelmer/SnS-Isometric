@@ -100,8 +100,6 @@ func _defend_night(sim) -> void:
 		var toward: Vector2i = (sim.shard_position - sim.town_hall_position).sign()
 		_try_build(sim, Defs.BUILDING_WATCHTOWER, sim.town_hall_position + toward + Vector2i(1, 1))
 		return
-	if _pending_buildings(sim) >= MAX_PENDING_SITES:
-		return
 	if not _has_completed(sim, Defs.BUILDING_SAWMILL) and _count(sim, Defs.BUILDING_SAWMILL) < 1:
 		return
 	if not _has_completed(sim, Defs.BUILDING_STOREHOUSE) and _count(sim, Defs.BUILDING_STOREHOUSE) < 1:
@@ -150,7 +148,9 @@ func _expand_toward_shard(sim) -> void:
 		requirements = sim.rivalry.claim_requirements("player")
 	if not bool(requirements.get("lumen", false)):
 		_place_forward_structure(sim, Defs.BUILDING_LUMEN_PILLAR)
-	if _stock(sim, Defs.RESOURCE_WOOD) >= 18:
+	# The Director: one fissure Outpost is the Crater War stake. Do not
+	# keep probing the distant Shard tile after the vent is held.
+	if _stock(sim, Defs.RESOURCE_WOOD) >= 18 and _count(sim, Defs.BUILDING_OUTPOST) < 1:
 		_place_forward_structure(sim, Defs.BUILDING_OUTPOST)
 
 
@@ -161,6 +161,8 @@ func _pursue_crater_war(sim) -> void:
 		var survey: Dictionary = sim.request_survey()
 		if bool(survey.get("success", false)):
 			_note(sim, "SURVEY", sim.crater_war.primary_fissure, String(survey.get("message", "")))
+	if sim.crater_war.geologist_surveyed:
+		_extend_roads(sim, sim.crater_war.primary_fissure, 2)
 	if _pending_buildings(sim) >= MAX_PENDING_SITES:
 		return
 	if sim.crater_war.geologist_surveyed and _unlocked(sim, Defs.BUILDING_WYRD_HARVESTER) and _count(sim, Defs.BUILDING_WYRD_HARVESTER) < 1:
@@ -173,7 +175,7 @@ func _pursue_crater_war(sim) -> void:
 func _contest_rivals(sim) -> void:
 	if sim.rivalry == null:
 		return
-	if sim.crater_war != null and String(sim.crater_war.rival_resolution) == "" and int(sim.soldiers_total) < 1 and _stock(sim, Defs.RESOURCE_WOOD) >= 8:
+	if sim.crater_war != null and bool(sim.demo_rival_revealed) and String(sim.crater_war.rival_resolution) == "" and int(sim.soldiers_total) < 1 and float(sim.elapsed_seconds) >= 1200.0 and _stock(sim, Defs.RESOURCE_WOOD) >= 8:
 		var deal: Dictionary = sim.request_passage_deal()
 		if bool(deal.get("success", false)):
 			_note(sim, "PASSAGE", sim.crater_war.primary_fissure, String(deal.get("message", "")))
@@ -223,6 +225,8 @@ func _try_bind(sim) -> void:
 func _try_frontier_outpost(sim) -> bool:
 	var hall: Vector2i = sim.town_hall_position
 	var marker := _frontier_target(sim)
+	if sim.crater_war != null and sim.crater_war.primary_fissure.x >= 0:
+		marker = sim.crater_war.primary_fissure
 	var aims: Array[Vector2i] = [marker]
 	for radius in range(1, 5):
 		for ox in range(-radius, radius + 1):
@@ -453,6 +457,8 @@ func _early_road_target(sim) -> Vector2i:
 
 
 func _frontier_target(sim) -> Vector2i:
+	if sim.crater_war != null and sim.crater_war.primary_fissure.x >= 0:
+		return sim.crater_war.primary_fissure
 	var marker: Variant = sim.founding_site.get("frontier_marker", Vector2i(-1, -1))
 	if marker is Vector2i and marker.x >= 0:
 		return marker

@@ -56,6 +56,8 @@ func _check_seed_slice(seed_value: int) -> void:
 	_check(sim.demo_frontier_revealed, "seed %d frontier reveal" % seed_value)
 	_check(sim.crater_war.geologist_surveyed, "seed %d geologist marks a fissure" % seed_value)
 	_check(sim.crater_war.primary_fissure.x >= 0, "seed %d plants a primary fissure" % seed_value)
+	var early_deal: Dictionary = sim.request_passage_deal()
+	_check(not bool(early_deal.get("success", false)), "seed %d passage deal waits for the rival" % seed_value)
 	sim.elapsed_seconds = Simulation.DEMO_RIVAL_SECONDS
 	sim._update_demo_beats()
 	_check(sim.demo_rival_revealed, "seed %d rival reveal" % seed_value)

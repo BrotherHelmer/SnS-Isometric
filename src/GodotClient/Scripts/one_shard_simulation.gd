@@ -979,6 +979,8 @@ func validate_placement(building_type: String, tile: Vector2i, rotation: int = 0
 		success_message = "CLEARING REQUIRED — woodcutters will clear the site first."
 	if building_type == Defs.BUILDING_WALL:
 		return _success(success_message)
+	if building_type == Defs.BUILDING_WYRD_HARVESTER and crater_war != null and crater_war.harvester_can_sit(tile):
+		return _with_placement_quality(_success(success_message), building_type, tile, rotation)
 	if _footprint_touches_planned_or_connected_road(tile, footprint):
 		return _with_placement_quality(_success(success_message), building_type, tile, rotation)
 	var spur := _auto_spur_tiles(tile, footprint)
@@ -9058,7 +9060,7 @@ func _record_event(event_type: String, message: String, details: Dictionary = {}
 		"details": details.duplicate(true)
 	}
 	run_journal.append(event)
-	while run_journal.size() > 1000:
+	while run_journal.size() > 8000:
 		run_journal.pop_front()
 	_mirror_playtest_event(event_type, message)
 	if not diagnostics_enabled:

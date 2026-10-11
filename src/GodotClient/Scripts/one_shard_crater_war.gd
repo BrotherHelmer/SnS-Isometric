@@ -95,13 +95,20 @@ func plant_fissures(marker: Vector2i) -> void:
 	primary_fissure = _clamp_tile(marker)
 	secondary_fissure = _clamp_tile(marker + SECONDARY_OFFSET)
 	fissure_tiles.clear()
-	for tile in [primary_fissure, secondary_fissure]:
-		if simulation.is_inside_map(tile) and tile != simulation.shard_position:
-			if String(simulation.get_tile(tile)) in [Defs.TILE_TREE, Defs.TILE_ROCK]:
-				simulation._set_tile(tile, Defs.TILE_GRASS)
-				simulation.tree_deposits.erase(simulation._tile_key(tile))
-				simulation.rock_deposits.erase(simulation._tile_key(tile))
-			fissure_tiles.append(tile)
+	for origin in [primary_fissure, secondary_fissure]:
+		for oy in range(-2, 3):
+			for ox in range(-2, 3):
+				if absi(ox) + absi(oy) > 2:
+					continue
+				var tile := _clamp_tile(origin + Vector2i(ox, oy))
+				if not simulation.is_inside_map(tile) or tile == simulation.shard_position:
+					continue
+				if String(simulation.get_tile(tile)) in [Defs.TILE_TREE, Defs.TILE_ROCK]:
+					simulation._set_tile(tile, Defs.TILE_GRASS)
+					simulation.tree_deposits.erase(simulation._tile_key(tile))
+					simulation.rock_deposits.erase(simulation._tile_key(tile))
+				if not is_fissure_tile(tile):
+					fissure_tiles.append(tile)
 	if not fissure_tiles.is_empty() and primary_fissure.x < 0:
 		primary_fissure = fissure_tiles[0]
 
@@ -253,6 +260,16 @@ func capture_outpost(structure: Dictionary) -> void:
 func request_passage_deal() -> Dictionary:
 	if rival_resolution != "":
 		return _failure("Resolved", "The rival at this fissure is already resolved.")
+	if not bool(simulation.demo_rival_revealed):
+		return _failure("Fog", "No rival has been sighted at this fissure.")
+	var rival_here := false
+	if simulation.rivalry != null:
+		for structure in simulation.rivalry.get_structures(RivalryTuning.AI_REALM):
+			if String(structure.get("type", "")) == RivalryTuning.STRUCTURE_CLAIMANT_OUTPOST and int(structure.get("hp", 0)) > 0:
+				rival_here = true
+				break
+	if not rival_here:
+		return _failure("Target", "No rival Outpost contests this fissure.")
 	if int(simulation.get_available_resource(Defs.RESOURCE_WOOD)) < PASSAGE_WOOD:
 		return _failure("Resources", "A passage deal costs %d Wood." % PASSAGE_WOOD)
 	simulation.central_inventory[Defs.RESOURCE_WOOD] = int(simulation.central_inventory.get(Defs.RESOURCE_WOOD, 0)) - PASSAGE_WOOD
