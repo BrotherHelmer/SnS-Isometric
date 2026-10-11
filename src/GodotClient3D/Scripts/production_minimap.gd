@@ -19,6 +19,7 @@ var camera_rig
 var texture: ImageTexture
 var last_signature := ""
 var refresh_elapsed := 0.0
+var overview_mode := false
 
 
 func _ready() -> void:
@@ -88,20 +89,31 @@ func redraw(frame_snapshot: Dictionary) -> void:
 func _render_map(map_size: Vector2i, frame_snapshot: Dictionary) -> Image:
 	var image := Image.create(map_size.x, map_size.y, false, Image.FORMAT_RGB8)
 	image.fill(Color("#0a1210"))
-	for y in range(map_size.y):
-		for x in range(map_size.x):
+	var step := 1 if map_size.x <= 120 or overview_mode else 2
+	for y in range(0, map_size.y, step):
+		for x in range(0, map_size.x, step):
 			var tile := Vector2i(x, y)
-			if not simulation.is_revealed(tile):
+			if not overview_mode and not simulation.is_revealed(tile):
 				continue
 			var tile_type := String(simulation.get_tile(tile))
 			var color := Color("#3a6a34")
-			if tile_type == Defs.TILE_TREE:
+			if simulation.has_method("is_water_tile") and simulation.is_water_tile(tile):
+				color = Color("#2a5a62")
+			elif tile_type == Defs.TILE_TREE:
 				color = Color("#1f3d24")
 			elif tile_type == Defs.TILE_ROCK:
 				color = Color("#6a6a62")
 			elif tile_type == Defs.TILE_SHARD:
 				color = Color("#6bcfe0")
-			image.set_pixel(x, y, color)
+			if not simulation.is_revealed(tile) and overview_mode:
+				color = color.darkened(0.45)
+			if step == 1:
+				image.set_pixel(x, y, color)
+			else:
+				for oy in range(step):
+					for ox in range(step):
+						if x + ox < map_size.x and y + oy < map_size.y:
+							image.set_pixel(x + ox, y + oy, color)
 	for road_value in frame_snapshot.get("roads", []):
 		var road: Dictionary = road_value
 		var anchor := Vector2i(road.get("anchor", Vector2i.ZERO))
@@ -136,8 +148,14 @@ func _render_map(map_size: Vector2i, frame_snapshot: Dictionary) -> Image:
 			continue
 		var hostile := String(combatant.get("faction", "")) in ["hostile", "rival"]
 		_dot(image, map_size, Vector2i(combatant.get("logical_tile", Vector2i.ZERO)), Color("#e37b6a") if hostile else Color("#9b3943"))
-	_dot(image, map_size, Vector2i(simulation.shard_position), Color("#6bcfe0"))
-	_dot(image, map_size, Vector2i(simulation.rival_town_hall_position), Color("#7a2c36"))
+	_stamp_landmark(image, map_size, Vector2i(simulation.shard_position), Color("#6bcfe0"), 3)
+	if simulation.get("rival_seats"):
+		for seat_value in simulation.rival_seats:
+			_stamp_landmark(image, map_size, Vector2i(seat_value), Color("#7a2c36"), 2)
+	else:
+		_stamp_landmark(image, map_size, Vector2i(simulation.rival_town_hall_position), Color("#7a2c36"), 2)
+	if simulation.is_town_hall_founded():
+		_stamp_landmark(image, map_size, Vector2i(simulation.town_hall_position), Color("#efcf8a"), 2)
 	_paint_camera(image, map_size)
 	return image
 
@@ -159,9 +177,18 @@ func _dot(image: Image, map_size: Vector2i, tile: Vector2i, color: Color, camera
 		return
 	# Every world marker obeys discovery, even when a snapshot contains hidden
 	# authority data. The player's camera outline is not a world observation.
-	if not camera_outline and not simulation.is_revealed(tile):
+	# Overview mode is the province atlas for the big-map shot.
+	if not camera_outline and not overview_mode and not simulation.is_revealed(tile):
 		return
 	image.set_pixel(tile.x, tile.y, color)
+
+
+func _stamp_landmark(image: Image, map_size: Vector2i, tile: Vector2i, color: Color, radius: int) -> void:
+	for oy in range(-radius, radius + 1):
+		for ox in range(-radius, radius + 1):
+			if ox * ox + oy * oy > radius * radius:
+				continue
+			_dot(image, map_size, tile + Vector2i(ox, oy), color, overview_mode)
 
 
 func _paint_camera(image: Image, map_size: Vector2i) -> void:

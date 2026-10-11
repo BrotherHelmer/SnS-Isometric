@@ -38,7 +38,7 @@ func _run() -> void:
 	for i in SEED_COUNT:
 		var seed_value := BASE_SEED + i * 97
 		var sim = Simulation.new()
-		sim.start_new_run(70, 70, seed_value, true)
+		sim.start_new_run(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, seed_value, true)
 		var audit: Dictionary = sim.founding_audit()
 		var ok := _check_audit(audit, seed_value)
 		if ok:
@@ -189,6 +189,13 @@ func _check_audit(audit: Dictionary, seed_value: int) -> bool:
 	ok = _check(bool(audit.get("footprint_stable", false)), "seed %d Town Hall footprint is stable outside the pit" % seed_value) and ok
 	var pit := float(audit.get("pit_radius", 0.0))
 	ok = _check(pit >= Simulation.CRATER_RADIUS * Simulation.CRATER_PIT_RADIUS_MIN - 0.05 and pit <= Simulation.CRATER_RADIUS * Simulation.CRATER_PIT_RADIUS_MAX + 0.05, "seed %d pit radius is 0.30–0.45 R" % seed_value) and ok
+	ok = _check(int(audit.get("rival_count", 0)) >= Simulation.RIVAL_SEAT_MIN and int(audit.get("rival_count", 0)) <= Simulation.RIVAL_SEAT_MAX, "seed %d has 3–4 rival seats" % seed_value) and ok
+	var spread: Dictionary = audit.get("resource_spread", {})
+	ok = _check(int(spread.get("filled_quadrants", 0)) >= 3, "seed %d resources reach at least 3 quadrants" % seed_value) and ok
+	ok = _check(int(spread.get("trees", 0)) >= 80, "seed %d has distributed timber" % seed_value) and ok
+	ok = _check(int(spread.get("water", 0)) >= 5, "seed %d has province water" % seed_value) and ok
+	var map_size: Vector2i = audit.get("map_size", Vector2i.ZERO)
+	ok = _check(map_size.x == Simulation.MAP_WIDTH and map_size.y == Simulation.MAP_HEIGHT, "seed %d is the 320 province" % seed_value) and ok
 	return ok
 
 

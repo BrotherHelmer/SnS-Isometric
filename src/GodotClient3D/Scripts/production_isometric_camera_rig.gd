@@ -12,6 +12,10 @@ const OPENING_ZOOM := 32.0
 # pull back onto a diamond island in a flat void.
 const STRATEGIC_ZOOM := 39.0
 const PLAY_ZOOM_CAP := 1.5
+# Test #13: 320-tile province can pull back further than the 70-tile
+# island. configure_for_map raises the live cap to this.
+const PROVINCE_ZOOM := 96.0
+const PROVINCE_ZOOM_CAP := 3.7
 const PREFERRED_YAW := -0.62
 # The Director: GFX-D default framing. 26 is ~32% closer than GFX-C's 38
 # so the founding meadow fills the camera instead of unused lawn.
@@ -19,6 +23,7 @@ const PREFERRED_YAW := -0.62
 var camera: Camera3D
 var target_position := Vector3.ZERO
 var target_zoom := NORMAL_ZOOM
+var zoom_cap := STRATEGIC_ZOOM
 var pan_bounds := Rect2(-34.0, -34.0, 68.0, 68.0)
 var dragging := false
 var pan_drag_kind := "middle_drag"
@@ -54,8 +59,8 @@ func _process(delta: float) -> void:
 		if input_vector != Vector2.ZERO:
 			_pan(input_vector.normalized() * delta * target_zoom * 0.42, false, "keyboard")
 	position = position.lerp(target_position, minf(1.0, delta * 9.0))
-	target_zoom = clampf(target_zoom, CLOSE_ZOOM, STRATEGIC_ZOOM)
-	camera.size = clampf(lerpf(camera.size, target_zoom, minf(1.0, delta * 10.0)), CLOSE_ZOOM, STRATEGIC_ZOOM)
+	target_zoom = clampf(target_zoom, CLOSE_ZOOM, zoom_cap)
+	camera.size = clampf(lerpf(camera.size, target_zoom, minf(1.0, delta * 10.0)), CLOSE_ZOOM, zoom_cap)
 
 
 # Camera input must arrive before Control nodes consume it. The Phase 3 HUD
@@ -66,10 +71,10 @@ func _input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
-			target_zoom = clampf(target_zoom - 3.5, CLOSE_ZOOM, STRATEGIC_ZOOM)
+			target_zoom = clampf(target_zoom - 3.5, CLOSE_ZOOM, zoom_cap)
 			get_viewport().set_input_as_handled()
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
-			target_zoom = clampf(target_zoom + 3.5, CLOSE_ZOOM, STRATEGIC_ZOOM)
+			target_zoom = clampf(target_zoom + 3.5, CLOSE_ZOOM, zoom_cap)
 			get_viewport().set_input_as_handled()
 		elif event.button_index == MOUSE_BUTTON_MIDDLE:
 			dragging = event.pressed
@@ -82,6 +87,7 @@ func _input(event: InputEvent) -> void:
 
 
 func configure_for_map(map_size: Vector2i) -> void:
+	zoom_cap = PROVINCE_ZOOM if map_size.x >= 200 else STRATEGIC_ZOOM
 	var extent_x := maxf(5.0, float(map_size.x - 1) * ScaleProfile.LOGICAL_CELL_METRES * 0.5)
 	var extent_z := maxf(5.0, float(map_size.y - 1) * ScaleProfile.LOGICAL_CELL_METRES * 0.5)
 	configure_pan_bounds(Rect2(-extent_x, -extent_z, extent_x * 2.0, extent_z * 2.0))
@@ -104,7 +110,7 @@ func focus_world(world_position: Vector3) -> void:
 func set_zoom_preset(preset: String) -> void:
 	match preset.to_lower():
 		"close": target_zoom = CLOSE_ZOOM
-		"strategic": target_zoom = STRATEGIC_ZOOM
+		"strategic": target_zoom = zoom_cap
 		_: target_zoom = NORMAL_ZOOM
 	if camera != null:
 		camera.size = target_zoom
@@ -137,7 +143,7 @@ func view_direction() -> Vector3:
 
 func compose_view(world_position: Vector3, orthographic_size: float) -> void:
 	target_position = Vector3(world_position.x, 0.0, world_position.z)
-	target_zoom = clampf(orthographic_size, CLOSE_ZOOM, STRATEGIC_ZOOM)
+	target_zoom = clampf(orthographic_size, CLOSE_ZOOM, zoom_cap)
 	_clamp_target()
 	position = target_position
 	if camera != null:

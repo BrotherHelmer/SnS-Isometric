@@ -732,6 +732,7 @@ func _initialize_presentation() -> void:
 	camera_rig.compose_view(world_view.opening_camera_focus(), ProductionIsometricCameraRig3D.OPENING_ZOOM)
 	play_camera_zoom = ProductionIsometricCameraRig3D.OPENING_ZOOM
 	play_camera_focus = camera_rig.target_position
+	world_view.note_camera(camera_rig.target_position, camera_rig.target_zoom)
 	if minimap != null:
 		minimap.bind(simulation_host.simulation, world_view, camera_rig)
 	last_synced_tick = -1
@@ -742,8 +743,12 @@ func _sync_presentation() -> void:
 	var frame := presentation_adapter.capture_frame(simulation_host.simulation, simulation_host.render_lead_seconds())
 	current_frame_snapshot = frame
 	world_view.sync_frame(frame)
+	world_view.note_camera(camera_rig.target_position, camera_rig.target_zoom)
 	var frontier_pad := 48.0 if placement_type != "" else 28.0
-	camera_rig.configure_pan_bounds(world_view.revealed_camera_bounds(camera_rig.target_zoom, frontier_pad))
+	if camera_rig.target_zoom >= camera_rig.zoom_cap * 0.72:
+		camera_rig.configure_for_map(simulation_host.simulation.map_size)
+	else:
+		camera_rig.configure_pan_bounds(world_view.revealed_camera_bounds(camera_rig.target_zoom, frontier_pad))
 	last_synced_tick = int(frame.get("tick", -1))
 
 
