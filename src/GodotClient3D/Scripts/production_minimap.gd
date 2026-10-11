@@ -197,7 +197,7 @@ func _stamp_crater_ring(image: Image, map_size: Vector2i) -> void:
 		return
 	var center: Vector2i = simulation.shard_position
 	var radius := int(round(float(simulation.CRATER_RADIUS)))
-	var pit := int(round(float(simulation.get("crater_pit_radius")))) if simulation.get("crater_pit_radius") != null else int(round(float(radius) * 0.35))
+	var pit := int(round(float(simulation.crater_pit_radius)))
 	for angle in range(0, 360, 3):
 		var rad := deg_to_rad(float(angle))
 		var rim := center + Vector2i(roundi(cos(rad) * float(radius)), roundi(sin(rad) * float(radius)))
