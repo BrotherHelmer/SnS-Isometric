@@ -378,6 +378,32 @@ func request_structure(realm_id: String, structure_type: String, tile: Vector2i)
 	return {"success": true, "message": "%s built." % Tuning.structure_name(structure_type), "structure": structure}
 
 
+func force_place_structure(realm_id: String, structure_type: String, tile: Vector2i) -> Dictionary:
+	if not realms.has(realm_id):
+		return _failure("Realm", "Unknown realm.")
+	var existing := get_structure_at_tile(tile)
+	if not existing.is_empty():
+		return {"success": true, "message": "Presence already visible.", "structure": existing}
+	var definition := Tuning.structure_definition(structure_type)
+	var structure := {
+		"id": next_structure_id,
+		"realm_id": realm_id,
+		"type": structure_type,
+		"position": tile,
+		"footprint": definition.get("footprint", Vector2i.ONE),
+		"hp": int(definition.get("max_hp", 100)),
+		"max_hp": int(definition.get("max_hp", 100)),
+		"active": true,
+		"connected": true,
+		"damage_flash": 0.0
+	}
+	next_structure_id += 1
+	structures.append(structure)
+	realms[realm_id]["structures"].append(structure["id"])
+	_log_event("%s presence sighted: %s." % [_realm_name(realm_id), Tuning.structure_name(structure_type)])
+	return {"success": true, "message": "%s sighted." % Tuning.structure_name(structure_type), "structure": structure}
+
+
 func get_roads(realm_id: String) -> Array[Vector2i]:
 	var result: Array[Vector2i] = []
 	if not realms.has(realm_id):

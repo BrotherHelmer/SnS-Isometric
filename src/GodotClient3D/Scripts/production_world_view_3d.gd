@@ -5179,7 +5179,15 @@ func _sync_map_markers() -> void:
 		var label := Label3D.new()
 		label.text = String(marker.get("title", "?"))
 		label.font_size = 28
-		label.modulate = Color("#efcf8a") if String(marker.get("kind", "")) != "skull" else Color("#f0a06e")
+		var kind := String(marker.get("kind", ""))
+		if kind == "raid":
+			label.modulate = Color("#f05a4a")
+		elif kind == "rival":
+			label.modulate = Color("#d46a3a")
+		elif kind == "skull":
+			label.modulate = Color("#f0a06e")
+		else:
+			label.modulate = Color("#efcf8a")
 		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		label.no_depth_test = true
 		label.position = tile_to_world(Vector2(tile)) + Vector3.UP * 2.4

@@ -3320,7 +3320,6 @@ func is_build_unlocked(building_type: String) -> bool:
 	var has_house := _player_has_building(Defs.BUILDING_HOUSE)
 	var has_tower := _player_has_building(Defs.BUILDING_WATCHTOWER)
 	var wheat := int(sim.central_inventory.get(Defs.RESOURCE_WHEAT, 0))
-	var night_near: bool = bool(sim.is_night) or float(sim.DAY_LENGTH_SECONDS) - float(sim.phase_time) <= 90.0
 	match building_type:
 		Defs.BUILDING_QUARRY, Defs.BUILDING_SAWMILL, Defs.TOOL_CLEAR_AREA:
 			return has_lumber or int(sim.day_count) >= 2
@@ -3329,7 +3328,7 @@ func is_build_unlocked(building_type: String) -> bool:
 		Defs.BUILDING_STOREHOUSE:
 			return has_house
 		Defs.BUILDING_WATCHTOWER, Defs.BUILDING_WALL, Defs.BUILDING_BARRACKS:
-			return night_near or has_tower or int(sim.day_count) >= 2
+			return sim.is_military_unlocked() or has_tower
 		Defs.BUILDING_LUMEN_PILLAR, Defs.BUILDING_OUTPOST:
 			return has_tower or (has_lumber and has_house and int(sim.day_count) >= 2)
 		_:
@@ -3345,7 +3344,7 @@ func unlock_hint(building_type: String) -> String:
 		Defs.BUILDING_STOREHOUSE:
 			return "Unlocks after a House"
 		Defs.BUILDING_WATCHTOWER, Defs.BUILDING_WALL, Defs.BUILDING_BARRACKS:
-			return "Unlocks as night draws near"
+			return "Available from the second minute"
 		Defs.BUILDING_LUMEN_PILLAR, Defs.BUILDING_OUTPOST:
 			return "Unlocks after you raise a Watchtower"
 		_:
@@ -3866,7 +3865,13 @@ func _toggle_result_stats() -> void:
 func _refresh_result_body() -> void:
 	var stats := last_result_stats
 	var won := bool(stats.get("victory", false))
-	result_title.text = "SHARD BOUND\nREALM SECURED" if won else "THE REALM HAS FALLEN"
+	var reason := String(stats.get("defeat_reason", ""))
+	if won and reason.contains("HOLDS"):
+		result_title.text = "THE REALM HOLDS\nFIVE DAYS"
+	elif won:
+		result_title.text = "SHARD BOUND\nREALM SECURED"
+	else:
+		result_title.text = "THE REALM HAS FALLEN"
 	var minutes := int(float(stats.get("elapsed_seconds", 0.0)) / 60.0)
 	var seconds := int(float(stats.get("elapsed_seconds", 0.0))) % 60
 	var lines: Array[String] = [

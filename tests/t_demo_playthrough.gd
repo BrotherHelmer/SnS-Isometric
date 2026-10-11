@@ -5,14 +5,16 @@ extends SceneTree
 ## advanced at a logged game-time rate. Shots every 5 minutes plus key events.
 
 const Scene = preload("res://src/GodotClient3D/Scenes/production_3d.tscn")
+const Simulation = preload("res://src/GodotClient/Scripts/one_shard_simulation.gd")
 const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
 const CameraRig = preload("res://src/GodotClient3D/Scripts/production_isometric_camera_rig.gd")
 const Player = preload("res://src/GodotClient3D/Scripts/production_demo_player.gd")
 const Intentions = preload("res://src/GodotClient/Scripts/one_shard_intentions.gd")
 
-const SEED := 260821
+const SEED_DEFAULT := 260821
 const STEP_SECONDS := 8.0
 const MAX_SECONDS_DEFAULT := 3600.0
+const DEST_DEFAULT := "res://artifacts/demo_playthrough_v2"
 
 var failures: Array[String] = []
 var script_errors := 0
@@ -34,7 +36,11 @@ var last_night := false
 var journal_cursor := 0
 var first_quest_done := false
 var saw_rival := false
+var saw_shard := false
 var step_index := 0
+var headless := false
+var accept := false
+var seed_value := SEED_DEFAULT
 
 
 func _init() -> void:
@@ -43,37 +49,56 @@ func _init() -> void:
 
 func _run() -> void:
 	root.size = Vector2i(1920, 1080)
-	dest = ProjectSettings.globalize_path("res://artifacts/demo_playthrough")
-	shot_dest = dest.path_join("shots")
-	DirAccess.make_dir_recursive_absolute(shot_dest)
-	csv_path = dest.path_join("playthrough.csv")
-	_write_csv_header()
-
 	var max_seconds := MAX_SECONDS_DEFAULT
+	var dest_res := DEST_DEFAULT
+	seed_value = SEED_DEFAULT
+	headless = false
+	accept = false
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--max-seconds="):
 			max_seconds = float(arg.trim_prefix("--max-seconds="))
+		elif arg.begins_with("--seed="):
+			seed_value = int(arg.trim_prefix("--seed="))
+		elif arg.begins_with("--dest="):
+			dest_res = arg.trim_prefix("--dest=")
+		elif arg == "--headless" or arg == "--headless=1":
+			headless = true
+		elif arg == "--accept" or arg == "--accept=1":
+			accept = true
+	dest = ProjectSettings.globalize_path(dest_res)
+	shot_dest = dest.path_join("shots")
+	DirAccess.make_dir_recursive_absolute(shot_dest)
+	csv_path = dest.path_join("playthrough_%d.csv" % seed_value)
+	if seed_value == SEED_DEFAULT:
+		csv_path = dest.path_join("playthrough.csv")
+	_write_csv_header()
 
-	var game := Scene.instantiate()
-	root.add_child(game)
-	await process_frame
-	await process_frame
-	OS.set_environment("SNS_PLAYTEST_LOG", "1")
-	game.start_new_3d(SEED)
-	game._hide_start_menu()
-	game.simulation_host.paused = true
-	if game.world_view != null:
-		game.world_view.set_presentation_paused(true)
-	var sim = game.simulation_host.simulation
-	sim.playtest_log.configure(true, dest.path_join("dpm.csv"))
+	var game = null
+	var sim = null
+	if headless:
+		sim = _make_sim(seed_value)
+	if not headless:
+		game = Scene.instantiate()
+		root.add_child(game)
+		await process_frame
+		await process_frame
+		OS.set_environment("SNS_PLAYTEST_LOG", "1")
+		game.start_new_3d(seed_value)
+		game._hide_start_menu()
+		game.simulation_host.paused = true
+		if game.world_view != null:
+			game.world_view.set_presentation_paused(true)
+		sim = game.simulation_host.simulation
+	if sim.playtest_log != null:
+		sim.playtest_log.configure(true, dest.path_join("dpm_%d.csv" % seed_value))
 	_check(sim.map_size.x == 320, "playthrough is on the 320 province")
-	_check(int(sim.rng_seed) == SEED, "seed is 260821")
+	_check(int(sim.rng_seed) == seed_value, "seed is %d" % seed_value)
 
 	var player = Player.new()
 	await _capture(game, sim, "t00_start", "Opening yard after founding.")
 	_log_row(sim, "start")
 	_note_event(sim, "start", "Founded seed %d at hall %s, shard %s, rivals %d." % [
-		SEED, str(sim.town_hall_position), str(sim.shard_position), sim.rival_seats.size()
+		seed_value, str(sim.town_hall_position), str(sim.shard_position), sim.rival_seats.size()
 	])
 
 	while float(sim.elapsed_seconds) < max_seconds and not bool(sim.game_finished):
@@ -103,25 +128,41 @@ func _run() -> void:
 			])
 
 	if bool(sim.victory):
-		await _capture(game, sim, "t%02d_victory" % _mm(sim), "Victory — Shard Bound.")
+		await _capture(game, sim, "t%02d_victory" % _mm(sim), "Victory.")
 		_note_event(sim, "victory", String(sim.last_message))
 	elif bool(sim.game_finished):
 		await _capture(game, sim, "t%02d_defeat" % _mm(sim), "Defeat: %s" % String(sim.defeat_reason))
 		_note_event(sim, "defeat", String(sim.defeat_reason))
 	else:
 		await _capture(game, sim, "t60_end", "State at 60 minutes; no ending.")
-		_note_event(sim, "end", "Reached the 60-minute cap without a Binding.")
+		_note_event(sim, "end", "Reached the 60-minute cap without a victory.")
 
+	if sim.is_revealed(sim.shard_position):
+		saw_shard = true
 	_write_notes(sim, player)
 	_check(script_errors == 0, "no script errors during the playthrough")
-	_check(DirAccess.open(shot_dest) != null, "shots directory exists")
-	print("DEMO_PLAYTHROUGH elapsed=%.1f finished=%s victory=%s shots=%d" % [
-		float(sim.elapsed_seconds), str(sim.game_finished), str(sim.victory), captured.size()
+	if not headless:
+		_check(DirAccess.open(shot_dest) != null, "shots directory exists")
+	if accept:
+		_check(float(sim.elapsed_seconds) >= 1500.0 or bool(sim.victory), "survived to minute 25 or later")
+		_check(saw_shard or sim.is_revealed(sim.shard_position), "found the Shard")
+		_check(saw_rival, "saw a rival")
+		_check(bool(sim.victory), "reached a victory")
+		_check(float(sim.elapsed_seconds) >= 2700.0 and float(sim.elapsed_seconds) <= 3600.0, "victory landed in minutes 45–60 (t=%.1f)" % float(sim.elapsed_seconds))
+	print("DEMO_PLAYTHROUGH seed=%d elapsed=%.1f finished=%s victory=%s shots=%d" % [
+		seed_value, float(sim.elapsed_seconds), str(sim.game_finished), str(sim.victory), captured.size()
 	])
 	print("DEMO_PLAYTHROUGH %s" % ("PASS" if failures.is_empty() else "FAIL"))
-	game.queue_free()
+	if game != null:
+		game.queue_free()
 	await process_frame
 	quit(0 if failures.is_empty() else 1)
+
+
+func _make_sim(seed_for_run: int):
+	var sim = Simulation.new()
+	sim.start_new_run(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, seed_for_run, true)
+	return sim
 
 
 func _watch_commands(sim, thought: Dictionary) -> void:
@@ -151,6 +192,15 @@ func _watch_journal(sim) -> void:
 			saw_rival = true
 			_note_event(sim, "rival", message)
 			captured["pending_rival"] = true
+		if kind == "frontier_revealed" and not captured.has("did_frontier"):
+			captured["did_frontier"] = true
+			saw_shard = true
+			_note_event(sim, "frontier", message)
+			captured["pending_frontier"] = true
+		if kind == "rival_encounter" and not saw_rival:
+			saw_rival = true
+			_note_event(sim, "rival", message)
+			captured["pending_rival"] = true
 
 
 func _watch_phase(game, sim) -> void:
@@ -166,6 +216,8 @@ func _watch_phase(game, sim) -> void:
 	last_night = night_now
 	if not saw_rival:
 		_maybe_rival(sim)
+	if not saw_shard and sim.is_revealed(sim.shard_position):
+		saw_shard = true
 	if captured.get("pending_first_quest", false):
 		captured["pending_first_quest"] = false
 		await _capture(game, sim, "t%02d_first_quest" % _mm(sim), "First intention complete.")
@@ -175,6 +227,9 @@ func _watch_phase(game, sim) -> void:
 	if captured.get("pending_first_raid", false):
 		captured["pending_first_raid"] = false
 		await _capture(game, sim, "t%02d_first_raid" % _mm(sim), "First raid or battle.")
+	if captured.get("pending_frontier", false):
+		captured["pending_frontier"] = false
+		await _capture(game, sim, "t%02d_frontier" % _mm(sim), "Frontier marker and Shard direction.")
 	if captured.get("pending_rival", false):
 		captured["pending_rival"] = false
 		await _capture(game, sim, "t%02d_rival" % _mm(sim), "Rival encounter.")
@@ -215,6 +270,10 @@ func _should_snapshot_minute(before: float, after: float) -> bool:
 func _capture(game, sim, name_value: String, caption: String) -> void:
 	if captured.has(name_value):
 		return
+	if headless or game == null:
+		captured[name_value] = "headless"
+		notes["timeline"].append({"t": float(sim.elapsed_seconds), "shot": name_value, "caption": caption})
+		return
 	_frame_camera(game, sim, name_value)
 	game._sync_presentation()
 	if game.has_method("_update_ui"):
@@ -242,6 +301,10 @@ func _frame_camera(game, sim, name_value: String) -> void:
 	var focus: Vector3 = game.world_view.opening_camera_focus()
 	if name_value.contains("night") or name_value.contains("raid"):
 		zoom = 40.0
+	elif name_value.contains("frontier"):
+		var marker: Variant = sim.founding_site.get("frontier_marker", sim.shard_position)
+		focus = game.world_view.tile_to_world(Vector2(marker))
+		zoom = 48.0
 	elif name_value.contains("rival"):
 		focus = _rival_focus(game, sim)
 		zoom = 48.0

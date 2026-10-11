@@ -138,7 +138,7 @@ static func title_label(text: String, size: int = SIZE_TITLE, color: Color = COL
 	label.text = text
 	set_font(label, display_font(700), size, color)
 	label.add_theme_color_override("font_outline_color", COLOR_OUTLINE)
-	label.add_theme_constant_override("outline_size", 3)
+	label.add_theme_constant_override("outline_size", 1)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return label
 
@@ -297,7 +297,7 @@ static func apply_button(button: Button, active_toggle := false) -> void:
 	button.add_theme_color_override("font_hover_pressed_color", COLOR_GOLD)
 	button.add_theme_color_override("font_disabled_color", Color("#8a8474"))
 	button.add_theme_color_override("font_outline_color", COLOR_OUTLINE)
-	button.add_theme_constant_override("outline_size", 3)
+	button.add_theme_constant_override("outline_size", 1)
 
 
 static func caption(text: String, size: int = SIZE_CAPTION) -> Label:
@@ -307,7 +307,7 @@ static func caption(text: String, size: int = SIZE_CAPTION) -> Label:
 	label.add_theme_font_size_override("font_size", maxi(size, SIZE_MIN))
 	label.add_theme_color_override("font_color", COLOR_GOLD_DIM)
 	label.add_theme_color_override("font_outline_color", COLOR_OUTLINE)
-	label.add_theme_constant_override("outline_size", 3)
+	label.add_theme_constant_override("outline_size", 1)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return label
 
@@ -334,11 +334,11 @@ static func hud_theme() -> Theme:
 	theme.set_color("font_pressed_color", "Button", COLOR_GOLD)
 	theme.set_color("font_disabled_color", "Button", Color("#8a8474"))
 	theme.set_color("font_outline_color", "Button", COLOR_OUTLINE)
-	theme.set_constant("outline_size", "Button", 3)
+	theme.set_constant("outline_size", "Button", 1)
 	theme.set_color("font_color", "OptionButton", COLOR_TEXT)
 	theme.set_color("font_color", "Label", COLOR_TEXT)
 	theme.set_color("font_outline_color", "Label", COLOR_OUTLINE)
-	theme.set_constant("outline_size", "Label", 3)
+	theme.set_constant("outline_size", "Label", 1)
 	theme.set_color("default_color", "RichTextLabel", COLOR_TEXT)
 	theme.set_color("font_outline_color", "RichTextLabel", COLOR_OUTLINE)
 	theme.set_constant("outline_size", "RichTextLabel", 2)

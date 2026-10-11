@@ -30,8 +30,8 @@ func think(sim) -> Dictionary:
 		last_idle_reason = "run finished"
 		return _result()
 	_defend(sim)
-	_pursue_economy(sim)
 	_defend_night(sim)
+	_pursue_economy(sim)
 	_scout(sim)
 	_expand_toward_shard(sim)
 	_contest_rivals(sim)
@@ -129,7 +129,7 @@ func _scout(sim) -> void:
 func _expand_toward_shard(sim) -> void:
 	if not _starter_ready(sim):
 		return
-	_extend_roads(sim, sim.shard_position, ROAD_BURST)
+	_extend_roads(sim, _frontier_target(sim), ROAD_BURST)
 	if not _unlocked(sim, Defs.BUILDING_LUMEN_PILLAR):
 		return
 	var requirements: Dictionary = {}
@@ -231,6 +231,11 @@ func _place_forward_structure(sim, building_type: String) -> bool:
 		return false
 	if _count(sim, building_type) >= (2 if building_type == Defs.BUILDING_OUTPOST else 4):
 		return false
+	if building_type == Defs.BUILDING_OUTPOST:
+		var marker := _frontier_target(sim)
+		if marker != sim.shard_position:
+			if _try_build(sim, building_type, marker):
+				return true
 	var site := _forward_site(sim, building_type)
 	if site.x < 0:
 		return false
@@ -269,6 +274,9 @@ func _forward_site(sim, building_type: String) -> Vector2i:
 		var useful := false
 		if building_type == Defs.BUILDING_OUTPOST:
 			var center := Vector2(tile) + Vector2(0.5, 0.5)
+			var marker := _frontier_target(sim)
+			if marker != sim.shard_position and center.distance_to(Vector2(marker)) <= 3.0:
+				useful = true
 			for node in wyrd_sites:
 				if harvest_outposts < 2 and center.distance_to(Vector2(node.position)) <= sim.WYRD_OUTPOST_HARVEST_RADIUS:
 					useful = true
@@ -362,6 +370,13 @@ func _early_road_target(sim) -> Vector2i:
 		var rock := _nearest_kind(sim, sim.town_hall_position, Defs.TILE_ROCK, 22)
 		if rock.x >= 0:
 			return rock
+	return _frontier_target(sim)
+
+
+func _frontier_target(sim) -> Vector2i:
+	var marker: Variant = sim.founding_site.get("frontier_marker", Vector2i(-1, -1))
+	if marker is Vector2i and marker.x >= 0:
+		return marker
 	return sim.shard_position
 
 
@@ -434,7 +449,6 @@ func _unlocked(sim, building_type: String) -> bool:
 	var has_house := _has_completed(sim, Defs.BUILDING_HOUSE)
 	var has_tower := _has_completed(sim, Defs.BUILDING_WATCHTOWER)
 	var wheat := _stock(sim, Defs.RESOURCE_WHEAT)
-	var night_near: bool = bool(sim.is_night) or float(sim.DAY_LENGTH_SECONDS) - float(sim.phase_time) <= 90.0
 	match building_type:
 		Defs.BUILDING_ROAD, Defs.BUILDING_HOUSE, Defs.BUILDING_LUMBER_CAMP, Defs.BUILDING_FARM:
 			return true
@@ -445,7 +459,7 @@ func _unlocked(sim, building_type: String) -> bool:
 		Defs.BUILDING_STOREHOUSE:
 			return has_house
 		Defs.BUILDING_WATCHTOWER, Defs.BUILDING_WALL, Defs.BUILDING_BARRACKS:
-			return night_near or has_tower or int(sim.day_count) >= 2
+			return sim.is_military_unlocked() or has_tower
 		Defs.BUILDING_LUMEN_PILLAR, Defs.BUILDING_OUTPOST:
 			return has_tower or (has_lumber and has_house and int(sim.day_count) >= 2)
 		_:

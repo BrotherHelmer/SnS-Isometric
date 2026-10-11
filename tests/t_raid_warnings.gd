@@ -36,24 +36,29 @@ func _run() -> void:
 		"active": true
 	}]
 	sim.night_warning_sent = true
-	sim.phase_time = Simulation.DAY_LENGTH_SECONDS - RaidIntents.HORN_WARNING_SECONDS - 0.05
+	sim.phase_time = Simulation.DAY_LENGTH_SECONDS - RaidIntents.RAID_WARNING_SECONDS - 0.05
 	sim._update_time(0.2)
-	_check(sim.horn_warning_sent, "horn warning fires at 45 seconds when a camp is nearby")
-	var horn_logged := String(sim.last_message).to_lower().contains("horns")
+	_check(sim.horn_warning_sent, "raid warning fires at 60 seconds")
+	var warned := String(sim.last_message).to_lower().contains("raid")
 	for entry in sim.log_entries:
-		if String(entry).to_lower().contains("horns"):
-			horn_logged = true
-	_check(horn_logged, "horn copy mentions horns")
+		if String(entry).to_lower().contains("raid"):
+			warned = true
+	_check(warned, "raid warning copy names the raid")
+	var pinged := false
+	for marker in sim.get_map_markers():
+		if String(marker.get("kind", "")) == "raid":
+			pinged = true
+	_check(pinged, "raid warning drops a map ping")
 	var quiet: Simulation = Simulation.new(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 778, false)
 	quiet.start_new_run(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 778, true)
 	quiet.enemy_camps.clear()
 	quiet.hidden_threat_level = 0
 	quiet.dusk_forecast = {"threat": "QUIET"}
-	quiet.phase_time = Simulation.DAY_LENGTH_SECONDS - RaidIntents.HORN_WARNING_SECONDS - 0.05
+	quiet.phase_time = Simulation.DAY_LENGTH_SECONDS - RaidIntents.RAID_WARNING_SECONDS - 0.05
 	quiet.dusk_warning_sent = true
 	quiet._update_time(0.2)
-	_check(quiet.horn_warning_sent, "horn flag is spent at 45s even when the woods are quiet")
-	_check(not String(quiet.last_message).to_lower().contains("horns"), "quiet woods do not invent horns")
+	_check(quiet.horn_warning_sent, "raid warning still fires when no camp is mapped")
+	_check(String(quiet.last_message).to_lower().contains("raid"), "every raid gets a 60s warning")
 	_check(_economy_skips_town_hall(), "an economy raid prefers an exposed yard over the Town Hall")
 
 

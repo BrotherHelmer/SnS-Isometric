@@ -11,7 +11,7 @@ Target: closed Windows Steam Playtest, then a public demo after observed playtes
 - Seven-minute days and three-minute nights at 1×. The proposed 35–55 minute session length is not yet validated by human sessions.
 - Outposts within three tiles of Wyrd nodes harvest Wyrd. Connected Lumen and roads support an operational Shard Outpost. Binding is an explicit action requiring at least 12 Wyrd and 120 seconds of maintained conditions. Historical one-night/two-night victory descriptions are obsolete.
 - Opposing Outposts contest Binding. Select a visible rival Outpost and order an assault by free patrol soldiers. They walk to the target and attack in range; tower sentries stay home. Assault soldiers remain vulnerable to raiders and can be recalled. Destroying the rival Outpost removes that obstruction; other Binding requirements still apply. This resolution was selected by the owner on 2026-09-25.
-- Town Hall destruction or the rival Binding first causes defeat. Current natural-match evidence is recorded in the execution status; prepared-state rule tests are not proof of a full playable match.
+- Town Hall destruction or the rival Binding first causes defeat. The one-hour demo also awards a labelled prologue victory, THE REALM HOLDS, after four nights if a Watchtower, Barracks and frontier Outpost stand and the Shard has been revealed. Binding remains the longer-war victory. Current natural-match evidence is recorded in the execution status; prepared-state rule tests are not proof of a full playable match.
 
 ## Persistence
 
