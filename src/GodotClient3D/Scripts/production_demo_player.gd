@@ -72,8 +72,9 @@ func _pursue_economy(sim) -> void:
 			last_idle_reason = "waiting for Lumber Camp so Quarry unlocks"
 		return
 	if _unlocked(sim, Defs.BUILDING_STOREHOUSE) and _count(sim, Defs.BUILDING_STOREHOUSE) < 1 and _need_storage(sim):
-		_try_build(sim, Defs.BUILDING_STOREHOUSE, sim.town_hall_position + Vector2i(4, 10))
-		return
+		if _try_build(sim, Defs.BUILDING_STOREHOUSE, sim.town_hall_position + Vector2i(4, 10)):
+			return
+		# Do not stall the hour on an unaffordable Storehouse — sawmill first.
 	if _unlocked(sim, Defs.BUILDING_SAWMILL) and _count(sim, Defs.BUILDING_SAWMILL) < 1 and _stock(sim, Defs.RESOURCE_WOOD) >= 8:
 		_try_build(sim, Defs.BUILDING_SAWMILL, sim.town_hall_position + Vector2i(10, 7))
 		return

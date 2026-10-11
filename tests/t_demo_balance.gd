@@ -81,6 +81,11 @@ func _run() -> void:
 	frontier.elapsed_seconds = Simulation.DEMO_VICTORY_SECONDS
 	frontier._update_demo_beats()
 	_check(frontier.victory, "THE REALM HOLDS fires at 45 min when the pieces stand")
+	var copy_sim: Simulation = Simulation.new()
+	copy_sim.start_new_run(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 260821, true)
+	var store_copy := String(copy_sim._storehouse_blocker_copy())
+	_check(store_copy.contains("Storehouse") or store_copy.contains("Place a Storehouse"), "storage notice names the Storehouse (%s)" % store_copy)
+	_check(String(copy_sim._demo_defeat_hint()).contains("Watchtower"), "defeat hint names the unfinished Watchtower")
 
 
 func _check_construction_beats_roads() -> void:

@@ -2039,11 +2039,43 @@ func _notice_if_new(title: String, body: String, category: String, cooldown_seco
 	push_notice(category, title, body, severity)
 
 
+func _storehouse_blocker_copy() -> String:
+	if _has_storehouse_site():
+		return "The Storehouse is already being built."
+	var cost: Dictionary = Defs.building_cost(Defs.BUILDING_STOREHOUSE)
+	var missing: Array[String] = []
+	for resource_type in cost.keys():
+		var need := int(cost[resource_type])
+		var have := get_available_resource(String(resource_type))
+		if have < need:
+			missing.append("%d more %s" % [need - have, Defs.resource_name(String(resource_type))])
+	if missing.is_empty():
+		return "Place a Storehouse — the materials are in the hall."
+	return "Storehouse needs %s." % ", ".join(missing)
+
+
+func _has_storehouse_site() -> bool:
+	for building in buildings:
+		if bool(building.get("construction", false)) and String(building.get("planned_type", "")) == Defs.BUILDING_STOREHOUSE:
+			return true
+	return false
+
+
+func _demo_defeat_hint() -> String:
+	if not _player_has_completed_building(Defs.BUILDING_WATCHTOWER):
+		return "Your first Watchtower was unfinished when raiders arrived."
+	if not _player_has_completed_building(Defs.BUILDING_BARRACKS):
+		return "Finish a Barracks so soldiers can meet the next raid."
+	return "Keep the Watchtower manned and repair the Hall before the next night."
+
+
 func _emit_routine_notices() -> void:
 	for building in buildings:
 		var status := String(building.get("status", "")).to_lower()
 		if "storage full" in status:
-			_notice_if_new("STORAGE FULL", "Build a Storehouse or free capacity.", "economy", 48.0)
+			if _player_has_completed_building(Defs.BUILDING_STOREHOUSE):
+				continue
+			_notice_if_new("STORAGE FULL", _storehouse_blocker_copy(), "economy", 90.0)
 			_offer_onboarding("storehouse_needed", "STOREHOUSE ADDS STORAGE. Build one to expand capacity for all resources. Farm→Bakery produces Bread to feed the settlement.")
 		if String(building.get("type", "")) == Defs.BUILDING_BAKERY and "waiting for wheat" in status:
 			var wheat_elsewhere := get_available_resource(Defs.RESOURCE_WHEAT) > int(building.get("local_inventory", {}).get(Defs.RESOURCE_WHEAT, 0))
@@ -8301,7 +8333,7 @@ func _destroy_building_by_id(building_id: int, reason: String, count_stats: bool
 	_add_log("%s %s." % [_display_building_name(destroyed), reason])
 
 	if building_type == Defs.BUILDING_TOWN_HALL:
-		_finish_run(false, "The Town Hall fell.")
+		_finish_run(false, "The Town Hall fell. %s" % _demo_defeat_hint())
 	if building_id == claim_outpost_id:
 		_cancel_claim("Shard claim cancelled: the Outpost fell.")
 
@@ -9900,7 +9932,7 @@ func _check_population_defeat() -> void:
 	if game_finished or not is_town_hall_founded():
 		return
 	if population_current <= 0:
-		_finish_run(false, "The last settlers are gone.")
+		_finish_run(false, "The last settlers are gone. %s" % _demo_defeat_hint())
 
 
 func _serialize_rival_seats() -> Array:
