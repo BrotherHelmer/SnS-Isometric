@@ -1,0 +1,2656 @@
+{
+	"balance": [],
+	"blockers": [],
+	"bugs": [
+		"Placement failed: CLAIMANT_OUTPOST: no site near (160, 156)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (159, 155)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (159, 157)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (161, 155)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (160, 155)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (160, 157)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (159, 156)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (161, 156)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (161, 157)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (158, 154)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (158, 158)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (162, 154)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (159, 154)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (159, 158)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (158, 155)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (162, 155)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (160, 154)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (160, 158)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (158, 156)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (162, 156)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (161, 154)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (161, 158)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (158, 157)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (162, 157)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (162, 158)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (157, 153)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (157, 159)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (163, 153)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (158, 153)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (158, 159)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (157, 154)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (163, 154)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (159, 153)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (159, 159)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (157, 155)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (163, 155)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (160, 153)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (160, 159)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (157, 156)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (163, 156)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (161, 153)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (161, 159)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (157, 157)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (163, 157)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (162, 153)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (162, 159)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (157, 158)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (163, 158)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (163, 159)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (156, 152)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (156, 160)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (164, 152)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (157, 152)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (157, 160)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (156, 153)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (164, 153)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (158, 152)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (158, 160)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (156, 154)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (164, 154)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (159, 152)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (159, 160)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (156, 155)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (164, 155)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (160, 152)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (160, 160)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (156, 156)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (164, 156)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (161, 152)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (161, 160)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (156, 157)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (164, 157)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (162, 152)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (162, 160)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (156, 158)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (164, 158)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (163, 152)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (163, 160)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (156, 159)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (164, 159)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (164, 160)"
+	],
+	"claim": {
+		"contested": false,
+		"lumen": false,
+		"outpost": false,
+		"ready": false,
+		"road": false,
+		"sovereign": true,
+		"summary": "Needs: operational Outpost beside the Shard, connected owned road, connected active Lumen, 12 accumulated Wyrd.",
+		"wyrd": false
+	},
+	"defeat_reason": "THE REALM HOLDS — five days on the frontier. Binding the Shard remains the longer war.",
+	"dull": [
+		"Dull stretch near t=488s (96s without a new order).",
+		"Dull stretch near t=584s (96s without a new order).",
+		"Dull stretch near t=1176s (96s without a new order).",
+		"Dull stretch near t=1688s (96s without a new order).",
+		"Dull stretch near t=1784s (96s without a new order).",
+		"Dull stretch near t=2288s (96s without a new order).",
+		"Dull stretch near t=2384s (96s without a new order)."
+	],
+	"elapsed": 2699.99999999864,
+	"events": [
+		{
+			"detail": "Founded seed 260821 at hall (239, 181), shard (160, 156), rivals 4.",
+			"kind": "start",
+			"t": 0.0
+		},
+		{
+			"detail": "A Settlement Begins",
+			"kind": "first_quest",
+			"t": 295.999999999999
+		},
+		{
+			"detail": "First night began on day 1.",
+			"kind": "first_night",
+			"t": 424.000000000028
+		},
+		{
+			"detail": "Raid active with 2 enemies.",
+			"kind": "first_raid",
+			"t": 424.000000000028
+		},
+		{
+			"detail": "THE SHARD LIES W — a frontier marker is within reach.",
+			"kind": "frontier",
+			"t": 720.000000000095
+		},
+		{
+			"detail": "Revealed rival CLAIMANT_OUTPOST at (236, 162).",
+			"kind": "rival",
+			"t": 1080.00000000011
+		},
+		{
+			"detail": "THE REALM HOLDS — five days on the frontier. Binding the Shard remains the longer war.",
+			"kind": "victory",
+			"t": 2699.99999999864
+		}
+	],
+	"finished": true,
+	"hall": "(239, 181)",
+	"orders": [
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 0.0,
+			"tile": "240,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Construction started: House.",
+			"seconds": 0.0,
+			"tile": "243,185",
+			"type": "HOUSE"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 16.0,
+			"tile": "240,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Construction started: Lumber Camp.",
+			"seconds": 16.0,
+			"tile": "237,177",
+			"type": "LUMBER_CAMP"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 32.0000000000002,
+			"tile": "242,186",
+			"type": "ROAD"
+		},
+		{
+			"message": "Construction started: Farm.",
+			"seconds": 32.0000000000002,
+			"tile": "244,187",
+			"type": "FARM"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 64.0000000000006,
+			"tile": "241,186",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 64.0000000000006,
+			"tile": "241,180",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 72.0000000000002,
+			"tile": "243,188",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 87.9999999999993,
+			"tile": "240,186",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 95.9999999999988,
+			"tile": "239,185",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 103.999999999998,
+			"tile": "242,188",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 103.999999999998,
+			"tile": "242,180",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 111.999999999998,
+			"tile": "241,187",
+			"type": "ROAD"
+		},
+		{
+			"message": "Construction started: Watchtower.",
+			"seconds": 119.999999999997,
+			"tile": "238,181",
+			"type": "WATCHTOWER"
+		},
+		{
+			"message": "Construction started: Barracks.",
+			"seconds": 175.999999999994,
+			"tile": "243,182",
+			"type": "BARRACKS"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 247.99999999999,
+			"tile": "244,181",
+			"type": "ROAD"
+		},
+		{
+			"message": "Construction started: Quarry.",
+			"seconds": 247.99999999999,
+			"tile": "246,178",
+			"type": "QUARRY"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 263.999999999992,
+			"tile": "240,174",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 271.999999999993,
+			"tile": "240,173",
+			"type": "ROAD"
+		},
+		{
+			"message": "Nils scouts toward the fog.",
+			"seconds": 279.999999999995,
+			"tile": "227,169",
+			"type": "SCOUT"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 279.999999999995,
+			"tile": "240,172",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 295.999999999999,
+			"tile": "240,171",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 295.999999999999,
+			"tile": "240,170",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 328.000000000006,
+			"tile": "240,169",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 328.000000000006,
+			"tile": "240,168",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 352.000000000012,
+			"tile": "240,167",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 360.000000000013,
+			"tile": "240,166",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 360.000000000013,
+			"tile": "240,165",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 392.000000000021,
+			"tile": "240,164",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 392.000000000021,
+			"tile": "240,163",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 624.000000000073,
+			"tile": "240,162",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 632.000000000075,
+			"tile": "240,161",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 632.000000000075,
+			"tile": "240,160",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 656.000000000081,
+			"tile": "240,159",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 664.000000000082,
+			"tile": "240,158",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 664.000000000082,
+			"tile": "240,157",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 696.00000000009,
+			"tile": "240,156",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 696.00000000009,
+			"tile": "239,156",
+			"type": "ROAD"
+		},
+		{
+			"message": "Claimant Outpost built.",
+			"seconds": 720.000000000095,
+			"tile": "237,184",
+			"type": "CLAIMANT_OUTPOST"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 728.000000000097,
+			"tile": "239,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 728.000000000097,
+			"tile": "238,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 760.000000000104,
+			"tile": "237,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 760.000000000104,
+			"tile": "236,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 784.00000000011,
+			"tile": "235,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 784.00000000011,
+			"tile": "234,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 800.000000000113,
+			"tile": "233,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 800.000000000113,
+			"tile": "232,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 808.000000000115,
+			"tile": "231,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 816.000000000117,
+			"tile": "230,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 824.000000000119,
+			"tile": "229,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 832.000000000121,
+			"tile": "228,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 840.000000000122,
+			"tile": "227,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 840.000000000122,
+			"tile": "226,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 848.000000000124,
+			"tile": "225,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 848.000000000124,
+			"tile": "224,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 856.000000000126,
+			"tile": "223,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 856.000000000126,
+			"tile": "223,174",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 864.000000000128,
+			"tile": "222,174",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 864.000000000128,
+			"tile": "223,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 872.00000000013,
+			"tile": "222,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 872.00000000013,
+			"tile": "221,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 904.000000000137,
+			"tile": "221,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 912.000000000139,
+			"tile": "220,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 912.000000000139,
+			"tile": "220,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 920.000000000141,
+			"tile": "220,174",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 920.000000000141,
+			"tile": "219,174",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 928.000000000142,
+			"tile": "218,174",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 928.000000000142,
+			"tile": "218,173",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 936.000000000144,
+			"tile": "217,174",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 936.000000000144,
+			"tile": "217,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 944.000000000146,
+			"tile": "217,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 944.000000000146,
+			"tile": "216,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 952.000000000148,
+			"tile": "219,173",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 952.000000000148,
+			"tile": "218,172",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 960.00000000015,
+			"tile": "217,173",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 960.00000000015,
+			"tile": "216,174",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 968.000000000152,
+			"tile": "217,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 968.000000000152,
+			"tile": "218,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 976.000000000153,
+			"tile": "216,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 976.000000000153,
+			"tile": "215,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 984.000000000155,
+			"tile": "219,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 984.000000000155,
+			"tile": "218,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 992.000000000157,
+			"tile": "220,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 992.000000000157,
+			"tile": "219,172",
+			"type": "ROAD"
+		},
+		{
+			"message": "3 patrol soldiers ordered to assault the rival Outpost. They remain vulnerable while away.",
+			"seconds": 1080.00000000011,
+			"tile": "236,162",
+			"type": "ASSAULT"
+		},
+		{
+			"message": "Nils scouts toward the fog.",
+			"seconds": 1208.0,
+			"tile": "227,169",
+			"type": "SCOUT"
+		},
+		{
+			"message": "Astrid scouts toward the fog.",
+			"seconds": 1215.99999999999,
+			"tile": "227,169",
+			"type": "SCOUT"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1231.99999999997,
+			"tile": "218,171",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1231.99999999997,
+			"tile": "217,172",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1287.99999999992,
+			"tile": "216,173",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1287.99999999992,
+			"tile": "215,174",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1295.99999999992,
+			"tile": "217,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1295.99999999992,
+			"tile": "216,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1303.99999999991,
+			"tile": "215,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1303.99999999991,
+			"tile": "214,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1311.9999999999,
+			"tile": "219,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1311.9999999999,
+			"tile": "218,179",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1319.99999999989,
+			"tile": "221,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1319.99999999989,
+			"tile": "220,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1327.99999999989,
+			"tile": "219,171",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1327.99999999989,
+			"tile": "220,172",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1335.99999999988,
+			"tile": "218,170",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1335.99999999988,
+			"tile": "217,171",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1343.99999999987,
+			"tile": "216,172",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1343.99999999987,
+			"tile": "215,173",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1351.99999999987,
+			"tile": "214,174",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1351.99999999987,
+			"tile": "217,179",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1359.99999999986,
+			"tile": "216,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1359.99999999986,
+			"tile": "215,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1367.99999999985,
+			"tile": "214,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1367.99999999985,
+			"tile": "213,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1375.99999999984,
+			"tile": "219,179",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1375.99999999984,
+			"tile": "218,180",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1383.99999999984,
+			"tile": "222,173",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1383.99999999984,
+			"tile": "221,173",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1391.99999999983,
+			"tile": "222,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1399.99999999982,
+			"tile": "221,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1407.99999999981,
+			"tile": "220,179",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1407.99999999981,
+			"tile": "219,170",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1415.99999999981,
+			"tile": "220,171",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1423.9999999998,
+			"tile": "221,172",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1423.9999999998,
+			"tile": "218,169",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1431.99999999979,
+			"tile": "217,170",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1431.99999999979,
+			"tile": "216,171",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1439.99999999979,
+			"tile": "215,172",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1439.99999999979,
+			"tile": "214,173",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1447.99999999978,
+			"tile": "213,174",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1447.99999999978,
+			"tile": "217,180",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1455.99999999977,
+			"tile": "216,179",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1455.99999999977,
+			"tile": "215,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1463.99999999976,
+			"tile": "214,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1463.99999999976,
+			"tile": "213,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1471.99999999976,
+			"tile": "212,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1471.99999999976,
+			"tile": "219,180",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1479.99999999975,
+			"tile": "218,181",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1479.99999999975,
+			"tile": "224,174",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1487.99999999974,
+			"tile": "224,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1495.99999999973,
+			"tile": "223,173",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1503.99999999973,
+			"tile": "223,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1511.99999999972,
+			"tile": "222,172",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1511.99999999972,
+			"tile": "222,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1519.99999999971,
+			"tile": "221,179",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1519.99999999971,
+			"tile": "220,180",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1527.99999999971,
+			"tile": "219,169",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1527.99999999971,
+			"tile": "220,170",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1543.99999999969,
+			"tile": "221,171",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1543.99999999969,
+			"tile": "218,168",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1551.99999999968,
+			"tile": "217,169",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1551.99999999968,
+			"tile": "216,170",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1559.99999999968,
+			"tile": "215,171",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1559.99999999968,
+			"tile": "214,172",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1567.99999999967,
+			"tile": "213,173",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1567.99999999967,
+			"tile": "212,174",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1575.99999999966,
+			"tile": "217,181",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1575.99999999966,
+			"tile": "216,180",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1583.99999999965,
+			"tile": "215,179",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1591.99999999965,
+			"tile": "214,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1591.99999999965,
+			"tile": "213,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Nils scouts toward the fog.",
+			"seconds": 1807.99999999945,
+			"tile": "227,169",
+			"type": "SCOUT"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1831.99999999943,
+			"tile": "212,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1831.99999999943,
+			"tile": "211,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1895.99999999937,
+			"tile": "219,181",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1895.99999999937,
+			"tile": "218,182",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1951.99999999932,
+			"tile": "225,174",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1959.99999999931,
+			"tile": "225,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1967.99999999931,
+			"tile": "224,173",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1975.9999999993,
+			"tile": "224,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1975.9999999993,
+			"tile": "223,172",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1983.99999999929,
+			"tile": "223,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1991.99999999928,
+			"tile": "222,171",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1991.99999999928,
+			"tile": "222,179",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1999.99999999928,
+			"tile": "221,180",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1999.99999999928,
+			"tile": "220,181",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2007.99999999927,
+			"tile": "219,168",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2015.99999999926,
+			"tile": "220,169",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2023.99999999925,
+			"tile": "221,170",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2031.99999999925,
+			"tile": "218,167",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2031.99999999925,
+			"tile": "217,168",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2039.99999999924,
+			"tile": "216,169",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2039.99999999924,
+			"tile": "215,170",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2047.99999999923,
+			"tile": "214,171",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2047.99999999923,
+			"tile": "213,172",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2055.99999999923,
+			"tile": "212,173",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2055.99999999923,
+			"tile": "211,174",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2063.99999999922,
+			"tile": "217,182",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2063.99999999922,
+			"tile": "216,181",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2079.9999999992,
+			"tile": "215,180",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2079.9999999992,
+			"tile": "214,179",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2087.9999999992,
+			"tile": "213,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2087.9999999992,
+			"tile": "212,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2095.99999999919,
+			"tile": "211,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2095.99999999919,
+			"tile": "210,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2103.99999999918,
+			"tile": "219,182",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2103.99999999918,
+			"tile": "218,183",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2119.99999999917,
+			"tile": "226,174",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2119.99999999917,
+			"tile": "226,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2135.99999999915,
+			"tile": "225,173",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2135.99999999915,
+			"tile": "225,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2143.99999999915,
+			"tile": "224,172",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2151.99999999914,
+			"tile": "224,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2151.99999999914,
+			"tile": "223,179",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2159.99999999913,
+			"tile": "222,170",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2167.99999999912,
+			"tile": "222,180",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2167.99999999912,
+			"tile": "219,167",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2175.99999999912,
+			"tile": "220,168",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2175.99999999912,
+			"tile": "221,169",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2183.99999999911,
+			"tile": "218,166",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2191.9999999991,
+			"tile": "217,167",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2191.9999999991,
+			"tile": "216,168",
+			"type": "ROAD"
+		},
+		{
+			"message": "Nils scouts toward the fog.",
+			"seconds": 2407.99999999891,
+			"tile": "227,169",
+			"type": "SCOUT"
+		},
+		{
+			"message": "Astrid scouts toward the fog.",
+			"seconds": 2415.9999999989,
+			"tile": "227,169",
+			"type": "SCOUT"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2439.99999999888,
+			"tile": "215,169",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2439.99999999888,
+			"tile": "214,170",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2503.99999999882,
+			"tile": "213,171",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2503.99999999882,
+			"tile": "212,172",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2567.99999999876,
+			"tile": "211,173",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2567.99999999876,
+			"tile": "210,174",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2575.99999999875,
+			"tile": "217,183",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2575.99999999875,
+			"tile": "216,182",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2591.99999999874,
+			"tile": "215,181",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2591.99999999874,
+			"tile": "214,180",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2599.99999999873,
+			"tile": "213,179",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2599.99999999873,
+			"tile": "212,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2607.99999999872,
+			"tile": "211,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2607.99999999872,
+			"tile": "210,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2615.99999999872,
+			"tile": "209,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2615.99999999872,
+			"tile": "219,183",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2623.99999999871,
+			"tile": "218,184",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2631.9999999987,
+			"tile": "227,174",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2639.99999999869,
+			"tile": "227,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2647.99999999869,
+			"tile": "226,173",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2655.99999999868,
+			"tile": "226,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2655.99999999868,
+			"tile": "225,172",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2663.99999999867,
+			"tile": "225,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2671.99999999867,
+			"tile": "224,171",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2679.99999999866,
+			"tile": "224,179",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2687.99999999865,
+			"tile": "223,180",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2695.99999999864,
+			"tile": "222,169",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2695.99999999864,
+			"tile": "223,170",
+			"type": "ROAD"
+		}
+	],
+	"rival_line": "Rival roads pushing toward the Shard",
+	"seed": 260821,
+	"shard": "(160, 156)",
+	"shots": [
+		"t00_start",
+		"pending_first_quest",
+		"t04_first_quest",
+		"t05_play",
+		"did_first_night",
+		"pending_first_night",
+		"did_first_raid",
+		"pending_first_raid",
+		"t07_first_night",
+		"t07_first_raid",
+		"t10_play",
+		"did_frontier",
+		"pending_frontier",
+		"t12_frontier",
+		"t15_play",
+		"pending_rival",
+		"t18_rival",
+		"t20_play",
+		"t25_play",
+		"t30_play",
+		"t35_play",
+		"t40_play",
+		"t44_victory"
+	],
+	"timeline": [
+		{
+			"caption": "Opening yard after founding.",
+			"shot": "t00_start",
+			"t": 0.0
+		},
+		{
+			"action": "ROAD @(240, 176) t=0",
+			"t": 0.0
+		},
+		{
+			"action": "HOUSE @(243, 185) t=0",
+			"t": 0.0
+		},
+		{
+			"action": "ROAD @(240, 175) t=16",
+			"t": 16.0
+		},
+		{
+			"action": "LUMBER_CAMP @(237, 177) t=16",
+			"t": 16.0
+		},
+		{
+			"action": "ROAD @(242, 186) t=32",
+			"t": 32.0000000000002
+		},
+		{
+			"action": "FARM @(244, 187) t=32",
+			"t": 32.0000000000002
+		},
+		{
+			"action": "ROAD @(241, 186) t=64",
+			"t": 64.0000000000006
+		},
+		{
+			"action": "ROAD @(241, 180) t=64",
+			"t": 64.0000000000006
+		},
+		{
+			"action": "ROAD @(243, 188) t=72",
+			"t": 72.0000000000002
+		},
+		{
+			"action": "ROAD @(240, 186) t=88",
+			"t": 87.9999999999993
+		},
+		{
+			"action": "ROAD @(239, 185) t=96",
+			"t": 95.9999999999988
+		},
+		{
+			"action": "ROAD @(242, 188) t=104",
+			"t": 103.999999999998
+		},
+		{
+			"action": "ROAD @(242, 180) t=104",
+			"t": 103.999999999998
+		},
+		{
+			"action": "ROAD @(241, 187) t=112",
+			"t": 111.999999999998
+		},
+		{
+			"action": "WATCHTOWER @(238, 181) t=120",
+			"t": 119.999999999997
+		},
+		{
+			"action": "BARRACKS @(243, 182) t=176",
+			"t": 175.999999999994
+		},
+		{
+			"action": "ROAD @(244, 181) t=248",
+			"t": 247.99999999999
+		},
+		{
+			"action": "QUARRY @(246, 178) t=248",
+			"t": 247.99999999999
+		},
+		{
+			"action": "ROAD @(240, 174) t=264",
+			"t": 263.999999999992
+		},
+		{
+			"action": "ROAD @(240, 173) t=272",
+			"t": 271.999999999993
+		},
+		{
+			"action": "SCOUT @(227, 169) t=280",
+			"t": 279.999999999995
+		},
+		{
+			"action": "ROAD @(240, 172) t=280",
+			"t": 279.999999999995
+		},
+		{
+			"caption": "First intention complete.",
+			"shot": "t04_first_quest",
+			"t": 295.999999999999
+		},
+		{
+			"action": "ROAD @(240, 171) t=296",
+			"t": 295.999999999999
+		},
+		{
+			"action": "ROAD @(240, 170) t=296",
+			"t": 295.999999999999
+		},
+		{
+			"caption": "Minute 5 yard.",
+			"shot": "t05_play",
+			"t": 304.000000000001
+		},
+		{
+			"action": "ROAD @(240, 169) t=328",
+			"t": 328.000000000006
+		},
+		{
+			"action": "ROAD @(240, 168) t=328",
+			"t": 328.000000000006
+		},
+		{
+			"action": "ROAD @(240, 167) t=352",
+			"t": 352.000000000012
+		},
+		{
+			"action": "ROAD @(240, 166) t=360",
+			"t": 360.000000000013
+		},
+		{
+			"action": "ROAD @(240, 165) t=360",
+			"t": 360.000000000013
+		},
+		{
+			"action": "ROAD @(240, 164) t=392",
+			"t": 392.000000000021
+		},
+		{
+			"action": "ROAD @(240, 163) t=392",
+			"t": 392.000000000021
+		},
+		{
+			"caption": "First night.",
+			"shot": "t07_first_night",
+			"t": 424.000000000028
+		},
+		{
+			"caption": "First raid or battle.",
+			"shot": "t07_first_raid",
+			"t": 424.000000000028
+		},
+		{
+			"caption": "Minute 10 yard.",
+			"shot": "t10_play",
+			"t": 600.000000000068
+		},
+		{
+			"action": "ROAD @(240, 162) t=624",
+			"t": 624.000000000073
+		},
+		{
+			"action": "ROAD @(240, 161) t=632",
+			"t": 632.000000000075
+		},
+		{
+			"action": "ROAD @(240, 160) t=632",
+			"t": 632.000000000075
+		},
+		{
+			"action": "ROAD @(240, 159) t=656",
+			"t": 656.000000000081
+		},
+		{
+			"action": "ROAD @(240, 158) t=664",
+			"t": 664.000000000082
+		},
+		{
+			"action": "ROAD @(240, 157) t=664",
+			"t": 664.000000000082
+		},
+		{
+			"action": "ROAD @(240, 156) t=696",
+			"t": 696.00000000009
+		},
+		{
+			"action": "ROAD @(239, 156) t=696",
+			"t": 696.00000000009
+		},
+		{
+			"caption": "Frontier marker and Shard direction.",
+			"shot": "t12_frontier",
+			"t": 720.000000000095
+		},
+		{
+			"action": "CLAIMANT_OUTPOST @(237, 184) t=720",
+			"t": 720.000000000095
+		},
+		{
+			"action": "ROAD @(239, 175) t=728",
+			"t": 728.000000000097
+		},
+		{
+			"action": "ROAD @(238, 175) t=728",
+			"t": 728.000000000097
+		},
+		{
+			"action": "ROAD @(237, 175) t=760",
+			"t": 760.000000000104
+		},
+		{
+			"action": "ROAD @(236, 175) t=760",
+			"t": 760.000000000104
+		},
+		{
+			"action": "ROAD @(235, 175) t=784",
+			"t": 784.00000000011
+		},
+		{
+			"action": "ROAD @(234, 175) t=784",
+			"t": 784.00000000011
+		},
+		{
+			"action": "ROAD @(233, 175) t=800",
+			"t": 800.000000000113
+		},
+		{
+			"action": "ROAD @(232, 175) t=800",
+			"t": 800.000000000113
+		},
+		{
+			"action": "ROAD @(231, 175) t=808",
+			"t": 808.000000000115
+		},
+		{
+			"action": "ROAD @(230, 175) t=816",
+			"t": 816.000000000117
+		},
+		{
+			"action": "ROAD @(229, 175) t=824",
+			"t": 824.000000000119
+		},
+		{
+			"action": "ROAD @(228, 175) t=832",
+			"t": 832.000000000121
+		},
+		{
+			"action": "ROAD @(227, 175) t=840",
+			"t": 840.000000000122
+		},
+		{
+			"action": "ROAD @(226, 175) t=840",
+			"t": 840.000000000122
+		},
+		{
+			"action": "ROAD @(225, 175) t=848",
+			"t": 848.000000000124
+		},
+		{
+			"action": "ROAD @(224, 175) t=848",
+			"t": 848.000000000124
+		},
+		{
+			"action": "ROAD @(223, 175) t=856",
+			"t": 856.000000000126
+		},
+		{
+			"action": "ROAD @(223, 174) t=856",
+			"t": 856.000000000126
+		},
+		{
+			"action": "ROAD @(222, 174) t=864",
+			"t": 864.000000000128
+		},
+		{
+			"action": "ROAD @(223, 176) t=864",
+			"t": 864.000000000128
+		},
+		{
+			"action": "ROAD @(222, 176) t=872",
+			"t": 872.00000000013
+		},
+		{
+			"action": "ROAD @(221, 176) t=872",
+			"t": 872.00000000013
+		},
+		{
+			"caption": "Minute 15 yard.",
+			"shot": "t15_play",
+			"t": 904.000000000137
+		},
+		{
+			"action": "ROAD @(221, 175) t=904",
+			"t": 904.000000000137
+		},
+		{
+			"action": "ROAD @(220, 175) t=912",
+			"t": 912.000000000139
+		},
+		{
+			"action": "ROAD @(220, 176) t=912",
+			"t": 912.000000000139
+		},
+		{
+			"action": "ROAD @(220, 174) t=920",
+			"t": 920.000000000141
+		},
+		{
+			"action": "ROAD @(219, 174) t=920",
+			"t": 920.000000000141
+		},
+		{
+			"action": "ROAD @(218, 174) t=928",
+			"t": 928.000000000142
+		},
+		{
+			"action": "ROAD @(218, 173) t=928",
+			"t": 928.000000000142
+		},
+		{
+			"action": "ROAD @(217, 174) t=936",
+			"t": 936.000000000144
+		},
+		{
+			"action": "ROAD @(217, 175) t=936",
+			"t": 936.000000000144
+		},
+		{
+			"action": "ROAD @(217, 176) t=944",
+			"t": 944.000000000146
+		},
+		{
+			"action": "ROAD @(216, 175) t=944",
+			"t": 944.000000000146
+		},
+		{
+			"action": "ROAD @(219, 173) t=952",
+			"t": 952.000000000148
+		},
+		{
+			"action": "ROAD @(218, 172) t=952",
+			"t": 952.000000000148
+		},
+		{
+			"action": "ROAD @(217, 173) t=960",
+			"t": 960.00000000015
+		},
+		{
+			"action": "ROAD @(216, 174) t=960",
+			"t": 960.00000000015
+		},
+		{
+			"action": "ROAD @(217, 177) t=968",
+			"t": 968.000000000152
+		},
+		{
+			"action": "ROAD @(218, 177) t=968",
+			"t": 968.000000000152
+		},
+		{
+			"action": "ROAD @(216, 176) t=976",
+			"t": 976.000000000153
+		},
+		{
+			"action": "ROAD @(215, 175) t=976",
+			"t": 976.000000000153
+		},
+		{
+			"action": "ROAD @(219, 177) t=984",
+			"t": 984.000000000155
+		},
+		{
+			"action": "ROAD @(218, 178) t=984",
+			"t": 984.000000000155
+		},
+		{
+			"action": "ROAD @(220, 177) t=992",
+			"t": 992.000000000157
+		},
+		{
+			"action": "ROAD @(219, 172) t=992",
+			"t": 992.000000000157
+		},
+		{
+			"caption": "Rival encounter.",
+			"shot": "t18_rival",
+			"t": 1080.00000000011
+		},
+		{
+			"action": "ASSAULT @(236, 162) t=1080",
+			"t": 1080.00000000011
+		},
+		{
+			"caption": "Minute 20 yard.",
+			"shot": "t20_play",
+			"t": 1200.0
+		},
+		{
+			"action": "SCOUT @(227, 169) t=1208",
+			"t": 1208.0
+		},
+		{
+			"action": "SCOUT @(227, 169) t=1216",
+			"t": 1215.99999999999
+		},
+		{
+			"action": "ROAD @(218, 171) t=1232",
+			"t": 1231.99999999997
+		},
+		{
+			"action": "ROAD @(217, 172) t=1232",
+			"t": 1231.99999999997
+		},
+		{
+			"action": "ROAD @(216, 173) t=1288",
+			"t": 1287.99999999992
+		},
+		{
+			"action": "ROAD @(215, 174) t=1288",
+			"t": 1287.99999999992
+		},
+		{
+			"action": "ROAD @(217, 178) t=1296",
+			"t": 1295.99999999992
+		},
+		{
+			"action": "ROAD @(216, 177) t=1296",
+			"t": 1295.99999999992
+		},
+		{
+			"action": "ROAD @(215, 176) t=1304",
+			"t": 1303.99999999991
+		},
+		{
+			"action": "ROAD @(214, 175) t=1304",
+			"t": 1303.99999999991
+		},
+		{
+			"action": "ROAD @(219, 178) t=1312",
+			"t": 1311.9999999999
+		},
+		{
+			"action": "ROAD @(218, 179) t=1312",
+			"t": 1311.9999999999
+		},
+		{
+			"action": "ROAD @(221, 177) t=1320",
+			"t": 1319.99999999989
+		},
+		{
+			"action": "ROAD @(220, 178) t=1320",
+			"t": 1319.99999999989
+		},
+		{
+			"action": "ROAD @(219, 171) t=1328",
+			"t": 1327.99999999989
+		},
+		{
+			"action": "ROAD @(220, 172) t=1328",
+			"t": 1327.99999999989
+		},
+		{
+			"action": "ROAD @(218, 170) t=1336",
+			"t": 1335.99999999988
+		},
+		{
+			"action": "ROAD @(217, 171) t=1336",
+			"t": 1335.99999999988
+		},
+		{
+			"action": "ROAD @(216, 172) t=1344",
+			"t": 1343.99999999987
+		},
+		{
+			"action": "ROAD @(215, 173) t=1344",
+			"t": 1343.99999999987
+		},
+		{
+			"action": "ROAD @(214, 174) t=1352",
+			"t": 1351.99999999987
+		},
+		{
+			"action": "ROAD @(217, 179) t=1352",
+			"t": 1351.99999999987
+		},
+		{
+			"action": "ROAD @(216, 178) t=1360",
+			"t": 1359.99999999986
+		},
+		{
+			"action": "ROAD @(215, 177) t=1360",
+			"t": 1359.99999999986
+		},
+		{
+			"action": "ROAD @(214, 176) t=1368",
+			"t": 1367.99999999985
+		},
+		{
+			"action": "ROAD @(213, 175) t=1368",
+			"t": 1367.99999999985
+		},
+		{
+			"action": "ROAD @(219, 179) t=1376",
+			"t": 1375.99999999984
+		},
+		{
+			"action": "ROAD @(218, 180) t=1376",
+			"t": 1375.99999999984
+		},
+		{
+			"action": "ROAD @(222, 173) t=1384",
+			"t": 1383.99999999984
+		},
+		{
+			"action": "ROAD @(221, 173) t=1384",
+			"t": 1383.99999999984
+		},
+		{
+			"action": "ROAD @(222, 177) t=1392",
+			"t": 1391.99999999983
+		},
+		{
+			"action": "ROAD @(221, 178) t=1400",
+			"t": 1399.99999999982
+		},
+		{
+			"action": "ROAD @(220, 179) t=1408",
+			"t": 1407.99999999981
+		},
+		{
+			"action": "ROAD @(219, 170) t=1408",
+			"t": 1407.99999999981
+		},
+		{
+			"action": "ROAD @(220, 171) t=1416",
+			"t": 1415.99999999981
+		},
+		{
+			"action": "ROAD @(221, 172) t=1424",
+			"t": 1423.9999999998
+		},
+		{
+			"action": "ROAD @(218, 169) t=1424",
+			"t": 1423.9999999998
+		},
+		{
+			"action": "ROAD @(217, 170) t=1432",
+			"t": 1431.99999999979
+		},
+		{
+			"action": "ROAD @(216, 171) t=1432",
+			"t": 1431.99999999979
+		},
+		{
+			"action": "ROAD @(215, 172) t=1440",
+			"t": 1439.99999999979
+		},
+		{
+			"action": "ROAD @(214, 173) t=1440",
+			"t": 1439.99999999979
+		},
+		{
+			"action": "ROAD @(213, 174) t=1448",
+			"t": 1447.99999999978
+		},
+		{
+			"action": "ROAD @(217, 180) t=1448",
+			"t": 1447.99999999978
+		},
+		{
+			"action": "ROAD @(216, 179) t=1456",
+			"t": 1455.99999999977
+		},
+		{
+			"action": "ROAD @(215, 178) t=1456",
+			"t": 1455.99999999977
+		},
+		{
+			"action": "ROAD @(214, 177) t=1464",
+			"t": 1463.99999999976
+		},
+		{
+			"action": "ROAD @(213, 176) t=1464",
+			"t": 1463.99999999976
+		},
+		{
+			"action": "ROAD @(212, 175) t=1472",
+			"t": 1471.99999999976
+		},
+		{
+			"action": "ROAD @(219, 180) t=1472",
+			"t": 1471.99999999976
+		},
+		{
+			"action": "ROAD @(218, 181) t=1480",
+			"t": 1479.99999999975
+		},
+		{
+			"action": "ROAD @(224, 174) t=1480",
+			"t": 1479.99999999975
+		},
+		{
+			"action": "ROAD @(224, 176) t=1488",
+			"t": 1487.99999999974
+		},
+		{
+			"action": "ROAD @(223, 173) t=1496",
+			"t": 1495.99999999973
+		},
+		{
+			"caption": "Minute 25 yard.",
+			"shot": "t25_play",
+			"t": 1503.99999999973
+		},
+		{
+			"action": "ROAD @(223, 177) t=1504",
+			"t": 1503.99999999973
+		},
+		{
+			"action": "ROAD @(222, 172) t=1512",
+			"t": 1511.99999999972
+		},
+		{
+			"action": "ROAD @(222, 178) t=1512",
+			"t": 1511.99999999972
+		},
+		{
+			"action": "ROAD @(221, 179) t=1520",
+			"t": 1519.99999999971
+		},
+		{
+			"action": "ROAD @(220, 180) t=1520",
+			"t": 1519.99999999971
+		},
+		{
+			"action": "ROAD @(219, 169) t=1528",
+			"t": 1527.99999999971
+		},
+		{
+			"action": "ROAD @(220, 170) t=1528",
+			"t": 1527.99999999971
+		},
+		{
+			"action": "ROAD @(221, 171) t=1544",
+			"t": 1543.99999999969
+		},
+		{
+			"action": "ROAD @(218, 168) t=1544",
+			"t": 1543.99999999969
+		},
+		{
+			"action": "ROAD @(217, 169) t=1552",
+			"t": 1551.99999999968
+		},
+		{
+			"action": "ROAD @(216, 170) t=1552",
+			"t": 1551.99999999968
+		},
+		{
+			"action": "ROAD @(215, 171) t=1560",
+			"t": 1559.99999999968
+		},
+		{
+			"action": "ROAD @(214, 172) t=1560",
+			"t": 1559.99999999968
+		},
+		{
+			"action": "ROAD @(213, 173) t=1568",
+			"t": 1567.99999999967
+		},
+		{
+			"action": "ROAD @(212, 174) t=1568",
+			"t": 1567.99999999967
+		},
+		{
+			"action": "ROAD @(217, 181) t=1576",
+			"t": 1575.99999999966
+		},
+		{
+			"action": "ROAD @(216, 180) t=1576",
+			"t": 1575.99999999966
+		},
+		{
+			"action": "ROAD @(215, 179) t=1584",
+			"t": 1583.99999999965
+		},
+		{
+			"action": "ROAD @(214, 178) t=1592",
+			"t": 1591.99999999965
+		},
+		{
+			"action": "ROAD @(213, 177) t=1592",
+			"t": 1591.99999999965
+		},
+		{
+			"caption": "Minute 30 yard.",
+			"shot": "t30_play",
+			"t": 1807.99999999945
+		},
+		{
+			"action": "SCOUT @(227, 169) t=1808",
+			"t": 1807.99999999945
+		},
+		{
+			"action": "ROAD @(212, 176) t=1832",
+			"t": 1831.99999999943
+		},
+		{
+			"action": "ROAD @(211, 175) t=1832",
+			"t": 1831.99999999943
+		},
+		{
+			"action": "ROAD @(219, 181) t=1896",
+			"t": 1895.99999999937
+		},
+		{
+			"action": "ROAD @(218, 182) t=1896",
+			"t": 1895.99999999937
+		},
+		{
+			"action": "ROAD @(225, 174) t=1952",
+			"t": 1951.99999999932
+		},
+		{
+			"action": "ROAD @(225, 176) t=1960",
+			"t": 1959.99999999931
+		},
+		{
+			"action": "ROAD @(224, 173) t=1968",
+			"t": 1967.99999999931
+		},
+		{
+			"action": "ROAD @(224, 177) t=1976",
+			"t": 1975.9999999993
+		},
+		{
+			"action": "ROAD @(223, 172) t=1976",
+			"t": 1975.9999999993
+		},
+		{
+			"action": "ROAD @(223, 178) t=1984",
+			"t": 1983.99999999929
+		},
+		{
+			"action": "ROAD @(222, 171) t=1992",
+			"t": 1991.99999999928
+		},
+		{
+			"action": "ROAD @(222, 179) t=1992",
+			"t": 1991.99999999928
+		},
+		{
+			"action": "ROAD @(221, 180) t=2000",
+			"t": 1999.99999999928
+		},
+		{
+			"action": "ROAD @(220, 181) t=2000",
+			"t": 1999.99999999928
+		},
+		{
+			"action": "ROAD @(219, 168) t=2008",
+			"t": 2007.99999999927
+		},
+		{
+			"action": "ROAD @(220, 169) t=2016",
+			"t": 2015.99999999926
+		},
+		{
+			"action": "ROAD @(221, 170) t=2024",
+			"t": 2023.99999999925
+		},
+		{
+			"action": "ROAD @(218, 167) t=2032",
+			"t": 2031.99999999925
+		},
+		{
+			"action": "ROAD @(217, 168) t=2032",
+			"t": 2031.99999999925
+		},
+		{
+			"action": "ROAD @(216, 169) t=2040",
+			"t": 2039.99999999924
+		},
+		{
+			"action": "ROAD @(215, 170) t=2040",
+			"t": 2039.99999999924
+		},
+		{
+			"action": "ROAD @(214, 171) t=2048",
+			"t": 2047.99999999923
+		},
+		{
+			"action": "ROAD @(213, 172) t=2048",
+			"t": 2047.99999999923
+		},
+		{
+			"action": "ROAD @(212, 173) t=2056",
+			"t": 2055.99999999923
+		},
+		{
+			"action": "ROAD @(211, 174) t=2056",
+			"t": 2055.99999999923
+		},
+		{
+			"action": "ROAD @(217, 182) t=2064",
+			"t": 2063.99999999922
+		},
+		{
+			"action": "ROAD @(216, 181) t=2064",
+			"t": 2063.99999999922
+		},
+		{
+			"action": "ROAD @(215, 180) t=2080",
+			"t": 2079.9999999992
+		},
+		{
+			"action": "ROAD @(214, 179) t=2080",
+			"t": 2079.9999999992
+		},
+		{
+			"action": "ROAD @(213, 178) t=2088",
+			"t": 2087.9999999992
+		},
+		{
+			"action": "ROAD @(212, 177) t=2088",
+			"t": 2087.9999999992
+		},
+		{
+			"action": "ROAD @(211, 176) t=2096",
+			"t": 2095.99999999919
+		},
+		{
+			"action": "ROAD @(210, 175) t=2096",
+			"t": 2095.99999999919
+		},
+		{
+			"caption": "Minute 35 yard.",
+			"shot": "t35_play",
+			"t": 2103.99999999918
+		},
+		{
+			"action": "ROAD @(219, 182) t=2104",
+			"t": 2103.99999999918
+		},
+		{
+			"action": "ROAD @(218, 183) t=2104",
+			"t": 2103.99999999918
+		},
+		{
+			"action": "ROAD @(226, 174) t=2120",
+			"t": 2119.99999999917
+		},
+		{
+			"action": "ROAD @(226, 176) t=2120",
+			"t": 2119.99999999917
+		},
+		{
+			"action": "ROAD @(225, 173) t=2136",
+			"t": 2135.99999999915
+		},
+		{
+			"action": "ROAD @(225, 177) t=2136",
+			"t": 2135.99999999915
+		},
+		{
+			"action": "ROAD @(224, 172) t=2144",
+			"t": 2143.99999999915
+		},
+		{
+			"action": "ROAD @(224, 178) t=2152",
+			"t": 2151.99999999914
+		},
+		{
+			"action": "ROAD @(223, 179) t=2152",
+			"t": 2151.99999999914
+		},
+		{
+			"action": "ROAD @(222, 170) t=2160",
+			"t": 2159.99999999913
+		},
+		{
+			"action": "ROAD @(222, 180) t=2168",
+			"t": 2167.99999999912
+		},
+		{
+			"action": "ROAD @(219, 167) t=2168",
+			"t": 2167.99999999912
+		},
+		{
+			"action": "ROAD @(220, 168) t=2176",
+			"t": 2175.99999999912
+		},
+		{
+			"action": "ROAD @(221, 169) t=2176",
+			"t": 2175.99999999912
+		},
+		{
+			"action": "ROAD @(218, 166) t=2184",
+			"t": 2183.99999999911
+		},
+		{
+			"action": "ROAD @(217, 167) t=2192",
+			"t": 2191.9999999991
+		},
+		{
+			"action": "ROAD @(216, 168) t=2192",
+			"t": 2191.9999999991
+		},
+		{
+			"caption": "Minute 40 yard.",
+			"shot": "t40_play",
+			"t": 2407.99999999891
+		},
+		{
+			"action": "SCOUT @(227, 169) t=2408",
+			"t": 2407.99999999891
+		},
+		{
+			"action": "SCOUT @(227, 169) t=2416",
+			"t": 2415.9999999989
+		},
+		{
+			"action": "ROAD @(215, 169) t=2440",
+			"t": 2439.99999999888
+		},
+		{
+			"action": "ROAD @(214, 170) t=2440",
+			"t": 2439.99999999888
+		},
+		{
+			"action": "ROAD @(213, 171) t=2504",
+			"t": 2503.99999999882
+		},
+		{
+			"action": "ROAD @(212, 172) t=2504",
+			"t": 2503.99999999882
+		},
+		{
+			"action": "ROAD @(211, 173) t=2568",
+			"t": 2567.99999999876
+		},
+		{
+			"action": "ROAD @(210, 174) t=2568",
+			"t": 2567.99999999876
+		},
+		{
+			"action": "ROAD @(217, 183) t=2576",
+			"t": 2575.99999999875
+		},
+		{
+			"action": "ROAD @(216, 182) t=2576",
+			"t": 2575.99999999875
+		},
+		{
+			"action": "ROAD @(215, 181) t=2592",
+			"t": 2591.99999999874
+		},
+		{
+			"action": "ROAD @(214, 180) t=2592",
+			"t": 2591.99999999874
+		},
+		{
+			"action": "ROAD @(213, 179) t=2600",
+			"t": 2599.99999999873
+		},
+		{
+			"action": "ROAD @(212, 178) t=2600",
+			"t": 2599.99999999873
+		},
+		{
+			"action": "ROAD @(211, 177) t=2608",
+			"t": 2607.99999999872
+		},
+		{
+			"action": "ROAD @(210, 176) t=2608",
+			"t": 2607.99999999872
+		},
+		{
+			"action": "ROAD @(209, 175) t=2616",
+			"t": 2615.99999999872
+		},
+		{
+			"action": "ROAD @(219, 183) t=2616",
+			"t": 2615.99999999872
+		},
+		{
+			"action": "ROAD @(218, 184) t=2624",
+			"t": 2623.99999999871
+		},
+		{
+			"action": "ROAD @(227, 174) t=2632",
+			"t": 2631.9999999987
+		},
+		{
+			"action": "ROAD @(227, 176) t=2640",
+			"t": 2639.99999999869
+		},
+		{
+			"action": "ROAD @(226, 173) t=2648",
+			"t": 2647.99999999869
+		},
+		{
+			"action": "ROAD @(226, 177) t=2656",
+			"t": 2655.99999999868
+		},
+		{
+			"action": "ROAD @(225, 172) t=2656",
+			"t": 2655.99999999868
+		},
+		{
+			"action": "ROAD @(225, 178) t=2664",
+			"t": 2663.99999999867
+		},
+		{
+			"action": "ROAD @(224, 171) t=2672",
+			"t": 2671.99999999867
+		},
+		{
+			"action": "ROAD @(224, 179) t=2680",
+			"t": 2679.99999999866
+		},
+		{
+			"action": "ROAD @(223, 180) t=2688",
+			"t": 2687.99999999865
+		},
+		{
+			"action": "ROAD @(222, 169) t=2696",
+			"t": 2695.99999999864
+		},
+		{
+			"action": "ROAD @(223, 170) t=2696",
+			"t": 2695.99999999864
+		},
+		{
+			"caption": "Victory.",
+			"shot": "t44_victory",
+			"t": 2699.99999999864
+		}
+	],
+	"unclear": [],
+	"victory": true
+}
