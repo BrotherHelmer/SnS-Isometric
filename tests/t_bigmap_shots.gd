@@ -54,7 +54,7 @@ func _run() -> void:
 				await process_frame
 				await RenderingServer.frame_post_draw
 				_save(dest, "minimap.png")
-				var atlas := game.minimap._render_map(game.simulation_host.simulation.map_size, game.current_frame_snapshot)
+				var atlas: Image = game.minimap._render_map(game.simulation_host.simulation.map_size, game.current_frame_snapshot)
 				if atlas != null:
 					atlas.resize(1080, 1080, Image.INTERPOLATE_NEAREST)
 					atlas.save_png(dest.path_join("minimap_atlas.png"))

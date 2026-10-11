@@ -3282,6 +3282,7 @@ func _prepare_test_tile(tile: Vector2i, tile_type: String) -> void:
 		tree_deposits.erase(_tile_key(tile))
 	if tile_type != Defs.TILE_ROCK:
 		rock_deposits.erase(_tile_key(tile))
+	water_tiles.erase(_tile_key(tile))
 	if is_inside_map(tile) and not height_map.is_empty():
 		var level := get_height(town_hall_position) if is_town_hall_founded() else get_height(tile)
 		height_map[tile.y][tile.x] = level
