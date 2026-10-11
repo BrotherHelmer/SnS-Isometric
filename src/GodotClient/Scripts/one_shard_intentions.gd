@@ -116,7 +116,7 @@ static func _catalog() -> Array:
 			"detail": "Establish lumber and stone production.",
 			"reward": "The first bottleneck: free workers have a cost.",
 			"criteria": [
-				{"kind": "building", "type": "LUMBER_CAMP", "label": "Build a Lumberjack"},
+				{"kind": "building", "type": "LUMBER_CAMP", "label": "Build a Lumber Camp"},
 				{"kind": "building", "type": "QUARRY", "label": "Build a Quarry"}
 			]
 		},

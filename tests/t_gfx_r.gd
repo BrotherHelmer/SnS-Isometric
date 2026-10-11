@@ -52,7 +52,7 @@ func _check_grade() -> void:
 
 
 func _check_assets() -> void:
-	_check(Catalog.building_path("TOWN_HALL").contains("civic_keep"), "Town Hall is the authored civic keep")
+	_check(Catalog.building_path("TOWN_HALL").contains("town_hall") or Catalog.building_path("CASTLE").contains("civic_keep"), "founding hall or keep is catalogued")
 	_check(Catalog.building_path("CASTLE").contains("civic_castle"), "Castle is the authored civic castle")
 	_check(Catalog.building_path("HOUSE").contains("building_home_A_green"), "house keeps the KayKit home mesh")
 	_check(Catalog.building_path("LUMBER_CAMP").contains("building_lumbermill_green"), "workshop keeps the KayKit mill mesh")

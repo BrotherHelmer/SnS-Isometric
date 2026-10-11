@@ -77,11 +77,10 @@ const TABLE := {
 	],
 	"TOWN_HALL": [
 		{"prop": "cart", "dx": -1, "dy": 2, "yaw": 12.0, "scale": 0.78},
-		{"prop": "barrel", "dx": 4, "dy": 1, "yaw": 0.0, "scale": 1.15},
-		{"prop": "barrel", "dx": 4, "dy": 2, "yaw": 16.0, "scale": 1.05},
+		{"prop": "wood_stack", "dx": 4, "dy": 1, "yaw": 8.0, "scale": 0.82},
+		{"prop": "stump", "dx": 4, "dy": 2, "yaw": 22.0, "scale": 0.68},
 		{"prop": "crate", "dx": -1, "dy": 1, "yaw": 8.0, "scale": 1.00},
 		{"prop": "lantern", "dx": 1, "dy": -1, "yaw": 0.0, "scale": 1.00},
-		{"prop": "crate", "dx": 2, "dy": -1, "yaw": 4.0, "scale": 0.95},
 	],
 	"CASTLE": [
 		{"prop": "weaponrack", "dx": -1, "dy": 1, "yaw": 90.0, "scale": 0.95},

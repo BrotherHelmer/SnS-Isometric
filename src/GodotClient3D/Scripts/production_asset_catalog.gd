@@ -36,9 +36,9 @@ const ANIMATION_LIBRARIES := {
 }
 
 const BUILDINGS := {
-	# GFX-Q: authored limestone keep. Houses / mill stay KayKit Hexagon.
-	"TOWN_HALL": ROOT + "/buildings/civic_keep.gltf",
-	"CASTLE": ROOT + "/buildings/civic_castle.gltf",
+	# Founding hall is the smaller civic house. The keep is the CASTLE upgrade.
+	"TOWN_HALL": ROOT + "/opening_style/town_hall.tscn",
+	"CASTLE": ROOT + "/buildings/civic_keep.gltf",
 	"HOUSE": ROOT + "/buildings/building_home_A_green.gltf",
 	"LUMBER_CAMP": ROOT + "/buildings/building_lumbermill_green.gltf",
 	"SAWMILL": ROOT + "/buildings/building_lumbermill_green.gltf",
@@ -77,6 +77,7 @@ const WORKYARD_PROPS := {
 	"fence": ROOT + "/opening_style/fence.tscn",
 	"cart": ROOT + "/opening_style/cart.tscn",
 	"wood_stack": ROOT + "/resources/Wood_Log_Stack.gltf",
+	"stump": ROOT + "/resources/Wood_Log_B.gltf",
 	"plank_stack": ROOT + "/resources/Wood_Planks_Stack_Small.gltf",
 	"stone_stack": ROOT + "/resources/Stone_Bricks_Stack_Small.gltf",
 	"barrel": ROOT + "/buildings/barrel.gltf",

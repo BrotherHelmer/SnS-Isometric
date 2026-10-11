@@ -61,8 +61,26 @@ func _run() -> void:
 		int(blockers.get("trees", -1)), int(blockers.get("rocks", -1)), float(blockers.get("radius", 0.0)),
 		str(blockers.get("tree_tiles", [])), str(sim.town_hall_position)
 	])
-	_check(int(blockers.get("trees", 1)) == 0, "no trees inside the 8-tile Town Hall yard")
-	_check(int(blockers.get("rocks", 1)) == 0, "no rocks inside the 8-tile Town Hall yard")
+	_check(int(blockers.get("trees", 1)) == 0, "no trees inside the founding clearing")
+	_check(int(blockers.get("rocks", 1)) == 0, "no rocks inside the founding clearing")
+	var audit: Dictionary = sim.founding_audit()
+	print("T_FIRST_SCREEN founding_audit=%s" % str(audit))
+	_check(int(audit.get("functional_buildings", 0)) == 1, "exactly one functional building")
+	_check(int(audit.get("fake_buildings", 1)) == 0, "no fake building entities")
+	_check(bool(audit.get("tree_reachable", false)), "wood is reachable from the hall")
+	_check(bool(audit.get("rock_reachable", false)), "stone is reachable from the hall")
+	_check(bool(audit.get("food_reachable", false)), "a food cluster is reachable")
+	_check(bool(audit.get("bridges_cross", false)), "starter bridges cross the creek")
+	_check(bool(audit.get("quest_target", false)), "quest names the Lumber Camp")
+	var hall_view = null
+	for view in game.world_view.building_views.values():
+		if String(view.building_type) == "TOWN_HALL":
+			hall_view = view
+			break
+	_check(hall_view != null, "Town Hall view exists")
+	if hall_view != null:
+		_check(hall_view.find_child("CivicDoor", true, false) != null, "founding hall has a visible door")
+		_check(hall_view.find_child("CivicRoof_Hall", true, false) != null, "founding hall has a green roof")
 	var dress: Node = game.world_view.resource_visuals_root.get_node_or_null("OpeningDress")
 	_check(dress != null and float(dress.get_meta("opening_yard_cells", 0.0)) >= 7.0, "opening dress records the 6–8 tile yard")
 	_check(dress != null and int(dress.get_meta("hamlet_cottages", 0)) == 0, "opening dress plants no cottages")

@@ -1050,10 +1050,13 @@ func _visual_relief_y(xz: Vector2) -> float:
 func _creek_cut_at(xz: Vector2) -> float:
 	if simulation == null or not simulation.is_town_hall_founded():
 		return 0.0
-	var hall: Vector2i = simulation.town_hall_position
 	var best := 999.0
-	for offset in [Vector2i(-5, -2), Vector2i(-4, 1), Vector2i(-4, 4), Vector2i(-3, 6), Vector2i(-4, 9), Vector2i(-6, 12), Vector2i(-8, 15)]:
-		var p := ScaleProfile.tile_to_flat_world(Vector2(hall + offset), map_size)
+	var tiles: Array = simulation.founding_site.get("creek_tiles", []) if simulation.founding_site is Dictionary else []
+	if tiles.is_empty():
+		var hall: Vector2i = simulation.town_hall_position
+		tiles = [hall + Vector2i(-7, -2), hall + Vector2i(-6, 2), hall + Vector2i(-6, 6), hall + Vector2i(-7, 10)]
+	for tile_value in tiles:
+		var p := ScaleProfile.tile_to_flat_world(Vector2(Vector2i(tile_value)), map_size)
 		best = minf(best, Vector2(xz.x - p.x, xz.y - p.z).length())
 	var bank := ScaleProfile.road_width_metres() * 0.85
 	if best > bank + 1.6:
@@ -1125,6 +1128,7 @@ func _compute_terrain_color(tile: Vector2i) -> Color:
 	if edge <= 1:
 		base = base.lerp(Color(0.090, 0.149, 0.165, 0.28) if rock_weight < 3 else Color(0.416, 0.376, 0.329, 0.24), 0.55)
 	var path_w := maxf(_visual_path_weight(tile), _hamlet_path_weight(tile))
+	path_w = maxf(path_w, _forecourt_weight(tile))
 	if path_w > 0.08:
 		base = base.lerp(Color(0.690, 0.520, 0.330, 0.88), clampf(path_w * 0.94, 0.0, 0.94))
 	if _is_farm_field_tile(tile):
@@ -1158,6 +1162,14 @@ func _meadow_weight(tile: Vector2i) -> float:
 	var hall: Vector2i = simulation.town_hall_position
 	var dist := Vector2(tile - hall).length()
 	return clampf(1.0 - absf(dist - 5.5) / 6.5, 0.0, 1.0) * (0.55 + float(_tile_hash(tile, 29) % 40) / 100.0)
+
+
+func _forecourt_weight(tile: Vector2i) -> float:
+	if simulation == null or not simulation.is_town_hall_founded():
+		return 0.0
+	var entrance: Vector2i = simulation._town_hall_entrance_tile()
+	var d := Vector2(tile).distance_to(Vector2(entrance) + Vector2(0.0, 0.6))
+	return clampf(1.0 - d / 2.35, 0.0, 1.0) * 0.92
 
 
 func _visual_path_weight(tile: Vector2i) -> float:
@@ -1706,6 +1718,8 @@ func _tile_occupied_by_structure(tile: Vector2i) -> bool:
 func _in_founding_yard(tile: Vector2i, radius := 8.0) -> bool:
 	if simulation == null or not simulation.is_town_hall_founded():
 		return false
+	if simulation.has_method("_in_founding_clearing"):
+		return bool(simulation._in_founding_clearing(tile))
 	var hall: Vector2i = simulation.town_hall_position
 	var footprint := Defs.building_footprint(Defs.BUILDING_TOWN_HALL)
 	var center := Vector2(hall) + Vector2(footprint - Vector2i.ONE) * 0.5
@@ -1713,8 +1727,8 @@ func _in_founding_yard(tile: Vector2i, radius := 8.0) -> bool:
 
 
 func founding_yard_blockers(radius := 8.0) -> Dictionary:
-	# Presentation + sim blockers inside the opening yard. Used by the
-	# first-screen gate: zero trees or rocks in the 6–8 tile clearing.
+	# Presentation + sim blockers inside the opening yard. Uses the
+	# seeded ellipse when the simulation has a founding site.
 	var trees := 0
 	var rocks := 0
 	var tree_tiles: Array[Vector2i] = []
@@ -1723,14 +1737,22 @@ func founding_yard_blockers(radius := 8.0) -> Dictionary:
 	var hall: Vector2i = simulation.town_hall_position
 	var footprint := Defs.building_footprint(Defs.BUILDING_TOWN_HALL)
 	var center := Vector2(hall) + Vector2(footprint - Vector2i.ONE) * 0.5
-	var reach := int(ceil(radius))
+	var rx := radius
+	var ry := radius
+	if simulation.founding_site is Dictionary and not simulation.founding_site.is_empty():
+		rx = float(simulation.founding_site.get("rx", radius))
+		ry = float(simulation.founding_site.get("ry", radius))
+	var reach := int(ceil(maxf(rx, ry)))
 	var origin := Vector2i(int(round(center.x)), int(round(center.y)))
 	for oy in range(-reach, reach + 1):
 		for ox in range(-reach, reach + 1):
 			var tile := origin + Vector2i(ox, oy)
 			if not simulation.is_inside_map(tile):
 				continue
-			if Vector2(tile).distance_to(center) >= radius:
+			if simulation.has_method("_in_founding_clearing"):
+				if not bool(simulation._in_founding_clearing(tile)):
+					continue
+			elif Vector2(tile).distance_to(center) >= radius:
 				continue
 			var kind := String(simulation.get_tile(tile))
 			if kind == Defs.TILE_TREE:
@@ -1738,7 +1760,7 @@ func founding_yard_blockers(radius := 8.0) -> Dictionary:
 				tree_tiles.append(tile)
 			elif kind == Defs.TILE_ROCK:
 				rocks += 1
-	return {"trees": trees, "rocks": rocks, "radius": radius, "tree_tiles": tree_tiles}
+	return {"trees": trees, "rocks": rocks, "radius": maxf(rx, ry), "tree_tiles": tree_tiles}
 
 
 func non_inspectable_building_meshes(radius_tiles := 16.0) -> Array[String]:
@@ -3445,6 +3467,8 @@ func _rebuild_opening_dressing() -> void:
 				continue
 			if _visual_path_weight(tile) > 0.28 or _hamlet_path_weight(tile) > 0.28:
 				continue
+			if _in_founding_yard(tile):
+				continue
 			var dist := Vector2(float(ox), float(oy)).length()
 			if dist < inner or dist > outer:
 				continue
@@ -3465,14 +3489,15 @@ func _rebuild_opening_dressing() -> void:
 		_append_nature_transform(transforms_by_path, _tree_path_for_tile(tile, 0, 3), tile, 0, 0.70, 1.05, 0.42)
 		planted += 1
 		planted_tiles.append(tile)
-	# GFX-S: understory and saplings soften the ring. Coverage stays
-	# planted / candidates (0.38–0.58). These extras do not count.
+	# Mature edge only. No saplings or understory in the founding yard.
 	for tile in planted_tiles:
+		if _in_founding_yard(tile):
+			continue
 		if Catalog.UNDERSTORY.size() > 0 and _tile_hash(tile, 83) % 3 == 0:
 			_append_nature_transform(transforms_by_path, String(Catalog.UNDERSTORY[_tile_hash(tile, 71) % Catalog.UNDERSTORY.size()]), tile, 6, 0.80, 0.72, 0.28)
-		if _tile_hash(tile, 91) % 5 == 0:
-			_append_nature_transform(transforms_by_path, _tree_path_for_tile(tile, 1, 1), tile, 1, 0.55, 0.48, 0.22)
 	for tile in candidates:
+		if _in_founding_yard(tile):
+			continue
 		var fringe := Vector2(float(tile.x - hall.x), float(tile.y - hall.y)).length()
 		if fringe > inner + 1.35 or fringe < inner:
 			continue
@@ -3483,7 +3508,10 @@ func _rebuild_opening_dressing() -> void:
 	_spawn_nature_multimeshes(host, transforms_by_path)
 	var coverage := 0.0 if candidates.is_empty() else float(planted) / float(candidates.size())
 	host.set_meta("opening_clearing_cells", inner)
-	host.set_meta("opening_yard_cells", 8.0)
+	var yard_r := 8.0
+	if simulation.founding_site is Dictionary:
+		yard_r = maxf(float(simulation.founding_site.get("rx", 8.0)), float(simulation.founding_site.get("ry", 7.0)))
+	host.set_meta("opening_yard_cells", yard_r)
 	host.set_meta("opening_forest_coverage", coverage)
 	host.set_meta("opening_forest_count", planted)
 	host.set_meta("opening_perimeter_count", candidates.size())
@@ -3562,13 +3590,16 @@ func _opening_ridge_tiles(hall: Vector2i) -> Array[Vector2i]:
 
 
 func opening_camera_focus() -> Vector3:
-	# Town Hall at about 53% across, 56% down in the opening viewport.
+	# Frame the hall, south door, open build sector and a nearby stand.
 	if simulation == null or not simulation.is_town_hall_founded():
 		return Vector3.ZERO
 	var hall: Vector2i = simulation.town_hall_position
 	var center := tile_to_world(Vector2(hall) + Vector2(1.5, 1.5))
 	var w := ScaleProfile.TOWN_HALL_WIDTH_METRES
-	return center + Vector3(-0.12 * w, 0.0, 0.18 * w)
+	var open_dir := Vector2(0.15, 1.0)
+	if simulation.founding_site is Dictionary:
+		open_dir = Vector2(simulation.founding_site.get("open_dir", open_dir))
+	return center + Vector3(open_dir.x * 0.22 * w - 0.06 * w, 0.0, 0.38 * w + open_dir.y * 0.10 * w)
 
 
 func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
@@ -3673,17 +3704,21 @@ func _spawn_kaykit_ridge_rock(ridge: Node3D, tile: Vector2i, index: int, scale_m
 
 
 func _spawn_meandering_creek(ridge: Node3D, hall: Vector2i, road_w: float) -> void:
-	# GFX-P: west-forest ribbon. Continues under the trees. Not a
-	# diagonal wedge across the village. Width 0.55–0.75R ±12%.
-	var tiles: Array[Vector2i] = [
-		hall + Vector2i(-5, -2),
-		hall + Vector2i(-4, 1),
-		hall + Vector2i(-4, 4),
-		hall + Vector2i(-3, 6),
-		hall + Vector2i(-4, 9),
-		hall + Vector2i(-6, 12),
-		hall + Vector2i(-8, 15),
-	]
+	# Seeded creek from the founding site. Falls back to a west ribbon.
+	var tiles: Array[Vector2i] = []
+	if simulation != null and simulation.founding_site is Dictionary:
+		for tile_value in simulation.founding_site.get("creek_tiles", []):
+			tiles.append(Vector2i(tile_value))
+	if tiles.size() < 5:
+		tiles = [
+			hall + Vector2i(-7, -2),
+			hall + Vector2i(-6, 1),
+			hall + Vector2i(-6, 4),
+			hall + Vector2i(-5, 7),
+			hall + Vector2i(-6, 10),
+			hall + Vector2i(-8, 13),
+			hall + Vector2i(-9, 16),
+		]
 	var points: Array[Vector3] = []
 	for tile in tiles:
 		if simulation != null and simulation.is_inside_map(tile):
@@ -3728,6 +3763,35 @@ func _spawn_meandering_creek(ridge: Node3D, hall: Vector2i, road_w: float) -> vo
 	creek.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	ridge.add_child(creek)
 	_dress_creek_shoreline(ridge, points)
+	_spawn_founding_bridges(ridge, width)
+
+
+func _spawn_founding_bridges(ridge: Node3D, width: float) -> void:
+	if simulation == null or not (simulation.founding_site is Dictionary):
+		return
+	var wood := _ridge_material(Color("#6B4E32"), 0.86)
+	var rail := _ridge_material(Color("#4A3826"), 0.90)
+	var index := 0
+	for tile_value in simulation.founding_site.get("bridge_tiles", []):
+		var tile := Vector2i(tile_value)
+		var deck := MeshInstance3D.new()
+		deck.name = "DressBridge_%d" % index
+		var deck_mesh := BoxMesh.new()
+		deck_mesh.size = Vector3(maxf(width + 0.85, 2.4), 0.16, maxf(width + 0.55, 1.8))
+		deck.mesh = deck_mesh
+		deck.position = tile_to_world(Vector2(tile)) + Vector3(0.0, 0.12, 0.0)
+		deck.material_override = wood
+		ridge.add_child(deck)
+		for side in [-1.0, 1.0]:
+			var post := MeshInstance3D.new()
+			post.name = "DressBridgeRail_%d_%d" % [index, int(side)]
+			var post_mesh := BoxMesh.new()
+			post_mesh.size = Vector3(0.10, 0.55, maxf(width + 0.35, 1.6))
+			post.mesh = post_mesh
+			post.position = deck.position + Vector3(side * 1.05, 0.28, 0.0)
+			post.material_override = rail
+			ridge.add_child(post)
+		index += 1
 
 
 func _dress_creek_shoreline(ridge: Node3D, points: Array[Vector3]) -> void:

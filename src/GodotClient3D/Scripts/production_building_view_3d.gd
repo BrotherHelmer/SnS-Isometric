@@ -156,6 +156,9 @@ func _create_completed_model() -> void:
 	if building_type == "WALL":
 		_create_wall_model()
 		return
+	if building_type == "TOWN_HALL":
+		_create_founding_hall_model()
+		return
 	var packed := load(Catalog.building_path(building_type)) as PackedScene
 	if packed == null:
 		return
@@ -167,6 +170,122 @@ func _create_completed_model() -> void:
 	# The Director: GFX-I trim-sheet remap after the mesh is live.
 	BuildingMaterials.apply(model_root, entity_id, building_type)
 	_apply_principal_trim()
+
+
+func _create_founding_hall_model() -> void:
+	# The Director: starter Town Hall is a small stone civic house with a
+	# green roof and a visible south door. The keep mesh is CASTLE only.
+	model_root = Node3D.new()
+	model_root.name = "SemanticModel_TOWN_HALL"
+	model_root.position.z = _model_offset_z()
+	add_child(model_root)
+	# Authored founding shell: stone walls, green roof, south door.
+	# Packed keep/castle stays on CASTLE so the upgrade keeps the keep.
+	_build_procedural_founding_hall(model_root)
+	BuildingMaterials.apply(model_root, entity_id, building_type)
+
+
+func _fit_node_to_size(node: Node, target: Vector3) -> void:
+	if node is Node3D:
+		var n3 := node as Node3D
+		var aabb := AABB()
+		var first := true
+		for child in n3.find_children("*", "MeshInstance3D", true, false):
+			var mesh_i := child as MeshInstance3D
+			if mesh_i.mesh == null:
+				continue
+			var local := mesh_i.mesh.get_aabb()
+			var world := mesh_i.transform * local
+			if first:
+				aabb = world
+				first = false
+			else:
+				aabb = aabb.merge(world)
+		if first or aabb.size.x < 0.05 or aabb.size.y < 0.05:
+			return
+		var sx := target.x / maxf(aabb.size.x, 0.05)
+		var sy := target.y / maxf(aabb.size.y, 0.05)
+		var sz := target.z / maxf(aabb.size.z, 0.05)
+		var s := clampf(minf(sx, minf(sy, sz)), 0.35, 8.0)
+		n3.scale = Vector3.ONE * s
+		n3.position.y = -aabb.position.y * s
+
+
+func _build_procedural_founding_hall(host: Node3D) -> void:
+	var stone := _material(BuildingMaterials.CASTLE_LIMESTONE, 0.0)
+	var masonry := _material(BuildingMaterials.CASTLE_MASONRY, 0.0)
+	var timber := _material(BuildingMaterials.DARK_TIMBER, 0.0)
+	var roof := _material(BuildingMaterials.HALL_SLATE, 0.0)
+	var plaster := _material(BuildingMaterials.WARM_PLASTER, 0.0)
+	var w := 5.20
+	var d := 4.40
+	var wall_h := 2.55
+	var walls := MeshInstance3D.new()
+	walls.name = "CivicWall_Hall"
+	var wall_mesh := BoxMesh.new()
+	wall_mesh.size = Vector3(w, wall_h, d)
+	walls.mesh = wall_mesh
+	walls.position = Vector3(0.0, wall_h * 0.5, 0.0)
+	walls.material_override = stone
+	host.add_child(walls)
+	var plaster_band := MeshInstance3D.new()
+	plaster_band.name = "CivicPlaster_Hall"
+	var band_mesh := BoxMesh.new()
+	band_mesh.size = Vector3(w * 0.92, wall_h * 0.42, 0.08)
+	plaster_band.mesh = band_mesh
+	plaster_band.position = Vector3(0.0, wall_h * 0.58, d * 0.50)
+	plaster_band.material_override = plaster
+	host.add_child(plaster_band)
+	var roof_body := MeshInstance3D.new()
+	roof_body.name = "CivicRoof_Hall"
+	var roof_mesh := PrismMesh.new()
+	roof_mesh.size = Vector3(w * 1.12, 2.15, d * 1.16)
+	roof_body.mesh = roof_mesh
+	roof_body.position = Vector3(0.0, wall_h + 1.05, 0.0)
+	roof_body.rotation.y = PI * 0.5
+	roof_body.material_override = roof
+	host.add_child(roof_body)
+	var chimney := MeshInstance3D.new()
+	chimney.name = "CivicChimney"
+	var chim_mesh := BoxMesh.new()
+	chim_mesh.size = Vector3(0.55, 1.35, 0.55)
+	chimney.mesh = chim_mesh
+	chimney.position = Vector3(-1.55, wall_h + 1.85, -0.85)
+	chimney.material_override = masonry
+	host.add_child(chimney)
+	var door := MeshInstance3D.new()
+	door.name = "CivicDoor"
+	var door_mesh := BoxMesh.new()
+	door_mesh.size = Vector3(1.15, 2.05, 0.10)
+	door.mesh = door_mesh
+	door.position = Vector3(0.0, 1.05, d * 0.50 + 0.06)
+	door.material_override = timber
+	host.add_child(door)
+	var lintel := MeshInstance3D.new()
+	lintel.name = "CivicDoor_Lintel"
+	var lintel_mesh := BoxMesh.new()
+	lintel_mesh.size = Vector3(1.45, 0.18, 0.16)
+	lintel.mesh = lintel_mesh
+	lintel.position = Vector3(0.0, 2.14, d * 0.50 + 0.08)
+	lintel.material_override = masonry
+	host.add_child(lintel)
+	for side in [-1.0, 1.0]:
+		var window := MeshInstance3D.new()
+		window.name = "CivicWindow"
+		var win_mesh := BoxMesh.new()
+		win_mesh.size = Vector3(0.72, 0.78, 0.08)
+		window.mesh = win_mesh
+		window.position = Vector3(side * 1.55, 1.55, d * 0.50 + 0.05)
+		window.material_override = _material(Color("#F5B36B"), 0.0)
+		host.add_child(window)
+	var step := MeshInstance3D.new()
+	step.name = "CivicDoor_Step"
+	var step_mesh := BoxMesh.new()
+	step_mesh.size = Vector3(1.70, 0.14, 0.55)
+	step.mesh = step_mesh
+	step.position = Vector3(0.0, 0.07, d * 0.50 + 0.38)
+	step.material_override = masonry
+	host.add_child(step)
 
 
 func _create_wall_model() -> void:

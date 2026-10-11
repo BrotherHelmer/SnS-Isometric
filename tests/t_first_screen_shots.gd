@@ -26,8 +26,11 @@ func _run() -> void:
 	root.add_child(game)
 	await process_frame
 	await process_frame
+	var seed_value := game.DEFAULT_SEED
+	if OS.get_environment("FIRST_SCREEN_SEED") != "":
+		seed_value = int(OS.get_environment("FIRST_SCREEN_SEED"))
 	var t0 := Time.get_ticks_msec()
-	game.start_new_3d(game.DEFAULT_SEED)
+	game.start_new_3d(seed_value)
 	var start_ms := float(Time.get_ticks_msec() - t0)
 	game._hide_start_menu()
 	game.simulation_host.paused = true

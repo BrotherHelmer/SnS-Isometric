@@ -44,8 +44,8 @@ const BUILDING_MODEL_SCALE := {
 const BUILDING_UNIT_SIZE := {
 	"LUMEN_PILLAR": Vector3(0.8, 1.3, 0.8),
 	"ENEMY_CAMP": Vector3(3.0, 3.7, 2.8),
-	"TOWN_HALL": Vector3(8.24, 12.53, 6.88),
-	"CASTLE": Vector3(8.24, 12.53, 7.13),
+	"TOWN_HALL": Vector3(5.40, 5.60, 4.80),
+	"CASTLE": Vector3(8.24, 12.53, 6.88),
 	"HOUSE": Vector3(0.7918, 0.9300, 0.8536),
 	"LUMBER_CAMP": Vector3(1.3667, 1.7080, 1.1893),
 	"SAWMILL": Vector3(1.3667, 1.7080, 1.1893),
