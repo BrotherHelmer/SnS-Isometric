@@ -2414,7 +2414,7 @@ func _update_loop_hud() -> void:
 			_log_first_screen_hint("rival", rival_line)
 		loop_label.text = "  ·  ".join(parts)
 		if status_plate != null:
-			var raid_or_night := simulation_host.simulation.is_night or binding_active
+			var raid_or_night: bool = bool(simulation_host.simulation.is_night) or binding_active
 			var show_status := (loop_label.text != "" or (bind_button != null and bind_button.visible) or binding_active)
 			if not raid_or_night and not _rival_banner_should_show() and rival_line != "" and parts.is_empty():
 				show_status = false
@@ -3306,12 +3306,11 @@ func is_build_unlocked(building_type: String) -> bool:
 	var has_farm := _player_has_building(Defs.BUILDING_FARM)
 	var has_house := _player_has_building(Defs.BUILDING_HOUSE)
 	var has_tower := _player_has_building(Defs.BUILDING_WATCHTOWER)
-	var wood := int(sim.central_inventory.get(Defs.RESOURCE_WOOD, 0))
 	var wheat := int(sim.central_inventory.get(Defs.RESOURCE_WHEAT, 0))
-	var night_near := sim.is_night or float(sim.DAY_LENGTH_SECONDS) - float(sim.phase_time) <= 90.0
+	var night_near: bool = bool(sim.is_night) or float(sim.DAY_LENGTH_SECONDS) - float(sim.phase_time) <= 90.0
 	match building_type:
 		Defs.BUILDING_QUARRY, Defs.BUILDING_SAWMILL, Defs.TOOL_CLEAR_AREA:
-			return has_lumber or wood >= 8 or int(sim.day_count) >= 2
+			return has_lumber or int(sim.day_count) >= 2
 		Defs.BUILDING_BAKERY:
 			return has_farm or wheat >= 4
 		Defs.BUILDING_STOREHOUSE:

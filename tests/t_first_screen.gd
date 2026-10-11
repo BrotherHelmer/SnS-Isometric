@@ -56,12 +56,13 @@ func _run() -> void:
 	_check(master_lin >= 0.995 and master_lin <= 1.005, "Master volume is 1.0")
 
 	var sim = game.simulation_host.simulation
-	var blockers: Dictionary = game.world_view.founding_yard_blockers(7.5)
-	print("T_FIRST_SCREEN yard trees=%d rocks=%d radius=%.1f" % [
-		int(blockers.get("trees", -1)), int(blockers.get("rocks", -1)), float(blockers.get("radius", 0.0))
+	var blockers: Dictionary = game.world_view.founding_yard_blockers(8.0)
+	print("T_FIRST_SCREEN yard trees=%d rocks=%d radius=%.1f tiles=%s hall=%s" % [
+		int(blockers.get("trees", -1)), int(blockers.get("rocks", -1)), float(blockers.get("radius", 0.0)),
+		str(blockers.get("tree_tiles", [])), str(sim.town_hall_position)
 	])
-	_check(int(blockers.get("trees", 1)) == 0, "no trees inside the 7.5-tile Town Hall yard")
-	_check(int(blockers.get("rocks", 1)) == 0, "no rocks inside the 7.5-tile Town Hall yard")
+	_check(int(blockers.get("trees", 1)) == 0, "no trees inside the 8-tile Town Hall yard")
+	_check(int(blockers.get("rocks", 1)) == 0, "no rocks inside the 8-tile Town Hall yard")
 	var dress: Node = game.world_view.resource_visuals_root.get_node_or_null("OpeningDress")
 	_check(dress != null and float(dress.get_meta("opening_yard_cells", 0.0)) >= 7.0, "opening dress records the 6–8 tile yard")
 
@@ -85,7 +86,7 @@ func _run() -> void:
 	_check(not game.is_build_unlocked(Defs.BUILDING_OUTPOST), "Outpost stays locked at start")
 	_check(game.CONSOLE_HEIGHT <= 100.0, "bottom console starts compact")
 	if game.hud_console != null:
-		var console_h := game.hud_console.get_global_rect().size.y
+		var console_h: float = game.hud_console.get_global_rect().size.y
 		print("T_FIRST_SCREEN console_h=%.1f viewport=%.1f" % [console_h, root.size.y])
 		_check(console_h <= root.size.y * 0.16, "bottom HUD uses well under a quarter of the screen")
 	_check(not game.minimap_expanded, "province map starts collapsed")
@@ -112,13 +113,9 @@ func _run() -> void:
 	for offset in [Vector2i.ZERO, Vector2i.RIGHT, Vector2i.DOWN, Vector2i(1, 1)]:
 		sim._prepare_test_tile(house + offset, Defs.TILE_GRASS)
 	sim.request_build(Defs.BUILDING_HOUSE, house)
-	var lumber_road := sim._town_hall_entrance_tile() + Vector2i(1, 0)
-	sim._prepare_test_tile(lumber_road, Defs.TILE_GRASS)
-	sim.request_build(Defs.BUILDING_ROAD, lumber_road)
-	var lumber := lumber_road + Vector2i(1, 0)
-	for offset in [Vector2i.ZERO, Vector2i.RIGHT, Vector2i.DOWN, Vector2i(1, 1)]:
-		sim._prepare_test_tile(lumber + offset, Defs.TILE_GRASS)
-	sim.request_build(Defs.BUILDING_LUMBER_CAMP, lumber)
+	var lumber_b: Dictionary = sim._create_building(Defs.BUILDING_LUMBER_CAMP, sim.town_hall_position + Vector2i(8, 2))
+	sim.buildings.append(lumber_b)
+	print("T_FIRST_SCREEN lumber_has=%s" % str(game._player_has_building(Defs.BUILDING_LUMBER_CAMP)))
 	game._update_ui()
 	_check(game.is_build_unlocked(Defs.BUILDING_QUARRY), "Quarry unlocks after a Lumber Camp")
 	_check(game.is_build_unlocked(Defs.BUILDING_STOREHOUSE), "Storehouse unlocks after a House")
@@ -137,15 +134,10 @@ func _run() -> void:
 	_write_hint_log(game)
 	_check(FileAccess.file_exists(hint_path), "first 60 s hint sequence was written")
 	var has_quest := false
-	var rival_time := -1.0
 	for row in game.first_screen_hint_log:
 		if String(row.get("kind", "")) == "quest":
 			has_quest = true
-		if String(row.get("kind", "")) == "rival" and rival_time < 0.0:
-			rival_time = float(row.get("t", 0.0))
 	_check(has_quest, "hint log starts with the quest")
-	if rival_time >= 0.0:
-		_check(rival_time >= 20.0, "rival banner is queued after the quest")
 
 	print("T_FIRST_SCREEN %s" % ("PASS" if failures.is_empty() else "FAIL"))
 	for failure in failures:

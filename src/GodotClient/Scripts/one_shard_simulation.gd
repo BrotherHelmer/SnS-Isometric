@@ -76,7 +76,7 @@ const ROAD_BUILD_SECONDS := 1.6
 const INITIAL_REVEAL_RADIUS := 12
 # First-screen yard: no TREE/ROCK inside this Euclidean radius of the
 # hall centre. Nearby stands stay at 8+ so lumber still has timber.
-const FOUNDING_YARD_RADIUS := 7.5
+const FOUNDING_YARD_RADIUS := 8.0
 # The Director: building/unit vision. Watchtower is the large scouting
 # ring, Outpost is medium-large, Lumen and other workplaces stay small.
 # Units reveal on tile change so a later scout order can just walk.
@@ -460,16 +460,21 @@ func start_presentation_run(seed_value: int = 0) -> void:
 	_flatten_area(town_center, 10)
 	_spawn_founding_yard_props(entrance)
 	for offset in [
-		Vector2i(-8, -5), Vector2i(-9, -3), Vector2i(-8, 1), Vector2i(-7, 5),
-		Vector2i(7, -6), Vector2i(9, -3), Vector2i(9, 2), Vector2i(7, 6)
+		Vector2i(-9, -6), Vector2i(-10, -3), Vector2i(-9, 2), Vector2i(-8, 6),
+		Vector2i(8, -7), Vector2i(10, -3), Vector2i(10, 3), Vector2i(8, 7)
 	]:
 		var tree_tile: Vector2i = town_center + Vector2i(offset)
+		if _tile_distance(tree_tile, town_center) < FOUNDING_YARD_RADIUS:
+			continue
 		_set_tile(tree_tile, Defs.TILE_TREE)
 		tree_deposits[_tile_key(tree_tile)] = 18
-	for offset in [Vector2i(-9, 4), Vector2i(10, 4), Vector2i(6, -9)]:
+	for offset in [Vector2i(-10, 5), Vector2i(11, 5), Vector2i(7, -10)]:
 		var rock_tile: Vector2i = town_center + Vector2i(offset)
+		if _tile_distance(rock_tile, town_center) < FOUNDING_YARD_RADIUS:
+			continue
 		_set_tile(rock_tile, Defs.TILE_ROCK)
 		rock_deposits[_tile_key(rock_tile)] = 20
+	_clear_founding_yard(town_center, FOUNDING_YARD_RADIUS)
 	for road_offset in [Vector2i(0, 1), Vector2i(0, 2)]:
 		var road_tile: Vector2i = entrance + Vector2i(road_offset)
 		if get_building_at_tile(road_tile).is_empty():
@@ -3284,6 +3289,8 @@ func _generate_map() -> void:
 	_place_wilderness_opportunities()
 	_place_enemy_camps()
 	_register_world_features()
+	_clear_founding_yard(town_center, FOUNDING_YARD_RADIUS)
+	_clear_founding_yard(rival_center, FOUNDING_YARD_RADIUS)
 
 
 func _generate_height_map() -> void:
@@ -3441,7 +3448,8 @@ func _place_resource_cluster(center: Vector2i, tile_type: String, count: int, de
 		var tile := center + Vector2i(rng.randi_range(-3, 3), rng.randi_range(-3, 3))
 		if not is_inside_map(tile):
 			continue
-		if _tile_distance(tile, town_hall_position) < 8.0:
+		var town_center := _footprint_center(town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
+		if _tile_distance(tile, town_center) < FOUNDING_YARD_RADIUS:
 			continue
 		if get_tile(tile) != Defs.TILE_GRASS:
 			continue
@@ -3518,13 +3526,16 @@ func _compose_settlement_landscape(center: Vector2i) -> void:
 
 
 func _clear_founding_yard(center: Vector2i, radius: float) -> void:
-	var reach := int(ceil(radius))
-	for y in range(center.y - reach, center.y + reach + 1):
-		for x in range(center.x - reach, center.x + reach + 1):
+	# Integer footprint centre is half a tile SE of the visual keep centre.
+	var focus := Vector2(center) - Vector2(0.5, 0.5)
+	var reach := int(ceil(radius)) + 1
+	var origin := Vector2i(int(round(focus.x)), int(round(focus.y)))
+	for y in range(origin.y - reach, origin.y + reach + 1):
+		for x in range(origin.x - reach, origin.x + reach + 1):
 			var tile := Vector2i(x, y)
 			if not is_inside_map(tile):
 				continue
-			if _tile_distance(tile, center) >= radius:
+			if Vector2(tile).distance_to(focus) >= radius:
 				continue
 			if String(get_tile(tile)) in [Defs.TILE_TREE, Defs.TILE_ROCK]:
 				_set_tile(tile, Defs.TILE_GRASS)

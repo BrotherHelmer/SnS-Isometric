@@ -1698,7 +1698,7 @@ func _tile_occupied_by_structure(tile: Vector2i) -> bool:
 	return false
 
 
-func _in_founding_yard(tile: Vector2i, radius := 7.5) -> bool:
+func _in_founding_yard(tile: Vector2i, radius := 8.0) -> bool:
 	if simulation == null or not simulation.is_town_hall_founded():
 		return false
 	var hall: Vector2i = simulation.town_hall_position
@@ -1707,13 +1707,14 @@ func _in_founding_yard(tile: Vector2i, radius := 7.5) -> bool:
 	return Vector2(tile).distance_to(center) < radius
 
 
-func founding_yard_blockers(radius := 7.5) -> Dictionary:
+func founding_yard_blockers(radius := 8.0) -> Dictionary:
 	# Presentation + sim blockers inside the opening yard. Used by the
 	# first-screen gate: zero trees or rocks in the 6–8 tile clearing.
 	var trees := 0
 	var rocks := 0
+	var tree_tiles: Array[Vector2i] = []
 	if simulation == null or not simulation.is_town_hall_founded():
-		return {"trees": 0, "rocks": 0, "radius": radius}
+		return {"trees": 0, "rocks": 0, "radius": radius, "tree_tiles": tree_tiles}
 	var hall: Vector2i = simulation.town_hall_position
 	var footprint := Defs.building_footprint(Defs.BUILDING_TOWN_HALL)
 	var center := Vector2(hall) + Vector2(footprint - Vector2i.ONE) * 0.5
@@ -1729,13 +1730,14 @@ func founding_yard_blockers(radius := 7.5) -> Dictionary:
 			var kind := String(simulation.get_tile(tile))
 			if kind == Defs.TILE_TREE:
 				trees += 1
+				tree_tiles.append(tile)
 			elif kind == Defs.TILE_ROCK:
 				rocks += 1
-	return {"trees": trees, "rocks": rocks, "radius": radius}
+	return {"trees": trees, "rocks": rocks, "radius": radius, "tree_tiles": tree_tiles}
 
 
 func _nature_suppressed_near_activity(tile: Vector2i) -> bool:
-	if _in_founding_yard(tile, 7.5):
+	if _in_founding_yard(tile, 8.0):
 		return true
 	for building_value in simulation.get_buildings():
 		var building: Dictionary = building_value
@@ -3441,7 +3443,7 @@ func _rebuild_opening_dressing() -> void:
 	_spawn_nature_multimeshes(host, transforms_by_path)
 	var coverage := 0.0 if candidates.is_empty() else float(planted) / float(candidates.size())
 	host.set_meta("opening_clearing_cells", inner)
-	host.set_meta("opening_yard_cells", 7.5)
+	host.set_meta("opening_yard_cells", 8.0)
 	host.set_meta("opening_forest_coverage", coverage)
 	host.set_meta("opening_forest_count", planted)
 	host.set_meta("opening_perimeter_count", candidates.size())

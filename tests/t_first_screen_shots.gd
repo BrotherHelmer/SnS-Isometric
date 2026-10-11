@@ -57,6 +57,24 @@ func _run() -> void:
 		str(game.status_plate.visible) if game.status_plate != null else "nil",
 		game.CONSOLE_HEIGHT
 	])
+	if shot_name.begins_with("after"):
+		game.first_screen_hint_log.clear()
+		if game.has_method("_log_first_screen_hint") and game.objective_button != null:
+			game._log_first_screen_hint("quest", game.objective_button.text)
+		game.simulation_host.paused = false
+		var sim = game.simulation_host.simulation
+		for _step in 12:
+			sim._simulate_seconds_for_test(5.0)
+			if game.has_method("_update_ui"):
+				game._update_ui()
+		var log_path := dest.path_join("hint_sequence.txt")
+		var file := FileAccess.open(log_path, FileAccess.WRITE)
+		if file != null:
+			file.store_line("t_sec\tkind\ttext")
+			for row in game.first_screen_hint_log:
+				file.store_line("%.1f\t%s\t%s" % [float(row.get("t", 0.0)), String(row.get("kind", "")), String(row.get("text", ""))])
+			file.close()
+			print("FIRST_SCREEN hint_log=%s rows=%d" % [log_path, game.first_screen_hint_log.size()])
 	game.queue_free()
 	await process_frame
 	print("FIRST_SCREEN PASS")

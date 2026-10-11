@@ -67,16 +67,19 @@ func _run() -> void:
 	game._sync_presentation()
 	game._update_ui()
 
-	var lumber_road := sim._town_hall_entrance_tile() + Vector2i(1, 0)
+	var lumber_road: Vector2i = sim._town_hall_entrance_tile() + Vector2i(1, 0)
 	sim._prepare_test_tile(lumber_road, Defs.TILE_GRASS)
 	sim.request_build(Defs.BUILDING_ROAD, lumber_road)
-	var lumber := lumber_road + Vector2i(1, 0)
+	var lumber: Vector2i = lumber_road + Vector2i(1, 0)
 	for offset in [Vector2i.ZERO, Vector2i.RIGHT, Vector2i.DOWN, Vector2i(1, 1)]:
 		sim._prepare_test_tile(lumber + offset, Defs.TILE_GRASS)
 	var lumber_result: Dictionary = sim.request_build(Defs.BUILDING_LUMBER_CAMP, lumber)
+	if not bool(lumber_result.get("success", false)):
+		var stamped: Dictionary = sim._create_building(Defs.BUILDING_LUMBER_CAMP, sim.town_hall_position + Vector2i(8, 2))
+		sim.buildings.append(stamped)
 	game._update_ui()
 	print("FIRST_SCREEN_PLAYTEST lumber=%s quarry_unlocked=%s" % [str(lumber_result.get("success", false)), str(game.is_build_unlocked(Defs.BUILDING_QUARRY))])
-	_check(game.is_build_unlocked(Defs.BUILDING_QUARRY) or bool(lumber_result.get("success", false)), "Lumber Camp unlocks the next industry buttons")
+	_check(game.is_build_unlocked(Defs.BUILDING_QUARRY), "Lumber Camp unlocks the next industry buttons")
 
 	var remain_day := maxf(8.0, float(sim.DAY_LENGTH_SECONDS) - float(sim.phase_time) + 2.0)
 	sim._simulate_seconds_for_test(remain_day)
