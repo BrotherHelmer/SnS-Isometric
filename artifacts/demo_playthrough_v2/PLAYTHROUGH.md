@@ -1,6 +1,6 @@
 # Demo playthrough v2 — one-hour hold (PR #81)
 
-Recorded on `cursor/demo-playthrough-a689` after the demo-balance round. Official seed **260821**. Hall `(239, 181)`, Shard `(160, 156)` (~84 tiles west), **4** rival seats. Map 320×320, crater R≈110.
+Recorded on `cursor/demo-playthrough-a689` at `d9bc1a0` after the demo-balance round. Official seed **260821**. Hall `(239, 181)`, Shard `(160, 156)` (~84 tiles west), **4** rival seats. Map 320×320, crater R≈110.
 
 Harness: `tests/t_demo_playthrough.gd` + `src/GodotClient3D/Scripts/production_demo_player.gd`. The bot issues only public `request_*` commands and advances game time at 8 s/step. Clock below is **game time**.
 
