@@ -158,7 +158,7 @@ func _check_exposure_and_contest() -> void:
 	sim.crater_war.exposure_burn_timer = 50.0
 	sim.crater_war._update_exposure(1.0)
 	_check(int(sim.central_inventory.get(Defs.RESOURCE_WYRD, 0)) < before, "exposure burns raw above the reserve")
-	_check(int(sim.central_inventory.get(Defs.RESOURCE_WYRD, 0)) >= CraterWar.RAW_RESERVE, "exposure keeps the refine reserve")
+	_check(int(sim.central_inventory.get(Defs.RESOURCE_WYRD, 0)) >= CraterWar.RAW_RESERVE + CraterWar.REFINE_INPUT, "exposure keeps the refine reserve")
 	var rival_structure := {}
 	for structure in sim.rivalry.get_structures("rival"):
 		if String(structure.get("type", "")) == Defs.BUILDING_OUTPOST:

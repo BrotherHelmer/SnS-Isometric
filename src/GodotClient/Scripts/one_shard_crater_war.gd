@@ -21,7 +21,7 @@ const RAW_RESERVE := 3
 const PASSAGE_WOOD := 8
 const CAPTURE_WOOD := 8
 const CAPTURE_STONE := 4
-const CAPTURE_WYRD := 1
+const CAPTURE_WYRD := 2
 const CAPTURE_STABILIZED := 0
 const ASSAULT_FORCE_SECONDS := 75.0
 const LATER_ASSAULT_FORCE_SECONDS := 150.0
@@ -390,7 +390,7 @@ func _update_exposure(delta: float) -> void:
 	var burn_every := lerpf(48.0, 14.0, exposure)
 	if exposure_burn_timer >= burn_every:
 		exposure_burn_timer = 0.0
-		if raw_stock() > RAW_RESERVE:
+		if raw_stock() > RAW_RESERVE + REFINE_INPUT:
 			simulation.central_inventory[Defs.RESOURCE_WYRD] = raw_stock() - 1
 			if geologist_surveyed and band != "STABLE":
 				simulation._record_event("exposure_burn", "Exposure burns a raw Wyrd above the reserve.", {"raw": raw_stock(), "band": band})

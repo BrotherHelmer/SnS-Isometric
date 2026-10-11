@@ -19,6 +19,7 @@ var last_actions: Array[String] = []
 var last_failures: Array[String] = []
 var orders: Array[Dictionary] = []
 var scouted := false
+var last_scout_day := 0
 var last_idle_reason := ""
 
 
@@ -115,9 +116,9 @@ func _defend(sim) -> void:
 
 
 func _scout(sim) -> void:
-	if scouted and int(sim.day_count) < 3:
+	if scouted and int(sim.day_count) <= last_scout_day:
 		return
-	if scouted and int(sim.day_count) >= 3 and int(sim.day_count) % 2 == 0:
+	if scouted and int(sim.day_count) >= 3:
 		scouted = false
 	if int(sim.soldiers_total) < 1:
 		return
@@ -130,6 +131,7 @@ func _scout(sim) -> void:
 	var result: Dictionary = sim.request_scout_direction(scout_id, target)
 	if bool(result.get("success", false)):
 		scouted = true
+		last_scout_day = int(sim.day_count)
 		_note(sim, "SCOUT", target, String(result.get("message", "")))
 	else:
 		last_failures.append("scout: %s" % String(result.get("message", "")))
@@ -186,7 +188,7 @@ func _pursue_crater_war(sim) -> void:
 	if _count(sim, Defs.BUILDING_OUTPOST) < 2:
 		if _try_frontier_outpost(sim):
 			return
-	if sim.crater_war.harvester_unlumened() and _unlocked(sim, Defs.BUILDING_LUMEN_PILLAR) and _stock(sim, Defs.RESOURCE_WYRD) >= 4:
+	if sim.crater_war.harvester_unlumened() and _unlocked(sim, Defs.BUILDING_LUMEN_PILLAR) and _stock(sim, Defs.RESOURCE_WYRD) >= 3:
 		if _try_build(sim, Defs.BUILDING_LUMEN_PILLAR, _harvester_tile(sim)):
 			return
 	if _unlocked(sim, Defs.BUILDING_WATCHTOWER) and _count(sim, Defs.BUILDING_WATCHTOWER) < 2:
