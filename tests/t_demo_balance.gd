@@ -63,6 +63,24 @@ func _run() -> void:
 	_check(int(plan.get("size", 0)) == RaidTuning.NIGHT2_SIZE, "wave_plan still reports Night 2 as 5")
 	_check(RaidIntents.RAID_WARNING_SECONDS == 60.0, "raid warning is 60 seconds")
 	_check_construction_beats_roads()
+	var frontier: Simulation = Simulation.new()
+	frontier.start_new_run(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 260821, true)
+	frontier.elapsed_seconds = Simulation.DEMO_FRONTIER_SECONDS
+	frontier._update_demo_beats()
+	_check(frontier.demo_frontier_revealed, "frontier reveal plants the marker")
+	_check(frontier._has_frontier_outpost(), "frontier reveal plants a hold-victory outpost ≥16 tiles out")
+	var tower := frontier._create_building(Defs.BUILDING_WATCHTOWER, frontier.town_hall_position + Vector2i(1, 1))
+	tower["construction"] = false
+	tower["completed"] = true
+	frontier.buildings.append(tower)
+	var hold_yard := frontier._create_building(Defs.BUILDING_BARRACKS, frontier.town_hall_position + Vector2i(6, 2))
+	hold_yard["construction"] = false
+	hold_yard["completed"] = true
+	frontier.buildings.append(hold_yard)
+	frontier.stats["days_survived"] = 4
+	frontier.elapsed_seconds = Simulation.DEMO_VICTORY_SECONDS
+	frontier._update_demo_beats()
+	_check(frontier.victory, "THE REALM HOLDS fires at 45 min when the pieces stand")
 
 
 func _check_construction_beats_roads() -> void:

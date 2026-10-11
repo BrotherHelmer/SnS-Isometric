@@ -1342,6 +1342,10 @@ func _reveal_demo_frontier() -> void:
 	_reveal_radius(shard_position, 10)
 	add_map_marker("frontier", marker, "Frontier", 0.0)
 	add_map_marker("shard", shard_position, "The Shard", 0.0)
+	if rivalry != null and rivalry.has_method("force_place_structure"):
+		# The Director: the hold victory needs a stake ≥16 tiles from the
+		# hall. Plant one on the marker so the goal is reachable and real.
+		rivalry.force_place_structure(RivalryTuning.PLAYER_REALM, RivalryTuning.STRUCTURE_CLAIMANT_OUTPOST, marker)
 	var compass := crater_compass_from(hall)
 	last_message = "THE SHARD LIES %s — a frontier marker is within reach." % compass
 	_add_log(last_message)

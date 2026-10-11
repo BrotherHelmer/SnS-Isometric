@@ -177,6 +177,26 @@ func _try_bind(sim) -> void:
 			last_failures.append("bind: %s" % String(result.get("message", "")))
 
 
+func _try_frontier_outpost(sim) -> bool:
+	var hall: Vector2i = sim.town_hall_position
+	var marker := _frontier_target(sim)
+	var aims: Array[Vector2i] = [marker]
+	for radius in range(1, 5):
+		for ox in range(-radius, radius + 1):
+			aims.append(marker + Vector2i(ox, -radius))
+			aims.append(marker + Vector2i(ox, radius))
+			aims.append(marker + Vector2i(-radius, ox))
+			aims.append(marker + Vector2i(radius, ox))
+	for aim_value in aims:
+		var aim: Vector2i = aim_value
+		if absi(aim.x - hall.x) + absi(aim.y - hall.y) < 16:
+			continue
+		if _try_build(sim, Defs.BUILDING_OUTPOST, aim):
+			return true
+	_extend_roads(sim, marker, 2)
+	return false
+
+
 func _try_build(sim, building_type: String, aim: Vector2i) -> bool:
 	if not _can_afford(sim, building_type):
 		last_idle_reason = "cannot afford %s" % Defs.building_name(building_type)
@@ -246,10 +266,9 @@ func _place_forward_structure(sim, building_type: String) -> bool:
 	if _count(sim, building_type) >= (2 if building_type == Defs.BUILDING_OUTPOST else 4):
 		return false
 	if building_type == Defs.BUILDING_OUTPOST:
-		var marker := _frontier_target(sim)
-		if marker != sim.shard_position:
-			if _try_build(sim, building_type, marker):
-				return true
+		if _try_frontier_outpost(sim):
+			return true
+		return false
 	var site := _forward_site(sim, building_type)
 	if site.x < 0:
 		return false
@@ -501,7 +520,8 @@ func _count(sim, building_type: String) -> int:
 			total += 1
 	if sim.rivalry != null and building_type in [Defs.BUILDING_LUMEN_PILLAR, Defs.BUILDING_OUTPOST]:
 		for structure in sim.rivalry.get_structures("player"):
-			if String(structure.get("type", "")) == building_type:
+			var kind := String(structure.get("type", ""))
+			if kind == building_type or (building_type == Defs.BUILDING_OUTPOST and kind == Tuning.STRUCTURE_CLAIMANT_OUTPOST):
 				total += 1
 	return total
 
