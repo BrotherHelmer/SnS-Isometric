@@ -3792,22 +3792,25 @@ func _spawn_founding_crater_traces(ridge: Node3D, hall: Vector2i) -> void:
 	glass.roughness = 0.14
 	glass.metallic = 0.16
 	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	var scorched := _ridge_material(Color("#2A3644"), 0.94)
+	var scorched := _ridge_material(Color("#3A4038"), 0.96)
 	var tinted := _ridge_material(Color("#3A5A58"), 0.88)
 	var crater_dir := Vector2(simulation.founding_site.get("crater_dir", Vector2(0.0, -1.0)))
 	if crater_dir.length_squared() < 0.01:
 		crater_dir = Vector2(0.0, -1.0)
 	var hall_world := tile_to_world(Vector2(hall) + Vector2(1.5, 1.5))
+	var trail_yaw := atan2(crater_dir.x, crater_dir.y)
 	for step in 5:
 		var along := hall_world + Vector3(crater_dir.x * (6.0 + float(step) * 3.2), 0.0, crater_dir.y * (6.0 + float(step) * 3.2))
 		var wash := MeshInstance3D.new()
 		wash.name = "DressWyrdTrail_%d" % step
 		var wash_mesh := CylinderMesh.new()
-		wash_mesh.top_radius = 2.15 - float(step) * 0.12
-		wash_mesh.bottom_radius = 2.55 - float(step) * 0.12
-		wash_mesh.height = 0.08
+		wash_mesh.top_radius = 1.55 - float(step) * 0.08
+		wash_mesh.bottom_radius = 1.85 - float(step) * 0.08
+		wash_mesh.height = 0.07
 		wash.mesh = wash_mesh
 		wash.position = along + Vector3(0.0, 0.02, 0.0)
+		wash.scale = Vector3(1.55, 1.0, 0.62)
+		wash.rotation.y = trail_yaw + float(step) * 0.11
 		wash.material_override = tinted if step % 2 == 0 else scorched
 		wash.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		ridge.add_child(wash)
@@ -3822,11 +3825,13 @@ func _spawn_founding_crater_traces(ridge: Node3D, hall: Vector2i) -> void:
 		var stain := MeshInstance3D.new()
 		stain.name = "DressWyrdScar_%d" % index
 		var stain_mesh := CylinderMesh.new()
-		stain_mesh.top_radius = 1.85
-		stain_mesh.bottom_radius = 2.25
-		stain_mesh.height = 0.12
+		stain_mesh.top_radius = 1.15
+		stain_mesh.bottom_radius = 1.45
+		stain_mesh.height = 0.10
 		stain.mesh = stain_mesh
 		stain.position = origin + Vector3(0.0, 0.03, 0.0)
+		stain.scale = Vector3(1.45, 1.0, 0.68)
+		stain.rotation.y = trail_yaw + float(index) * 0.35
 		stain.material_override = scorched
 		stain.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		ridge.add_child(stain)
