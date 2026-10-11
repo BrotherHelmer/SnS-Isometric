@@ -3817,22 +3817,70 @@ func _generate_founding_creek(center: Vector2i) -> void:
 	elif water_type == "pond":
 		tiles = _founding_water_blob(center + Vector2i(roundi(coast_dir.x * 7.0), roundi(coast_dir.y * 6.0)), 2, site_rng)
 	else:
-		var flow := (coast_dir * 0.35 + Vector2(-coast_dir.y, coast_dir.x) * 0.85).normalized()
-		var p := center + Vector2i(roundi(coast_dir.x * float(site_rng.randi_range(6, 8))), roundi(coast_dir.y * float(site_rng.randi_range(4, 7))))
-		var guard := 0
-		while tiles.size() < 11 and guard < 22:
-			guard += 1
-			if is_inside_map(p) and not _in_founding_clearing(p):
-				if tiles.is_empty() or tiles[tiles.size() - 1] != p:
-					if not tiles.is_empty():
-						_append_creek_gap(tiles, tiles[tiles.size() - 1], p)
-					tiles.append(p)
-			flow = (flow + Vector2(site_rng.randf_range(-0.42, 0.42), site_rng.randf_range(-0.28, 0.28))).normalized()
-			p = p + Vector2i(clampi(roundi(flow.x), -1, 1), clampi(roundi(flow.y), -1, 1))
+		tiles = _founding_water_ribbon(center, coast_dir, site_rng, 11)
+	tiles = _largest_water_component(tiles)
 	if tiles.size() < 5:
-		tiles = _founding_water_blob(center + Vector2i(roundi(coast_dir.x * 7.0), roundi(coast_dir.y * 6.0)), 2, site_rng)
+		tiles = _founding_water_ribbon(center, coast_dir, site_rng, 8)
+	if tiles.size() < 5:
+		tiles = _founding_water_blob(center + Vector2i(roundi(coast_dir.x * 6.0), roundi(coast_dir.y * 5.0)), 2, site_rng)
+		tiles = _largest_water_component(tiles)
 	founding_site["creek_tiles"] = tiles
 	_choose_founding_bridge(center, tiles)
+
+
+func _founding_water_ribbon(center: Vector2i, coast_dir: Vector2, site_rng: RandomNumberGenerator, length: int) -> Array[Vector2i]:
+	var tiles: Array[Vector2i] = []
+	var flow := (coast_dir * 0.35 + Vector2(-coast_dir.y, coast_dir.x) * 0.85).normalized()
+	var start_dist := 7
+	for try_dist in [7, 6, 5, 8, 4]:
+		var probe := center + Vector2i(roundi(coast_dir.x * float(try_dist)), roundi(coast_dir.y * float(try_dist)))
+		if is_inside_map(probe) and not _in_founding_clearing(probe) and _tile_distance(probe, shard_position) >= crater_pit_radius + 1.0:
+			start_dist = try_dist
+			break
+	var p := center + Vector2i(roundi(coast_dir.x * float(start_dist)), roundi(coast_dir.y * float(start_dist)))
+	var guard := 0
+	while tiles.size() < length and guard < 28:
+		guard += 1
+		if is_inside_map(p) and not _in_founding_clearing(p) and _tile_distance(p, shard_position) >= crater_pit_radius + 1.0:
+			if tiles.is_empty() or tiles[tiles.size() - 1] != p:
+				if not tiles.is_empty():
+					_append_creek_gap(tiles, tiles[tiles.size() - 1], p)
+				tiles.append(p)
+		flow = (flow + Vector2(site_rng.randf_range(-0.42, 0.42), site_rng.randf_range(-0.28, 0.28))).normalized()
+		p = p + Vector2i(clampi(roundi(flow.x), -1, 1), clampi(roundi(flow.y), -1, 1))
+	return _largest_water_component(tiles)
+
+
+func _largest_water_component(tiles: Array[Vector2i]) -> Array[Vector2i]:
+	if tiles.size() <= 1:
+		return tiles
+	var keys: Dictionary = {}
+	for tile in tiles:
+		keys[_tile_key(tile)] = tile
+	var best: Array[Vector2i] = []
+	var seen: Dictionary = {}
+	for tile in tiles:
+		var start_key := _tile_key(tile)
+		if seen.has(start_key):
+			continue
+		var component: Array[Vector2i] = []
+		var pending: Array[Vector2i] = [tile]
+		seen[start_key] = true
+		while not pending.is_empty():
+			var cur: Vector2i = pending.pop_back()
+			component.append(cur)
+			for oy in range(-1, 2):
+				for ox in range(-1, 2):
+					if ox == 0 and oy == 0:
+						continue
+					var n := cur + Vector2i(ox, oy)
+					var nkey := _tile_key(n)
+					if keys.has(nkey) and not seen.has(nkey):
+						seen[nkey] = true
+						pending.append(n)
+		if component.size() > best.size():
+			best = component
+	return _order_connected_tiles(best)
 
 
 func _founding_water_blob(origin: Vector2i, radius: int, site_rng: RandomNumberGenerator) -> Array[Vector2i]:
@@ -3925,10 +3973,15 @@ func _choose_founding_bridge(center: Vector2i, creek_tiles: Array[Vector2i]) -> 
 	var perp := Vector2i(-tangent.y, tangent.x)
 	if perp == Vector2i.ZERO:
 		perp = Vector2i(1, 0)
+	var water: Dictionary = {}
+	for creek_tile in creek_tiles:
+		water[_tile_key(Vector2i(creek_tile))] = true
 	for step in [-1, 0, 1]:
 		var tile: Vector2i = best + perp * step
-		if is_inside_map(tile):
+		if is_inside_map(tile) and water.has(_tile_key(tile)) and not bridges.has(tile):
 			bridges.append(tile)
+	if not bridges.has(best):
+		bridges.append(best)
 	founding_site["bridge_tiles"] = bridges
 
 
@@ -4208,11 +4261,15 @@ func founding_audit() -> Dictionary:
 		seen_water[_tile_key(Vector2i(creek[0]))] = true
 		while not pending_water.is_empty():
 			var cur_water: Vector2i = pending_water.pop_back()
-			for n in _neighbors(cur_water):
-				var nkey := _tile_key(n)
-				if water_keys.has(nkey) and not seen_water.has(nkey):
-					seen_water[nkey] = true
-					pending_water.append(n)
+			for oy in range(-1, 2):
+				for ox in range(-1, 2):
+					if ox == 0 and oy == 0:
+						continue
+					var n := cur_water + Vector2i(ox, oy)
+					var nkey := _tile_key(n)
+					if water_keys.has(nkey) and not seen_water.has(nkey):
+						seen_water[nkey] = true
+						pending_water.append(n)
 		creek_continuous = seen_water.size() == water_keys.size()
 	var intention := Intentions.current(self)
 	var quest_label := ""
