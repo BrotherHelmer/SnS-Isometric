@@ -140,6 +140,8 @@ func compose_view(world_position: Vector3, orthographic_size: float) -> void:
 	position = target_position
 	if camera != null:
 		camera.size = target_zoom
+		camera.position = Vector3(0.0, 32.0, 32.0)
+		camera.look_at(global_position, Vector3.UP)
 
 
 func _pan(amount: Vector2, immediate := false, source := "script") -> void:

@@ -726,10 +726,9 @@ func _initialize_presentation() -> void:
 	world_view.setup(simulation_host.simulation, world_snapshot, quality_profile)
 	world_view.bind_fog_overlay(camera_rig.camera)
 	camera_rig.configure_for_map(simulation_host.simulation.map_size)
-	# Keep the authored isometric yaw. Full orbit rotation aimed many
-	# seeds off the island into the void; the crater still reads behind
-	# or beside the hall from the 12 m focus pull.
-	camera_rig.rotation.y = ProductionIsometricCameraRig3D.PREFERRED_YAW
+	# Face the crater so the camera sits on the inland side of the hall.
+	# Adding PREFERRED_YAW on top twisted western seeds into the void.
+	camera_rig.rotation.y = world_view.opening_camera_yaw()
 	camera_rig.compose_view(world_view.opening_camera_focus(), ProductionIsometricCameraRig3D.OPENING_ZOOM)
 	play_camera_zoom = ProductionIsometricCameraRig3D.OPENING_ZOOM
 	play_camera_focus = camera_rig.target_position
