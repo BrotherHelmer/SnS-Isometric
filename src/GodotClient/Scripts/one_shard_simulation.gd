@@ -4200,10 +4200,20 @@ func founding_audit() -> Dictionary:
 				break
 	var creek_continuous := creek.size() >= 5
 	if creek_continuous:
-		for i in range(1, creek.size()):
-			if _tile_distance(Vector2i(creek[i]), Vector2i(creek[i - 1])) > 2.3:
-				creek_continuous = false
-				break
+		var water_keys: Dictionary = {}
+		for creek_tile in creek:
+			water_keys[_tile_key(Vector2i(creek_tile))] = true
+		var seen_water: Dictionary = {}
+		var pending_water: Array[Vector2i] = [Vector2i(creek[0])]
+		seen_water[_tile_key(Vector2i(creek[0]))] = true
+		while not pending_water.is_empty():
+			var cur_water: Vector2i = pending_water.pop_back()
+			for n in _neighbors(cur_water):
+				var nkey := _tile_key(n)
+				if water_keys.has(nkey) and not seen_water.has(nkey):
+					seen_water[nkey] = true
+					pending_water.append(n)
+		creek_continuous = seen_water.size() == water_keys.size()
 	var intention := Intentions.current(self)
 	var quest_label := ""
 	for row in intention.get("criteria", []):
