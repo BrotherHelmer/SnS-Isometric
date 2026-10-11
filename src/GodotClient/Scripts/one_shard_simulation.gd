@@ -77,6 +77,11 @@ const INITIAL_REVEAL_RADIUS := 12
 # First-screen yard: no TREE/ROCK inside this Euclidean radius of the
 # hall centre. Nearby stands stay at 8+ so lumber still has timber.
 const FOUNDING_YARD_RADIUS := 8.0
+# Meteor bowl: settlers live inside the crater so they can reach the Shard.
+const CRATER_RADIUS := 22.0
+const CRATER_CORE_RADIUS := 8.0
+const FOUNDING_MAX_SLOPE := 1.0
+const FOUNDING_RESOURCE_NEAR := 12
 # The Director: building/unit vision. Watchtower is the large scouting
 # ring, Outpost is medium-large, Lumen and other workplaces stay small.
 # Units reveal on tile change so a later scout order can just walk.
@@ -1387,9 +1392,33 @@ func impact_factor(tile: Vector2i) -> float:
 	var distance := _tile_distance(tile, shard_position)
 	if distance <= 3.0:
 		return 1.0
-	if distance >= 12.0:
+	if distance >= CRATER_RADIUS:
 		return 0.0
-	return clampf(1.0 - (distance - 3.0) / 9.0, 0.0, 1.0)
+	return clampf(1.0 - (distance - 3.0) / (CRATER_RADIUS - 3.0), 0.0, 1.0)
+
+
+func is_inside_crater(tile: Vector2i) -> bool:
+	return _tile_distance(tile, shard_position) <= CRATER_RADIUS
+
+
+func crater_direction_from(tile: Vector2i) -> Vector2:
+	var delta := Vector2(shard_position - tile)
+	if delta.length_squared() < 0.01:
+		return Vector2(0.0, -1.0)
+	return delta.normalized()
+
+
+func crater_compass_from(tile: Vector2i) -> String:
+	# Tile +Y faces the camera (south). Flip Y so the label is map-north.
+	var dir := crater_direction_from(tile)
+	var vx := dir.x
+	var vy := -dir.y
+	var angle := atan2(vx, vy)
+	var octant := int(round(angle / (PI * 0.25)))
+	if octant < 0:
+		octant += 8
+	var names := ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+	return String(names[octant % 8])
 
 
 func get_world_features() -> Array:
@@ -3230,19 +3259,19 @@ func _generate_map() -> void:
 		height_map.append(height_row)
 
 	_generate_height_map()
+	shard_position = Vector2i(
+		clampi(int(map_size.x / 2) + rng.randi_range(-4, 4), 12, map_size.x - 13),
+		clampi(int(map_size.y / 2) + rng.randi_range(-4, 4), 12, map_size.y - 13)
+	)
+	_shape_impact_crater()
 	town_hall_position = _choose_founding_hall_tile()
 	_init_founding_site()
 	rival_town_hall_position = Vector2i(
 		clampi(roundi(float(map_size.x) * 0.77), 1, maxi(1, map_size.x - 6)),
 		clampi(roundi(float(map_size.y) * 0.17), 1, maxi(1, map_size.x - 6))
 	)
-	shard_position = Vector2i(
-		clampi(int(map_size.x / 2) + rng.randi_range(-4, 4), 12, map_size.x - 13),
-		clampi(int(map_size.y / 2) + rng.randi_range(-4, 4), 12, map_size.y - 13)
-	)
 	_flatten_area(_footprint_center(town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL)), 8)
 	_flatten_area(_footprint_center(rival_town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL)), 8)
-	_shape_impact_crater()
 
 	_place_random_resources()
 	var town_center := _footprint_center(town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
@@ -3266,6 +3295,7 @@ func _generate_map() -> void:
 	_place_founding_nearby_resources(town_center)
 	_generate_founding_creek(town_center)
 	_ensure_founding_food(town_center)
+	_place_founding_wyrd_traces(town_center)
 	_strip_founding_isolates(town_center)
 
 	_set_tile(shard_position, Defs.TILE_SHARD)
@@ -3299,6 +3329,7 @@ func _generate_map() -> void:
 	_place_founding_nearby_resources(town_center)
 	_generate_founding_creek(town_center)
 	_ensure_founding_food(town_center)
+	_place_founding_wyrd_traces(town_center)
 	_strip_founding_isolates(town_center)
 
 
@@ -3329,20 +3360,25 @@ func _flatten_area(center: Vector2i, radius: int) -> void:
 
 
 func _shape_impact_crater() -> void:
+	# Habitable meteor bowl. The Shard sits in the scorched core; settlers
+	# found on the flat floor inside the rim so they can harvest Wyrd.
 	var crater_floor := maxi(0, get_height(shard_position) - 1)
 	var rim_height := mini(3, crater_floor + 2)
-	for offset in _radius_offsets(6):
+	var reach := int(ceil(CRATER_RADIUS)) + 2
+	for offset in _radius_offsets(reach):
 		var tile: Vector2i = shard_position + offset
 		if not is_inside_map(tile):
 			continue
 		var distance := _tile_distance(tile, shard_position)
 		if distance <= 2.4:
 			height_map[tile.y][tile.x] = crater_floor if rng.randf() > 0.16 else mini(crater_floor + 1, rim_height)
-		elif distance <= 4.2:
-			var bulge := 1 if rng.randf() < 0.22 and (offset.x + offset.y) % 2 == 0 else 0
+		elif distance <= CRATER_CORE_RADIUS:
+			height_map[tile.y][tile.x] = crater_floor
+		elif distance <= CRATER_RADIUS - 1.5:
+			height_map[tile.y][tile.x] = crater_floor
+		elif distance <= CRATER_RADIUS + 1.6:
+			var bulge := 1 if rng.randf() < 0.28 and (offset.x + offset.y) % 2 == 0 else 0
 			height_map[tile.y][tile.x] = mini(3, rim_height + bulge)
-		elif distance <= 6.0 and rng.randf() < 0.38:
-			height_map[tile.y][tile.x] = mini(3, get_height(tile) + 1)
 
 
 func _place_wilderness_opportunities() -> void:
@@ -3564,6 +3600,11 @@ func _init_founding_site() -> void:
 	var site_rng := RandomNumberGenerator.new()
 	site_rng.seed = rng_seed * 31 + 11
 	var open_dir := Vector2(site_rng.randf_range(-0.15, 0.85), site_rng.randf_range(0.45, 1.0)).normalized()
+	var crater_dir := crater_direction_from(town_hall_position)
+	var away := -crater_dir
+	if away.length_squared() < 0.01:
+		away = Vector2(0.2, 1.0)
+	open_dir = (open_dir * 0.45 + away * 0.55 + Vector2(0.0, 0.35)).normalized()
 	founding_site = {
 		"rx": site_rng.randf_range(7.4, 9.4),
 		"ry": site_rng.randf_range(6.6, 8.6),
@@ -3574,30 +3615,62 @@ func _init_founding_site() -> void:
 		"food_tiles": [],
 		"road_tiles": [],
 		"creek_side": -1,
+		"crater_dir": crater_dir,
+		"wyrd_tiles": [],
 	}
 
 
 func _choose_founding_hall_tile() -> Vector2i:
-	var base := Vector2i(
-		clampi(roundi(float(map_size.x) * 0.18), 4, maxi(4, map_size.x - 10)),
-		clampi(roundi(float(map_size.y) * 0.71), 8, maxi(8, map_size.y - 8))
-	)
+	# Always found on the flat crater floor, south of the Shard so the
+	# impact scar sits on the opening horizon.
 	var site_rng := RandomNumberGenerator.new()
 	site_rng.seed = rng_seed * 17 + 3
-	var best := base
+	var fallback := Vector2i(
+		clampi(shard_position.x - 8, 4, map_size.x - 10),
+		clampi(shard_position.y + 14, 8, map_size.y - 8)
+	)
+	var best := fallback
 	var best_score := -9999.0
-	for i in 9:
-		var cand := base + Vector2i(site_rng.randi_range(-3, 4), site_rng.randi_range(-3, 3))
-		cand.x = clampi(cand.x, 4, map_size.x - 10)
-		cand.y = clampi(cand.y, 8, map_size.y - 8)
-		var score := 4.0 - absf(float(get_height(cand)) - 1.0)
-		score += float(9 - i) * 0.05
+	for i in 28:
+		var angle := site_rng.randf_range(-0.85, 0.85)
+		var dist := site_rng.randf_range(CRATER_CORE_RADIUS + 5.0, CRATER_RADIUS - 4.0)
+		var cand := Vector2i(
+			clampi(shard_position.x + roundi(sin(angle) * dist), 4, map_size.x - 10),
+			clampi(shard_position.y + roundi(cos(angle) * dist), 8, map_size.y - 8)
+		)
+		var crater_d := _tile_distance(cand, shard_position)
+		if crater_d < CRATER_CORE_RADIUS + 4.0 or crater_d > CRATER_RADIUS - 2.0:
+			continue
+		var slope := _founding_slope_at(cand)
+		if slope > FOUNDING_MAX_SLOPE:
+			continue
+		var score := 6.0 - slope * 2.4
+		score += clampf(1.0 - absf(crater_d - 16.0) / 6.0, 0.0, 1.0) * 2.2
+		if cand.y > shard_position.y:
+			score += 1.4
 		if cand.x > 6 and cand.y < map_size.y - 8:
-			score += 0.4
+			score += 0.3
+		score += float(28 - i) * 0.01
 		if score > best_score:
 			best_score = score
 			best = cand
 	return best
+
+
+func _founding_slope_at(anchor: Vector2i) -> float:
+	var lo := 99
+	var hi := -99
+	for oy in range(-3, 7):
+		for ox in range(-1, 6):
+			var tile := anchor + Vector2i(ox, oy)
+			if not is_inside_map(tile):
+				continue
+			var h := get_height(tile)
+			lo = mini(lo, h)
+			hi = maxi(hi, h)
+	if lo > hi:
+		return 0.0
+	return float(hi - lo)
 
 
 func _in_founding_clearing(tile: Vector2i) -> bool:
@@ -3784,6 +3857,33 @@ func _ensure_founding_food(center: Vector2i) -> void:
 	founding_site["food_tiles"] = food_tiles
 
 
+func _place_founding_wyrd_traces(center: Vector2i) -> void:
+	# Glowing shard-crystal crumbs and scorched tiles that point at the crater.
+	var crater_dir := crater_direction_from(center)
+	founding_site["crater_dir"] = crater_dir
+	var traces: Array[Vector2i] = []
+	for dist in [7, 9, 11, 13]:
+		var tile := center + Vector2i(roundi(crater_dir.x * float(dist)), roundi(crater_dir.y * float(dist)))
+		tile.x = clampi(tile.x, 1, map_size.x - 2)
+		tile.y = clampi(tile.y, 1, map_size.y - 2)
+		if not is_inside_map(tile) or _in_founding_clearing(tile) or is_founding_creek_tile(tile):
+			continue
+		if tile == shard_position:
+			continue
+		if get_tile(tile) == Defs.TILE_SHARD:
+			continue
+		if get_tile(tile) == Defs.TILE_TREE:
+			_set_tile(tile, Defs.TILE_GRASS)
+			tree_deposits.erase(_tile_key(tile))
+		if not traces.has(tile):
+			traces.append(tile)
+	if traces.is_empty():
+		var fallback := center + Vector2i(roundi(crater_dir.x * 8.0), roundi(crater_dir.y * 8.0))
+		if is_inside_map(fallback) and fallback != shard_position:
+			traces.append(fallback)
+	founding_site["wyrd_tiles"] = traces
+
+
 func _ensure_nearby_resource(center: Vector2i, tile_type: String, max_dist: int) -> void:
 	if _nearest_resource_tile(center, tile_type, max_dist) != Vector2i(-1, -1):
 		return
@@ -3954,6 +4054,27 @@ func founding_audit() -> Dictionary:
 	for obj in objectives:
 		if String(obj.get("id", "")) == "lumber" and String(obj.get("text", "")).contains("Lumber Camp"):
 			lumber_objective = true
+	var crater_d := _tile_distance(center, shard_position)
+	var water_d := float(FOUNDING_RESOURCE_NEAR + 4)
+	for creek_tile in creek:
+		water_d = minf(water_d, _tile_distance(center, Vector2i(creek_tile)))
+	var tree_d := _tile_distance(center, tree_tile) if tree_tile != Vector2i(-1, -1) else 99.0
+	var rock_d := _tile_distance(center, rock_tile) if rock_tile != Vector2i(-1, -1) else 99.0
+	var food_d := 99.0
+	for food in founding_site.get("food_tiles", []):
+		food_d = minf(food_d, _tile_distance(center, Vector2i(food)))
+	var slope := _founding_slope_at(town_hall_position)
+	var crater_dir := crater_direction_from(center)
+	var wyrd_ok := false
+	for trace in founding_site.get("wyrd_tiles", []):
+		var toward := Vector2(Vector2i(trace) - center)
+		if toward.length_squared() < 0.01:
+			continue
+		if toward.normalized().dot(crater_dir) >= 0.45 and _tile_distance(center, Vector2i(trace)) <= float(FOUNDING_RESOURCE_NEAR + 2):
+			wyrd_ok = true
+			break
+	if not wyrd_ok and crater_d <= CRATER_RADIUS:
+		wyrd_ok = crater_d <= float(FOUNDING_RESOURCE_NEAR + 8)
 	return {
 		"seed": rng_seed,
 		"functional_buildings": functional,
@@ -3973,6 +4094,19 @@ func founding_audit() -> Dictionary:
 		"quest_label": quest_label,
 		"quest_target": quest_label == "Build a Lumber Camp" and lumber_objective,
 		"hall": town_hall_position,
+		"shard": shard_position,
+		"inside_crater": crater_d <= CRATER_RADIUS and crater_d >= CRATER_CORE_RADIUS,
+		"crater_dist": crater_d,
+		"crater_dir": crater_dir,
+		"crater_compass": crater_compass_from(center),
+		"slope": slope,
+		"slope_ok": slope <= FOUNDING_MAX_SLOPE,
+		"water_near": water_d <= float(FOUNDING_RESOURCE_NEAR),
+		"tree_near": tree_d <= float(FOUNDING_RESOURCE_NEAR),
+		"rock_near": rock_d <= float(FOUNDING_RESOURCE_NEAR),
+		"food_near": food_d <= float(FOUNDING_RESOURCE_NEAR),
+		"wyrd_marker": wyrd_ok,
+		"wyrd_traces": founding_site.get("wyrd_tiles", []).size(),
 	}
 
 

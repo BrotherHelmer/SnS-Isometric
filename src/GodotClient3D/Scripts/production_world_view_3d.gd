@@ -3612,22 +3612,29 @@ func _opening_forest_score(tile: Vector2i, hall: Vector2i) -> float:
 
 
 func _opening_ridge_tiles(hall: Vector2i) -> Array[Vector2i]:
-	# GFX-P: one back/upper formation. No large foreground rocks.
-	# Camera looks from +tile.y, so back is -Y.
-	return [
-		hall + Vector2i(6, -8),
-		hall + Vector2i(7, -9),
-		hall + Vector2i(8, -8),
-		hall + Vector2i(9, -9),
-		hall + Vector2i(7, -7),
-		hall + Vector2i(5, -9),
-		hall + Vector2i(8, -10),
-		hall + Vector2i(6, -10),
-	]
+	# Rim sits toward the crater so the opening reads as a meteor bowl.
+	var toward := Vector2(0.0, -1.0)
+	if simulation != null and simulation.founding_site is Dictionary:
+		toward = Vector2(simulation.founding_site.get("crater_dir", toward))
+	if toward.length_squared() < 0.01:
+		toward = Vector2(0.0, -1.0)
+	toward = toward.normalized()
+	var side := Vector2(-toward.y, toward.x)
+	var tiles: Array[Vector2i] = []
+	for spec in [
+		{"along": 8.0, "side": 0.0}, {"along": 9.0, "side": 1.2}, {"along": 8.0, "side": -1.4},
+		{"along": 10.0, "side": 0.6}, {"along": 7.0, "side": 1.8}, {"along": 9.0, "side": -2.0},
+		{"along": 10.0, "side": -0.8}, {"along": 8.0, "side": 2.4}
+	]:
+		tiles.append(hall + Vector2i(
+			roundi(toward.x * float(spec["along"]) + side.x * float(spec["side"])),
+			roundi(toward.y * float(spec["along"]) + side.y * float(spec["side"]))
+		))
+	return tiles
 
 
 func opening_camera_focus() -> Vector3:
-	# Frame the hall door, trodden forecourt, short road and the creek.
+	# Frame the hall door, the crater direction, and the short road.
 	if simulation == null or not simulation.is_town_hall_founded():
 		return Vector3.ZERO
 	var hall: Vector2i = simulation.town_hall_position
@@ -3635,10 +3642,16 @@ func opening_camera_focus() -> Vector3:
 	var w := ScaleProfile.TOWN_HALL_WIDTH_METRES
 	var open_dir := Vector2(0.15, 1.0)
 	var creek_side := -1.0
+	var crater_dir := Vector2(0.0, -1.0)
 	if simulation.founding_site is Dictionary:
 		open_dir = Vector2(simulation.founding_site.get("open_dir", open_dir))
 		creek_side = float(simulation.founding_site.get("creek_side", -1))
-	return center + Vector3(creek_side * 0.22 * w + open_dir.x * 0.16 * w, 0.0, 0.58 * w + open_dir.y * 0.08 * w)
+		crater_dir = Vector2(simulation.founding_site.get("crater_dir", crater_dir))
+	return center + Vector3(
+		creek_side * 0.14 * w + crater_dir.x * 0.20 * w + open_dir.x * 0.08 * w,
+		0.0,
+		0.42 * w + crater_dir.y * 0.16 * w
+	)
 
 
 func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
@@ -3719,6 +3732,7 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 	if not trees.is_empty():
 		_spawn_nature_multimeshes(ridge, trees)
 	_spawn_meandering_creek(ridge, hall, r)
+	_spawn_founding_crater_traces(ridge, hall)
 
 
 func _spawn_kaykit_ridge_rock(ridge: Node3D, tile: Vector2i, index: int, scale_mul: float) -> void:
@@ -3742,6 +3756,57 @@ func _spawn_kaykit_ridge_rock(ridge: Node3D, tile: Vector2i, index: int, scale_m
 		mat.metallic = 0.0
 		mesh_i.material_override = mat
 	ridge.add_child(prop)
+
+
+func _spawn_founding_crater_traces(ridge: Node3D, _hall: Vector2i) -> void:
+	# Reuse the shard-crystal language so the opening points at the crater.
+	if simulation == null or not (simulation.founding_site is Dictionary):
+		return
+	var glass := StandardMaterial3D.new()
+	glass.albedo_color = Color(0.38, 0.78, 0.88, 0.80)
+	glass.emission_enabled = true
+	glass.emission = Color("#3b8fbd")
+	glass.emission_energy_multiplier = 2.2
+	glass.roughness = 0.18
+	glass.metallic = 0.12
+	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	var scorched := _ridge_material(Color("#2A3644"), 0.94)
+	var index := 0
+	for tile_value in simulation.founding_site.get("wyrd_tiles", []):
+		var tile := Vector2i(tile_value)
+		if not simulation.is_inside_map(tile):
+			continue
+		var origin := tile_to_world(Vector2(tile))
+		var stain := MeshInstance3D.new()
+		stain.name = "DressWyrdScar_%d" % index
+		var stain_mesh := CylinderMesh.new()
+		stain_mesh.top_radius = 0.95
+		stain_mesh.bottom_radius = 1.15
+		stain_mesh.height = 0.08
+		stain.mesh = stain_mesh
+		stain.position = origin + Vector3(0.0, 0.03, 0.0)
+		stain.material_override = scorched
+		stain.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		ridge.add_child(stain)
+		var crystal := MeshInstance3D.new()
+		crystal.name = "DressWyrdTrace_%d" % index
+		var prism := PrismMesh.new()
+		prism.size = Vector3(0.42 + float(index % 3) * 0.08, 1.15 + float(index % 2) * 0.35, 0.34)
+		crystal.mesh = prism
+		crystal.position = origin + Vector3(0.0, 0.62, 0.0)
+		crystal.rotation_degrees = Vector3(8.0, float(index) * 28.0, 176.0)
+		crystal.material_override = glass
+		ridge.add_child(crystal)
+		var glow := OmniLight3D.new()
+		glow.name = "DressWyrdGlow_%d" % index
+		glow.light_color = Color("#7ad7ea")
+		glow.light_energy = 0.85
+		glow.omni_range = 5.5
+		glow.shadow_enabled = false
+		glow.position = origin + Vector3(0.0, 1.1, 0.0)
+		ridge.add_child(glow)
+		index += 1
+	ridge.set_meta("wyrd_traces", index)
 
 
 func _spawn_meandering_creek(ridge: Node3D, hall: Vector2i, road_w: float) -> void:

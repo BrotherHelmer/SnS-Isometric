@@ -33,7 +33,7 @@ func _run() -> void:
 		var ok := _check_audit(audit, seed_value)
 		if ok:
 			passed += 1
-		rows.append("%d\t%d\t%d\t%d\t%.1f\t%.1f\t%s\t%s\t%s\t%s\t%s\t%s" % [
+		rows.append("%d\t%d\t%d\t%d\t%.1f\t%.1f\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%.1f\t%.1f\t%s\t%s\t%s\t%s\t%s\t%s" % [
 			seed_value,
 			int(audit.get("functional_buildings", -1)),
 			int(audit.get("fake_buildings", -1)),
@@ -45,6 +45,15 @@ func _run() -> void:
 			str(audit.get("food_reachable", false)),
 			str(audit.get("bridges_cross", false)),
 			str(audit.get("quest_target", false)),
+			str(audit.get("inside_crater", false)),
+			float(audit.get("crater_dist", -1.0)),
+			float(audit.get("slope", -1.0)),
+			str(audit.get("water_near", false)),
+			str(audit.get("tree_near", false)),
+			str(audit.get("rock_near", false)),
+			str(audit.get("food_near", false)),
+			str(audit.get("wyrd_marker", false)),
+			String(audit.get("crater_compass", "")),
 			"PASS" if ok else "FAIL",
 		])
 	var sim_ms := float(Time.get_ticks_msec() - t0)
@@ -69,13 +78,23 @@ func _run() -> void:
 		print("T_FOUNDING_SEEDS mesh_seed=%d fake=%s start_ms=%.0f" % [seed_value, str(fake), start_ms])
 		_check(fake.is_empty(), "seed %d has 0 fake building meshes" % seed_value)
 		var sim = game.simulation_host.simulation
-		_check(int(sim.founding_audit().get("functional_buildings", 0)) == 1, "seed %d 3D has one Town Hall" % seed_value)
+		var audit: Dictionary = sim.founding_audit()
+		_check(int(audit.get("functional_buildings", 0)) == 1, "seed %d 3D has one Town Hall" % seed_value)
 		_check(game.objective_button != null and String(game.objective_button.text).contains("Lumber Camp"), "seed %d HUD quest says Lumber Camp" % seed_value)
+		_check(bool(audit.get("inside_crater", false)), "seed %d start is inside the crater" % seed_value)
+		var dress: Node = game.world_view.resource_visuals_root.get_node_or_null("OpeningDress")
+		var traces := dress.find_child("DressWyrdTrace_0", true, false) if dress != null else null
+		var beacon := game.world_view.shard_beacon
+		_check(traces != null or beacon != null, "seed %d has a visible wyrd/crater marker" % seed_value)
+		print("T_FOUNDING_SEEDS crater_seed=%d compass=%s dist=%.1f hall=%s shard=%s" % [
+			seed_value, String(audit.get("crater_compass", "")), float(audit.get("crater_dist", -1.0)),
+			str(audit.get("hall", Vector2i.ZERO)), str(audit.get("shard", Vector2i.ZERO))
+		])
 
 	var report := dest.path_join("founding_seeds.txt")
 	var file := FileAccess.open(report, FileAccess.WRITE)
 	if file != null:
-		file.store_line("seed\tfunctional\tfake\tclearing_trees\trx\try\ttree\trock\tfood\tbridges\tquest\tresult")
+		file.store_line("seed\tfunctional\tfake\tclearing_trees\trx\try\ttree\trock\tfood\tbridges\tquest\tcrater\tdist\tslope\twater\ttree_n\trock_n\tfood_n\twyrd\tcompass\tresult")
 		for row in rows:
 			file.store_line(row)
 		file.store_line("sim_pass=%d/%d sim_ms=%.0f" % [passed, SEED_COUNT, sim_ms])
@@ -104,6 +123,13 @@ func _check_audit(audit: Dictionary, seed_value: int) -> bool:
 	ok = _check(bool(audit.get("creek_continuous", false)), "seed %d creek is continuous" % seed_value) and ok
 	ok = _check(bool(audit.get("bridges_cross", false)), "seed %d bridges cross water" % seed_value) and ok
 	ok = _check(bool(audit.get("quest_target", false)), "seed %d quest targets Lumber Camp" % seed_value) and ok
+	ok = _check(bool(audit.get("inside_crater", false)), "seed %d start is inside the crater radius" % seed_value) and ok
+	ok = _check(bool(audit.get("slope_ok", false)), "seed %d slope is below the founding threshold" % seed_value) and ok
+	ok = _check(bool(audit.get("water_near", false)), "seed %d water is within %d tiles" % [seed_value, Simulation.FOUNDING_RESOURCE_NEAR]) and ok
+	ok = _check(bool(audit.get("tree_near", false)), "seed %d trees are within %d tiles" % [seed_value, Simulation.FOUNDING_RESOURCE_NEAR]) and ok
+	ok = _check(bool(audit.get("rock_near", false)), "seed %d stone is within %d tiles" % [seed_value, Simulation.FOUNDING_RESOURCE_NEAR]) and ok
+	ok = _check(bool(audit.get("food_near", false)), "seed %d food is within %d tiles" % [seed_value, Simulation.FOUNDING_RESOURCE_NEAR]) and ok
+	ok = _check(bool(audit.get("wyrd_marker", false)), "seed %d has a wyrd/crater marker toward the start" % seed_value) and ok
 	return ok
 
 

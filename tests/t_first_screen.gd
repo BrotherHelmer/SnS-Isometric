@@ -72,6 +72,15 @@ func _run() -> void:
 	_check(bool(audit.get("food_reachable", false)), "a food cluster is reachable")
 	_check(bool(audit.get("bridges_cross", false)), "starter bridges cross the creek")
 	_check(bool(audit.get("quest_target", false)), "quest names the Lumber Camp")
+	_check(bool(audit.get("inside_crater", false)), "start sits inside the crater radius")
+	_check(bool(audit.get("slope_ok", false)), "founding slope is below the crater-floor threshold")
+	_check(bool(audit.get("water_near", false)) and bool(audit.get("tree_near", false)), "water and wood are close")
+	_check(bool(audit.get("rock_near", false)) and bool(audit.get("food_near", false)), "stone and food are close")
+	_check(bool(audit.get("wyrd_marker", false)), "a wyrd or crater marker points from the start")
+	print("T_FIRST_SCREEN crater_compass=%s dist=%.1f hall=%s shard=%s" % [
+		String(audit.get("crater_compass", "")), float(audit.get("crater_dist", -1.0)),
+		str(audit.get("hall", Vector2i.ZERO)), str(audit.get("shard", Vector2i.ZERO))
+	])
 	var hall_view = null
 	for view in game.world_view.building_views.values():
 		if String(view.building_type) == "TOWN_HALL":
