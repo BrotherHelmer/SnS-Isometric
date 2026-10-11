@@ -29,35 +29,34 @@ func _run() -> void:
 		game.simulation_host.paused = true
 		if game.has_method("_update_ui"):
 			game._update_ui()
-		for _i in 6:
+		game.world_view.note_camera(game.world_view.opening_camera_focus(), CameraRig.OPENING_ZOOM)
+		for _i in 10:
 			await process_frame
-			game.world_view.stream_chunks(12000)
+			game.world_view.stream_chunks(20000)
 		await RenderingServer.frame_post_draw
 		_save(dest, "first_%d.png" % seed_value)
 		if seed_value == SHOT_SEEDS[0]:
 			game.camera_rig.configure_for_map(game.simulation_host.simulation.map_size)
 			game.camera_rig.compose_view(game.world_view.opening_camera_focus(), CameraRig.PROVINCE_ZOOM)
 			game.world_view.note_camera(game.camera_rig.target_position, CameraRig.PROVINCE_ZOOM)
-			for _j in 8:
+			for _j in 12:
 				await process_frame
-				game.world_view.stream_chunks(12000)
+				game.world_view.stream_chunks(20000)
 			await RenderingServer.frame_post_draw
 			_save(dest, "overview.png")
 			if game.minimap != null:
 				game.minimap.overview_mode = true
-				game.minimap_expanded = true
-				game.minimap.visible = true
-				game.minimap.custom_minimum_size = Vector2(720, 720)
-				if game.minimap.map_image != null:
-					game.minimap.map_image.custom_minimum_size = Vector2(680, 680)
 				game.minimap.redraw(game.current_frame_snapshot)
-				await process_frame
-				await RenderingServer.frame_post_draw
-				_save(dest, "minimap.png")
 				var atlas: Image = game.minimap._render_map(game.simulation_host.simulation.map_size, game.current_frame_snapshot)
 				if atlas != null:
 					atlas.resize(1080, 1080, Image.INTERPOLATE_NEAREST)
 					atlas.save_png(dest.path_join("minimap_atlas.png"))
+					var board := Image.create(1920, 1080, false, Image.FORMAT_RGB8)
+					board.fill(Color("#0a1210"))
+					var left := (1920 - 1080) / 2
+					board.blit_rect(atlas, Rect2i(0, 0, 1080, 1080), Vector2i(left, 0))
+					board.save_png(dest.path_join("minimap.png"))
+					print("T_BIGMAP_SHOTS wrote minimap.png 1920x1080")
 		game.queue_free()
 		await process_frame
 	print("T_BIGMAP_SHOTS dest=%s" % dest)

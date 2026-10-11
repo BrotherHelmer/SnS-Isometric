@@ -637,23 +637,34 @@ func _camera_chunk() -> Vector2i:
 	if simulation == null:
 		return Vector2i.ZERO
 	var tile := world_to_tile(camera_world)
-	if tile == Vector2i.ZERO and simulation.is_town_hall_founded():
+	if not simulation.is_inside_map(tile) and simulation.is_town_hall_founded():
 		tile = simulation.town_hall_position
 	return chunk_of_tile(tile)
 
 
+func _stream_reach() -> int:
+	return STREAM_FAR_CHUNKS + maxi(0, int(round((camera_zoom - 32.0) / 24.0)))
+
+
 func _stream_opening_chunks() -> void:
 	if simulation != null and simulation.is_town_hall_founded():
-		var hall_world := tile_to_world(Vector2(simulation.town_hall_position) + Vector2(2, 2))
-		camera_world = hall_world
+		camera_world = opening_camera_focus()
+		camera_zoom = maxf(camera_zoom, 32.0)
 	_refresh_terrain_lookups()
 	_bake_road_control_texture()
 	var focus := _camera_chunk()
-	for oy in range(-STREAM_NEAR_CHUNKS, STREAM_NEAR_CHUNKS + 1):
-		for ox in range(-STREAM_NEAR_CHUNKS, STREAM_NEAR_CHUNKS + 1):
+	var reach := mini(_stream_reach(), STREAM_FAR_CHUNKS)
+	var built_open := 0
+	for oy in range(-reach, reach + 1):
+		for ox in range(-reach, reach + 1):
 			var coord := focus + Vector2i(ox, oy)
 			if _chunk_has_tiles(coord) and _chunk_is_wanted(coord):
-				_rebuild_chunk(coord, CHUNK_LOD_NEAR, true)
+				_rebuild_chunk(coord, _desired_lod(coord), true)
+				built_open += 1
+				if built_open >= 20:
+					break
+		if built_open >= 20:
+			break
 	_enqueue_desired_chunks()
 
 
@@ -688,7 +699,7 @@ func _enqueue_desired_chunks() -> void:
 		seen[_chunk_key(existing)] = true
 	var focus := _camera_chunk()
 	var span := _chunk_span()
-	var reach := STREAM_FAR_CHUNKS + (1 if camera_zoom > 50.0 else 0)
+	var reach := _stream_reach()
 	for oy in range(-reach, reach + 1):
 		for ox in range(-reach, reach + 1):
 			var coord := focus + Vector2i(ox, oy)
@@ -717,7 +728,7 @@ func _enqueue_revealed_chunks() -> void:
 	for key_value in simulation.revealed_tiles.keys():
 		var tile: Vector2i = simulation._tile_from_key(String(key_value))
 		var coord := chunk_of_tile(tile)
-		if absi(coord.x - focus.x) > STREAM_FAR_CHUNKS + 1 or absi(coord.y - focus.y) > STREAM_FAR_CHUNKS + 1:
+		if absi(coord.x - focus.x) > _stream_reach() + 1 or absi(coord.y - focus.y) > _stream_reach() + 1:
 			continue
 		var key := _chunk_key(coord)
 		if int(chunk_lod.get(key, CHUNK_LOD_NONE)) != CHUNK_LOD_NONE:
@@ -746,24 +757,20 @@ func _desired_lod(coord: Vector2i) -> int:
 	var cheb := maxi(absi(coord.x - focus.x), absi(coord.y - focus.y))
 	if cheb <= STREAM_NEAR_CHUNKS:
 		return CHUNK_LOD_NEAR
-	if cheb <= STREAM_FAR_CHUNKS + (1 if camera_zoom > 50.0 else 0):
+	if cheb <= _stream_reach():
 		return CHUNK_LOD_FAR
 	return CHUNK_LOD_NONE
 
 
 func _chunk_explored_or_visible(coord: Vector2i) -> bool:
+	# Five corner samples miss a 5-tile crater corridor inside a 32
+	# chunk. Step the chunk so any revealed sliver counts.
 	var origin := _chunk_origin(coord)
-	var x0 := clampi(origin.x, 0, map_size.x - 1)
-	var y0 := clampi(origin.y, 0, map_size.y - 1)
-	var x1 := clampi(origin.x + CHUNK_TILES - 1, 0, map_size.x - 1)
-	var y1 := clampi(origin.y + CHUNK_TILES - 1, 0, map_size.y - 1)
-	var samples := [
-		Vector2i(x0, y0), Vector2i(x1, y0), Vector2i(x0, y1), Vector2i(x1, y1),
-		Vector2i((x0 + x1) / 2, (y0 + y1) / 2)
-	]
-	for tile in samples:
-		if simulation.is_revealed(tile):
-			return true
+	for y in range(origin.y, origin.y + CHUNK_TILES, 4):
+		for x in range(origin.x, origin.x + CHUNK_TILES, 4):
+			var tile := Vector2i(x, y)
+			if simulation.is_inside_map(tile) and simulation.is_revealed(tile):
+				return true
 	return false
 
 
@@ -4159,6 +4166,8 @@ func opening_camera_focus() -> Vector3:
 	if inland.length_squared() < 1.0:
 		inland = Vector3(shard.x - center.x, 0.0, shard.z - center.z)
 	var pull := clampf(Vector2(center.x, center.z).length() * 0.38, 10.0, 22.0)
+	if map_size.x >= 200:
+		pull = clampf(pull, 8.0, 12.0)
 	return center + inland.normalized() * pull
 
 

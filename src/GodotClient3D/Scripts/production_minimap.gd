@@ -96,17 +96,17 @@ func _render_map(map_size: Vector2i, frame_snapshot: Dictionary) -> Image:
 			if not overview_mode and not simulation.is_revealed(tile):
 				continue
 			var tile_type := String(simulation.get_tile(tile))
-			var color := Color("#3a6a34")
+			var color := Color("#4d8a3e")
 			if simulation.has_method("is_water_tile") and simulation.is_water_tile(tile):
-				color = Color("#2a5a62")
+				color = Color("#3a8a96")
 			elif tile_type == Defs.TILE_TREE:
-				color = Color("#1f3d24")
+				color = Color("#1c4a22")
 			elif tile_type == Defs.TILE_ROCK:
-				color = Color("#6a6a62")
+				color = Color("#8a8678")
 			elif tile_type == Defs.TILE_SHARD:
 				color = Color("#6bcfe0")
 			if not simulation.is_revealed(tile) and overview_mode:
-				color = color.darkened(0.45)
+				color = color.darkened(0.22)
 			if step == 1:
 				image.set_pixel(x, y, color)
 			else:
@@ -148,14 +148,15 @@ func _render_map(map_size: Vector2i, frame_snapshot: Dictionary) -> Image:
 			continue
 		var hostile := String(combatant.get("faction", "")) in ["hostile", "rival"]
 		_dot(image, map_size, Vector2i(combatant.get("logical_tile", Vector2i.ZERO)), Color("#e37b6a") if hostile else Color("#9b3943"))
-	_stamp_landmark(image, map_size, Vector2i(simulation.shard_position), Color("#6bcfe0"), 3)
+	_stamp_crater_ring(image, map_size)
+	_stamp_landmark(image, map_size, Vector2i(simulation.shard_position), Color("#6bcfe0"), 5)
 	if simulation.get("rival_seats"):
 		for seat_value in simulation.rival_seats:
-			_stamp_landmark(image, map_size, Vector2i(seat_value), Color("#7a2c36"), 2)
+			_stamp_landmark(image, map_size, Vector2i(seat_value), Color("#c45c3a"), 4)
 	else:
-		_stamp_landmark(image, map_size, Vector2i(simulation.rival_town_hall_position), Color("#7a2c36"), 2)
+		_stamp_landmark(image, map_size, Vector2i(simulation.rival_town_hall_position), Color("#c45c3a"), 4)
 	if simulation.is_town_hall_founded():
-		_stamp_landmark(image, map_size, Vector2i(simulation.town_hall_position), Color("#efcf8a"), 2)
+		_stamp_landmark(image, map_size, Vector2i(simulation.town_hall_position), Color("#efcf8a"), 4)
 	_paint_camera(image, map_size)
 	return image
 
@@ -189,6 +190,20 @@ func _stamp_landmark(image: Image, map_size: Vector2i, tile: Vector2i, color: Co
 			if ox * ox + oy * oy > radius * radius:
 				continue
 			_dot(image, map_size, tile + Vector2i(ox, oy), color, overview_mode)
+
+
+func _stamp_crater_ring(image: Image, map_size: Vector2i) -> void:
+	if simulation == null:
+		return
+	var center: Vector2i = simulation.shard_position
+	var radius := int(round(float(simulation.CRATER_RADIUS)))
+	var pit := int(round(float(simulation.get("crater_pit_radius")))) if simulation.get("crater_pit_radius") != null else int(round(float(radius) * 0.35))
+	for angle in range(0, 360, 3):
+		var rad := deg_to_rad(float(angle))
+		var rim := center + Vector2i(roundi(cos(rad) * float(radius)), roundi(sin(rad) * float(radius)))
+		_dot(image, map_size, rim, Color("#5a6a4a"), overview_mode)
+		var pit_tile := center + Vector2i(roundi(cos(rad) * float(pit)), roundi(sin(rad) * float(pit)))
+		_dot(image, map_size, pit_tile, Color("#2a3a38"), overview_mode)
 
 
 func _paint_camera(image: Image, map_size: Vector2i) -> void:

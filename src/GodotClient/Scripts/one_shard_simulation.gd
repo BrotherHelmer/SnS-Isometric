@@ -4427,6 +4427,11 @@ func _lay_founding_roads() -> void:
 	if heading.length_squared() < 0.01:
 		heading = (out * 0.45 + water_aim * 0.55).normalized()
 	var roads: Array[Vector2i] = []
+	# The Director: the door tile is the seed of connected_roads.
+	# Walking off it first left the whole founding path orphaned.
+	if is_inside_map(entrance) and not _in_founding_hall_footprint(entrance) and get_building_at_tile(entrance).is_empty():
+		_add_completed_building(Defs.BUILDING_ROAD, entrance)
+		roads.append(entrance)
 	var cursor := entrance
 	for _i in 8:
 		var nxt := cursor + Vector2i(clampi(roundi(heading.x), -1, 1), clampi(roundi(heading.y), -1, 1))
@@ -8862,7 +8867,12 @@ func _is_adjacent_to_town_hall(tile: Vector2i) -> bool:
 	var town_hall := _find_town_hall()
 	if town_hall.is_empty():
 		return false
-	return tile == _town_hall_entrance_tile()
+	if tile == _town_hall_entrance_tile():
+		return true
+	for hall_tile in _footprint_tiles(town_hall_position, _building_footprint(town_hall)):
+		if absi(hall_tile.x - tile.x) + absi(hall_tile.y - tile.y) == 1:
+			return true
+	return false
 
 
 func _town_hall_entrance_tile() -> Vector2i:

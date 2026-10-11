@@ -59,17 +59,21 @@ func _run() -> void:
 
 
 func _place_opening_build(sim) -> Dictionary:
-	var origin: Vector2i = sim._town_hall_entrance_tile()
+	sim._recompute_road_network()
 	var last_road := {"success": false, "message": "no candidate"}
 	var last_house := {"success": false, "message": "no candidate"}
-	for dy in range(-2, 6):
-		for dx in range(-4, 6):
-			var road: Vector2i = origin + Vector2i(dx, dy)
-			if not sim.is_inside_map(road):
+	var seeds: Array[Vector2i] = []
+	for key_value in sim.connected_roads.keys():
+		seeds.append(sim._tile_from_key(String(key_value)))
+	if seeds.is_empty():
+		seeds.append(sim._town_hall_entrance_tile())
+	for origin in seeds:
+		for neighbor in sim._neighbors(origin):
+			if not sim.is_inside_map(neighbor):
 				continue
-			sim._prepare_test_tile(road, Defs.TILE_GRASS)
-			last_road = sim.request_build(Defs.BUILDING_ROAD, road)
-			var house: Vector2i = road + Vector2i(2, 0)
+			sim._prepare_test_tile(neighbor, Defs.TILE_GRASS)
+			last_road = sim.request_build(Defs.BUILDING_ROAD, neighbor)
+			var house: Vector2i = neighbor + Vector2i(2, 0)
 			for offset in [Vector2i.ZERO, Vector2i.RIGHT, Vector2i.DOWN, Vector2i(1, 1)]:
 				if sim.is_inside_map(house + offset):
 					sim._prepare_test_tile(house + offset, Defs.TILE_GRASS)
