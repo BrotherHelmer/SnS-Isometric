@@ -77,9 +77,16 @@ const INITIAL_REVEAL_RADIUS := 12
 # First-screen yard: no TREE/ROCK inside this Euclidean radius of the
 # hall centre. Nearby stands stay at 8+ so lumber still has timber.
 const FOUNDING_YARD_RADIUS := 8.0
-# Meteor bowl: settlers live inside the crater so they can reach the Shard.
+# Meteor bowl. CRATER_RADIUS is the wyrd harvest zone, not the pit.
 const CRATER_RADIUS := 22.0
 const CRATER_CORE_RADIUS := 8.0
+# ChatGPT #11: hall sits on the 0.70–0.85 R annulus. Floor is 0.65 R.
+# Pit excavation is 0.30–0.45 R. Change these fractions, not call sites.
+const FOUNDING_CRATER_DIST_MIN := 0.70
+const FOUNDING_CRATER_DIST_MAX := 0.85
+const FOUNDING_CRATER_DIST_FLOOR := 0.65
+const CRATER_PIT_RADIUS_MIN := 0.30
+const CRATER_PIT_RADIUS_MAX := 0.45
 const FOUNDING_MAX_SLOPE := 1.0
 const FOUNDING_RESOURCE_NEAR := 12
 # The Director: building/unit vision. Watchtower is the large scouting
@@ -113,6 +120,7 @@ var tree_regrowth: Dictionary = {}
 var town_hall_position := Vector2i.ZERO
 var rival_town_hall_position := Vector2i.ZERO
 var shard_position := Vector2i.ZERO
+var crater_pit_radius := 8.0
 # Seeded founding site. Ellipse clearing, creek path, starter road and
 # nearby resource clusters all come from this dictionary so every new
 # game is different without becoming unplayable.
@@ -395,6 +403,7 @@ func start_new_run(width: int = MAP_WIDTH, height: int = MAP_HEIGHT, seed_value:
 	best_score = _load_best_score()
 
 	founding_site.clear()
+	crater_pit_radius = CRATER_RADIUS * 0.36
 	_generate_map()
 	rivalry = null
 	if begin_founded:
@@ -597,8 +606,11 @@ func _spawn_founding_yard_props(_entrance: Vector2i) -> void:
 		{"type": "wood_stack", "off": Vector2i(-2, 1), "rot": 14.0, "scale": 0.82},
 		{"type": "crate", "off": Vector2i(2, 1), "rot": 8.0, "scale": 0.95},
 		{"type": "stump", "off": Vector2i(-3, 2), "rot": 22.0, "scale": 0.68},
+		{"type": "stump", "off": Vector2i(4, -1), "rot": -18.0, "scale": 0.62},
+		{"type": "stump", "off": Vector2i(-4, -2), "rot": 40.0, "scale": 0.58},
 		{"type": "cart", "off": Vector2i(3, 2), "rot": -10.0, "scale": 0.72},
 		{"type": "lantern", "off": Vector2i(1, 0), "rot": 0.0, "scale": 1.00},
+		{"type": "crate", "off": Vector2i(-1, 3), "rot": -6.0, "scale": 0.88},
 	]
 	var id := 1
 	for spec in props:
@@ -1408,9 +1420,10 @@ func crater_direction_from(tile: Vector2i) -> Vector2:
 	return delta.normalized()
 
 
-func crater_compass_from(tile: Vector2i) -> String:
+func compass_from_dir(dir: Vector2) -> String:
 	# Tile +Y faces the camera (south). Flip Y so the label is map-north.
-	var dir := crater_direction_from(tile)
+	if dir.length_squared() < 0.01:
+		return "N"
 	var vx := dir.x
 	var vy := -dir.y
 	var angle := atan2(vx, vy)
@@ -1419,6 +1432,34 @@ func crater_compass_from(tile: Vector2i) -> String:
 		octant += 8
 	var names := ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 	return String(names[octant % 8])
+
+
+func crater_compass_from(tile: Vector2i) -> String:
+	return compass_from_dir(crater_direction_from(tile))
+
+
+func founding_orbit_degrees_from(tile: Vector2i) -> float:
+	# 0° = north of the Shard, 90° = east, walking the crater rim.
+	var delta := Vector2(tile - shard_position)
+	if delta.length_squared() < 0.01:
+		return 0.0
+	var deg := rad_to_deg(atan2(delta.x, -delta.y))
+	if deg < 0.0:
+		deg += 360.0
+	return deg
+
+
+func founding_orbit_sector_from(tile: Vector2i) -> int:
+	return int(floor(founding_orbit_degrees_from(tile) / 45.0)) % 8
+
+
+func _founding_orbit_heading() -> float:
+	# Full 360° around the Shard. Sector salt keeps 100 sequential
+	# seeds from collapsing onto one arc; jitter keeps each seed unique.
+	var heading_rng := RandomNumberGenerator.new()
+	heading_rng.seed = rng_seed * 17 + 3
+	var sector := posmod(rng_seed * 13, 8)
+	return (float(sector) + heading_rng.randf()) * (PI * 0.25)
 
 
 func get_world_features() -> Array:
@@ -3270,8 +3311,8 @@ func _generate_map() -> void:
 		clampi(roundi(float(map_size.x) * 0.77), 1, maxi(1, map_size.x - 6)),
 		clampi(roundi(float(map_size.y) * 0.17), 1, maxi(1, map_size.x - 6))
 	)
-	_flatten_area(_footprint_center(town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL)), 8)
-	_flatten_area(_footprint_center(rival_town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL)), 8)
+	_flatten_area(_footprint_center(town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL)), 4)
+	_flatten_area(_footprint_center(rival_town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL)), 4)
 
 	_place_random_resources()
 	var town_center := _footprint_center(town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
@@ -3360,25 +3401,26 @@ func _flatten_area(center: Vector2i, radius: int) -> void:
 
 
 func _shape_impact_crater() -> void:
-	# Habitable meteor bowl. The Shard sits in the scorched core; settlers
-	# found on the flat floor inside the rim so they can harvest Wyrd.
-	var crater_floor := maxi(0, get_height(shard_position) - 1)
-	var rim_height := mini(3, crater_floor + 2)
-	var reach := int(ceil(CRATER_RADIUS)) + 2
+	# Excavation is a small irregular pit. The harvest radius stays
+	# larger so the Town Hall can sit on stable ground outside the hole.
+	var pit_rng := RandomNumberGenerator.new()
+	pit_rng.seed = rng_seed * 11 + 2
+	crater_pit_radius = CRATER_RADIUS * pit_rng.randf_range(CRATER_PIT_RADIUS_MIN, CRATER_PIT_RADIUS_MAX)
+	var pit_floor := maxi(0, get_height(shard_position) - 2)
+	var rim_height := mini(3, get_height(shard_position) + 1)
+	var reach := int(ceil(crater_pit_radius)) + 3
 	for offset in _radius_offsets(reach):
 		var tile: Vector2i = shard_position + offset
 		if not is_inside_map(tile):
 			continue
 		var distance := _tile_distance(tile, shard_position)
-		if distance <= 2.4:
-			height_map[tile.y][tile.x] = crater_floor if rng.randf() > 0.16 else mini(crater_floor + 1, rim_height)
-		elif distance <= CRATER_CORE_RADIUS:
-			height_map[tile.y][tile.x] = crater_floor
-		elif distance <= CRATER_RADIUS - 1.5:
-			height_map[tile.y][tile.x] = crater_floor
-		elif distance <= CRATER_RADIUS + 1.6:
-			var bulge := 1 if rng.randf() < 0.28 and (offset.x + offset.y) % 2 == 0 else 0
-			height_map[tile.y][tile.x] = mini(3, rim_height + bulge)
+		var jagged := crater_pit_radius + pit_rng.randf_range(-1.1, 1.1)
+		if distance <= jagged * 0.35:
+			height_map[tile.y][tile.x] = pit_floor
+		elif distance <= jagged:
+			height_map[tile.y][tile.x] = pit_floor if pit_rng.randf() > 0.22 else mini(pit_floor + 1, rim_height)
+		elif distance <= jagged + 2.2:
+			height_map[tile.y][tile.x] = rim_height if pit_rng.randf() > 0.28 else mini(3, rim_height + 1)
 
 
 func _place_wilderness_opportunities() -> void:
@@ -3523,22 +3565,28 @@ func _clear_area(center: Vector2i, radius: int) -> void:
 
 func _ensure_founding_apron(center: Vector2i) -> void:
 	_clear_founding_yard(center, FOUNDING_YARD_RADIUS)
-	_flatten_area(center, 8)
+	_flatten_area(center, 4)
 	var open_dir: Vector2 = founding_site.get("open_dir", Vector2(0.2, 1.0))
 	_clear_area(center + Vector2i(roundi(open_dir.x * 5.0), roundi(open_dir.y * 5.0)), 3)
-	_clear_area(center + Vector2i(0, 4), 3)
+	var entrance := _town_hall_entrance_tile()
+	_clear_area(entrance + Vector2i(0, 2), 2)
 
 
 func _compose_settlement_landscape(center: Vector2i) -> void:
-	# Mature forest on 2–3 sides. The open sector stays a buildable meadow.
+	# Forest and stone follow the seeded layout, not a fixed west wall.
 	var open_dir: Vector2 = founding_site.get("open_dir", Vector2(0.2, 1.0))
+	var forest_dir: Vector2 = founding_site.get("forest_dir", Vector2(-0.8, -0.4))
+	var stone_dir: Vector2 = founding_site.get("stone_dir", Vector2(0.9, 0.1))
+	var crater_dir: Vector2 = founding_site.get("crater_dir", Vector2(0.0, -1.0))
 	if open_dir.length_squared() < 0.01:
 		open_dir = Vector2(0.2, 1.0)
+	if forest_dir.length_squared() < 0.01:
+		forest_dir = Vector2(-0.8, -0.4)
 	open_dir = open_dir.normalized()
+	forest_dir = forest_dir.normalized()
 	var site_rng := RandomNumberGenerator.new()
 	site_rng.seed = rng_seed * 67 + 5
-	var sides := 2 if site_rng.randf() < 0.35 else 3
-	var inner := maxf(float(founding_site.get("rx", 8.0)), float(founding_site.get("ry", 7.0))) + 0.35
+	var inner := maxf(float(founding_site.get("rx", 8.0)), float(founding_site.get("ry", 7.0))) + 0.15
 	for offset in _radius_offsets(14):
 		var tile: Vector2i = center + offset
 		if not is_inside_map(tile) or _in_founding_clearing(tile):
@@ -3549,20 +3597,17 @@ func _compose_settlement_landscape(center: Vector2i) -> void:
 		var dir := Vector2(tile - center)
 		if dir.length_squared() < 0.01:
 			continue
-		var facing := dir.normalized().dot(open_dir)
-		if facing > 0.18:
+		var n := dir.normalized()
+		if n.dot(open_dir) > 0.20 or n.dot(crater_dir) > 0.32:
 			continue
-		if sides == 2 and absf(dir.normalized().dot(Vector2(-open_dir.y, open_dir.x))) < 0.18:
+		if n.dot(forest_dir) < 0.08:
 			continue
 		if get_tile(tile) != Defs.TILE_GRASS:
 			continue
-		if site_rng.randf() < 0.78:
+		if site_rng.randf() < 0.80:
 			_set_tile(tile, Defs.TILE_TREE)
 			tree_deposits[_tile_key(tile)] = 18
-	var shoulder := center + Vector2i(
-		roundi(-open_dir.y * 9.0 + open_dir.x * 2.0),
-		roundi(open_dir.x * 9.0 + open_dir.y * 2.0)
-	)
+	var shoulder := center + Vector2i(roundi(stone_dir.x * 9.0), roundi(stone_dir.y * 9.0))
 	for i in 8:
 		var tile := shoulder + Vector2i(site_rng.randi_range(-2, 2), site_rng.randi_range(-2, 2))
 		if not is_inside_map(tile) or _in_founding_clearing(tile):
@@ -3599,69 +3644,120 @@ func founding_hall_center() -> Vector2:
 func _init_founding_site() -> void:
 	var site_rng := RandomNumberGenerator.new()
 	site_rng.seed = rng_seed * 31 + 11
-	var open_dir := Vector2(site_rng.randf_range(-0.15, 0.85), site_rng.randf_range(0.45, 1.0)).normalized()
 	var crater_dir := crater_direction_from(town_hall_position)
 	var away := -crater_dir
 	if away.length_squared() < 0.01:
 		away = Vector2(0.2, 1.0)
-	open_dir = (open_dir * 0.45 + away * 0.55 + Vector2(0.0, 0.35)).normalized()
+	var open_dir := (away * 0.70 + Vector2(site_rng.randf_range(-0.55, 0.55), site_rng.randf_range(-0.35, 0.35))).normalized()
+	var water_kind := posmod(rng_seed * 19, 3)
+	var water_type := "river" if water_kind == 0 else ("lake" if water_kind == 1 else "pond")
+	var forest_heading := site_rng.randf() * TAU
+	var forest_dir := Vector2(sin(forest_heading), cos(forest_heading))
+	if forest_dir.dot(crater_dir) > 0.28:
+		forest_dir = Vector2(-forest_dir.y, forest_dir.x)
+	if forest_dir.dot(open_dir) > 0.35:
+		forest_dir = -forest_dir
+	if forest_dir.length_squared() < 0.01:
+		forest_dir = Vector2(-open_dir.y, open_dir.x)
+	var stone_sign := 1.0 if site_rng.randf() < 0.5 else -1.0
+	var stone_dir := Vector2(-forest_dir.y, forest_dir.x) * stone_sign
+	var coast_sign := 1.0 if site_rng.randf() < 0.5 else -1.0
+	var coast_dir := Vector2(-open_dir.y, open_dir.x) * coast_sign
 	founding_site = {
-		"rx": site_rng.randf_range(7.4, 9.4),
-		"ry": site_rng.randf_range(6.6, 8.6),
+		"rx": site_rng.randf_range(7.2, 8.6),
+		"ry": site_rng.randf_range(6.4, 7.8),
 		"angle": site_rng.randf_range(-0.55, 0.55),
 		"open_dir": open_dir,
 		"creek_tiles": [],
 		"bridge_tiles": [],
 		"food_tiles": [],
 		"road_tiles": [],
-		"creek_side": -1,
+		"creek_side": -1 if coast_sign < 0.0 else 1,
 		"crater_dir": crater_dir,
 		"wyrd_tiles": [],
+		"water_type": water_type,
+		"forest_dir": forest_dir,
+		"stone_dir": stone_dir,
+		"coast_dir": coast_dir,
+		"ridge_side": site_rng.randi_range(-1, 1),
+		"orbit_deg": founding_orbit_degrees_from(town_hall_position),
 	}
 
 
 func _choose_founding_hall_tile() -> Vector2i:
-	# Always found on the flat crater floor, south of the Shard so the
-	# impact scar sits on the opening horizon.
+	# Full 360° orbit. Score terrain in a cone around the seeded heading
+	# so seeds cover every sector without ignoring slope or the pit.
 	var site_rng := RandomNumberGenerator.new()
 	site_rng.seed = rng_seed * 17 + 3
+	var heading := _founding_orbit_heading()
+	var dist_lo := CRATER_RADIUS * FOUNDING_CRATER_DIST_MIN
+	var dist_hi := CRATER_RADIUS * FOUNDING_CRATER_DIST_MAX
 	var fallback := Vector2i(
-		clampi(shard_position.x - 8, 4, map_size.x - 10),
-		clampi(shard_position.y + 14, 8, map_size.y - 8)
+		clampi(shard_position.x + roundi(sin(heading) * dist_lo), 4, map_size.x - 10),
+		clampi(shard_position.y + roundi(cos(heading) * dist_lo), 4, map_size.y - 10)
 	)
 	var best := fallback
 	var best_score := -9999.0
-	for i in 28:
-		var angle := site_rng.randf_range(-0.85, 0.85)
-		var dist := site_rng.randf_range(CRATER_CORE_RADIUS + 5.0, CRATER_RADIUS - 4.0)
+	for i in 40:
+		var spread := 0.42 if i < 28 else 0.95
+		var angle := heading + site_rng.randf_range(-spread, spread)
+		var dist := site_rng.randf_range(dist_lo, dist_hi)
+		if i >= 36:
+			dist = site_rng.randf_range(CRATER_RADIUS * FOUNDING_CRATER_DIST_FLOOR, dist_hi)
 		var cand := Vector2i(
 			clampi(shard_position.x + roundi(sin(angle) * dist), 4, map_size.x - 10),
-			clampi(shard_position.y + roundi(cos(angle) * dist), 8, map_size.y - 8)
+			clampi(shard_position.y + roundi(cos(angle) * dist), 4, map_size.y - 10)
 		)
-		var crater_d := _tile_distance(cand, shard_position)
-		if crater_d < CRATER_CORE_RADIUS + 4.0 or crater_d > CRATER_RADIUS - 2.0:
+		if not _founding_footprint_stable(cand):
+			continue
+		var crater_d := _tile_distance(_founding_footprint_center(cand), shard_position)
+		if crater_d < CRATER_RADIUS * FOUNDING_CRATER_DIST_FLOOR or crater_d > CRATER_RADIUS * FOUNDING_CRATER_DIST_MAX:
 			continue
 		var slope := _founding_slope_at(cand)
 		if slope > FOUNDING_MAX_SLOPE:
 			continue
-		var score := 6.0 - slope * 2.4
-		score += clampf(1.0 - absf(crater_d - 16.0) / 6.0, 0.0, 1.0) * 2.2
-		if cand.y > shard_position.y:
-			score += 1.4
-		if cand.x > 6 and cand.y < map_size.y - 8:
-			score += 0.3
-		score += float(28 - i) * 0.01
+		var score := 7.0 - slope * 2.6
+		score += clampf(1.0 - absf(crater_d - (dist_lo + dist_hi) * 0.5) / (dist_hi - dist_lo), 0.0, 1.0) * 2.4
+		if crater_d >= dist_lo:
+			score += 0.8
+		score += float(40 - i) * 0.01
 		if score > best_score:
 			best_score = score
 			best = cand
+	if best_score < -100.0 or not _founding_footprint_stable(best):
+		for dist_try in [dist_lo, (dist_lo + dist_hi) * 0.5, dist_hi, CRATER_RADIUS * FOUNDING_CRATER_DIST_FLOOR]:
+			var cand := Vector2i(
+				clampi(shard_position.x + roundi(sin(heading) * dist_try), 4, map_size.x - 10),
+				clampi(shard_position.y + roundi(cos(heading) * dist_try), 4, map_size.y - 10)
+			)
+			if _founding_footprint_stable(cand):
+				return cand
 	return best
+
+
+func _founding_footprint_center(anchor: Vector2i) -> Vector2i:
+	var footprint := Defs.building_footprint(Defs.BUILDING_TOWN_HALL)
+	return anchor + Vector2i(int((footprint.x - 1) / 2), int((footprint.y - 1) / 2))
+
+
+func _founding_footprint_stable(anchor: Vector2i) -> bool:
+	var footprint := Defs.building_footprint(Defs.BUILDING_TOWN_HALL)
+	for oy in footprint.y:
+		for ox in footprint.x:
+			var tile := anchor + Vector2i(ox, oy)
+			if not is_inside_map(tile):
+				return false
+			if _tile_distance(tile, shard_position) < crater_pit_radius + 1.6:
+				return false
+	return _founding_slope_at(anchor) <= FOUNDING_MAX_SLOPE
 
 
 func _founding_slope_at(anchor: Vector2i) -> float:
 	var lo := 99
 	var hi := -99
-	for oy in range(-3, 7):
-		for ox in range(-1, 6):
+	var footprint := Defs.building_footprint(Defs.BUILDING_TOWN_HALL)
+	for oy in range(-1, footprint.y + 1):
+		for ox in range(-1, footprint.x + 1):
 			var tile := anchor + Vector2i(ox, oy)
 			if not is_inside_map(tile):
 				continue
@@ -3699,32 +3795,68 @@ func is_founding_creek_tile(tile: Vector2i) -> bool:
 func _generate_founding_creek(center: Vector2i) -> void:
 	var site_rng := RandomNumberGenerator.new()
 	site_rng.seed = rng_seed * 53 + 7
-	var side := -1 if site_rng.randf() < 0.62 else 1
-	founding_site["creek_side"] = side
-	var start := center + Vector2i(side * site_rng.randi_range(6, 8), site_rng.randi_range(-3, 1))
+	var water_type := String(founding_site.get("water_type", "river"))
+	var coast_dir: Vector2 = founding_site.get("coast_dir", Vector2(-1.0, 0.2))
+	if coast_dir.length_squared() < 0.01:
+		coast_dir = Vector2(-1.0, 0.2)
+	coast_dir = coast_dir.normalized()
+	founding_site["creek_side"] = -1 if coast_dir.x < 0.0 else 1
 	var tiles: Array[Vector2i] = []
-	var p := start
-	var dir := Vector2(float(side) * 0.12, 1.0)
-	var guard := 0
-	while tiles.size() < 11 and guard < 22:
-		guard += 1
-		if is_inside_map(p) and not _in_founding_clearing(p):
-			if tiles.is_empty() or tiles[tiles.size() - 1] != p:
-				if not tiles.is_empty():
-					_append_creek_gap(tiles, tiles[tiles.size() - 1], p)
-				tiles.append(p)
-		dir = (dir + Vector2(site_rng.randf_range(-0.38, 0.38), 0.88)).normalized()
-		p = p + Vector2i(clampi(roundi(dir.x), -1, 1), 1)
-	if tiles.size() < 8:
-		tiles.clear()
-		for i in 11:
-			var fallback := center + Vector2i(side * 7, -3 + i)
-			if is_inside_map(fallback) and not _in_founding_clearing(fallback):
-				tiles.append(fallback)
-			elif is_inside_map(fallback):
-				tiles.append(fallback + Vector2i(side * 2, 0))
+	if water_type == "lake":
+		tiles = _founding_water_blob(center + Vector2i(roundi(coast_dir.x * 8.0), roundi(coast_dir.y * 7.0)), 3, site_rng)
+	elif water_type == "pond":
+		tiles = _founding_water_blob(center + Vector2i(roundi(coast_dir.x * 7.0), roundi(coast_dir.y * 6.0)), 2, site_rng)
+	else:
+		var flow := (coast_dir * 0.35 + Vector2(-coast_dir.y, coast_dir.x) * 0.85).normalized()
+		var p := center + Vector2i(roundi(coast_dir.x * float(site_rng.randi_range(6, 8))), roundi(coast_dir.y * float(site_rng.randi_range(4, 7))))
+		var guard := 0
+		while tiles.size() < 11 and guard < 22:
+			guard += 1
+			if is_inside_map(p) and not _in_founding_clearing(p):
+				if tiles.is_empty() or tiles[tiles.size() - 1] != p:
+					if not tiles.is_empty():
+						_append_creek_gap(tiles, tiles[tiles.size() - 1], p)
+					tiles.append(p)
+			flow = (flow + Vector2(site_rng.randf_range(-0.42, 0.42), site_rng.randf_range(-0.28, 0.28))).normalized()
+			p = p + Vector2i(clampi(roundi(flow.x), -1, 1), clampi(roundi(flow.y), -1, 1))
+	if tiles.size() < 5:
+		tiles = _founding_water_blob(center + Vector2i(roundi(coast_dir.x * 7.0), roundi(coast_dir.y * 6.0)), 2, site_rng)
 	founding_site["creek_tiles"] = tiles
 	_choose_founding_bridge(center, tiles)
+
+
+func _founding_water_blob(origin: Vector2i, radius: int, site_rng: RandomNumberGenerator) -> Array[Vector2i]:
+	var blob: Array[Vector2i] = []
+	for offset in _radius_offsets(radius + 1):
+		var tile: Vector2i = origin + offset
+		if not is_inside_map(tile) or _in_founding_clearing(tile):
+			continue
+		if _tile_distance(tile, origin) > float(radius) + site_rng.randf_range(-0.4, 0.5):
+			continue
+		if _tile_distance(tile, shard_position) < crater_pit_radius + 1.0:
+			continue
+		blob.append(tile)
+	return _order_connected_tiles(blob)
+
+
+func _order_connected_tiles(tiles: Array[Vector2i]) -> Array[Vector2i]:
+	if tiles.is_empty():
+		return tiles
+	var left: Array[Vector2i] = tiles.duplicate()
+	var ordered: Array[Vector2i] = [left[0]]
+	left.remove_at(0)
+	while not left.is_empty():
+		var last: Vector2i = ordered[ordered.size() - 1]
+		var best_i := 0
+		var best_d := 999.0
+		for i in left.size():
+			var d := _tile_distance(last, left[i])
+			if d < best_d:
+				best_d = d
+				best_i = i
+		ordered.append(left[best_i])
+		left.remove_at(best_i)
+	return ordered
 
 
 func _strip_founding_isolates(center: Vector2i) -> void:
@@ -3794,10 +3926,11 @@ func _place_founding_nearby_resources(center: Vector2i) -> void:
 	var site_rng := RandomNumberGenerator.new()
 	site_rng.seed = rng_seed * 73 + 13
 	var open_dir: Vector2 = founding_site.get("open_dir", Vector2(0.2, 1.0))
-	var left := Vector2(-open_dir.y, open_dir.x)
-	var tree_c := center + Vector2i(roundi(-open_dir.x * 9.0 + left.x * 3.0), roundi(-open_dir.y * 9.0 + left.y * 3.0))
-	var rock_c := center + Vector2i(roundi(left.x * 8.0 + open_dir.x * 2.0), roundi(left.y * 8.0 + open_dir.y * 2.0))
-	var food_c := center + Vector2i(roundi(open_dir.x * 7.0 - left.x * 3.0), roundi(open_dir.y * 7.0 - left.y * 3.0))
+	var forest_dir: Vector2 = founding_site.get("forest_dir", Vector2(-0.8, -0.4))
+	var stone_dir: Vector2 = founding_site.get("stone_dir", Vector2(0.9, 0.1))
+	var tree_c := center + Vector2i(roundi(forest_dir.x * 9.0), roundi(forest_dir.y * 9.0))
+	var rock_c := center + Vector2i(roundi(stone_dir.x * 8.0), roundi(stone_dir.y * 8.0))
+	var food_c := center + Vector2i(roundi(open_dir.x * 7.0 - stone_dir.x * 2.0), roundi(open_dir.y * 7.0 - stone_dir.y * 2.0))
 	_place_resource_cluster(tree_c, Defs.TILE_TREE, 10, 18)
 	_place_resource_cluster(rock_c, Defs.TILE_ROCK, 6, 22)
 	var food_tiles: Array[Vector2i] = []
@@ -3966,18 +4099,31 @@ func _is_founding_bridge_tile(tile: Vector2i) -> bool:
 
 func _lay_founding_roads() -> void:
 	var entrance := _town_hall_entrance_tile()
-	var open_dir: Vector2 = founding_site.get("open_dir", Vector2(0.0, 1.0))
-	var dir := Vector2i(roundi(open_dir.x), roundi(open_dir.y))
-	if dir == Vector2i.ZERO:
-		dir = Vector2i(0, 1)
+	var hall := founding_hall_center()
+	var out := Vector2(entrance) - hall
+	if out.length_squared() < 0.01:
+		out = Vector2(0.0, 1.0)
+	out = out.normalized()
+	var water_aim := Vector2(founding_site.get("coast_dir", Vector2(-1.0, 0.2)))
+	var bend := (out * 0.55 + water_aim * 0.45).normalized()
 	var roads: Array[Vector2i] = []
-	for i in 4:
-		var tile: Vector2i = entrance + dir * i
-		if not is_inside_map(tile):
+	var cursor := entrance
+	for i in 5:
+		var step := out if i < 2 else bend
+		var nxt := cursor + Vector2i(clampi(roundi(step.x), -1, 1), clampi(roundi(step.y), -1, 1))
+		if nxt == cursor:
+			nxt = cursor + Vector2i(clampi(roundi(out.x), -1, 1), clampi(roundi(out.y), -1, 1))
+		if nxt == cursor:
+			nxt = cursor + Vector2i(0, 1)
+		cursor = nxt
+		if not is_inside_map(cursor) or _in_founding_hall_footprint(cursor):
 			continue
-		if get_building_at_tile(tile).is_empty():
-			_add_completed_building(Defs.BUILDING_ROAD, tile)
-		roads.append(tile)
+		if is_founding_creek_tile(cursor) and not _is_founding_bridge_tile(cursor):
+			break
+		if get_building_at_tile(cursor).is_empty():
+			_add_completed_building(Defs.BUILDING_ROAD, cursor)
+		if not roads.has(cursor):
+			roads.append(cursor)
 	for tile in founding_site.get("bridge_tiles", []):
 		var bridge := Vector2i(tile)
 		if not is_inside_map(bridge):
@@ -4107,7 +4253,7 @@ func founding_audit() -> Dictionary:
 		"quest_target": quest_label == "Build a Lumber Camp" and lumber_objective,
 		"hall": town_hall_position,
 		"shard": shard_position,
-		"inside_crater": crater_d <= CRATER_RADIUS and crater_d >= CRATER_CORE_RADIUS,
+		"inside_crater": crater_d <= CRATER_RADIUS and crater_d >= crater_pit_radius + 1.5,
 		"crater_dist": crater_d,
 		"crater_dir": crater_dir,
 		"crater_compass": crater_compass_from(center),
@@ -4119,7 +4265,29 @@ func founding_audit() -> Dictionary:
 		"food_near": food_d <= float(FOUNDING_RESOURCE_NEAR),
 		"wyrd_marker": wyrd_ok,
 		"wyrd_traces": founding_site.get("wyrd_tiles", []).size(),
+		"orbit_deg": founding_orbit_degrees_from(center),
+		"orbit_compass": compass_from_dir(Vector2(center - shard_position)),
+		"orbit_sector": founding_orbit_sector_from(center),
+		"water_type": String(founding_site.get("water_type", "river")),
+		"forest_compass": compass_from_dir(Vector2(founding_site.get("forest_dir", Vector2(-1, 0)))),
+		"stone_compass": compass_from_dir(Vector2(founding_site.get("stone_dir", Vector2(1, 0)))),
+		"coast_compass": compass_from_dir(Vector2(founding_site.get("coast_dir", Vector2(-1, 0)))),
+		"ridge_side": int(founding_site.get("ridge_side", 0)),
+		"pit_radius": crater_pit_radius,
+		"distance_band": crater_d >= CRATER_RADIUS * FOUNDING_CRATER_DIST_FLOOR and crater_d <= CRATER_RADIUS * FOUNDING_CRATER_DIST_MAX,
+		"footprint_stable": _founding_footprint_stable(town_hall_position),
+		"layout_signature": founding_layout_signature(),
 	}
+
+
+func founding_layout_signature() -> String:
+	return "%s_%s_%s_%s_%s" % [
+		String(founding_site.get("water_type", "river")),
+		compass_from_dir(Vector2(founding_site.get("forest_dir", Vector2(-1, 0)))),
+		compass_from_dir(Vector2(founding_site.get("stone_dir", Vector2(1, 0)))),
+		compass_from_dir(Vector2(founding_site.get("coast_dir", Vector2(-1, 0)))),
+		str(int(founding_site.get("ridge_side", 0))),
+	]
 
 
 func _clear_corridor(start: Vector2i, finish: Vector2i, half_width: int) -> void:

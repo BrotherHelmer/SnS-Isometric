@@ -726,6 +726,7 @@ func _initialize_presentation() -> void:
 	world_view.setup(simulation_host.simulation, world_snapshot, quality_profile)
 	world_view.bind_fog_overlay(camera_rig.camera)
 	camera_rig.configure_for_map(simulation_host.simulation.map_size)
+	camera_rig.rotation.y = ProductionIsometricCameraRig3D.PREFERRED_YAW + world_view.opening_camera_yaw()
 	camera_rig.compose_view(world_view.opening_camera_focus(), ProductionIsometricCameraRig3D.OPENING_ZOOM)
 	play_camera_zoom = ProductionIsometricCameraRig3D.OPENING_ZOOM
 	play_camera_focus = camera_rig.target_position

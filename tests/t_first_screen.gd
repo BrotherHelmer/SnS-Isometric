@@ -77,10 +77,15 @@ func _run() -> void:
 	_check(bool(audit.get("water_near", false)) and bool(audit.get("tree_near", false)), "water and wood are close")
 	_check(bool(audit.get("rock_near", false)) and bool(audit.get("food_near", false)), "stone and food are close")
 	_check(bool(audit.get("wyrd_marker", false)), "a wyrd or crater marker points from the start")
-	print("T_FIRST_SCREEN crater_compass=%s dist=%.1f hall=%s shard=%s dir=%s" % [
+	_check(bool(audit.get("distance_band", false)), "Town Hall sits in the 0.65–0.85 R harvest band")
+	_check(bool(audit.get("footprint_stable", false)), "Town Hall footprint is on stable ground outside the pit")
+	print("T_FIRST_SCREEN crater_compass=%s dist=%.1f hall=%s shard=%s dir=%s orbit=%.1f sector=%d water=%s layout=%s pit=%.1f" % [
 		String(audit.get("crater_compass", "")), float(audit.get("crater_dist", -1.0)),
 		str(audit.get("hall", Vector2i.ZERO)), str(audit.get("shard", Vector2i.ZERO)),
-		str(audit.get("crater_dir", Vector2.ZERO))
+		str(audit.get("crater_dir", Vector2.ZERO)),
+		float(audit.get("orbit_deg", -1.0)), int(audit.get("orbit_sector", -1)),
+		String(audit.get("water_type", "")), String(audit.get("layout_signature", "")),
+		float(audit.get("pit_radius", -1.0))
 	])
 	var hall_view = null
 	for view in game.world_view.building_views.values():
@@ -96,6 +101,10 @@ func _run() -> void:
 	_check(dress != null and int(dress.get_meta("hamlet_cottages", 0)) == 0, "opening dress plants no cottages")
 	_check(dress != null and dress.find_child("DressWyrdTrace_0", true, false) != null, "opening shows a wyrd crystal toward the crater")
 	_check(dress != null and dress.find_child("DressWyrdTrail_0", true, false) != null, "opening shows scorched ground toward the crater")
+	_check(dress == null or dress.find_child("DressWyrdGlow", true, false) == null, "opening has no UI-clipping wyrd glow")
+	_check(dress == null or dress.find_child("DressWyrdHorizon", true, false) == null, "opening has no giant horizon glow")
+	var expected_yaw := CameraRig.PREFERRED_YAW + game.world_view.opening_camera_yaw()
+	_check(is_equal_approx(game.camera_rig.rotation.y, expected_yaw), "opening yaw frames the crater behind the hall")
 	var fake: Array[String] = game.world_view.non_inspectable_building_meshes(16.0)
 	var fake_map: Array[String] = game.world_view.non_inspectable_building_meshes(-1.0)
 	print("T_FIRST_SCREEN dress_buildings_start=%s map=%s" % [str(fake), str(fake_map)])

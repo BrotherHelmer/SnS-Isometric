@@ -14,7 +14,8 @@ Godot **ignores** `--user-data-dir`. Isolate `user://` with a temporary
 
 ## What it captures
 
-All frames are 1920×1080, seed `DEFAULT_SEED` (260821), sim paused:
+All frames are 1920×1080, seed `DEFAULT_SEED` (260821) unless
+`SNS_GFX_SEED` or `--gfx-seed` overrides it, sim paused:
 
 | file | framing |
 | --- | --- |
@@ -36,6 +37,14 @@ the engine creates the window off-screen; the autoload also parks it
 from `_init`. Optional `override.cfg` beside the exe (not in the `.pck`)
 can set borderless / no_focus / initial position if you want the same
 chrome before scripts run.
+
+Optional seed override for exported builds:
+
+```bat
+set SNS_GFX_SEED=260918
+```
+
+or `-- --gfx-seed=260918` after the engine args.
 
 ```bat
 set SNS_GFX_SHOTS=D:\shots\gfx-e

@@ -1021,9 +1021,8 @@ func _add_terrain_cell(surface: SurfaceTool, tile: Vector2i) -> void:
 
 
 func _visual_relief_y(xz: Vector2) -> float:
-	# Presentation only. Simulation height is unchanged. Village stays
-	# nearly flat; the back ridge grows 0.08–0.18B; creek sits in a
-	# shallow cut; worn paths dip 3–6 cm. No camera-side cliff.
+	# Presentation only. Village stays flat. The pit sinks around the
+	# Shard; displaced earth rises at the excavation rim.
 	if simulation == null or map_size == Vector2i.ZERO:
 		return 0.0
 	var b := ScaleProfile.TOWN_HALL_WIDTH_METRES
@@ -1034,17 +1033,28 @@ func _visual_relief_y(xz: Vector2) -> float:
 	var dx := xz.x - hall_world.x
 	var dz := xz.y - hall_world.z
 	var dist := Vector2(dx, dz).length()
-	var village := 1.0 - smoothstep(7.0, 14.0, dist)
-	var back := smoothstep(-2.0, -14.0, dz)
-	var ridge_h := lerpf(0.08 * b, 0.18 * b, clampf((-dz - 4.0) / 18.0, 0.0, 1.0))
+	var village := 1.0 - smoothstep(6.5, 12.0, dist)
+	var shard_world := ScaleProfile.tile_to_flat_world(Vector2(simulation.shard_position), map_size)
+	var from_shard := Vector2(xz.x - shard_world.x, xz.y - shard_world.z).length()
+	var pit_m := maxf(float(simulation.crater_pit_radius) * ScaleProfile.LOGICAL_CELL_METRES, 14.0)
+	var pit := 0.0
+	if from_shard < pit_m:
+		pit = -0.42 * (1.0 - from_shard / pit_m)
+	elif from_shard < pit_m + 7.0:
+		var rim_t := 1.0 - absf(from_shard - pit_m) / 7.0
+		pit = 0.16 * b * rim_t * (0.85 + 0.15 * sin(xz.x * 0.21 + xz.y * 0.17))
+	var crater_dir := Vector2(0.0, -1.0)
+	if simulation.founding_site is Dictionary:
+		crater_dir = Vector2(simulation.founding_site.get("crater_dir", crater_dir))
+	if crater_dir.length_squared() < 0.01:
+		crater_dir = Vector2(0.0, -1.0)
+	var toward := Vector2(dx, dz).dot(crater_dir.normalized())
+	var back := smoothstep(2.0, 16.0, toward)
+	var ridge_h := lerpf(0.08 * b, 0.18 * b, clampf((toward - 4.0) / 18.0, 0.0, 1.0))
 	var noise := 0.82 + 0.18 * sin(xz.x * 0.11 + xz.y * 0.07)
 	var ridge := back * ridge_h * noise * (1.0 - village)
-	var peri := smoothstep(22.0, 48.0, dist) * 0.07 * b
-	if dz > 3.0:
-		peri *= 0.15
-		ridge = 0.0
-	peri *= (1.0 - village)
-	return ridge + peri + _creek_cut_at(xz) + _road_dip_at(xz)
+	var peri := smoothstep(22.0, 48.0, dist) * 0.07 * b * (1.0 - village)
+	return ridge + peri + pit * (1.0 - village) + _creek_cut_at(xz) + _road_dip_at(xz)
 
 
 func _creek_cut_at(xz: Vector2) -> float:
@@ -2007,34 +2017,61 @@ func _create_shard_marker() -> void:
 	var origin := tile_to_world(Vector2(simulation.shard_position))
 	shard_beacon.position = Vector3(origin.x, 0.0, origin.z)
 	environment_root.add_child(shard_beacon)
+	var pit_r := 7.4
+	if simulation.get("crater_pit_radius") != null:
+		pit_r = maxf(float(simulation.crater_pit_radius) * ScaleProfile.LOGICAL_CELL_METRES * 0.42, 6.2)
 
-	var scar := MeshInstance3D.new()
-	scar.name = "ImpactScar"
-	var scar_mesh := CylinderMesh.new()
-	scar_mesh.top_radius = 6.4
-	scar_mesh.bottom_radius = 7.2
-	scar_mesh.height = 0.16
-	scar.mesh = scar_mesh
-	scar.position = Vector3(0.35, 0.04, -0.55)
-	var scar_material := StandardMaterial3D.new()
-	scar_material.albedo_color = Color("#2a3644")
-	scar_material.roughness = 0.92
-	scar.material_override = scar_material
-	shard_beacon.add_child(scar)
+	var pit := MeshInstance3D.new()
+	pit.name = "ImpactPit"
+	var pit_mesh := SphereMesh.new()
+	pit_mesh.radius = pit_r * 0.72
+	pit_mesh.height = 1.35
+	pit.mesh = pit_mesh
+	pit.position = Vector3(0.15, -0.55, -0.20)
+	pit.scale = Vector3(1.15, 0.42, 0.88)
+	var pit_mat := StandardMaterial3D.new()
+	pit_mat.albedo_color = Color("#2C2A26")
+	pit_mat.roughness = 0.96
+	pit.material_override = pit_mat
+	pit.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	shard_beacon.add_child(pit)
+
+	var earth := StandardMaterial3D.new()
+	earth.albedo_color = Color("#4A4338")
+	earth.roughness = 0.94
+	var cracked := StandardMaterial3D.new()
+	cracked.albedo_color = Color("#3A3834")
+	cracked.roughness = 0.90
+	var spoil := [
+		{"pos": Vector3(3.8, 0.18, 1.6), "size": Vector3(3.4, 0.85, 2.2), "rot": 0.4},
+		{"pos": Vector3(-4.2, 0.14, -1.1), "size": Vector3(2.8, 0.72, 3.1), "rot": -0.7},
+		{"pos": Vector3(1.6, 0.22, -3.8), "size": Vector3(3.1, 0.64, 2.4), "rot": 1.1},
+		{"pos": Vector3(-2.4, 0.16, 3.4), "size": Vector3(2.6, 0.58, 2.0), "rot": 2.2},
+		{"pos": Vector3(4.6, 0.12, -2.8), "size": Vector3(2.2, 0.50, 1.8), "rot": -1.4}
+	]
+	for i in spoil.size():
+		var mound := MeshInstance3D.new()
+		mound.name = "ImpactSpoil_%d" % i
+		var box := BoxMesh.new()
+		box.size = spoil[i]["size"]
+		mound.mesh = box
+		mound.position = spoil[i]["pos"]
+		mound.rotation = Vector3(0.12, float(spoil[i]["rot"]), 0.08)
+		mound.material_override = earth if i % 2 == 0 else cracked
+		mound.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		shard_beacon.add_child(mound)
 
 	shard_crystal_material = StandardMaterial3D.new()
-	shard_crystal_material.albedo_color = Color(0.38, 0.78, 0.88, 0.88)
+	shard_crystal_material.albedo_color = Color(0.42, 0.58, 0.64, 0.92)
 	shard_crystal_material.emission_enabled = true
-	shard_crystal_material.emission = Color("#3b8fbd")
-	shard_crystal_material.emission_energy_multiplier = 2.8
-	shard_crystal_material.roughness = 0.18
-	shard_crystal_material.metallic = 0.12
-	shard_crystal_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	shard_crystal_material.emission = Color("#2a5a68")
+	shard_crystal_material.emission_energy_multiplier = 0.55
+	shard_crystal_material.roughness = 0.42
+	shard_crystal_material.metallic = 0.18
 	var crystal_specs := [
-		{"size": Vector3(1.55, 6.4, 1.22), "pos": Vector3(0.0, 3.2, 0.0), "rot": Vector3(8.0, 18.0, 184.0)},
-		{"size": Vector3(0.85, 3.6, 0.72), "pos": Vector3(0.95, 2.1, 0.55), "rot": Vector3(16.0, 48.0, 162.0)},
-		{"size": Vector3(0.62, 2.4, 0.55), "pos": Vector3(-0.82, 1.55, -0.70), "rot": Vector3(-12.0, -32.0, 198.0)},
-		{"size": Vector3(0.38, 1.45, 0.32), "pos": Vector3(0.35, 1.05, 1.25), "rot": Vector3(28.0, 80.0, 140.0)}
+		{"size": Vector3(1.35, 2.15, 0.95), "pos": Vector3(0.35, 0.55, 0.20), "rot": Vector3(18.0, 22.0, 108.0)},
+		{"size": Vector3(0.85, 1.35, 0.62), "pos": Vector3(-0.95, 0.28, 0.85), "rot": Vector3(-22.0, 54.0, 96.0)},
+		{"size": Vector3(0.72, 1.05, 0.48), "pos": Vector3(1.15, 0.22, -0.70), "rot": Vector3(28.0, -40.0, 118.0)}
 	]
 	for index in crystal_specs.size():
 		var spec: Dictionary = crystal_specs[index]
@@ -2050,122 +2087,65 @@ func _create_shard_marker() -> void:
 
 	shard_beacon_column = MeshInstance3D.new()
 	shard_beacon_column.name = "ShardColumn"
-	var column := CylinderMesh.new()
-	column.top_radius = 0.12
-	column.bottom_radius = 0.72
-	column.height = 32.0
-	shard_beacon_column.mesh = column
-	shard_beacon_column.position = Vector3(0.0, 18.0, 0.0)
-	var column_material := StandardMaterial3D.new()
-	column_material.albedo_color = Color(0.35, 0.78, 0.92, 0.16)
-	column_material.emission_enabled = true
-	column_material.emission = Color("#5ec8e0")
-	column_material.emission_energy_multiplier = 1.8
-	column_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	column_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	shard_beacon_column.material_override = column_material
+	var vein := BoxMesh.new()
+	vein.size = Vector3(0.18, 0.08, 2.4)
+	shard_beacon_column.mesh = vein
+	shard_beacon_column.position = Vector3(0.4, 0.06, -0.2)
+	shard_beacon_column.rotation_degrees = Vector3(0.0, 28.0, 0.0)
+	var vein_mat := StandardMaterial3D.new()
+	vein_mat.albedo_color = Color(0.32, 0.52, 0.58, 0.70)
+	vein_mat.emission_enabled = true
+	vein_mat.emission = Color("#2f6a74")
+	vein_mat.emission_energy_multiplier = 0.40
+	vein_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	shard_beacon_column.material_override = vein_mat
+	shard_beacon_column.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	shard_beacon.add_child(shard_beacon_column)
 
 	shard_beacon_light = OmniLight3D.new()
 	shard_beacon_light.name = "ShardLight"
-	shard_beacon_light.light_color = Color("#7ad7ea")
-	shard_beacon_light.light_energy = 2.8
-	shard_beacon_light.omni_range = 20.0
+	shard_beacon_light.light_color = Color("#6a9aa4")
+	shard_beacon_light.light_energy = 0.55
+	shard_beacon_light.omni_range = 8.0
 	shard_beacon_light.shadow_enabled = false
-	shard_beacon_light.position = Vector3(0.0, 5.4, 0.0)
+	shard_beacon_light.position = Vector3(0.0, 1.1, 0.0)
 	shard_beacon.add_child(shard_beacon_light)
 
-	var mist := CPUParticles3D.new()
-	mist.name = "ShardMist"
-	mist.emitting = true
-	mist.amount = 36
-	mist.lifetime = 5.2
-	mist.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
-	mist.emission_sphere_radius = 3.2
-	mist.direction = Vector3.UP
-	mist.spread = 24.0
-	mist.gravity = Vector3(0.0, 0.22, 0.0)
-	mist.initial_velocity_min = 0.25
-	mist.initial_velocity_max = 1.05
-	mist.scale_amount_min = 0.22
-	mist.scale_amount_max = 0.58
-	var mist_material := StandardMaterial3D.new()
-	mist_material.albedo_color = Color(0.55, 0.82, 0.95, 0.18)
-	mist_material.emission_enabled = true
-	mist_material.emission = Color("#6bcfe0")
-	mist_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mist_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mist.mesh = SphereMesh.new()
-	(mist.mesh as SphereMesh).radius = 0.28
-	(mist.mesh as SphereMesh).height = 0.56
-	mist.material_override = mist_material
-	mist.position = Vector3(0.2, 1.1, -0.15)
-	shard_beacon.add_child(mist)
-
-	var motes := CPUParticles3D.new()
-	motes.name = "ShardMotes"
-	motes.emitting = true
-	motes.amount = 18
-	motes.lifetime = 2.8
-	motes.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
-	motes.emission_sphere_radius = 1.6
-	motes.direction = Vector3.UP
-	motes.gravity = Vector3(0.0, 0.55, 0.0)
-	motes.initial_velocity_min = 0.4
-	motes.initial_velocity_max = 1.6
-	motes.scale_amount_min = 0.06
-	motes.scale_amount_max = 0.14
-	var mote_material := StandardMaterial3D.new()
-	mote_material.albedo_color = Color(0.72, 0.88, 1.0, 0.55)
-	mote_material.emission_enabled = true
-	mote_material.emission = Color("#9ae8f2")
-	mote_material.emission_energy_multiplier = 2.2
-	mote_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	motes.mesh = SphereMesh.new()
-	(motes.mesh as SphereMesh).radius = 0.08
-	(motes.mesh as SphereMesh).height = 0.16
-	motes.material_override = mote_material
-	motes.position = Vector3(0.0, 2.8, 0.0)
-	shard_beacon.add_child(motes)
-
 	var debris_offsets := [
-		Vector3(2.8, 0.22, 1.1), Vector3(-2.1, 0.18, 2.4), Vector3(3.6, 0.28, -1.8),
-		Vector3(-3.4, 0.16, -0.9), Vector3(1.2, 0.32, -3.3), Vector3(-0.6, 0.42, 3.6),
-		Vector3(4.4, 0.2, 0.6), Vector3(-4.1, 0.24, 1.8), Vector3(2.2, 0.36, 3.1),
-		Vector3(-1.8, 0.14, -3.8), Vector3(5.1, 0.18, -2.4)
+		Vector3(2.4, 0.18, 1.0), Vector3(-1.8, 0.12, 2.1), Vector3(3.1, 0.20, -1.4),
+		Vector3(-2.8, 0.10, -0.8), Vector3(1.1, 0.22, -2.6), Vector3(-0.4, 0.28, 2.8),
+		Vector3(3.6, 0.14, 0.5), Vector3(-3.2, 0.16, 1.4), Vector3(1.8, 0.24, 2.4),
+		Vector3(-1.5, 0.10, -2.9)
 	]
 	for fragment_index in debris_offsets.size():
 		var fragment := MeshInstance3D.new()
 		fragment.name = "ImpactRock_%d" % fragment_index
 		var rock := PrismMesh.new()
-		rock.size = Vector3(0.42 + float(fragment_index % 4) * 0.22, 0.28 + float(fragment_index % 3) * 0.16, 0.34)
+		rock.size = Vector3(0.55 + float(fragment_index % 4) * 0.18, 0.32 + float(fragment_index % 3) * 0.14, 0.40)
 		fragment.mesh = rock
 		fragment.position = debris_offsets[fragment_index]
 		fragment.rotation = Vector3(0.31 * fragment_index, 0.7 * fragment_index, 0.22 * fragment_index)
 		var rock_material := StandardMaterial3D.new()
-		rock_material.albedo_color = Color("#3d4650").lerp(Color("#4a6270"), float(fragment_index % 3) / 3.0)
+		rock_material.albedo_color = Color("#3d4650").lerp(Color("#5a5348"), float(fragment_index % 3) / 3.0)
 		fragment.material_override = rock_material
+		fragment.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		shard_beacon.add_child(fragment)
 
 
 func _update_shard_beacon(wyrdfall: Dictionary) -> void:
-	if shard_beacon_light == null or shard_beacon_column == null:
+	if shard_beacon_light == null:
 		return
 	var binding := bool(wyrdfall.get("binding_active", false)) or bool(wyrdfall.get("reckoning", false))
 	var progress := clampf(float(wyrdfall.get("binding_percent", 0.0)) / 100.0, 0.0, 1.0)
-	var pulse := 1.0 + (0.18 + 0.28 * progress if binding else 0.05) * (0.5 + 0.5 * sin(float(Time.get_ticks_msec()) / 280.0))
-	shard_beacon_light.light_energy = (3.4 if binding else 2.8) * pulse
-	shard_beacon_light.light_color = Color("#7ad7ea").lerp(Color("#a48cff"), progress if binding else 0.0)
-	var material := shard_beacon_column.material_override as StandardMaterial3D
-	if material != null:
-		material.emission_energy_multiplier = (3.2 if binding else 1.8) * pulse
-		material.albedo_color.a = 0.32 if binding else 0.16
+	var pulse := 1.0 + (0.10 + 0.16 * progress if binding else 0.03) * (0.5 + 0.5 * sin(float(Time.get_ticks_msec()) / 280.0))
+	shard_beacon_light.light_energy = (1.15 if binding else 0.55) * pulse
+	shard_beacon_light.light_color = Color("#6a9aa4").lerp(Color("#8a7ab0"), progress if binding else 0.0)
+	if shard_beacon_column != null:
+		var material := shard_beacon_column.material_override as StandardMaterial3D
+		if material != null:
+			material.emission_energy_multiplier = (0.85 if binding else 0.40) * pulse
 	if shard_crystal_material != null:
-		shard_crystal_material.emission_energy_multiplier = (3.6 if binding else 2.8) * pulse
-	if shard_beacon != null:
-		var motes := shard_beacon.get_node_or_null("ShardMotes") as CPUParticles3D
-		if motes != null:
-			motes.speed_scale = 1.35 if binding else 1.0
+		shard_crystal_material.emission_energy_multiplier = (1.05 if binding else 0.55) * pulse
 
 
 func _sync_wyrd_springs(sites: Array) -> void:
@@ -3584,7 +3564,6 @@ func _hamlet_path_weight(tile: Vector2i) -> float:
 func _spawn_opening_hamlet(host: Node3D, hall: Vector2i, reserved: Dictionary) -> void:
 	# Terrain dressing only. Cottages, fences, stacks and carts used
 	# to read as a hamlet the player could not inspect or own.
-	_spawn_dress_pond(host, hall + Vector2i(-5, -3), Vector2(5.4, 3.6), "DressPond")
 	_spawn_dress_coast(host, hall)
 	_spawn_opening_ridge(host, hall)
 	host.set_meta("hamlet_cottages", 0)
@@ -3620,11 +3599,13 @@ func _opening_faces_crater(tile: Vector2i, hall: Vector2i) -> bool:
 
 
 func _opening_forest_score(tile: Vector2i, hall: Vector2i) -> float:
-	# Camera looks from +Y. Prefer the back (-Y) and west (-X) so the
-	# opening meadow stays readable and the forest frames 40–55%.
-	# Do not score the crater corridor: that arc has to stay open.
-	var d := tile - hall
-	var score := -float(d.y) * 1.35 - float(d.x) * 0.40 + float(_tile_hash(tile, 3) % 7) * 0.08
+	var forest_dir := Vector2(-0.8, -0.4)
+	if simulation != null and simulation.founding_site is Dictionary:
+		forest_dir = Vector2(simulation.founding_site.get("forest_dir", forest_dir))
+	if forest_dir.length_squared() < 0.01:
+		forest_dir = Vector2(-0.8, -0.4)
+	var d := Vector2(tile - hall)
+	var score := d.normalized().dot(forest_dir.normalized()) * 3.2 + float(_tile_hash(tile, 3) % 7) * 0.08
 	if _opening_faces_build_sector(tile, hall):
 		score -= 6.0
 	if _opening_faces_crater(tile, hall):
@@ -3640,7 +3621,12 @@ func _opening_ridge_tiles(hall: Vector2i) -> Array[Vector2i]:
 	if toward.length_squared() < 0.01:
 		toward = Vector2(0.0, -1.0)
 	toward = toward.normalized()
+	var ridge_side := 0.0
+	if simulation != null and simulation.founding_site is Dictionary:
+		ridge_side = float(simulation.founding_site.get("ridge_side", 0))
 	var side := Vector2(-toward.y, toward.x)
+	toward = (toward + side * ridge_side * 0.22).normalized()
+	side = Vector2(-toward.y, toward.x)
 	var tiles: Array[Vector2i] = []
 	for spec in [
 		{"along": 8.0, "side": 0.0}, {"along": 9.0, "side": 1.2}, {"along": 8.0, "side": -1.4},
@@ -3654,24 +3640,33 @@ func _opening_ridge_tiles(hall: Vector2i) -> Array[Vector2i]:
 	return tiles
 
 
+func opening_camera_yaw() -> float:
+	# Look along the crater so the pit sits behind / diagonally behind
+	# the hall regardless of orbit angle.
+	var crater_dir := Vector2(0.0, -1.0)
+	if simulation != null and simulation.founding_site is Dictionary:
+		crater_dir = Vector2(simulation.founding_site.get("crater_dir", crater_dir))
+	if crater_dir.length_squared() < 0.01:
+		crater_dir = Vector2(0.0, -1.0)
+	return atan2(crater_dir.x, -crater_dir.y)
+
+
 func opening_camera_focus() -> Vector3:
-	# Frame the hall door, the crater direction, and the short road.
+	# Hall in the lower-middle; crater rim in the upper third.
 	if simulation == null or not simulation.is_town_hall_founded():
 		return Vector3.ZERO
 	var hall: Vector2i = simulation.town_hall_position
 	var center := tile_to_world(Vector2(hall) + Vector2(1.5, 1.5))
 	var w := ScaleProfile.TOWN_HALL_WIDTH_METRES
 	var open_dir := Vector2(0.15, 1.0)
-	var creek_side := -1.0
 	var crater_dir := Vector2(0.0, -1.0)
 	if simulation.founding_site is Dictionary:
 		open_dir = Vector2(simulation.founding_site.get("open_dir", open_dir))
-		creek_side = float(simulation.founding_site.get("creek_side", -1))
 		crater_dir = Vector2(simulation.founding_site.get("crater_dir", crater_dir))
 	return center + Vector3(
-		creek_side * 0.10 * w + crater_dir.x * 0.62 * w + open_dir.x * 0.05 * w,
+		crater_dir.x * 0.38 * w + open_dir.x * 0.16 * w,
 		0.0,
-		0.28 * w + crater_dir.y * 0.48 * w
+		crater_dir.y * 0.38 * w + open_dir.y * 0.16 * w
 	)
 
 
@@ -3711,26 +3706,34 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 		if Catalog.ROCKS.size() > 1:
 			_spawn_kaykit_ridge_rock(ridge, tile, index, 0.55 + float(index % 4) * 0.10)
 		index += 1
+	var crater_dir := Vector2(0.0, -1.0)
+	if simulation != null and simulation.founding_site is Dictionary:
+		crater_dir = Vector2(simulation.founding_site.get("crater_dir", crater_dir))
+	if crater_dir.length_squared() < 0.01:
+		crater_dir = Vector2(0.0, -1.0)
+	crater_dir = crater_dir.normalized()
+	var crater_side := Vector2(-crater_dir.y, crater_dir.x)
+	var crater_yaw := atan2(crater_dir.x, -crater_dir.y)
 	var formation := MeshInstance3D.new()
 	formation.name = "RidgeFormation"
 	formation.mesh = _back_ridge_formation_mesh(b * 1.72, b * 0.52)
-	var anchor := tiles[2] if tiles.size() > 2 else hall + Vector2i(0, -7)
-	formation.position = tile_to_world(Vector2(anchor)) + Vector3(0.0, 0.0, -0.8)
-	formation.rotation.y = 0.18
+	var anchor := tiles[2] if tiles.size() > 2 else hall + Vector2i(roundi(crater_dir.x * 7.0), roundi(crater_dir.y * 7.0))
+	formation.position = tile_to_world(Vector2(anchor)) + Vector3(crater_dir.x * 0.8, 0.0, crater_dir.y * 0.8)
+	formation.rotation.y = crater_yaw + 0.18
 	formation.material_override = grass_b
 	ridge.add_child(formation)
 	var peak_a := MeshInstance3D.new()
 	peak_a.name = "RidgeFormationCap"
 	peak_a.mesh = _back_ridge_formation_mesh(b * 0.72, b * 0.46)
-	peak_a.position = formation.position + Vector3(-2.4, 0.0, -1.6)
-	peak_a.rotation.y = -0.38
+	peak_a.position = formation.position + Vector3(-crater_side.x * 2.4 - crater_dir.x * 1.6, 0.0, -crater_side.y * 2.4 - crater_dir.y * 1.6)
+	peak_a.rotation.y = crater_yaw - 0.38
 	peak_a.material_override = grass_c
 	ridge.add_child(peak_a)
 	var peak_b := MeshInstance3D.new()
 	peak_b.name = "RidgeFormationShade"
 	peak_b.mesh = _back_ridge_formation_mesh(b * 0.58, b * 0.28)
-	peak_b.position = formation.position + Vector3(2.8, 0.0, -0.9)
-	peak_b.rotation.y = 0.62
+	peak_b.position = formation.position + Vector3(crater_side.x * 2.8 - crater_dir.x * 0.9, 0.0, crater_side.y * 2.8 - crater_dir.y * 0.9)
+	peak_b.rotation.y = crater_yaw + 0.62
 	peak_b.material_override = grass_a
 	ridge.add_child(peak_b)
 	for ledge_i in 6:
@@ -3739,13 +3742,26 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 		var ledge_mesh := BoxMesh.new()
 		ledge_mesh.size = Vector3(1.55 + float(ledge_i) * 0.28, 0.34, 0.62)
 		ledge.mesh = ledge_mesh
-		ledge.position = formation.position + Vector3(-2.6 + float(ledge_i) * 1.05, 0.12 + float(ledge_i % 3) * 0.18, 0.85 - float(ledge_i) * 0.12)
-		ledge.rotation.y = 0.18 + float(ledge_i) * 0.22
+		var along := -2.6 + float(ledge_i) * 1.05
+		var out := 0.85 - float(ledge_i) * 0.12
+		ledge.position = formation.position + Vector3(crater_side.x * along + crater_dir.x * out, 0.12 + float(ledge_i % 3) * 0.18, crater_side.y * along + crater_dir.y * out)
+		ledge.rotation.y = crater_yaw + 0.18 + float(ledge_i) * 0.22
 		ledge.material_override = rock_lo if ledge_i % 2 == 0 else rock_hi
+		ledge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		ridge.add_child(ledge)
 	var trees: Dictionary = {}
+	var forest_dir := Vector2(-0.8, -0.4)
+	if simulation != null and simulation.founding_site is Dictionary:
+		forest_dir = Vector2(simulation.founding_site.get("forest_dir", forest_dir))
+	if forest_dir.length_squared() < 0.01:
+		forest_dir = Vector2(-0.8, -0.4)
+	forest_dir = forest_dir.normalized()
+	var forest_side := Vector2(-forest_dir.y, forest_dir.x)
 	for tree_i in 7:
-		var tree_tile: Vector2i = hall + Vector2i(2 + (tree_i % 4), -2 - int(tree_i / 3))
+		var tree_tile: Vector2i = hall + Vector2i(
+			roundi(forest_dir.x * (6.0 + float(tree_i % 3)) + forest_side.x * float(tree_i - 3) * 0.8),
+			roundi(forest_dir.y * (6.0 + float(tree_i % 3)) + forest_side.y * float(tree_i - 3) * 0.8)
+		)
 		if _in_founding_yard(tree_tile) or _opening_faces_crater(tree_tile, hall):
 			continue
 		if simulation.is_inside_map(tree_tile):
@@ -3780,98 +3796,47 @@ func _spawn_kaykit_ridge_rock(ridge: Node3D, tile: Vector2i, index: int, scale_m
 
 
 func _spawn_founding_crater_traces(ridge: Node3D, hall: Vector2i) -> void:
-	# The Director: reuse ShardBeacon glass so the opening camera can
-	# read the crater direction without leaving the founding meadow.
+	# Small embedded fragments and cracked earth toward the pit.
+	# No glowing columns and no oval pads — those read as VFX, not impact.
 	if simulation == null or not (simulation.founding_site is Dictionary):
 		return
 	var glass := StandardMaterial3D.new()
-	glass.albedo_color = Color(0.42, 0.82, 0.92, 0.92)
+	glass.albedo_color = Color(0.40, 0.54, 0.58, 0.88)
 	glass.emission_enabled = true
-	glass.emission = Color("#5ec8e0")
-	glass.emission_energy_multiplier = 3.4
-	glass.roughness = 0.14
+	glass.emission = Color("#2a5460")
+	glass.emission_energy_multiplier = 0.45
+	glass.roughness = 0.38
 	glass.metallic = 0.16
-	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	var scorched := _ridge_material(Color("#3A4038"), 0.96)
-	var tinted := _ridge_material(Color("#3A5A58"), 0.88)
+	var cracked := _ridge_material(Color("#3A3834"), 0.94)
 	var crater_dir := Vector2(simulation.founding_site.get("crater_dir", Vector2(0.0, -1.0)))
 	if crater_dir.length_squared() < 0.01:
 		crater_dir = Vector2(0.0, -1.0)
-	var hall_world := tile_to_world(Vector2(hall) + Vector2(1.5, 1.5))
-	var trail_yaw := atan2(crater_dir.x, crater_dir.y)
-	for step in 5:
-		var along := hall_world + Vector3(crater_dir.x * (6.0 + float(step) * 3.2), 0.0, crater_dir.y * (6.0 + float(step) * 3.2))
-		var wash := MeshInstance3D.new()
-		wash.name = "DressWyrdTrail_%d" % step
-		var wash_mesh := CylinderMesh.new()
-		wash_mesh.top_radius = 1.55 - float(step) * 0.08
-		wash_mesh.bottom_radius = 1.85 - float(step) * 0.08
-		wash_mesh.height = 0.07
-		wash.mesh = wash_mesh
-		wash.position = along + Vector3(0.0, 0.02, 0.0)
-		wash.scale = Vector3(1.55, 1.0, 0.62)
-		wash.rotation.y = trail_yaw + float(step) * 0.11
-		wash.material_override = tinted if step % 2 == 0 else scorched
-		wash.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		ridge.add_child(wash)
 	var index := 0
-	var last_origin := hall_world
 	for tile_value in simulation.founding_site.get("wyrd_tiles", []):
 		var tile := Vector2i(tile_value)
 		if not simulation.is_inside_map(tile):
 			continue
 		var origin := tile_to_world(Vector2(tile))
-		last_origin = origin
-		var stain := MeshInstance3D.new()
-		stain.name = "DressWyrdScar_%d" % index
-		var stain_mesh := CylinderMesh.new()
-		stain_mesh.top_radius = 1.15
-		stain_mesh.bottom_radius = 1.45
-		stain_mesh.height = 0.10
-		stain.mesh = stain_mesh
-		stain.position = origin + Vector3(0.0, 0.03, 0.0)
-		stain.scale = Vector3(1.45, 1.0, 0.68)
-		stain.rotation.y = trail_yaw + float(index) * 0.35
-		stain.material_override = scorched
-		stain.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		ridge.add_child(stain)
-		var crystal := MeshInstance3D.new()
-		crystal.name = "DressWyrdTrace_%d" % index
+		var shard := MeshInstance3D.new()
+		shard.name = "DressWyrdTrace_%d" % index
 		var prism := PrismMesh.new()
-		prism.size = Vector3(1.15 + float(index % 3) * 0.22, 4.20 + float(index) * 0.55, 0.92)
-		crystal.mesh = prism
-		crystal.position = origin + Vector3(0.0, 2.15 + float(index) * 0.22, 0.0)
-		crystal.rotation_degrees = Vector3(8.0, float(index) * 28.0, 176.0)
-		crystal.material_override = glass
-		ridge.add_child(crystal)
-		var glow := OmniLight3D.new()
-		glow.name = "DressWyrdGlow_%d" % index
-		glow.light_color = Color("#7ad7ea")
-		glow.light_energy = 2.15
-		glow.omni_range = 11.0
-		glow.shadow_enabled = false
-		glow.position = origin + Vector3(0.0, 1.6, 0.0)
-		ridge.add_child(glow)
+		prism.size = Vector3(0.42 + float(index % 3) * 0.10, 0.85 + float(index) * 0.12, 0.34)
+		shard.mesh = prism
+		shard.position = origin + Vector3(0.0, 0.18, 0.0)
+		shard.rotation_degrees = Vector3(22.0, float(index) * 31.0, 98.0)
+		shard.material_override = glass
+		ridge.add_child(shard)
+		var spoil := MeshInstance3D.new()
+		spoil.name = "DressWyrdTrail_%d" % index
+		var box := BoxMesh.new()
+		box.size = Vector3(1.15, 0.16, 0.72)
+		spoil.mesh = box
+		spoil.position = origin + Vector3(0.12, 0.04, -0.08)
+		spoil.rotation.y = atan2(crater_dir.x, crater_dir.y) + float(index) * 0.28
+		spoil.material_override = cracked
+		spoil.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		ridge.add_child(spoil)
 		index += 1
-	if index > 0:
-		var horizon := MeshInstance3D.new()
-		horizon.name = "DressWyrdHorizon"
-		var column := CylinderMesh.new()
-		column.top_radius = 0.10
-		column.bottom_radius = 0.42
-		column.height = 14.0
-		horizon.mesh = column
-		horizon.position = last_origin + Vector3(0.0, 8.2, 0.0)
-		var column_mat := StandardMaterial3D.new()
-		column_mat.albedo_color = Color(0.40, 0.82, 0.94, 0.28)
-		column_mat.emission_enabled = true
-		column_mat.emission = Color("#5ec8e0")
-		column_mat.emission_energy_multiplier = 2.4
-		column_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		column_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		horizon.material_override = column_mat
-		horizon.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		ridge.add_child(horizon)
 	ridge.set_meta("wyrd_traces", index)
 
 
@@ -3897,7 +3862,21 @@ func _spawn_meandering_creek(ridge: Node3D, hall: Vector2i, road_w: float) -> vo
 			points.append(tile_to_world(Vector2(tile)) + Vector3(0.0, 0.04, 0.0))
 	if points.size() < 5:
 		return
-	var width := clampf(road_w * 1.18, road_w * 1.00, road_w * 1.40)
+	var water_type := "river"
+	if simulation != null and simulation.founding_site is Dictionary:
+		water_type = String(simulation.founding_site.get("water_type", "river"))
+	var width_mul := 1.18
+	if water_type == "lake":
+		width_mul = 2.25
+	elif water_type == "pond":
+		width_mul = 1.55
+	var width := clampf(road_w * width_mul, road_w * 1.00, road_w * 2.40)
+	if water_type == "pond" or water_type == "lake":
+		var mid := points[int(points.size() / 2)]
+		_spawn_dress_pond(ridge, simulation.town_hall_position if simulation != null else Vector2i.ZERO, Vector2(6.8 if water_type == "lake" else 4.2, 4.8 if water_type == "lake" else 3.1), "DressPond")
+		var pond: MeshInstance3D = ridge.get_node_or_null("DressPond")
+		if pond != null:
+			pond.position = mid + Vector3(0.0, 0.02, 0.0)
 	var bank := _ridge_material(Color("#786C50"), 0.92)
 	var wet := _ridge_material(Color("#3D5552"), 0.55)
 	var shallow := _ridge_material(Color("#5AA0A0"), 0.28)
@@ -4136,14 +4115,26 @@ func _spawn_dress_pond(host: Node3D, tile: Vector2i, size: Vector2, node_name: S
 
 
 func _spawn_dress_coast(host: Node3D, hall: Vector2i) -> void:
-	# GFX-Q: west water-edge apron so the pond reads into the creek cut.
+	# Sit the coast plane on the seeded water so it does not read as a
+	# floating green slab on the meadow.
+	var coast_dir := Vector2(-1.0, 0.15)
+	if simulation != null and simulation.founding_site is Dictionary:
+		coast_dir = Vector2(simulation.founding_site.get("coast_dir", coast_dir))
+	if coast_dir.length_squared() < 0.01:
+		coast_dir = Vector2(-1.0, 0.15)
+	coast_dir = coast_dir.normalized()
+	var anchor := hall + Vector2i(roundi(coast_dir.x * 7.0), roundi(coast_dir.y * 6.0))
+	if simulation != null and simulation.founding_site is Dictionary:
+		var creek: Array = simulation.founding_site.get("creek_tiles", [])
+		if not creek.is_empty():
+			anchor = Vector2i(creek[int(creek.size() / 2)])
 	var edge := MeshInstance3D.new()
 	edge.name = "DressCoastEdge"
 	var mesh := PlaneMesh.new()
-	mesh.size = Vector2(4.2, 7.4)
+	mesh.size = Vector2(2.6, 3.4)
 	edge.mesh = mesh
-	edge.position = tile_to_world(Vector2(hall + Vector2i(-6, 1))) + Vector3(0.4, 0.03, 0.0)
-	edge.rotation.y = 0.18
+	edge.position = tile_to_world(Vector2(anchor)) + Vector3(0.0, 0.02, 0.0)
+	edge.rotation.y = atan2(coast_dir.x, coast_dir.y)
 	var water := StandardMaterial3D.new()
 	water.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
 	water.albedo_color = Color("#345F65")
@@ -4155,14 +4146,15 @@ func _spawn_dress_coast(host: Node3D, hall: Vector2i) -> void:
 	var bank := MeshInstance3D.new()
 	bank.name = "DressCoastBank"
 	var bank_mesh := BoxMesh.new()
-	bank_mesh.size = Vector3(4.8, 0.16, 0.55)
+	bank_mesh.size = Vector3(3.2, 0.12, 0.42)
 	bank.mesh = bank_mesh
-	bank.position = edge.position + Vector3(1.6, 0.02, 0.2)
-	bank.rotation.y = 0.22
+	bank.position = edge.position + Vector3(-coast_dir.x * 0.9, 0.02, -coast_dir.y * 0.9)
+	bank.rotation.y = atan2(coast_dir.x, coast_dir.y)
 	var mud := StandardMaterial3D.new()
 	mud.albedo_color = Color("#786C50")
 	mud.roughness = 0.92
 	bank.material_override = mud
+	bank.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	host.add_child(bank)
 	host.set_meta("hamlet_coast", 1)
 

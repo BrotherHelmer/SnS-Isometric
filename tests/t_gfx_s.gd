@@ -110,10 +110,16 @@ func _check_live_scene() -> void:
 	_check(master_lin >= 0.995 and master_lin <= 1.005, "Master volume is 1.0")
 	_check(game.world_view.has_method("_visual_relief_y"), "terrain relief helper exists")
 	var hall_flat := ScaleProfile.tile_to_flat_world(Vector2(game.simulation_host.simulation.town_hall_position + Vector2i(2, 2)), game.world_view.map_size)
+	var crater_dir := Vector2(0.0, -1.0)
+	if game.simulation_host.simulation.founding_site is Dictionary:
+		crater_dir = Vector2(game.simulation_host.simulation.founding_site.get("crater_dir", crater_dir))
+	if crater_dir.length_squared() < 0.01:
+		crater_dir = Vector2(0.0, -1.0)
+	crater_dir = crater_dir.normalized()
 	var village_relief: float = game.world_view._visual_relief_y(Vector2(hall_flat.x, hall_flat.z))
-	var back_relief: float = game.world_view._visual_relief_y(Vector2(hall_flat.x + 10.0, hall_flat.z - 20.0))
-	var front_relief: float = game.world_view._visual_relief_y(Vector2(hall_flat.x, hall_flat.z + 16.0))
-	print("GFX_S relief village=%.3f back=%.3f front=%.3f" % [village_relief, back_relief, front_relief])
+	var back_relief: float = game.world_view._visual_relief_y(Vector2(hall_flat.x + crater_dir.x * 14.0, hall_flat.z + crater_dir.y * 14.0))
+	var front_relief: float = game.world_view._visual_relief_y(Vector2(hall_flat.x - crater_dir.x * 16.0, hall_flat.z - crater_dir.y * 16.0))
+	print("GFX_S relief village=%.3f back=%.3f front=%.3f crater_dir=%s" % [village_relief, back_relief, front_relief, str(crater_dir)])
 	_check(absf(village_relief) <= 0.08, "village tiles stay nearly flat")
 	_check(back_relief >= 0.70 and back_relief <= 2.10, "back ridge relief is 0.08–0.18B")
 	_check(front_relief <= 0.35, "no camera-side cliff")
@@ -159,7 +165,7 @@ func _check_live_scene() -> void:
 		if formation != null and formation.material_override is StandardMaterial3D:
 			var ridge_col := (formation.material_override as StandardMaterial3D).albedo_color
 			_check(ridge_col.g > ridge_col.r, "ridge formation is grassy, not tan sand")
-		_check(dress.find_child("DressCoastEdge", true, false) != null, "opening has a west water edge")
+		_check(dress.find_child("DressCoastEdge", true, false) != null, "opening has a seeded water edge")
 		_check(int(dress.get_meta("hamlet_cottages", 0)) == 0, "opening plants no dress cottages")
 		_check(dress.find_child("DressCartWest", true, false) == null, "opening no longer dresses a second cart")
 		_check(dress.find_child("DressLongCrate", true, false) == null, "opening no longer dresses extra crates")

@@ -3,8 +3,9 @@ extends SceneTree
 ## 100-seed founding-site gate. Every new game must have one real Town Hall,
 ## no fake buildings, an irregular clearing, reachable wood/stone/food,
 ## bridges that cross the creek, and a Lumber Camp quest. Lore: the start
-## sits inside the crater on flat land, with water/trees/stone/food within
-## FOUNDING_RESOURCE_NEAR tiles and a visible wyrd/crater marker.
+## sits inside the harvest radius on stable ground outside the pit, with
+## water/trees/stone/food within FOUNDING_RESOURCE_NEAR tiles and a visible
+## wyrd/crater marker. ChatGPT #11: 360° orbit, distance band, layout variety.
 
 const Simulation = preload("res://src/GodotClient/Scripts/one_shard_simulation.gd")
 const Scene = preload("res://src/GodotClient3D/Scenes/production_3d.tscn")
@@ -12,6 +13,9 @@ const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
 
 const SEED_COUNT := 100
 const BASE_SEED := 260821
+const SECTOR_MIN := 6
+const SECTOR_MAX_SHARE := 0.25
+const UNIQUE_LAYOUT_MIN := 12
 
 var failures: Array[String] = []
 var rows: Array[String] = []
@@ -27,6 +31,10 @@ func _run() -> void:
 	DirAccess.make_dir_recursive_absolute(dest)
 	var t0 := Time.get_ticks_msec()
 	var passed := 0
+	var sectors: Array[int] = [0, 0, 0, 0, 0, 0, 0, 0]
+	var water_seen: Dictionary = {}
+	var signatures: Dictionary = {}
+	var compass_names := ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 	for i in SEED_COUNT:
 		var seed_value := BASE_SEED + i * 97
 		var sim = Simulation.new()
@@ -35,6 +43,10 @@ func _run() -> void:
 		var ok := _check_audit(audit, seed_value)
 		if ok:
 			passed += 1
+		var sector := clampi(int(audit.get("orbit_sector", 0)), 0, 7)
+		sectors[sector] += 1
+		water_seen[String(audit.get("water_type", ""))] = true
+		signatures[String(audit.get("layout_signature", ""))] = true
 		var row := "%d\t%d\t%d\t%d\t%.1f\t%.1f" % [
 			seed_value,
 			int(audit.get("functional_buildings", -1)),
@@ -51,7 +63,7 @@ func _run() -> void:
 			str(audit.get("quest_target", false)),
 			str(audit.get("inside_crater", false)),
 		]
-		row += "\t%.1f\t%.1f\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % [
+		row += "\t%.1f\t%.1f\t%s\t%s\t%s\t%s\t%s\t%s\t%.1f\t%d\t%s\t%s\t%s\t%s" % [
 			float(audit.get("crater_dist", -1.0)),
 			float(audit.get("slope", -1.0)),
 			str(audit.get("water_near", false)),
@@ -60,11 +72,36 @@ func _run() -> void:
 			str(audit.get("food_near", false)),
 			str(audit.get("wyrd_marker", false)),
 			String(audit.get("crater_compass", "")),
+			float(audit.get("orbit_deg", -1.0)),
+			sector,
+			String(audit.get("water_type", "")),
+			String(audit.get("layout_signature", "")),
+			str(audit.get("distance_band", false)),
 			"PASS" if ok else "FAIL",
 		]
 		rows.append(row)
 	var sim_ms := float(Time.get_ticks_msec() - t0)
 	print("T_FOUNDING_SEEDS sim_pass=%d/%d sim_ms=%.0f" % [passed, SEED_COUNT, sim_ms])
+
+	var hist_lines: Array[String] = []
+	hist_lines.append("sector\tlabel\tcount\tpct")
+	var max_share := 0.0
+	for sector_i in 8:
+		var count := sectors[sector_i]
+		var pct := float(count) / float(SEED_COUNT)
+		max_share = maxf(max_share, pct)
+		hist_lines.append("%d\t%s\t%d\t%.1f" % [sector_i, compass_names[sector_i], count, pct * 100.0])
+		_check(count >= SECTOR_MIN, "orbit sector %s has at least %d seeds (got %d)" % [compass_names[sector_i], SECTOR_MIN, count])
+	_check(max_share <= SECTOR_MAX_SHARE + 0.001, "no orbit sector exceeds 25%% (max %.1f%%)" % (max_share * 100.0))
+	_check(water_seen.size() >= 3, "at least 3 water types across 100 seeds (got %s)" % str(water_seen.keys()))
+	_check(signatures.size() >= UNIQUE_LAYOUT_MIN, "at least %d unique layout signatures (got %d)" % [UNIQUE_LAYOUT_MIN, signatures.size()])
+	var water_names: PackedStringArray = []
+	for water_key in water_seen.keys():
+		water_names.append(String(water_key))
+	hist_lines.append("unique_layouts=%d" % signatures.size())
+	hist_lines.append("water_types=%s" % ",".join(water_names))
+	hist_lines.append("max_sector_share=%.3f" % max_share)
+	print("T_FOUNDING_SEEDS sectors=%s unique_layouts=%d waters=%s" % [str(sectors), signatures.size(), str(water_seen.keys())])
 
 	var mesh_seeds := [BASE_SEED, BASE_SEED + 97, BASE_SEED + 194]
 	var game := Scene.instantiate()
@@ -89,26 +126,35 @@ func _run() -> void:
 		_check(int(audit.get("functional_buildings", 0)) == 1, "seed %d 3D has one Town Hall" % seed_value)
 		_check(game.objective_button != null and String(game.objective_button.text).contains("Lumber Camp"), "seed %d HUD quest says Lumber Camp" % seed_value)
 		_check(bool(audit.get("inside_crater", false)), "seed %d start is inside the crater" % seed_value)
+		_check(bool(audit.get("distance_band", false)), "seed %d Town Hall is in the harvest distance band" % seed_value)
 		var dress: Node = game.world_view.resource_visuals_root.get_node_or_null("OpeningDress")
 		var traces: Node = dress.find_child("DressWyrdTrace_0", true, false) if dress != null else null
 		var beacon: Node = game.world_view.shard_beacon
 		_check(traces != null, "seed %d has a DressWyrdTrace visible from the start" % seed_value)
 		_check(beacon != null, "seed %d still has the ShardBeacon toward the crater" % seed_value)
-		print("T_FOUNDING_SEEDS crater_seed=%d compass=%s dist=%.1f hall=%s shard=%s dir=%s" % [
+		_check(dress == null or dress.find_child("DressWyrdGlow", true, false) == null, "seed %d has no DressWyrdGlow" % seed_value)
+		print("T_FOUNDING_SEEDS crater_seed=%d compass=%s dist=%.1f hall=%s shard=%s dir=%s orbit=%.1f water=%s layout=%s" % [
 			seed_value, String(audit.get("crater_compass", "")), float(audit.get("crater_dist", -1.0)),
 			str(audit.get("hall", Vector2i.ZERO)), str(audit.get("shard", Vector2i.ZERO)),
-			str(audit.get("crater_dir", Vector2.ZERO))
+			str(audit.get("crater_dir", Vector2.ZERO)), float(audit.get("orbit_deg", -1.0)),
+			String(audit.get("water_type", "")), String(audit.get("layout_signature", ""))
 		])
 
 	var report := dest.path_join("founding_seeds.txt")
 	var file := FileAccess.open(report, FileAccess.WRITE)
 	if file != null:
-		file.store_line("seed\tfunctional\tfake\tclearing_trees\trx\try\ttree\trock\tfood\tbridges\tquest\tcrater\tdist\tslope\twater\ttree_n\trock_n\tfood_n\twyrd\tcompass\tresult")
+		file.store_line("seed\tfunctional\tfake\tclearing_trees\trx\try\ttree\trock\tfood\tbridges\tquest\tcrater\tdist\tslope\twater\ttree_n\trock_n\tfood_n\twyrd\tcompass\torbit\tsector\twater_type\tlayout\tband\tresult")
 		for row in rows:
 			file.store_line(row)
-		file.store_line("sim_pass=%d/%d sim_ms=%.0f" % [passed, SEED_COUNT, sim_ms])
+		file.store_line("sim_pass=%d/%d sim_ms=%.0f unique_layouts=%d" % [passed, SEED_COUNT, sim_ms, signatures.size()])
 		file.close()
-	print("T_FOUNDING_SEEDS report=%s" % report)
+	var hist_path := dest.path_join("founding_angle_histogram.txt")
+	var hist := FileAccess.open(hist_path, FileAccess.WRITE)
+	if hist != null:
+		for line in hist_lines:
+			hist.store_line(line)
+		hist.close()
+	print("T_FOUNDING_SEEDS report=%s histogram=%s" % [report, hist_path])
 	print("T_FOUNDING_SEEDS %s" % ("PASS" if failures.is_empty() else "FAIL"))
 	for failure in failures:
 		print("  FAIL %s" % failure)
@@ -139,6 +185,10 @@ func _check_audit(audit: Dictionary, seed_value: int) -> bool:
 	ok = _check(bool(audit.get("rock_near", false)), "seed %d stone is within %d tiles" % [seed_value, Simulation.FOUNDING_RESOURCE_NEAR]) and ok
 	ok = _check(bool(audit.get("food_near", false)), "seed %d food is within %d tiles" % [seed_value, Simulation.FOUNDING_RESOURCE_NEAR]) and ok
 	ok = _check(bool(audit.get("wyrd_marker", false)), "seed %d has a wyrd/crater marker toward the start" % seed_value) and ok
+	ok = _check(bool(audit.get("distance_band", false)), "seed %d Town Hall is in the 0.65–0.85 R band" % seed_value) and ok
+	ok = _check(bool(audit.get("footprint_stable", false)), "seed %d Town Hall footprint is stable outside the pit" % seed_value) and ok
+	var pit := float(audit.get("pit_radius", 0.0))
+	ok = _check(pit >= Simulation.CRATER_RADIUS * Simulation.CRATER_PIT_RADIUS_MIN - 0.05 and pit <= Simulation.CRATER_RADIUS * Simulation.CRATER_PIT_RADIUS_MAX + 0.05, "seed %d pit radius is 0.30–0.45 R" % seed_value) and ok
 	return ok
 
 
