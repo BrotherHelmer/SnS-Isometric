@@ -56,6 +56,7 @@ func _run() -> void:
 	quiet.dusk_forecast = {"threat": "QUIET"}
 	quiet.phase_time = Simulation.DAY_LENGTH_SECONDS - RaidIntents.RAID_WARNING_SECONDS - 0.05
 	quiet.dusk_warning_sent = true
+	quiet.night_warning_sent = true
 	quiet._update_time(0.2)
 	_check(quiet.horn_warning_sent, "raid warning still fires when no camp is mapped")
 	_check(String(quiet.last_message).to_lower().contains("raid"), "every raid gets a 60s warning")

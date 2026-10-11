@@ -7560,7 +7560,7 @@ func _update_time(delta: float) -> void:
 			String(dusk_forecast.get("threat", "QUIET")),
 			String(dusk_forecast.get("activity", "Light"))
 		])
-		if not String(last_message).begins_with("RAID IN"):
+		if not horn_warning_sent and not String(last_message).begins_with("RAID IN"):
 			last_message = "NIGHTFALL — Threat: %s. Likely activity: %s." % [
 				String(dusk_forecast.get("threat", "QUIET")),
 				String(dusk_forecast.get("activity", "Light"))
