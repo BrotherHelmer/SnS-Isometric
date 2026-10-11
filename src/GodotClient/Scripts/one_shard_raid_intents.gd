@@ -6,6 +6,7 @@ const INTENT_ECONOMY := "raid_economy"
 const INTENT_CENTER := "raid_center"
 const INTENT_PROBE := "raid_probe"
 const INTENT_RITUAL := "raid_ritual"
+const INTENT_HARVESTER := "raid_harvester"
 
 const BEARINGS := [
 	"the north",
@@ -89,6 +90,8 @@ static func label_for(intent: String) -> String:
 			return "a push on the settlement centre"
 		INTENT_RITUAL:
 			return "a strike on the Binding"
+		INTENT_HARVESTER:
+			return "a raid on the Wyrd Harvester"
 		_:
 			return "a probing raid"
 

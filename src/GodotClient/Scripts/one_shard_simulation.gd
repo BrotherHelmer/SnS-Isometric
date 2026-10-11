@@ -7907,6 +7907,32 @@ func spawn_ritual_raid(wave_size: int = 4) -> void:
 	_emit_audio("enemy")
 
 
+func spawn_harvester_raid(wave_size: int = 2) -> void:
+	var origin := _spawn_origin_for_bearing(RaidIntents.choose_bearing(day_count + 2, rng_seed))
+	if origin.x < 0:
+		var origins := _night_spawn_origins()
+		if not origins.is_empty():
+			origin = origins[0]
+		else:
+			origin = shard_position
+	var target := _raid_named_target(Defs.BUILDING_WYRD_HARVESTER)
+	raid_plan = {
+		"intent": RaidIntents.INTENT_HARVESTER,
+		"bearing": _bearing_from_town(origin),
+		"origin": origin,
+		"target_id": int(target.get("id", 0)),
+		"target_name": _display_building_name(target) if not target.is_empty() else "the Wyrd Harvester"
+	}
+	for i in range(maxi(1, wave_size)):
+		_spawn_enemy(origin, RaidTuning.NIGHT1_HP, RaidTuning.NIGHT1_DAMAGE, -0.08 * float(i), 0, ENEMY_RAIDER, RaidTuning.NIGHT1_ARMOR)
+	_begin_raid(0)
+	last_message = "HARVESTER RAID — hostiles from %s mean the Wyrd vent." % String(raid_plan.get("bearing", "the wilds"))
+	_add_log(last_message)
+	push_notice("danger", "RAID", last_message, "critical")
+	_record_event("harvester_raid_spawn", last_message, {"size": wave_size, "origin": origin})
+	_emit_audio("enemy")
+
+
 func _raid_economy_candidates() -> Array:
 	var yards: Array = []
 	for building in buildings:
@@ -8197,8 +8223,13 @@ func _find_enemy_target_unprofiled(enemy: Dictionary) -> Dictionary:
 	# Night 1 keeps classic siege targeting so the teaching raid still
 	# walks the yard and the Watchtower can fire. Variety starts Night 2:
 	# economy raids peel to yards; centre raids keep the defended route.
+	var forced_intent := String(enemy.get("raid_intent", raid_plan.get("intent", "")))
+	if forced_intent == RaidIntents.INTENT_HARVESTER:
+		var forced_harvester := _raid_named_target(Defs.BUILDING_WYRD_HARVESTER)
+		if not forced_harvester.is_empty():
+			return {"entity": forced_harvester, "kind": "building"}
 	if day_count > 1:
-		var raid_intent := String(enemy.get("raid_intent", raid_plan.get("intent", "")))
+		var raid_intent := forced_intent
 		if raid_intent == RaidIntents.INTENT_RITUAL:
 			var ritual_hit := _ritual_raid_target()
 			if not ritual_hit.is_empty():

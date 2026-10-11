@@ -148,10 +148,10 @@ func _expand_toward_shard(sim) -> void:
 		requirements = sim.rivalry.claim_requirements("player")
 	if not bool(requirements.get("lumen", false)):
 		_place_forward_structure(sim, Defs.BUILDING_LUMEN_PILLAR)
-	# The Director: one fissure Outpost is the Crater War stake. Do not
-	# keep probing the distant Shard tile after the vent is held.
-	if _stock(sim, Defs.RESOURCE_WOOD) >= 18 and _count(sim, Defs.BUILDING_OUTPOST) < 1:
-		_place_forward_structure(sim, Defs.BUILDING_OUTPOST)
+	# The Director: a corridor Outpost unlocks full harvest. The frontier
+	# stake is already on the vent; do not spam the distant Shard.
+	if _stock(sim, Defs.RESOURCE_WOOD) >= 18 and sim.crater_war != null and not sim.crater_war.route_secured():
+		_try_waypoint_outpost(sim)
 
 
 func _pursue_crater_war(sim) -> void:
@@ -169,7 +169,30 @@ func _pursue_crater_war(sim) -> void:
 		if _try_build(sim, Defs.BUILDING_WYRD_HARVESTER, sim.crater_war.primary_fissure):
 			return
 	if _has_completed(sim, Defs.BUILDING_WYRD_HARVESTER) and _unlocked(sim, Defs.BUILDING_WYRD_REFINER) and _count(sim, Defs.BUILDING_WYRD_REFINER) < 1:
-		_try_build(sim, Defs.BUILDING_WYRD_REFINER, sim.town_hall_position + Vector2i(9, 4))
+		if _try_build(sim, Defs.BUILDING_WYRD_REFINER, sim.town_hall_position + Vector2i(9, 4)):
+			return
+	if not _has_completed(sim, Defs.BUILDING_WYRD_HARVESTER):
+		return
+	if not sim.crater_war.route_secured():
+		if _try_waypoint_outpost(sim):
+			return
+	if _count(sim, Defs.BUILDING_OUTPOST) < 2:
+		if _try_frontier_outpost(sim):
+			return
+	if sim.crater_war.harvester_unlumened() and _unlocked(sim, Defs.BUILDING_LUMEN_PILLAR) and _stock(sim, Defs.RESOURCE_WYRD) >= 4:
+		if _try_build(sim, Defs.BUILDING_LUMEN_PILLAR, _harvester_tile(sim)):
+			return
+	if _unlocked(sim, Defs.BUILDING_WATCHTOWER) and _count(sim, Defs.BUILDING_WATCHTOWER) < 2:
+		if _try_build(sim, Defs.BUILDING_WATCHTOWER, _harvester_tile(sim)):
+			return
+	if _unlocked(sim, Defs.BUILDING_WALL) and _count(sim, Defs.BUILDING_WALL) < 3:
+		if _try_build(sim, Defs.BUILDING_WALL, _harvester_tile(sim)):
+			return
+	if _count(sim, Defs.BUILDING_HOUSE) < 3 and _stock(sim, Defs.RESOURCE_WOOD) >= 4:
+		_try_build(sim, Defs.BUILDING_HOUSE, sim.town_hall_position + Vector2i(2, 8))
+		return
+	if _count(sim, Defs.BUILDING_FARM) < 2 and _stock(sim, Defs.RESOURCE_WOOD) >= 4:
+		_try_build(sim, Defs.BUILDING_FARM, sim.town_hall_position + Vector2i(1, 10))
 
 
 func _contest_rivals(sim) -> void:
@@ -186,8 +209,6 @@ func _contest_rivals(sim) -> void:
 		if String(target.get("type", "")) != Defs.BUILDING_OUTPOST:
 			continue
 		if int(target.get("hp", 0)) <= 0:
-			continue
-		if sim.crater_war != null and String(sim.crater_war.rival_resolution) != "":
 			continue
 		var already := false
 		for guard in sim.workers:
@@ -220,6 +241,48 @@ func _try_bind(sim) -> void:
 			_note(sim, "BIND", sim.shard_position, String(result.get("message", "")))
 		else:
 			last_failures.append("bind: %s" % String(result.get("message", "")))
+
+
+func _try_waypoint_outpost(sim) -> bool:
+	if not _can_afford(sim, Defs.BUILDING_OUTPOST):
+		last_idle_reason = "cannot afford the corridor Outpost"
+		return false
+	var marker := Vector2i(-1, -1)
+	if sim.crater_war != null:
+		marker = sim.crater_war.waypoint_tile()
+	if marker.x < 0:
+		marker = _midpoint(sim.town_hall_position, _frontier_target(sim))
+	var hall: Vector2i = sim.town_hall_position
+	var aims: Array[Vector2i] = [marker]
+	for radius in range(1, 6):
+		for ox in range(-radius, radius + 1):
+			aims.append(marker + Vector2i(ox, -radius))
+			aims.append(marker + Vector2i(ox, radius))
+			aims.append(marker + Vector2i(-radius, ox))
+			aims.append(marker + Vector2i(radius, ox))
+	for aim_value in aims:
+		var aim: Vector2i = aim_value
+		if absi(aim.x - hall.x) + absi(aim.y - hall.y) < 8:
+			continue
+		if _try_build(sim, Defs.BUILDING_OUTPOST, aim):
+			return true
+	_extend_roads(sim, marker, 2)
+	return false
+
+
+func _harvester_tile(sim) -> Vector2i:
+	for building in sim.get_buildings():
+		if bool(building.get("construction", false)):
+			continue
+		if String(building.get("type", "")) == Defs.BUILDING_WYRD_HARVESTER:
+			return Vector2i(building.get("position", Vector2i.ZERO))
+	if sim.crater_war != null and sim.crater_war.primary_fissure.x >= 0:
+		return sim.crater_war.primary_fissure
+	return _frontier_target(sim)
+
+
+func _midpoint(a: Vector2i, b: Vector2i) -> Vector2i:
+	return Vector2i(int(round((a.x + b.x) * 0.5)), int(round((a.y + b.y) * 0.5)))
 
 
 func _try_frontier_outpost(sim) -> bool:

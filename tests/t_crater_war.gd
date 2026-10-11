@@ -27,11 +27,15 @@ func _run() -> void:
 	_check(Defs.is_buildable(Defs.BUILDING_WYRD_REFINER), "refiner is buildable")
 	_check(CraterWar.STABILIZED_TO_BIND == 12, "Binding costs 12 stabilized")
 	_check(CraterWar.RITUAL_SECONDS == 120.0, "ritual lasts 120 seconds")
+	_check(CraterWar.HARVEST_INTERVAL >= 28.0, "harvest is paced for a 45-minute hour")
+	_check(CraterWar.REFINE_INPUT >= 3, "refine spends 3 raw per Stabilized")
+	_check(CraterWar.CAPTURE_STABILIZED == 0, "capture does not dump Stabilized")
 	_check_varying_nights()
 	for seed_value in SEEDS:
 		_check_seed_slice(seed_value)
 	_check_hold_is_milestone()
 	_check_binding_ritual()
+	_check_exposure_and_contest()
 
 
 func _check_varying_nights() -> void:
@@ -118,9 +122,11 @@ func _check_binding_ritual() -> void:
 			rival_structure = structure
 			break
 	_check(not rival_structure.is_empty(), "binding setup has a rival outpost")
+	var stab_before := int(sim.central_inventory.get(Defs.RESOURCE_STABILIZED_WYRD, 0))
 	sim.crater_war.capture_outpost(rival_structure)
 	_check(sim.crater_war.rival_resolution == "capture", "capture flips the outpost and pays a reward")
 	_check(int(sim.central_inventory.get(Defs.RESOURCE_WOOD, 0)) >= 8, "capture grants wood")
+	_check(int(sim.central_inventory.get(Defs.RESOURCE_STABILIZED_WYRD, 0)) == stab_before, "capture does not grant Stabilized")
 	_check(String(sim.last_message).contains("CAPTURED"), "capture copy is visible")
 	_check(sim.crater_war.can_begin(), "Binding is ready once 12 Stabilized is in the store")
 	sim.central_inventory[Defs.RESOURCE_STABILIZED_WYRD] = 11
@@ -132,6 +138,40 @@ func _check_binding_ritual() -> void:
 	sim._simulate_seconds_for_test(CraterWar.RITUAL_SECONDS + 0.2)
 	_check(sim.victory, "defended ritual wins Binding")
 	_check(String(sim.defeat_reason).contains("BOUND"), "victory copy is Binding, not THE REALM HOLDS")
+
+
+func _check_exposure_and_contest() -> void:
+	var sim: Simulation = Simulation.new()
+	sim.start_new_run(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 260821, true)
+	sim.elapsed_seconds = Simulation.DEMO_FRONTIER_SECONDS
+	sim._update_demo_beats()
+	sim.elapsed_seconds = Simulation.DEMO_RIVAL_SECONDS
+	sim._update_demo_beats()
+	var harvest := sim._create_building(Defs.BUILDING_WYRD_HARVESTER, sim.crater_war.primary_fissure)
+	harvest["construction"] = false
+	harvest["completed"] = true
+	sim.buildings.append(harvest)
+	sim.central_inventory[Defs.RESOURCE_WYRD] = 12
+	sim.crater_war._update_exposure(1.0)
+	_check(sim.crater_war.exposure > 0.3, "unlumened surplus raw raises exposure")
+	var before := int(sim.central_inventory.get(Defs.RESOURCE_WYRD, 0))
+	sim.crater_war.exposure_burn_timer = 50.0
+	sim.crater_war._update_exposure(1.0)
+	_check(int(sim.central_inventory.get(Defs.RESOURCE_WYRD, 0)) < before, "exposure burns raw above the reserve")
+	_check(int(sim.central_inventory.get(Defs.RESOURCE_WYRD, 0)) >= CraterWar.RAW_RESERVE, "exposure keeps the refine reserve")
+	var rival_structure := {}
+	for structure in sim.rivalry.get_structures("rival"):
+		if String(structure.get("type", "")) == Defs.BUILDING_OUTPOST:
+			rival_structure = structure
+			break
+	sim.crater_war.capture_outpost(rival_structure)
+	sim.elapsed_seconds = sim.crater_war.capture_at + CraterWar.SECOND_PUSH_DELAY + 1.0
+	sim.crater_war._maybe_rival_contest()
+	_check(sim.crater_war.second_push_done, "rival second push plants another Outpost")
+	_check(sim.crater_war._rival_outpost_alive(), "the second push is a living rival Outpost")
+	sim.elapsed_seconds = sim.crater_war.capture_at + CraterWar.HARVESTER_RAID_DELAY + 1.0
+	sim.crater_war._maybe_rival_contest()
+	_check(sim.crater_war.harvester_raid_done, "rival raids the harvester after the second push")
 
 
 func _check(ok: bool, message: String) -> void:
