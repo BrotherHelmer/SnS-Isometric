@@ -99,7 +99,7 @@ Hall `(76, 188)`, Shard `(157, 156)`, 3 rivals. First quest at 4:32. Night 1 at 
 | t_sns_ui_look | PASS |
 | t_bigmap | PASS — start_new_3d **822 ms**, first frame **715 ms**, Master **1.000** |
 | export audit | **MISSING 0** |
-| t_founding_seeds sim | **100/100** including the quarry-stone 5–8 band |
+| t_founding_seeds | **sim 100/100**, **render 100/100** including the quarry-stone 5–8 band |
 
 ## What still fails / is dull
 
