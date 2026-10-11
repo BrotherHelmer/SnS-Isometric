@@ -373,7 +373,7 @@ func _write_notes(sim, player) -> void:
 		_unique("balance", "No soldiers after 15 minutes — barracks / food / unlock pacing is tight.")
 	if not saw_rival:
 		_unique("unclear", "No rival encounter in 60 minutes. Scout depth is 14 tiles; rival seats sit across a 320 map.")
-	notes["seed"] = SEED
+	notes["seed"] = seed_value
 	notes["elapsed"] = float(sim.elapsed_seconds)
 	notes["victory"] = bool(sim.victory)
 	notes["finished"] = bool(sim.game_finished)
@@ -385,7 +385,8 @@ func _write_notes(sim, player) -> void:
 	if sim.rivalry != null:
 		notes["claim"] = sim.rivalry.claim_requirements("player")
 		notes["rival_line"] = String(sim.rivalry.get_rival_status_line())
-	var file := FileAccess.open(dest.path_join("notes.json"), FileAccess.WRITE)
+	var notes_name := "notes.json" if seed_value == SEED_DEFAULT else "notes_%d.json" % seed_value
+	var file := FileAccess.open(dest.path_join(notes_name), FileAccess.WRITE)
 	file.store_string(JSON.stringify(notes, "\t"))
 	file.close()
 

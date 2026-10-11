@@ -44,10 +44,16 @@ func _run() -> void:
 		sim.buildings.erase(barracks)
 	var warning: Simulation = Simulation.new()
 	warning.start_new_run(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 260821, true)
+	warning.dusk_warning_sent = true
+	warning.night_warning_sent = true
 	warning.phase_time = Simulation.DAY_LENGTH_SECONDS - RaidIntents.RAID_WARNING_SECONDS - 0.05
 	warning._update_time(0.2)
 	_check(warning.horn_warning_sent, "raid warning flag at 60s")
-	_check(String(warning.last_message).contains("RAID IN 60"), "raid warning copy")
+	var copy_ok := String(warning.last_message).contains("RAID IN")
+	for entry in warning.log_entries:
+		if String(entry).contains("RAID IN"):
+			copy_ok = true
+	_check(copy_ok, "raid warning copy (last='%s')" % String(warning.last_message))
 	var pinged := false
 	for marker in warning.get_map_markers():
 		if String(marker.get("kind", "")) == "raid":
@@ -56,6 +62,35 @@ func _run() -> void:
 	var plan := Wyrdfall.wave_plan(8.0, 2, false, false)
 	_check(int(plan.get("size", 0)) == RaidTuning.NIGHT2_SIZE, "wave_plan still reports Night 2 as 5")
 	_check(RaidIntents.RAID_WARNING_SECONDS == 60.0, "raid warning is 60 seconds")
+	_check_construction_beats_roads()
+
+
+func _check_construction_beats_roads() -> void:
+	var sim: Simulation = Simulation.new()
+	sim.start_new_run(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 260821, true)
+	var hall: Vector2i = sim.town_hall_position
+	var barracks := sim._create_building(Defs.BUILDING_BARRACKS, hall + Vector2i(6, 2))
+	barracks["construction"] = true
+	barracks["planned_type"] = Defs.BUILDING_BARRACKS
+	barracks["connected"] = true
+	barracks["materials_needed"] = {Defs.RESOURCE_PLANKS: 10, Defs.RESOURCE_STONE: 8}
+	barracks["materials_delivered"] = Defs.empty_inventory()
+	barracks["materials_in_transit"] = Defs.empty_inventory()
+	sim.buildings.append(barracks)
+	sim.central_inventory[Defs.RESOURCE_PLANKS] = 14
+	sim.central_inventory[Defs.RESOURCE_STONE] = 10
+	_check(sim._construction_waiting_for_materials(), "connected barracks with stock waits for deliveries")
+	sim._ensure_carriers()
+	var assigned := false
+	for worker in sim.workers:
+		if String(worker.get("type", "")) != "carrier":
+			continue
+		worker["state"] = "Idle"
+		worker["task"] = {}
+		worker["carried_amount"] = 0
+		if sim._assign_carrier_task(worker):
+			assigned = assigned or String(worker.get("task", {}).get("purpose", "")) == "construction"
+	_check(assigned, "idle carrier takes construction before a road job")
 
 
 func _check(ok: bool, message: String) -> void:

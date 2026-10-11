@@ -1274,7 +1274,10 @@ func _capped_raid_size(planned: int) -> int:
 	if planned <= 0:
 		return 0
 	if _player_has_completed_building(Defs.BUILDING_BARRACKS):
-		return planned
+		# The Director: after the Barracks is up, Night 2's five is the
+		# demo's ceiling. Later nights stay visible without snowballing
+		# past a keep that has one tower and one training yard.
+		return mini(planned, RaidTuning.NIGHT2_SIZE)
 	return mini(planned, RaidTuning.NIGHT1_SIZE)
 
 
@@ -5486,7 +5489,8 @@ func _process_carriers(delta: float) -> void:
 	for worker in workers:
 		if String(worker.get("type", "")) != "carrier":
 			continue
-		if String(worker["state"]) == "Idle":
+		var carrier_state := String(worker["state"])
+		if carrier_state == "Idle" or (carrier_state == "No shelter" and not is_night):
 			_assign_carrier_task(worker)
 		elif String(worker["state"]) == "Building":
 			var task: Dictionary = worker.get("task", {})
@@ -6150,7 +6154,7 @@ func _send_worker_to_shelter(worker: Dictionary) -> void:
 	var start: Vector2i = worker["position"]
 	var is_carrier := String(worker.get("type", "")) == "carrier"
 	for entrance in _shelter_entries():
-		var candidate: Array = _find_road_path(start, [entrance]) if is_carrier else _find_worker_path(start, entrance)
+		var candidate: Array = _path_to_access(start, [entrance]) if is_carrier else _find_worker_path(start, entrance)
 		if start != entrance and candidate.is_empty():
 			continue
 		if not found or candidate.size() < best_path.size():
@@ -6237,7 +6241,10 @@ func _advance_carrier(worker: Dictionary, delta: float) -> void:
 	worker["move_elapsed"] = 0.0
 
 	var next_tile: Vector2i = worker["path"].pop_front()
-	if not _is_walkable_road(next_tile):
+	# The Director: hauls stay on roads when a spine path exists. Grass is
+	# allowed when the job had to leave the network (road-build spur or a
+	# carrier stranded after dusk) so construction is not soft-locked.
+	if not _is_walkable_road(next_tile) and not _is_worker_walkable(next_tile, worker["path"].is_empty()):
 		worker["path"] = []
 		worker["state"] = "Blocked"
 		last_message = "A broken road blocked a carrier."
@@ -6261,6 +6268,11 @@ func _assign_carrier_task_unprofiled(worker: Dictionary) -> bool:
 	# first. Deliver construction materials before the next free road tile.
 	if _assign_construction_supply(worker):
 		return true
+	# Planned buildings starve if carriers keep laying the next free road
+	# while stock is sitting in the hall. Skip road jobs until deliveries
+	# that can actually leave the warehouse have been assigned.
+	if _construction_waiting_for_materials():
+		return false
 	if _assign_road_build(worker):
 		return true
 	if _assign_processor_supply(worker):
@@ -6268,9 +6280,85 @@ func _assign_carrier_task_unprofiled(worker: Dictionary) -> bool:
 	return _assign_output_fetch(worker)
 
 
+func _construction_waiting_for_road() -> bool:
+	for site in buildings:
+		if not bool(site.get("construction", false)):
+			continue
+		if String(site.get("planned_type", "")) == Defs.BUILDING_ROAD:
+			continue
+		if not bool(site.get("connected", false)):
+			return true
+	return false
+
+
+func _road_helps_construction(road_site: Dictionary) -> bool:
+	var road_tile: Vector2i = road_site.get("position", Vector2i.ZERO)
+	for site in buildings:
+		if not bool(site.get("construction", false)):
+			continue
+		if String(site.get("planned_type", "")) in [Defs.BUILDING_ROAD, ""]:
+			continue
+		if bool(site.get("connected", false)):
+			continue
+		var footprint: Vector2i = _building_footprint(site)
+		var origin: Vector2i = site.get("position", Vector2i.ZERO)
+		if _manhattan(origin, road_tile) <= 3:
+			return true
+		for perimeter in _footprint_perimeter(origin, footprint):
+			if _manhattan(perimeter, road_tile) <= 1:
+				return true
+	return false
+
+
+func _construction_waiting_for_materials() -> bool:
+	for site in buildings:
+		if not bool(site.get("construction", false)) or not bool(site.get("connected", false)):
+			continue
+		if String(site.get("planned_type", "")) in [Defs.BUILDING_ROAD, ""]:
+			continue
+		if _construction_materials_ready(site):
+			continue
+		var needed: Dictionary = site.get("materials_needed", {})
+		var delivered: Dictionary = site.get("materials_delivered", {})
+		var in_transit: Dictionary = site.get("materials_in_transit", Defs.empty_inventory())
+		for resource_type in needed.keys():
+			var outstanding := int(needed.get(resource_type, 0)) - int(delivered.get(resource_type, 0)) - int(in_transit.get(resource_type, 0))
+			if outstanding > 0 and int(central_inventory.get(resource_type, 0)) > 0:
+				return true
+	return false
+
+
+func _path_to_access(start: Vector2i, access: Array) -> Array:
+	if access.is_empty():
+		return []
+	if access.has(start):
+		return []
+	var road_path := _find_road_path(start, access)
+	if not road_path.is_empty():
+		return road_path
+	var best_path: Array = []
+	for access_tile_value in access:
+		var access_tile: Vector2i = access_tile_value
+		if start == access_tile:
+			return []
+		var candidate := _find_worker_path(start, access_tile)
+		if candidate.is_empty():
+			continue
+		if best_path.is_empty() or candidate.size() < best_path.size():
+			best_path = candidate
+	return best_path
+
+
 func _assign_road_build(worker: Dictionary) -> bool:
-	if workers_free() <= 0:
+	# The Director: a free peasant is the normal road crew. If a building
+	# is already paid and only waiting on its auto-spur, a carrier may
+	# finish that last tile so construction is not soft-locked.
+	if _construction_waiting_for_materials():
 		return false
+	var unblock := _construction_waiting_for_road()
+	if workers_free() <= 0 and not unblock:
+		return false
+	var candidates: Array = []
 	for site in buildings:
 		if int(site.get("builder_worker_id", 0)) > 0 and not _road_builder_claim_exists(site):
 			site["builder_worker_id"] = 0
@@ -6279,10 +6367,19 @@ func _assign_road_build(worker: Dictionary) -> bool:
 			or not bool(site.get("connected", false)) \
 			or int(site.get("builder_worker_id", 0)) > 0:
 			continue
+		candidates.append(site)
+	if unblock:
+		var helpful: Array = []
+		for site in candidates:
+			if _road_helps_construction(site):
+				helpful.append(site)
+		if not helpful.is_empty():
+			candidates = helpful
+	for site in candidates:
 		var access := _building_access_tiles(site)
 		if access.is_empty():
 			continue
-		var path := _find_road_path(worker["position"], access)
+		var path := _path_to_access(worker["position"], access)
 		if path.is_empty() and not access.has(worker["position"]):
 			continue
 		site["builder_worker_id"] = int(worker["id"])
@@ -6427,7 +6524,7 @@ func _assign_from_central(worker: Dictionary, destination: Dictionary, resource_
 	var start_access := _town_hall_access_tiles()
 	if start_access.is_empty():
 		return false
-	var path := _find_road_path(worker["position"], start_access)
+	var path := _path_to_access(worker["position"], start_access)
 	if path.is_empty() and not start_access.has(worker["position"]):
 		return false
 	worker["task"] = {
@@ -6458,7 +6555,7 @@ func _assign_building_to_marker(worker: Dictionary, source: Dictionary, destinat
 	var access := _building_access_tiles(source)
 	if access.is_empty():
 		return false
-	var path := _find_road_path(worker["position"], access)
+	var path := _path_to_access(worker["position"], access)
 	if path.is_empty() and not access.has(worker["position"]):
 		return false
 	worker["task"] = {
@@ -6536,7 +6633,7 @@ func _assign_dropoff_for_carried(worker: Dictionary) -> bool:
 		worker["state"] = "Blocked"
 		return false
 
-	var path := _find_road_path(worker["position"], access)
+	var path := _path_to_access(worker["position"], access)
 	if path.is_empty() and not access.has(worker["position"]):
 		worker["state"] = "Blocked"
 		return false
@@ -7459,10 +7556,11 @@ func _update_time(delta: float) -> void:
 			String(dusk_forecast.get("threat", "QUIET")),
 			String(dusk_forecast.get("activity", "Light"))
 		])
-		last_message = "NIGHTFALL — Threat: %s. Likely activity: %s." % [
-			String(dusk_forecast.get("threat", "QUIET")),
-			String(dusk_forecast.get("activity", "Light"))
-		]
+		if not String(last_message).begins_with("RAID IN"):
+			last_message = "NIGHTFALL — Threat: %s. Likely activity: %s." % [
+				String(dusk_forecast.get("threat", "QUIET")),
+				String(dusk_forecast.get("activity", "Light"))
+			]
 	if not is_night and not night_final_warning_sent and remaining <= NIGHT_FINAL_WARNING_SECONDS:
 		night_final_warning_sent = true
 		path_grid_dirty = true

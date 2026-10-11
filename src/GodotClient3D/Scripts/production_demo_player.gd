@@ -10,7 +10,7 @@ extends RefCounted
 const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
 const Tuning = preload("res://src/GodotClient/Scripts/one_shard_rivalry_tuning.gd")
 
-const MAX_PENDING_ROADS := 4
+const MAX_PENDING_ROADS := 2
 const MAX_PENDING_SITES := 1
 const SITE_RADIUS := 22
 const ROAD_BURST := 2
@@ -97,6 +97,8 @@ func _defend_night(sim) -> void:
 		var toward: Vector2i = (sim.shard_position - sim.town_hall_position).sign()
 		_try_build(sim, Defs.BUILDING_WATCHTOWER, sim.town_hall_position + toward + Vector2i(1, 1))
 		return
+	if _pending_buildings(sim) >= MAX_PENDING_SITES:
+		return
 	if _unlocked(sim, Defs.BUILDING_BARRACKS) and _count(sim, Defs.BUILDING_BARRACKS) < 1:
 		_try_build(sim, Defs.BUILDING_BARRACKS, sim.town_hall_position + Vector2i(6, 2))
 
@@ -128,6 +130,10 @@ func _scout(sim) -> void:
 
 func _expand_toward_shard(sim) -> void:
 	if not _starter_ready(sim):
+		return
+	if not _has_completed(sim, Defs.BUILDING_BARRACKS):
+		# The Director: keep carriers on the keep until the Barracks is up.
+		# Frontier roads used to steal every haul and starve deliveries.
 		return
 	_extend_roads(sim, _frontier_target(sim), ROAD_BURST)
 	if not _unlocked(sim, Defs.BUILDING_LUMEN_PILLAR):
@@ -197,12 +203,17 @@ func _try_quarry(sim) -> bool:
 		last_idle_reason = "cannot afford Quarry"
 		return false
 	var rocks := _revealed_kind(sim, sim.town_hall_position, Defs.TILE_ROCK, 32)
+	var preferred: Variant = sim.founding_site.get("quarry_stone", Vector2i(-1, -1))
+	if preferred is Vector2i and preferred.x >= 0:
+		rocks.erase(preferred)
+		rocks.insert(0, preferred)
 	if rocks.is_empty():
 		last_failures.append("QUARRY: no revealed rock")
 		_extend_roads(sim, _aim_resource(sim, Defs.TILE_ROCK, Vector2i(8, 2)), 2)
 		return false
 	var footprint: Vector2i = Defs.building_footprint(Defs.BUILDING_QUARRY)
 	var road_aim := Vector2i(rocks[0])
+	var road_aim_score := 100000
 	var reasons: Dictionary = {}
 	for rock_value in rocks:
 		var rock: Vector2i = rock_value
@@ -219,7 +230,10 @@ func _try_quarry(sim) -> bool:
 					var reason := String(validation.get("reason", String(validation.get("message", "unknown"))))
 					reasons[reason] = int(reasons.get(reason, 0)) + 1
 					if reason == "RoadConnection" or String(validation.get("message", "")).contains("road"):
-						road_aim = rock
+						var score := absi(rock.x - sim.town_hall_position.x) + absi(rock.y - sim.town_hall_position.y)
+						if score < road_aim_score:
+							road_aim = rock
+							road_aim_score = score
 	_extend_roads(sim, road_aim, 2)
 	last_failures.append("QUARRY: %d rocks visible, none placeable yet %s" % [rocks.size(), str(reasons)])
 	print("DEMO_AI quarry_fail rocks=%d reasons=%s aim=%s" % [rocks.size(), str(reasons), str(road_aim)])
@@ -367,6 +381,9 @@ func _early_road_target(sim) -> Vector2i:
 	if _count(sim, Defs.BUILDING_FARM) < 1:
 		return _aim_food(sim, Vector2i(7, 9))
 	if _count(sim, Defs.BUILDING_QUARRY) < 1:
+		var preferred: Variant = sim.founding_site.get("quarry_stone", Vector2i(-1, -1))
+		if preferred is Vector2i and preferred.x >= 0:
+			return preferred
 		var rock := _nearest_kind(sim, sim.town_hall_position, Defs.TILE_ROCK, 22)
 		if rock.x >= 0:
 			return rock
