@@ -1,12 +1,12 @@
 # Demo playthrough v2 — one-hour hold (PR #81)
 
-Recorded on `cursor/demo-playthrough-a689` at `d9bc1a0` after the demo-balance round. Official seed **260821**. Hall `(239, 181)`, Shard `(160, 156)` (~84 tiles west), **4** rival seats. Map 320×320, crater R≈110.
+Recorded on `cursor/demo-playthrough-a689` at `d9bc1a0` (hold hour) plus the P2 HUD/notice pass on this branch. Official seed **260821**. Hall `(239, 181)`, Shard `(160, 156)` (~84 tiles west), **4** rival seats. Map 320×320, crater R≈110.
 
 Harness: `tests/t_demo_playthrough.gd` + `src/GodotClient3D/Scripts/production_demo_player.gd`. The bot issues only public `request_*` commands and advances game time at 8 s/step. Clock below is **game time**.
 
 **Result: THE REALM HOLDS at 45:00.** Four nights survived. Watchtower, Barracks, frontier stake and a visible rival all land inside the one-hour window. Binding remains the longer war.
 
-Shots (3D, 1920×1080, seed 260821): `t00_start`, `t04_first_quest`, `t05_play`, `t07_first_night`, `t07_first_raid`, `t10_play`, `t12_frontier`, `t15_play`, `t18_rival`, `t20_play`, `t25_play`, `t30_play`, `t35_play`, `t40_play`, `t44_victory`.
+Shots (3D, 1920×1080, seed 260821): `t00_start`, `t04_first_quest`, `t05_play`, `t07_first_night`, `t07_first_raid`, `t10_play`, `t12_frontier`, `t15_play`, `t18_rival`, `t20_play`, `t25_play`, `t30_play`, `t35_play`, `t40_play`, `t44_victory`. Type proof after the outline-off pass: `hud_victory_type`, `hud_raid_type`.
 
 ---
 
@@ -88,14 +88,27 @@ Hall `(76, 188)`, Shard `(157, 156)`, 3 rivals. First quest at 4:32. Night 1 at 
 
 ---
 
+## Gates (this pass)
+
+| Gate | Result |
+| --- | --- |
+| t_demo_balance | PASS (stone 5–8 on 4 seeds, tower@120s, construction before roads, raid 60s + ping, 2→5 only after Barracks, hold at 2700) |
+| t_raid_warnings | PASS |
+| t_economy_feedback | PASS |
+| t_hud_type | PASS (Label/Button/RichTextLabel outline_size 0) |
+| t_sns_ui_look | PASS |
+| t_bigmap | PASS — start_new_3d **822 ms**, first frame **715 ms**, Master **1.000** |
+| export audit | **MISSING 0** |
+| t_founding_seeds sim | **100/100** including the quarry-stone 5–8 band |
+
 ## What still fails / is dull
 
-- **Storehouse never builds** on 260821 (plank cost vs stock). Quest sits on Storehouse / Stone Shortage after minute 5. Not a crash; it is leftover HUD noise.
+- **Storehouse was unaffordable** on the recorded 260821 hour (4 planks left after the tower + barracks). The bot now falls through to a Sawmill instead of spinning on that quest; the 45:00 CSVs were recorded before that change and still show the stall.
 - **Dull road-laying** from minute 12 to 45. Something meaningful happens at 12 (frontier), 18 (rival), 7/18/30/40 (nights), 45 (hold). The in-between is settlers walking west.
-- **HUD doubled type on 1080p** is still visible on lavapipe (THE REALM HOLDSO, RAIDOID). outline_size is 1. Not re-verified on a discrete GPU.
-- **ChatGPT P2 items 8–9** (HUD noise, raid emotion) not fully addressed.
+- **1080p type**: HUD outline_size is now 0 plus a 1 px shadow. Tight crops of `THE REALM HOLDS / FIVE DAYS` are a single stroke. Cinzel ball terminals can still be misread as an extra letter (HOLDSO / RAIDOID) by a reviewer model; not re-verified on a discrete GPU.
 - **Binding** is still the longer war and is not reachable in this hour on the 320 map.
-- Official **3D shots** are captured in a second pass on 260821; headless accept does not write PNGs.
+- **git push** of the local commits after `ca9967c` is blocked in this environment (no GitHub write credentials). PR #81 body is updated; remote code may still be the pre-hold revision until the branch is pushed.
+- Official **3D hour shots** are from the hold recording; `hud_victory_type` / `hud_raid_type` are the type-proof pass.
 
 ---
 

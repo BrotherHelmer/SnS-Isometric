@@ -3746,7 +3746,7 @@ func _create_result_overlay(root: Control) -> void:
 	result_title = Label.new()
 	result_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	Identity.apply_label(result_title, "title")
-	result_title.add_theme_font_size_override("font_size", 26)
+	HudSkin.set_font(result_title, HudSkin.display_font(700), 26, Identity.COLOR_LUMEN)
 	HudSkin.apply_readable_type(result_title)
 	box.add_child(result_title)
 	result_body = RichTextLabel.new()
