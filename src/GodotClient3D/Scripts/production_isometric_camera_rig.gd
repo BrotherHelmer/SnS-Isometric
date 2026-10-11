@@ -35,9 +35,11 @@ func _ready() -> void:
 	camera.near = 0.2
 	camera.far = 8000.0
 	camera.position = Vector3(0.0, 32.0, 32.0)
+	# Local -45° X, not look_at: after the parent moves, look_at(global
+	# position) uses a stale camera transform and aims at the ocean.
+	camera.rotation_degrees = Vector3(-45.0, 0.0, 0.0)
 	camera.current = true
 	add_child(camera)
-	camera.look_at(Vector3.ZERO, Vector3.UP)
 	rotation.y = PREFERRED_YAW
 	position = target_position
 
@@ -141,7 +143,7 @@ func compose_view(world_position: Vector3, orthographic_size: float) -> void:
 	if camera != null:
 		camera.size = target_zoom
 		camera.position = Vector3(0.0, 32.0, 32.0)
-		camera.look_at(global_position, Vector3.UP)
+		camera.rotation_degrees = Vector3(-45.0, 0.0, 0.0)
 
 
 func _pan(amount: Vector2, immediate := false, source := "script") -> void:

@@ -608,9 +608,12 @@ func _spawn_founding_yard_props(_entrance: Vector2i) -> void:
 		{"type": "stump", "off": Vector2i(-3, 2), "rot": 22.0, "scale": 0.68},
 		{"type": "stump", "off": Vector2i(4, -1), "rot": -18.0, "scale": 0.62},
 		{"type": "stump", "off": Vector2i(-4, -2), "rot": 40.0, "scale": 0.58},
+		{"type": "stump", "off": Vector2i(5, 3), "rot": 12.0, "scale": 0.55},
+		{"type": "stump", "off": Vector2i(-5, 1), "rot": -28.0, "scale": 0.60},
 		{"type": "cart", "off": Vector2i(3, 2), "rot": -10.0, "scale": 0.72},
 		{"type": "lantern", "off": Vector2i(1, 0), "rot": 0.0, "scale": 1.00},
 		{"type": "crate", "off": Vector2i(-1, 3), "rot": -6.0, "scale": 0.88},
+		{"type": "crate", "off": Vector2i(2, -2), "rot": 16.0, "scale": 0.80},
 	]
 	var id := 1
 	for spec in props:
@@ -3824,6 +3827,18 @@ func _generate_founding_creek(center: Vector2i) -> void:
 	if tiles.size() < 5:
 		tiles = _founding_water_blob(center + Vector2i(roundi(coast_dir.x * 6.0), roundi(coast_dir.y * 5.0)), 2, site_rng)
 		tiles = _largest_water_component(tiles)
+	if tiles.size() < 5:
+		tiles = []
+		for step in 6:
+			var forced := center + Vector2i(roundi(coast_dir.x * float(5 + step)), roundi(coast_dir.y * float(5 + step)))
+			forced.x = clampi(forced.x, 1, map_size.x - 2)
+			forced.y = clampi(forced.y, 1, map_size.y - 2)
+			if _in_founding_clearing(forced) or _tile_distance(forced, shard_position) < crater_pit_radius + 1.0:
+				continue
+			if not tiles.has(forced):
+				if not tiles.is_empty():
+					_append_creek_gap(tiles, tiles[tiles.size() - 1], forced)
+				tiles.append(forced)
 	founding_site["creek_tiles"] = tiles
 	_choose_founding_bridge(center, tiles)
 
@@ -4161,6 +4176,8 @@ func _is_founding_bridge_tile(tile: Vector2i) -> bool:
 
 
 func _lay_founding_roads() -> void:
+	# Walk from the door toward water and stop on a bridge. A 2-tile
+	# stub that dies in the lawn reads as a dead-end path.
 	var entrance := _town_hall_entrance_tile()
 	var hall := founding_hall_center()
 	var out := Vector2(entrance) - hall
@@ -4168,12 +4185,27 @@ func _lay_founding_roads() -> void:
 		out = Vector2(0.0, 1.0)
 	out = out.normalized()
 	var water_aim := Vector2(founding_site.get("coast_dir", Vector2(-1.0, 0.2)))
-	var bend := (out * 0.55 + water_aim * 0.45).normalized()
+	if water_aim.length_squared() < 0.01:
+		water_aim = Vector2(-1.0, 0.2)
+	water_aim = water_aim.normalized()
+	var target := entrance + Vector2i(roundi(water_aim.x * 8.0), roundi(water_aim.y * 8.0))
+	var bridges: Array = founding_site.get("bridge_tiles", [])
+	if not bridges.is_empty():
+		var best := Vector2i(bridges[0])
+		var best_d := _tile_distance(entrance, best)
+		for tile in bridges:
+			var d := _tile_distance(entrance, Vector2i(tile))
+			if d < best_d:
+				best_d = d
+				best = Vector2i(tile)
+		target = best
+	var heading := (Vector2(target) - Vector2(entrance)).normalized()
+	if heading.length_squared() < 0.01:
+		heading = (out * 0.45 + water_aim * 0.55).normalized()
 	var roads: Array[Vector2i] = []
 	var cursor := entrance
-	for i in 5:
-		var step := out if i < 2 else bend
-		var nxt := cursor + Vector2i(clampi(roundi(step.x), -1, 1), clampi(roundi(step.y), -1, 1))
+	for _i in 8:
+		var nxt := cursor + Vector2i(clampi(roundi(heading.x), -1, 1), clampi(roundi(heading.y), -1, 1))
 		if nxt == cursor:
 			nxt = cursor + Vector2i(clampi(roundi(out.x), -1, 1), clampi(roundi(out.y), -1, 1))
 		if nxt == cursor:
@@ -4187,7 +4219,9 @@ func _lay_founding_roads() -> void:
 			_add_completed_building(Defs.BUILDING_ROAD, cursor)
 		if not roads.has(cursor):
 			roads.append(cursor)
-	for tile in founding_site.get("bridge_tiles", []):
+		if _is_founding_bridge_tile(cursor):
+			break
+	for tile in bridges:
 		var bridge := Vector2i(tile)
 		if not is_inside_map(bridge):
 			continue
