@@ -97,12 +97,13 @@
 	"crater_war": {
 		"capture_at": 1155.10000000004,
 		"exposure": 0.3,
+		"first_12_at": 2023.99999999925,
 		"fissure": "(100, 181)",
 		"interacted": true,
 		"resolution": "capture",
-		"ritual_at": 2703.99999999864,
+		"ritual_at": 2023.99999999925,
 		"secondary": "(108, 176)",
-		"stabilized": 28,
+		"stabilized": 7,
 		"storehouse_at": 308.500000000002,
 		"surveyed": true
 	},
@@ -112,10 +113,9 @@
 		"Dull stretch near t=592s (96s without a new order).",
 		"Dull stretch near t=1056s (96s without a new order).",
 		"Dull stretch near t=1656s (96s without a new order).",
-		"Dull stretch near t=1752s (96s without a new order).",
-		"Dull stretch near t=2368s (96s without a new order)."
+		"Dull stretch near t=1752s (96s without a new order)."
 	],
-	"elapsed": 2823.99999999853,
+	"elapsed": 2143.99999999915,
 	"events": [
 		{
 			"detail": "Founded seed 260918 at hall (76, 188), shard (157, 156), rivals 3.",
@@ -163,14 +163,19 @@
 			"t": 1176.00000000003
 		},
 		{
+			"detail": "Store reached 12 Stabilized Wyrd.",
+			"kind": "stabilized_12",
+			"t": 2023.99999999925
+		},
+		{
 			"detail": "BINDING BEGUN — defend the fissure ritual for 120 seconds.",
 			"kind": "ritual",
-			"t": 2703.99999999864
+			"t": 2023.99999999925
 		},
 		{
 			"detail": "THE FISSURE IS BOUND — the ritual held.",
 			"kind": "victory",
-			"t": 2823.99999999853
+			"t": 2143.99999999915
 		}
 	],
 	"finished": true,
@@ -789,6 +794,12 @@
 			"type": "ROAD"
 		},
 		{
+			"message": "BINDING BEGUN — defend the fissure ritual for 120 seconds.",
+			"seconds": 2023.99999999925,
+			"tile": "100,181",
+			"type": "BIND"
+		},
+		{
 			"message": "Tove scouts toward the fog.",
 			"seconds": 2039.99999999924,
 			"tile": "88,176",
@@ -797,13 +808,13 @@
 		{
 			"message": "Road planned. Resume time so a free peasant can build it.",
 			"seconds": 2047.99999999923,
-			"tile": "101,178",
+			"tile": "78,193",
 			"type": "ROAD"
 		},
 		{
 			"message": "Road planned. Resume time so a free peasant can build it.",
 			"seconds": 2047.99999999923,
-			"tile": "102,179",
+			"tile": "101,178",
 			"type": "ROAD"
 		},
 		{
@@ -823,6 +834,12 @@
 			"seconds": 2063.99999999922,
 			"tile": "88,176",
 			"type": "SCOUT"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2071.99999999921,
+			"tile": "75,190",
+			"type": "ROAD"
 		},
 		{
 			"message": "Tove scouts toward the fog.",
@@ -863,13 +880,7 @@
 		{
 			"message": "Road planned. Resume time so a free peasant can build it.",
 			"seconds": 2119.99999999917,
-			"tile": "103,180",
-			"type": "ROAD"
-		},
-		{
-			"message": "Road planned. Resume time so a free peasant can build it.",
-			"seconds": 2119.99999999917,
-			"tile": "104,181",
+			"tile": "76,192",
 			"type": "ROAD"
 		},
 		{
@@ -877,6 +888,12 @@
 			"seconds": 2119.99999999917,
 			"tile": "88,176",
 			"type": "SCOUT"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2127.99999999916,
+			"tile": "78,186",
+			"type": "ROAD"
 		},
 		{
 			"message": "Tove scouts toward the fog.",
@@ -887,390 +904,6 @@
 		{
 			"message": "Tove scouts toward the fog.",
 			"seconds": 2135.99999999915,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2143.99999999915,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2151.99999999914,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2159.99999999913,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2167.99999999912,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2175.99999999912,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2183.99999999911,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Road planned. Resume time so a free peasant can build it.",
-			"seconds": 2191.9999999991,
-			"tile": "103,182",
-			"type": "ROAD"
-		},
-		{
-			"message": "Road planned. Resume time so a free peasant can build it.",
-			"seconds": 2191.9999999991,
-			"tile": "102,183",
-			"type": "ROAD"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2191.9999999991,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2199.99999999909,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2207.99999999909,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2215.99999999908,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Construction started: Watchtower.",
-			"seconds": 2271.99999999903,
-			"tile": "78,187",
-			"type": "WATCHTOWER"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2431.99999999888,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2439.99999999888,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2447.99999999887,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2455.99999999886,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2463.99999999885,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2471.99999999885,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2479.99999999884,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2487.99999999883,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2495.99999999883,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2503.99999999882,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2511.99999999881,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Construction started: House.",
-			"seconds": 2519.9999999988,
-			"tile": "73,187",
-			"type": "HOUSE"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2519.9999999988,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2527.9999999988,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2535.99999999879,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2543.99999999878,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2551.99999999877,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2559.99999999877,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2567.99999999876,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2575.99999999875,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2583.99999999875,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2591.99999999874,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2599.99999999873,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2607.99999999872,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2615.99999999872,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2623.99999999871,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2631.9999999987,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2639.99999999869,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2647.99999999869,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2655.99999999868,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2663.99999999867,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2671.99999999867,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2679.99999999866,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2687.99999999865,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2695.99999999864,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2703.99999999864,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "BINDING BEGUN — defend the fissure ritual for 120 seconds.",
-			"seconds": 2703.99999999864,
-			"tile": "100,181",
-			"type": "BIND"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2711.99999999863,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2719.99999999862,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2727.99999999861,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2735.99999999861,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2743.9999999986,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2751.99999999859,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2759.99999999859,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2767.99999999858,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2775.99999999857,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2783.99999999856,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2791.99999999856,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2799.99999999855,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2807.99999999854,
-			"tile": "88,176",
-			"type": "SCOUT"
-		},
-		{
-			"message": "Tove scouts toward the fog.",
-			"seconds": 2815.99999999853,
 			"tile": "88,176",
 			"type": "SCOUT"
 		}
@@ -1303,12 +936,10 @@
 		"t20_play",
 		"t25_play",
 		"t30_play",
-		"t35_play",
-		"t40_play",
-		"t45_play",
 		"pending_ritual",
-		"t45_ritual",
-		"t47_victory"
+		"t33_ritual",
+		"t35_play",
+		"t35_victory"
 	],
 	"timeline": [
 		{
@@ -1790,15 +1421,24 @@
 			"t": 1983.99999999929
 		},
 		{
+			"action": "BIND @(100, 181) t=2024",
+			"t": 2023.99999999925
+		},
+		{
+			"caption": "Binding ritual begun.",
+			"shot": "t33_ritual",
+			"t": 2023.99999999925
+		},
+		{
 			"action": "SCOUT @(88, 176) t=2040",
 			"t": 2039.99999999924
 		},
 		{
-			"action": "ROAD @(101, 178) t=2048",
+			"action": "ROAD @(78, 193) t=2048",
 			"t": 2047.99999999923
 		},
 		{
-			"action": "ROAD @(102, 179) t=2048",
+			"action": "ROAD @(101, 178) t=2048",
 			"t": 2047.99999999923
 		},
 		{
@@ -1812,6 +1452,10 @@
 		{
 			"action": "SCOUT @(88, 176) t=2064",
 			"t": 2063.99999999922
+		},
+		{
+			"action": "ROAD @(75, 190) t=2072",
+			"t": 2071.99999999921
 		},
 		{
 			"action": "SCOUT @(88, 176) t=2072",
@@ -1843,16 +1487,16 @@
 			"t": 2111.99999999917
 		},
 		{
-			"action": "ROAD @(103, 180) t=2120",
-			"t": 2119.99999999917
-		},
-		{
-			"action": "ROAD @(104, 181) t=2120",
+			"action": "ROAD @(76, 192) t=2120",
 			"t": 2119.99999999917
 		},
 		{
 			"action": "SCOUT @(88, 176) t=2120",
 			"t": 2119.99999999917
+		},
+		{
+			"action": "ROAD @(78, 186) t=2128",
+			"t": 2127.99999999916
 		},
 		{
 			"action": "SCOUT @(88, 176) t=2128",
@@ -1863,280 +1507,9 @@
 			"t": 2135.99999999915
 		},
 		{
-			"action": "SCOUT @(88, 176) t=2144",
-			"t": 2143.99999999915
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2152",
-			"t": 2151.99999999914
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2160",
-			"t": 2159.99999999913
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2168",
-			"t": 2167.99999999912
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2176",
-			"t": 2175.99999999912
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2184",
-			"t": 2183.99999999911
-		},
-		{
-			"action": "ROAD @(103, 182) t=2192",
-			"t": 2191.9999999991
-		},
-		{
-			"action": "ROAD @(102, 183) t=2192",
-			"t": 2191.9999999991
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2192",
-			"t": 2191.9999999991
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2200",
-			"t": 2199.99999999909
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2208",
-			"t": 2207.99999999909
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2216",
-			"t": 2215.99999999908
-		},
-		{
-			"action": "WATCHTOWER @(78, 187) t=2272",
-			"t": 2271.99999999903
-		},
-		{
-			"caption": "Minute 40 yard.",
-			"shot": "t40_play",
-			"t": 2407.99999999891
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2432",
-			"t": 2431.99999999888
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2440",
-			"t": 2439.99999999888
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2448",
-			"t": 2447.99999999887
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2456",
-			"t": 2455.99999999886
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2464",
-			"t": 2463.99999999885
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2472",
-			"t": 2471.99999999885
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2480",
-			"t": 2479.99999999884
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2488",
-			"t": 2487.99999999883
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2496",
-			"t": 2495.99999999883
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2504",
-			"t": 2503.99999999882
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2512",
-			"t": 2511.99999999881
-		},
-		{
-			"action": "HOUSE @(73, 187) t=2520",
-			"t": 2519.9999999988
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2520",
-			"t": 2519.9999999988
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2528",
-			"t": 2527.9999999988
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2536",
-			"t": 2535.99999999879
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2544",
-			"t": 2543.99999999878
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2552",
-			"t": 2551.99999999877
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2560",
-			"t": 2559.99999999877
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2568",
-			"t": 2567.99999999876
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2576",
-			"t": 2575.99999999875
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2584",
-			"t": 2583.99999999875
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2592",
-			"t": 2591.99999999874
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2600",
-			"t": 2599.99999999873
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2608",
-			"t": 2607.99999999872
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2616",
-			"t": 2615.99999999872
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2624",
-			"t": 2623.99999999871
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2632",
-			"t": 2631.9999999987
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2640",
-			"t": 2639.99999999869
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2648",
-			"t": 2647.99999999869
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2656",
-			"t": 2655.99999999868
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2664",
-			"t": 2663.99999999867
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2672",
-			"t": 2671.99999999867
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2680",
-			"t": 2679.99999999866
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2688",
-			"t": 2687.99999999865
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2696",
-			"t": 2695.99999999864
-		},
-		{
-			"caption": "Minute 45 yard.",
-			"shot": "t45_play",
-			"t": 2703.99999999864
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2704",
-			"t": 2703.99999999864
-		},
-		{
-			"action": "BIND @(100, 181) t=2704",
-			"t": 2703.99999999864
-		},
-		{
-			"caption": "Binding ritual begun.",
-			"shot": "t45_ritual",
-			"t": 2703.99999999864
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2712",
-			"t": 2711.99999999863
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2720",
-			"t": 2719.99999999862
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2728",
-			"t": 2727.99999999861
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2736",
-			"t": 2735.99999999861
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2744",
-			"t": 2743.9999999986
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2752",
-			"t": 2751.99999999859
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2760",
-			"t": 2759.99999999859
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2768",
-			"t": 2767.99999999858
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2776",
-			"t": 2775.99999999857
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2784",
-			"t": 2783.99999999856
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2792",
-			"t": 2791.99999999856
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2800",
-			"t": 2799.99999999855
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2808",
-			"t": 2807.99999999854
-		},
-		{
-			"action": "SCOUT @(88, 176) t=2816",
-			"t": 2815.99999999853
-		},
-		{
 			"caption": "Victory.",
-			"shot": "t47_victory",
-			"t": 2823.99999999853
+			"shot": "t35_victory",
+			"t": 2143.99999999915
 		}
 	],
 	"unclear": [],

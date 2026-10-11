@@ -1,21 +1,21 @@
-You are re-reviewing Shard & Sovereign after TEST #15 — P1 demo fixes plus a vertical slice of The Crater War (PR #82, stacked on the v2 hold hour). The previous hold scored the 45-minute THE REALM HOLDS run. Survival is now a milestone, not a win. Binding the frontier fissure is the hour.
+You are re-reviewing Shard & Sovereign after TEST #15 — P1 demo fixes plus a vertical slice of The Crater War (PR #82). Binding now starts when the store holds 12 Stabilized Wyrd, not on a 45:00 clock.
 
 Read PLAYTHROUGH.md first. Then look at the screenshots in this folder in this order. These are the ONLY attached images:
 
 - t00_start.png — founding yard, first quest
 - t05_storehouse.png — Sawmill / Storehouse plank loop complete (minute 5)
-- t07_first_raid.png — night 1, 2 raiders, 60 s warning, watchtower up
-- t12_frontier.png — crater west, geologist marks the fissure, Bind-the-fissure objective
-- t18_rival.png — a rival Claimant Outpost sighted on the same vent
+- t07_first_raid.png — night 1, 2 raiders, 60 s warning
+- t12_frontier.png — crater west, geologist marks the fissure
+- t18_rival.png — rival Claimant Outpost sighted (demo reveal beat)
 - t19_capture.png — CAPTURE toast: +8 Wood, +4 Stone, +2 Wyrd, +2 Stabilized
 - t20_play.png — after capture; rival relocates to a second vent
-- t30_play.png — mid-hour nights with varying raid direction / target
-- t45_ritual.png — BINDING BEGUN, 120 s ritual, THE REALM HOLDS is only a milestone toast
-- t47_victory.png — THE FISSURE IS BOUND / THE RITUAL HELD at 47:04
+- t25_play.png — refining toward 12 Stabilized
+- t26_ritual.png — BINDING BEGUN the moment the store hits 12 (26:48 on 260821)
+- t28_victory.png — THE FISSURE IS BOUND / THE RITUAL HELD at 28:48
 
-The bot played like a sensible settler on seed 260821. It finished the Storehouse, captured the Outpost, interacted with the rival, harvested/refined Stabilized Wyrd, defended the ritual, and won Binding. Three other seeds (261306, 261597, 260918) do the same at 47:04.
+The bot earned 12 Stabilized, then chose to start the 120 s ritual. Other seeds bind at 30:00 / 30:00 / 35:44 — not a shared clock.
 
-Rate the fun of this Crater War hour 1–10 for a new player who wanted up to an hour of play. Judge the pacing minute by minute against the previous hold-only hour. Give a short remaining-fix list only if something still blocks a fun hour.
+Rate the fun of this Crater War hour 1–10. Judge pacing against the previous hold-only hour and the fake 47:04 timer win.
 
 Return:
 1. Fun score (1–10) and one-sentence reason

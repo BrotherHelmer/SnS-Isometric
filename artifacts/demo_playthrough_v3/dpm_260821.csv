@@ -1627,3 +1627,319 @@ elapsed,day,night,event,detail,seconds_since_command,idle_gap
 2816.0,5,0,"scout_order","Bjorn scouts toward the fog.",0.0,0
 2820.4,5,1,"raid_started","wave=5 intent=raid_ritual",4.4,0
 2820.4,5,1,"night_started","Night 5",4.4,0
+0.0,1,0,"build_placed","Construction started.",0.0,0
+16.0,1,0,"build_placed","Construction started.",0.0,0
+32.0,1,0,"build_placed","Construction started.",0.0,0
+80.3,1,0,"resource_blocked","LUMBER CAMP: Output storage full",48.3,1
+92.3,1,0,"resource_blocked","LUMBER CAMP: Output storage full",60.3,1
+113.7,1,0,"resource_blocked","FARM: Output storage full",81.7,1
+114.3,1,0,"resource_blocked","LUMBER CAMP: Output storage full",82.3,1
+120.0,1,0,"build_placed","Construction started.",0.0,0
+172.5,1,0,"discovery","A dense stand of timber waits beyond the first hills.",52.5,1
+172.5,1,0,"resource_blocked","WATCHTOWER: Waiting for worker",52.5,1
+184.0,1,0,"build_placed","Construction started.",0.0,0
+188.3,1,0,"resource_blocked","LUMBER CAMP: Output storage full",4.3,0
+191.8,1,0,"resource_blocked","FARM: Output storage full",7.8,0
+206.3,1,0,"resource_blocked","LUMBER CAMP: Output storage full",22.3,0
+218.3,1,0,"resource_blocked","LUMBER CAMP: Output storage full",34.3,1
+221.3,1,0,"intention_complete","A Settlement Begins",37.3,1
+221.3,1,0,"intention_complete","Feed the Settlement",37.3,1
+224.0,1,0,"build_placed","Construction started.",0.0,0
+242.3,1,0,"resource_blocked","LUMBER CAMP: Output storage full",18.3,0
+256.7,1,0,"resource_blocked","QUARRY: Output storage full",32.7,1
+272.0,1,0,"build_placed","Construction started.",0.0,0
+272.4,1,0,"resource_blocked","SAWMILL: Waiting for logs",0.4,0
+290.3,1,0,"resource_blocked","LUMBER CAMP: Output storage full",18.3,0
+303.0,1,0,"resource_blocked","SAWMILL: Waiting for logs",31.0,1
+304.0,1,0,"build_placed","Construction started.",0.0,0
+315.9,1,0,"resource_blocked","QUARRY: Output storage full",11.9,0
+330.0,1,0,"dusk_warning","Dusk approaches",26.0,0
+360.0,1,0,"horn_warning","RAID IN 60 SECONDS — hostiles from the north. They mean Town Hall.",56.0,1
+390.3,1,0,"resource_blocked","LUMBER CAMP: Output storage full",86.3,1
+412.1,1,0,"intention_complete","Prepare for Nightfall",108.1,1
+420.0,1,1,"raid_started","wave=2 intent=raid_probe",116.0,1
+420.0,1,1,"night_started","Night 1",116.0,1
+433.1,1,1,"building_damaged","Watchtower is under attack.",129.1,1
+434.7,1,1,"building_damaged","Watchtower is under attack.",130.7,1
+435.3,1,1,"building_damaged","Watchtower is under attack.",131.3,1
+436.9,1,1,"building_damaged","Watchtower is under attack.",132.9,1
+437.5,1,1,"building_damaged","Watchtower is under attack.",133.5,1
+439.1,1,1,"building_damaged","Watchtower is under attack.",135.1,1
+439.7,1,1,"building_damaged","Watchtower is under attack.",135.7,1
+441.3,1,1,"building_damaged","Watchtower is under attack.",137.3,1
+441.9,1,1,"building_damaged","Watchtower is under attack.",137.9,1
+443.5,1,1,"building_damaged","Watchtower is under attack.",139.5,1
+444.1,1,1,"building_damaged","Watchtower is under attack.",140.1,1
+445.7,1,1,"building_damaged","Watchtower is under attack.",141.7,1
+446.3,1,1,"building_damaged","Watchtower is under attack.",142.3,1
+447.9,1,1,"building_damaged","Watchtower is under attack.",143.9,1
+450.1,1,1,"building_damaged","Watchtower is under attack.",146.1,1
+452.3,1,1,"building_damaged","Watchtower is under attack.",148.3,1
+454.5,1,1,"building_damaged","Watchtower is under attack.",150.5,1
+456.7,1,1,"building_damaged","Watchtower is under attack.",152.7,1
+458.9,1,1,"building_damaged","Watchtower is under attack.",154.9,1
+461.1,1,1,"building_damaged","Watchtower is under attack.",157.1,1
+463.3,1,1,"building_damaged","Watchtower is under attack.",159.3,1
+465.5,1,1,"building_damaged","Watchtower is under attack.",161.5,1
+467.7,1,1,"building_damaged","Watchtower is under attack.",163.7,1
+600.1,2,0,"dawn","Day 2",296.1,1
+600.1,2,0,"dawn_aftermath","DAWN — Night 1 survived",296.1,1
+600.1,2,0,"intention_complete","Where Did They Come From?",296.1,1
+600.4,2,0,"resource_blocked","SAWMILL: Waiting for logs",296.4,1
+606.2,2,0,"resource_blocked","FARM: Output storage full",302.2,1
+620.4,2,0,"resource_blocked","LUMBER CAMP: Output storage full",316.4,1
+632.0,2,0,"build_placed","Construction started.",0.0,0
+638.4,2,0,"resource_blocked","LUMBER CAMP: Output storage full",6.4,0
+643.9,2,0,"resource_blocked","QUARRY: Output storage full",11.9,0
+656.5,2,0,"resource_blocked","SAWMILL: Waiting for logs",24.5,0
+664.0,2,0,"build_placed","Construction started.",0.0,0
+665.6,2,0,"resource_blocked","BAKERY: Waiting for wheat",1.6,0
+676.4,2,0,"resource_blocked","LUMBER CAMP: Output storage full",12.4,0
+688.0,2,0,"build_placed","Construction started.",0.0,0
+692.2,2,0,"resource_blocked","SAWMILL: Waiting for logs",4.2,0
+704.6,2,0,"resource_blocked","FARM: Waiting for worker",16.6,0
+720.0,2,0,"discovery","Someone defended this ridge before you. Lore discovered: Those Who Held the Ridge +7 Stone",32.0,1
+720.0,2,0,"discovery","A still lake holds the low ground.",32.0,1
+720.0,2,0,"build_placed","Construction started.",0.0,0
+726.8,2,0,"resource_blocked","BAKERY: Waiting for wheat",6.8,0
+762.4,2,0,"resource_blocked","FARM: Output storage full",42.4,1
+790.8,2,0,"resource_blocked","FARM: Output storage full",70.8,1
+847.5,2,0,"resource_blocked","LUMBER CAMP: Output storage full",127.5,1
+850.1,2,0,"resource_blocked","LUMBER CAMP: Output storage full",130.1,1
+853.0,2,0,"resource_blocked","LUMBER CAMP: Output storage full",133.0,1
+866.2,2,0,"resource_blocked","QUARRY: Waiting for worker",146.2,1
+882.3,2,0,"resource_blocked","QUARRY: No resources in range",162.3,1
+930.1,2,0,"dusk_warning","Dusk approaches",210.1,1
+960.1,2,0,"horn_warning","RAID IN 60 SECONDS — hostiles from the east. They mean Town Hall.",240.1,1
+994.4,2,0,"resource_blocked","FARM: Output storage full",274.4,1
+1020.1,2,1,"raid_started","wave=5 intent=raid_center",300.1,1
+1020.1,2,1,"night_started","Night 2",300.1,1
+1023.9,2,1,"building_damaged","Bakery is under attack.",303.9,1
+1026.3,2,1,"building_damaged","Storehouse is under attack.",306.3,1
+1029.5,2,1,"building_damaged","Quarry is under attack.",309.5,1
+1029.6,2,1,"building_damaged","Storehouse is under attack.",309.6,1
+1032.3,2,1,"building_damaged","Farm is under attack.",312.3,1
+1035.0,2,1,"building_damaged","Bakery is under attack.",315.0,1
+1035.2,2,1,"building_damaged","Watchtower is under attack.",315.2,1
+1037.1,2,1,"building_damaged","Watchtower is under attack.",317.1,1
+1037.3,2,1,"building_damaged","Quarry is under attack.",317.3,1
+1042.4,2,1,"building_damaged","Farm is under attack.",322.4,1
+1051.3,2,1,"building_damaged","Farm is under attack.",331.3,1
+1056.4,2,1,"building_damaged","Lumber Camp is under attack.",336.4,1
+1058.6,2,1,"building_damaged","Watchtower is under attack.",338.6,1
+1059.7,2,1,"building_damaged","Watchtower is under attack.",339.7,1
+1060.8,2,1,"building_damaged","Lumber Camp is under attack.",340.8,1
+1061.0,2,1,"building_damaged","Watchtower is under attack.",341.0,1
+1062.8,2,1,"building_damaged","Watchtower is under attack.",342.8,1
+1063.0,2,1,"building_damaged","Watchtower is under attack.",343.0,1
+1064.2,2,1,"building_damaged","Watchtower is under attack.",344.2,1
+1065.2,2,1,"building_damaged","Watchtower is under attack.",345.2,1
+1065.7,2,1,"building_damaged","Watchtower is under attack.",345.7,1
+1067.0,2,1,"building_damaged","Watchtower is under attack.",347.0,1
+1067.4,2,1,"building_damaged","Watchtower is under attack.",347.4,1
+1069.2,2,1,"building_damaged","Watchtower is under attack.",349.2,1
+1069.6,2,1,"building_damaged","Watchtower is under attack.",349.6,1
+1071.4,2,1,"building_damaged","Watchtower is under attack.",351.4,1
+1071.8,2,1,"building_damaged","Watchtower is under attack.",351.8,1
+1073.6,2,1,"building_damaged","Watchtower is under attack.",353.6,1
+1074.0,2,1,"building_damaged","Watchtower is under attack.",354.0,1
+1075.8,2,1,"building_damaged","Watchtower is under attack.",355.8,1
+1078.0,2,1,"building_damaged","Watchtower is under attack.",358.0,1
+1080.2,2,1,"building_damaged","Watchtower is under attack.",360.2,1
+1082.4,2,1,"building_damaged","Watchtower is under attack.",362.4,1
+1200.2,3,0,"dawn","Day 3",480.2,1
+1200.2,3,0,"dawn_aftermath","DAWN — Night 2 survived",480.2,1
+1200.5,3,0,"resource_blocked","LUMBER CAMP: Output storage full",480.5,1
+1202.4,3,0,"resource_blocked","FARM: Output storage full",482.4,1
+1202.7,3,0,"resource_blocked","BAKERY: Waiting for wheat",482.7,1
+1203.8,3,0,"resource_blocked","SAWMILL: Waiting for logs",483.8,1
+1216.5,3,0,"resource_blocked","LUMBER CAMP: Output storage full",496.5,1
+1219.4,3,0,"resource_blocked","FARM: Output storage full",499.4,1
+1234.4,3,0,"resource_blocked","SAWMILL: Waiting for logs",514.4,1
+1311.7,3,0,"resource_blocked","FARM: Output storage full",591.7,1
+1315.7,3,0,"resource_blocked","LUMBER CAMP: Output storage full",595.7,1
+1320.0,3,0,"build_placed","Construction started.",0.0,0
+1322.5,3,0,"resource_blocked","LUMBER CAMP: Output storage full",2.5,0
+1340.1,3,0,"resource_blocked","FARM: Output storage full",20.1,0
+1346.6,3,0,"resource_blocked","SAWMILL: Waiting for logs",26.6,0
+1368.0,3,0,"build_placed","Construction started.",0.0,0
+1368.5,3,0,"resource_blocked","FARM: Output storage full",0.5,0
+1382.5,3,0,"resource_blocked","LUMBER CAMP: Output storage full",14.5,0
+1389.8,3,0,"resource_blocked","FARM: Output storage full",21.8,0
+1452.0,3,0,"resource_blocked","LUMBER CAMP: Output storage full",84.0,1
+1454.5,3,0,"resource_blocked","LUMBER CAMP: Output storage full",86.5,1
+1469.0,3,0,"resource_blocked","SAWMILL: Waiting for logs",101.0,1
+1485.2,3,0,"resource_blocked","LUMBER CAMP: Output storage full",117.2,1
+1490.4,3,0,"resource_blocked","LUMBER CAMP: Output storage full",122.4,1
+1504.0,3,0,"scout_order","Bjorn scouts toward the fog.",0.0,0
+1514.9,3,0,"resource_blocked","SAWMILL: Waiting for logs",10.9,0
+1530.2,3,0,"dusk_warning","Dusk approaches",26.2,0
+1542.5,3,0,"resource_blocked","LUMBER CAMP: Output storage full",38.5,1
+1546.0,3,0,"resource_blocked","FARM: Output storage full",42.0,1
+1550.5,3,0,"resource_blocked","LUMBER CAMP: Output storage full",46.5,1
+1555.7,3,0,"resource_blocked","SAWMILL: Waiting for logs",51.7,1
+1560.2,3,0,"horn_warning","RAID IN 60 SECONDS — hostiles from the south. They mean Outpost.",56.2,1
+1571.0,3,0,"resource_blocked","SAWMILL: Waiting for logs",67.0,1
+1575.0,3,0,"resource_blocked","BAKERY: Waiting for wheat",71.0,1
+1576.0,3,0,"build_placed","Construction started.",0.0,0
+1609.9,3,0,"resource_blocked","FARM: Output storage full",33.9,1
+1620.2,3,1,"raid_started","wave=5 intent=raid_ritual",44.2,1
+1620.2,3,1,"night_started","Night 3",44.2,1
+0.0,1,0,"build_placed","Construction started.",0.0,0
+16.0,1,0,"build_placed","Construction started.",0.0,0
+32.0,1,0,"build_placed","Construction started.",0.0,0
+80.3,1,0,"resource_blocked","LUMBER CAMP: Output storage full",48.3,1
+92.3,1,0,"resource_blocked","LUMBER CAMP: Output storage full",60.3,1
+113.7,1,0,"resource_blocked","FARM: Output storage full",81.7,1
+114.3,1,0,"resource_blocked","LUMBER CAMP: Output storage full",82.3,1
+120.0,1,0,"build_placed","Construction started.",0.0,0
+172.5,1,0,"discovery","A dense stand of timber waits beyond the first hills.",52.5,1
+172.5,1,0,"resource_blocked","WATCHTOWER: Waiting for worker",52.5,1
+184.0,1,0,"build_placed","Construction started.",0.0,0
+188.3,1,0,"resource_blocked","LUMBER CAMP: Output storage full",4.3,0
+191.8,1,0,"resource_blocked","FARM: Output storage full",7.8,0
+206.3,1,0,"resource_blocked","LUMBER CAMP: Output storage full",22.3,0
+218.3,1,0,"resource_blocked","LUMBER CAMP: Output storage full",34.3,1
+221.3,1,0,"intention_complete","A Settlement Begins",37.3,1
+221.3,1,0,"intention_complete","Feed the Settlement",37.3,1
+224.0,1,0,"build_placed","Construction started.",0.0,0
+242.3,1,0,"resource_blocked","LUMBER CAMP: Output storage full",18.3,0
+256.7,1,0,"resource_blocked","QUARRY: Output storage full",32.7,1
+272.0,1,0,"build_placed","Construction started.",0.0,0
+272.4,1,0,"resource_blocked","SAWMILL: Waiting for logs",0.4,0
+290.3,1,0,"resource_blocked","LUMBER CAMP: Output storage full",18.3,0
+303.0,1,0,"resource_blocked","SAWMILL: Waiting for logs",31.0,1
+304.0,1,0,"build_placed","Construction started.",0.0,0
+315.9,1,0,"resource_blocked","QUARRY: Output storage full",11.9,0
+330.0,1,0,"dusk_warning","Dusk approaches",26.0,0
+360.0,1,0,"horn_warning","RAID IN 60 SECONDS — hostiles from the north. They mean Town Hall.",56.0,1
+390.3,1,0,"resource_blocked","LUMBER CAMP: Output storage full",86.3,1
+412.1,1,0,"intention_complete","Prepare for Nightfall",108.1,1
+420.0,1,1,"raid_started","wave=2 intent=raid_probe",116.0,1
+420.0,1,1,"night_started","Night 1",116.0,1
+433.1,1,1,"building_damaged","Watchtower is under attack.",129.1,1
+434.7,1,1,"building_damaged","Watchtower is under attack.",130.7,1
+435.3,1,1,"building_damaged","Watchtower is under attack.",131.3,1
+436.9,1,1,"building_damaged","Watchtower is under attack.",132.9,1
+437.5,1,1,"building_damaged","Watchtower is under attack.",133.5,1
+439.1,1,1,"building_damaged","Watchtower is under attack.",135.1,1
+439.7,1,1,"building_damaged","Watchtower is under attack.",135.7,1
+441.3,1,1,"building_damaged","Watchtower is under attack.",137.3,1
+441.9,1,1,"building_damaged","Watchtower is under attack.",137.9,1
+443.5,1,1,"building_damaged","Watchtower is under attack.",139.5,1
+444.1,1,1,"building_damaged","Watchtower is under attack.",140.1,1
+445.7,1,1,"building_damaged","Watchtower is under attack.",141.7,1
+446.3,1,1,"building_damaged","Watchtower is under attack.",142.3,1
+447.9,1,1,"building_damaged","Watchtower is under attack.",143.9,1
+450.1,1,1,"building_damaged","Watchtower is under attack.",146.1,1
+452.3,1,1,"building_damaged","Watchtower is under attack.",148.3,1
+454.5,1,1,"building_damaged","Watchtower is under attack.",150.5,1
+456.7,1,1,"building_damaged","Watchtower is under attack.",152.7,1
+458.9,1,1,"building_damaged","Watchtower is under attack.",154.9,1
+461.1,1,1,"building_damaged","Watchtower is under attack.",157.1,1
+463.3,1,1,"building_damaged","Watchtower is under attack.",159.3,1
+465.5,1,1,"building_damaged","Watchtower is under attack.",161.5,1
+467.7,1,1,"building_damaged","Watchtower is under attack.",163.7,1
+600.1,2,0,"dawn","Day 2",296.1,1
+600.1,2,0,"dawn_aftermath","DAWN — Night 1 survived",296.1,1
+600.1,2,0,"intention_complete","Where Did They Come From?",296.1,1
+600.4,2,0,"resource_blocked","SAWMILL: Waiting for logs",296.4,1
+606.2,2,0,"resource_blocked","FARM: Output storage full",302.2,1
+620.4,2,0,"resource_blocked","LUMBER CAMP: Output storage full",316.4,1
+632.0,2,0,"build_placed","Construction started.",0.0,0
+638.4,2,0,"resource_blocked","LUMBER CAMP: Output storage full",6.4,0
+643.9,2,0,"resource_blocked","QUARRY: Output storage full",11.9,0
+656.5,2,0,"resource_blocked","SAWMILL: Waiting for logs",24.5,0
+664.0,2,0,"build_placed","Construction started.",0.0,0
+665.6,2,0,"resource_blocked","BAKERY: Waiting for wheat",1.6,0
+676.4,2,0,"resource_blocked","LUMBER CAMP: Output storage full",12.4,0
+688.0,2,0,"build_placed","Construction started.",0.0,0
+692.2,2,0,"resource_blocked","SAWMILL: Waiting for logs",4.2,0
+704.6,2,0,"resource_blocked","FARM: Waiting for worker",16.6,0
+720.0,2,0,"discovery","Someone defended this ridge before you. Lore discovered: Those Who Held the Ridge +7 Stone",32.0,1
+720.0,2,0,"discovery","A still lake holds the low ground.",32.0,1
+720.0,2,0,"build_placed","Construction started.",0.0,0
+726.8,2,0,"resource_blocked","BAKERY: Waiting for wheat",6.8,0
+762.4,2,0,"resource_blocked","FARM: Output storage full",42.4,1
+790.8,2,0,"resource_blocked","FARM: Output storage full",70.8,1
+847.5,2,0,"resource_blocked","LUMBER CAMP: Output storage full",127.5,1
+850.1,2,0,"resource_blocked","LUMBER CAMP: Output storage full",130.1,1
+853.0,2,0,"resource_blocked","LUMBER CAMP: Output storage full",133.0,1
+866.2,2,0,"resource_blocked","QUARRY: Waiting for worker",146.2,1
+882.3,2,0,"resource_blocked","QUARRY: No resources in range",162.3,1
+930.1,2,0,"dusk_warning","Dusk approaches",210.1,1
+960.1,2,0,"horn_warning","RAID IN 60 SECONDS — hostiles from the east. They mean Town Hall.",240.1,1
+994.4,2,0,"resource_blocked","FARM: Output storage full",274.4,1
+1020.1,2,1,"raid_started","wave=5 intent=raid_center",300.1,1
+1020.1,2,1,"night_started","Night 2",300.1,1
+1023.9,2,1,"building_damaged","Bakery is under attack.",303.9,1
+1026.3,2,1,"building_damaged","Storehouse is under attack.",306.3,1
+1029.5,2,1,"building_damaged","Quarry is under attack.",309.5,1
+1029.6,2,1,"building_damaged","Storehouse is under attack.",309.6,1
+1032.3,2,1,"building_damaged","Farm is under attack.",312.3,1
+1035.0,2,1,"building_damaged","Bakery is under attack.",315.0,1
+1035.2,2,1,"building_damaged","Watchtower is under attack.",315.2,1
+1037.1,2,1,"building_damaged","Watchtower is under attack.",317.1,1
+1037.3,2,1,"building_damaged","Quarry is under attack.",317.3,1
+1042.4,2,1,"building_damaged","Farm is under attack.",322.4,1
+1051.3,2,1,"building_damaged","Farm is under attack.",331.3,1
+1056.4,2,1,"building_damaged","Lumber Camp is under attack.",336.4,1
+1058.6,2,1,"building_damaged","Watchtower is under attack.",338.6,1
+1059.7,2,1,"building_damaged","Watchtower is under attack.",339.7,1
+1060.8,2,1,"building_damaged","Lumber Camp is under attack.",340.8,1
+1061.0,2,1,"building_damaged","Watchtower is under attack.",341.0,1
+1062.8,2,1,"building_damaged","Watchtower is under attack.",342.8,1
+1063.0,2,1,"building_damaged","Watchtower is under attack.",343.0,1
+1064.2,2,1,"building_damaged","Watchtower is under attack.",344.2,1
+1065.2,2,1,"building_damaged","Watchtower is under attack.",345.2,1
+1065.7,2,1,"building_damaged","Watchtower is under attack.",345.7,1
+1067.0,2,1,"building_damaged","Watchtower is under attack.",347.0,1
+1067.4,2,1,"building_damaged","Watchtower is under attack.",347.4,1
+1069.2,2,1,"building_damaged","Watchtower is under attack.",349.2,1
+1069.6,2,1,"building_damaged","Watchtower is under attack.",349.6,1
+1071.4,2,1,"building_damaged","Watchtower is under attack.",351.4,1
+1071.8,2,1,"building_damaged","Watchtower is under attack.",351.8,1
+1073.6,2,1,"building_damaged","Watchtower is under attack.",353.6,1
+1074.0,2,1,"building_damaged","Watchtower is under attack.",354.0,1
+1075.8,2,1,"building_damaged","Watchtower is under attack.",355.8,1
+1078.0,2,1,"building_damaged","Watchtower is under attack.",358.0,1
+1080.2,2,1,"building_damaged","Watchtower is under attack.",360.2,1
+1082.4,2,1,"building_damaged","Watchtower is under attack.",362.4,1
+1200.2,3,0,"dawn","Day 3",480.2,1
+1200.2,3,0,"dawn_aftermath","DAWN — Night 2 survived",480.2,1
+1200.5,3,0,"resource_blocked","LUMBER CAMP: Output storage full",480.5,1
+1202.4,3,0,"resource_blocked","FARM: Output storage full",482.4,1
+1202.7,3,0,"resource_blocked","BAKERY: Waiting for wheat",482.7,1
+1203.8,3,0,"resource_blocked","SAWMILL: Waiting for logs",483.8,1
+1216.5,3,0,"resource_blocked","LUMBER CAMP: Output storage full",496.5,1
+1219.4,3,0,"resource_blocked","FARM: Output storage full",499.4,1
+1234.4,3,0,"resource_blocked","SAWMILL: Waiting for logs",514.4,1
+1311.7,3,0,"resource_blocked","FARM: Output storage full",591.7,1
+1315.7,3,0,"resource_blocked","LUMBER CAMP: Output storage full",595.7,1
+1320.0,3,0,"build_placed","Construction started.",0.0,0
+1322.5,3,0,"resource_blocked","LUMBER CAMP: Output storage full",2.5,0
+1340.1,3,0,"resource_blocked","FARM: Output storage full",20.1,0
+1346.6,3,0,"resource_blocked","SAWMILL: Waiting for logs",26.6,0
+1368.0,3,0,"build_placed","Construction started.",0.0,0
+1368.5,3,0,"resource_blocked","FARM: Output storage full",0.5,0
+1382.5,3,0,"resource_blocked","LUMBER CAMP: Output storage full",14.5,0
+1389.8,3,0,"resource_blocked","FARM: Output storage full",21.8,0
+1452.0,3,0,"resource_blocked","LUMBER CAMP: Output storage full",84.0,1
+1454.5,3,0,"resource_blocked","LUMBER CAMP: Output storage full",86.5,1
+1469.0,3,0,"resource_blocked","SAWMILL: Waiting for logs",101.0,1
+1485.2,3,0,"resource_blocked","LUMBER CAMP: Output storage full",117.2,1
+1490.4,3,0,"resource_blocked","LUMBER CAMP: Output storage full",122.4,1
+1504.0,3,0,"scout_order","Bjorn scouts toward the fog.",0.0,0
+1514.9,3,0,"resource_blocked","SAWMILL: Waiting for logs",10.9,0
+1530.2,3,0,"dusk_warning","Dusk approaches",26.2,0
+1542.5,3,0,"resource_blocked","LUMBER CAMP: Output storage full",38.5,1
+1546.0,3,0,"resource_blocked","FARM: Output storage full",42.0,1
+1550.5,3,0,"resource_blocked","LUMBER CAMP: Output storage full",46.5,1
+1555.7,3,0,"resource_blocked","SAWMILL: Waiting for logs",51.7,1
+1560.2,3,0,"horn_warning","RAID IN 60 SECONDS — hostiles from the south. They mean Outpost.",56.2,1
+1571.0,3,0,"resource_blocked","SAWMILL: Waiting for logs",67.0,1
+1575.0,3,0,"resource_blocked","BAKERY: Waiting for wheat",71.0,1
+1576.0,3,0,"build_placed","Construction started.",0.0,0
+1609.9,3,0,"resource_blocked","FARM: Output storage full",33.9,1
+1620.2,3,1,"raid_started","wave=5 intent=raid_ritual",44.2,1
+1620.2,3,1,"night_started","Night 3",44.2,1
