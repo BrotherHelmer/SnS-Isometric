@@ -1,0 +1,148 @@
+game_seconds,game_minutes,day,night,population,housing,soldiers,buildings,roads,wood,planks,stone,wheat,bread,wyrd,quest,events,victory,finished
+0.0,0.00,1,0,2,5,0,1,14,50,18,18,0,18,3,"A Settlement Begins","start",0,0
+8.0,0.13,1,0,2,5,0,1,16,46,18,18,0,18,3,"A Settlement Begins","ROAD HOUSE",0,0
+16.0,0.27,1,0,2,10,0,3,16,44,18,18,0,18,3,"A Settlement Begins","LUMBER_CAMP",0,0
+24.0,0.40,1,0,2,10,0,3,18,44,18,18,0,18,3,"A Settlement Begins","ROAD FARM",0,0
+32.0,0.53,1,0,3,10,0,3,19,40,18,18,0,18,3,"A Settlement Begins","ROAD ROAD ROAD",0,0
+40.0,0.67,1,0,3,10,0,4,19,41,18,18,0,18,3,"A Settlement Begins","ROAD ROAD",0,0
+48.0,0.80,1,0,3,10,0,4,19,45,18,18,2,18,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+56.0,0.93,1,0,3,10,0,4,19,46,18,18,4,18,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+64.0,1.07,1,0,4,10,0,4,19,48,18,18,6,18,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+72.0,1.20,1,0,4,10,0,4,19,50,18,18,8,18,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+80.0,1.33,1,0,4,10,0,4,19,50,18,18,10,18,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+88.0,1.47,1,0,4,10,0,4,19,50,18,18,12,18,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+96.0,1.60,1,0,5,10,0,4,19,50,18,18,14,18,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+104.0,1.73,1,0,5,10,0,4,19,50,18,18,16,18,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+112.0,1.87,1,0,5,10,0,4,19,50,18,18,18,18,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+120.0,2.00,1,0,5,10,0,4,19,50,18,18,22,18,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+128.0,2.13,1,0,5,10,0,4,19,50,18,18,24,18,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+136.0,2.27,1,0,6,10,0,4,19,50,18,18,26,17,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+144.0,2.40,1,0,6,10,0,4,19,50,18,18,28,17,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+152.0,2.53,1,0,6,10,0,4,19,50,18,18,30,17,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+160.0,2.67,1,0,6,10,0,4,19,50,18,18,32,17,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+168.0,2.80,1,0,6,10,0,4,19,50,18,18,34,17,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+176.0,2.93,1,0,6,10,0,4,19,50,18,18,36,17,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+184.0,3.07,1,0,7,10,0,4,19,50,18,18,40,16,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+192.0,3.20,1,0,7,10,0,4,19,50,18,18,42,16,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+200.0,3.33,1,0,7,10,0,4,19,50,18,18,44,16,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+208.0,3.47,1,0,7,10,0,4,19,50,18,18,46,16,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+216.0,3.60,1,0,7,10,0,4,19,50,18,18,48,16,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+224.0,3.73,1,0,7,10,0,4,19,50,18,18,50,16,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+232.0,3.87,1,0,8,10,0,4,19,50,18,18,52,15,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+240.0,4.00,1,0,8,10,0,4,19,50,18,18,54,15,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+248.0,4.13,1,0,8,10,0,4,19,50,18,18,58,15,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+256.0,4.27,1,0,8,10,0,4,19,50,18,18,60,15,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+264.0,4.40,1,0,8,10,0,4,19,50,18,18,62,15,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+272.0,4.53,1,0,9,10,0,4,19,50,18,18,64,14,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+280.0,4.67,1,0,9,10,0,4,19,50,18,18,66,14,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+288.0,4.80,1,0,9,10,0,4,19,50,18,18,68,14,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+296.0,4.93,1,0,9,10,0,4,19,50,18,18,70,14,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+304.0,5.07,1,0,9,10,0,4,19,50,18,18,72,14,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+312.0,5.20,1,0,9,10,0,4,19,50,18,18,76,14,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+320.0,5.33,1,0,10,10,0,4,19,50,18,18,78,13,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+328.0,5.47,1,0,10,10,0,4,19,50,18,18,80,13,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+336.0,5.60,1,0,10,10,0,4,19,50,18,18,80,13,3,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+344.0,5.73,1,0,10,10,0,4,19,50,18,18,80,13,3,"A Settlement Begins","WATCHTOWER",0,0
+352.0,5.87,1,0,10,10,0,4,19,50,18,18,80,13,3,"A Settlement Begins","BARRACKS",0,0
+360.0,6.00,1,0,10,10,0,4,19,50,18,18,80,13,3,"A Settlement Begins","QUARRY",0,0
+368.0,6.13,1,0,10,10,0,4,19,50,18,18,80,13,3,"A Settlement Begins","cannot afford Storehouse",0,0
+376.0,6.27,1,0,10,10,0,4,19,50,18,18,80,13,3,"A Settlement Begins","cannot afford Storehouse",0,0
+384.0,6.40,1,0,10,10,0,4,19,50,18,18,80,13,3,"A Settlement Begins","cannot afford Storehouse",0,0
+392.0,6.53,1,0,10,10,0,4,19,50,18,18,80,13,3,"A Settlement Begins","cannot afford Storehouse",0,0
+400.0,6.67,1,0,10,10,0,4,19,50,18,18,80,13,3,"A Settlement Begins","cannot afford Storehouse",0,0
+408.0,6.80,1,0,10,10,0,4,19,50,18,18,80,13,3,"A Settlement Begins","cannot afford Storehouse",0,0
+416.0,6.93,1,0,10,10,0,4,19,50,18,18,80,13,3,"A Settlement Begins","cannot afford Storehouse",0,0
+424.0,7.07,1,1,10,10,0,4,19,50,18,18,80,3,3,"A Settlement Begins","night raid",0,0
+432.0,7.20,1,1,10,10,0,4,19,50,18,18,80,3,3,"A Settlement Begins","night raid",0,0
+440.0,7.33,1,1,10,10,0,4,19,50,18,18,80,3,3,"A Settlement Begins","night raid",0,0
+448.0,7.47,1,1,10,10,0,4,19,50,18,18,80,3,3,"A Settlement Begins","night raid",0,0
+456.0,7.60,1,1,10,10,0,4,19,50,18,18,80,3,3,"A Settlement Begins","night raid",0,0
+464.0,7.73,1,1,10,10,0,4,19,50,18,18,80,3,3,"A Settlement Begins","night raid",0,0
+472.0,7.87,1,1,10,10,0,4,19,50,18,18,80,3,3,"A Settlement Begins","night raid",0,0
+480.0,8.00,1,1,10,10,0,3,19,50,18,18,80,3,3,"A Settlement Begins","night raid",0,0
+488.0,8.13,1,1,10,10,0,3,19,50,18,18,80,3,3,"A Settlement Begins","night raid LUMBER_CAMP",0,0
+496.0,8.27,1,1,10,10,0,3,19,50,18,18,80,3,3,"A Settlement Begins","night",0,0
+504.0,8.40,1,1,10,10,0,3,19,50,18,18,80,3,2,"A Settlement Begins","night",0,0
+512.0,8.53,1,1,10,10,0,3,19,50,18,18,80,3,2,"A Settlement Begins","night",0,0
+520.0,8.67,1,1,10,10,0,3,19,50,18,18,80,3,2,"A Settlement Begins","night",0,0
+528.0,8.80,1,1,10,10,0,3,19,50,18,18,80,3,2,"A Settlement Begins","night",0,0
+536.0,8.93,1,1,10,10,0,3,19,50,18,18,80,3,2,"A Settlement Begins","night",0,0
+544.0,9.07,1,1,10,10,0,3,19,50,18,18,80,3,2,"A Settlement Begins","night",0,0
+552.0,9.20,1,1,10,10,0,3,19,50,18,18,80,3,2,"A Settlement Begins","night",0,0
+560.0,9.33,1,1,10,10,0,3,19,50,18,18,80,3,2,"A Settlement Begins","night",0,0
+568.0,9.47,1,1,10,10,0,3,19,50,18,18,80,3,2,"A Settlement Begins","night",0,0
+576.0,9.60,1,1,10,10,0,3,19,50,18,18,80,3,2,"A Settlement Begins","night",0,0
+584.0,9.73,1,1,10,10,0,3,19,50,18,18,80,3,1,"A Settlement Begins","night",0,0
+592.0,9.87,1,1,10,10,0,3,19,50,18,18,80,3,1,"A Settlement Begins","night",0,0
+600.0,10.00,1,1,10,10,0,3,19,50,18,18,80,3,1,"A Settlement Begins","night",0,0
+608.0,10.13,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+616.0,10.27,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+624.0,10.40,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+632.0,10.53,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+640.0,10.67,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+648.0,10.80,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+656.0,10.93,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+664.0,11.07,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+672.0,11.20,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+680.0,11.33,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+688.0,11.47,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+696.0,11.60,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+704.0,11.73,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+712.0,11.87,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+720.0,12.00,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+728.0,12.13,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+736.0,12.27,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+744.0,12.40,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+752.0,12.53,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+760.0,12.67,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+768.0,12.80,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+776.0,12.93,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+784.0,13.07,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+792.0,13.20,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+800.0,13.33,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+808.0,13.47,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+816.0,13.60,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+824.0,13.73,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+832.0,13.87,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+840.0,14.00,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+848.0,14.13,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+856.0,14.27,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+864.0,14.40,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+872.0,14.53,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+880.0,14.67,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+888.0,14.80,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+896.0,14.93,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+904.0,15.07,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+912.0,15.20,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+920.0,15.33,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+928.0,15.47,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+936.0,15.60,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+944.0,15.73,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+952.0,15.87,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+960.0,16.00,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+968.0,16.13,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+976.0,16.27,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+984.0,16.40,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+992.0,16.53,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+1000.0,16.67,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+1008.0,16.80,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+1016.0,16.93,2,0,10,10,0,4,19,48,18,18,80,3,1,"A Settlement Begins","cannot afford Storehouse",0,0
+1024.0,17.07,2,1,10,10,0,4,19,48,18,18,66,0,1,"A Settlement Begins","night raid",0,0
+1032.0,17.20,2,1,10,10,0,4,19,48,18,18,66,0,1,"A Settlement Begins","night raid",0,0
+1040.0,17.33,2,1,10,10,0,4,19,48,18,18,66,0,1,"A Settlement Begins","night raid",0,0
+1048.0,17.47,2,1,10,10,0,4,19,48,18,18,66,0,1,"A Settlement Begins","night raid",0,0
+1056.0,17.60,2,1,10,10,0,4,19,48,18,18,66,0,1,"A Settlement Begins","night raid",0,0
+1064.0,17.73,2,1,10,10,0,4,19,48,18,18,66,0,1,"A Settlement Begins","night raid",0,0
+1072.0,17.87,2,1,10,10,0,4,19,48,18,18,66,0,1,"A Settlement Begins","night raid",0,0
+1080.0,18.00,2,1,10,10,0,4,19,48,18,18,66,0,1,"A Settlement Begins","night raid",0,0
+1088.0,18.13,2,1,10,10,0,4,19,48,18,18,66,0,1,"A Settlement Begins","night raid",0,0
+1096.0,18.27,2,1,10,10,0,3,19,48,18,18,66,0,1,"A Settlement Begins","night raid",0,0
+1104.0,18.40,2,1,10,10,0,3,19,44,18,18,66,0,0,"A Settlement Begins","night raid LUMBER_CAMP",0,0
+1112.0,18.53,2,1,10,10,0,2,19,38,18,18,66,0,0,"A Settlement Begins","night raid",0,0
+1120.0,18.67,2,1,10,10,0,2,19,26,18,18,66,0,0,"A Settlement Begins","night raid FARM",0,0
+1128.0,18.80,2,1,5,5,0,1,19,8,18,18,58,0,0,"A Settlement Begins","night raid",0,0
+1136.0,18.93,2,1,5,5,0,1,19,8,18,18,16,0,0,"A Settlement Begins","night raid",0,0
+1144.0,19.07,2,1,5,5,0,1,19,8,14,16,0,0,0,"A Settlement Begins","night raid",0,0
+1152.0,19.20,2,1,5,5,0,1,19,8,14,16,0,0,0,"A Settlement Begins","night raid",0,0
+1160.0,19.33,2,1,5,5,0,1,19,8,14,16,0,0,0,"A Settlement Begins","night raid",0,0
+1163.4,19.39,2,1,5,5,0,0,19,8,14,16,0,0,0,"A Settlement Begins","night raid",0,1

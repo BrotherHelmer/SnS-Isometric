@@ -94,6 +94,13 @@ const CRATER_PIT_RADIUS_MIN := 0.30
 const CRATER_PIT_RADIUS_MAX := 0.45
 const FOUNDING_MAX_SLOPE := 1.0
 const FOUNDING_RESOURCE_NEAR := 12
+const FOUNDING_QUARRY_STONE_MIN := 5.0
+const FOUNDING_QUARRY_STONE_MAX := 8.0
+const WATCHTOWER_UNLOCK_SECONDS := 120.0
+const DEMO_FRONTIER_SECONDS := 720.0
+const DEMO_RIVAL_SECONDS := 1080.0
+const DEMO_VICTORY_SECONDS := 2700.0
+const DEMO_FRONTIER_DISTANCE := 24
 # The Director: building/unit vision. Watchtower is the large scouting
 # ring, Outpost is medium-large, Lumen and other workplaces stay small.
 # Units reveal on tile change so a later scout order can just walk.
@@ -188,6 +195,8 @@ var night_final_warning_sent := false
 var dusk_warning_sent := false
 var horn_warning_sent := false
 var raid_plan: Dictionary = {}
+var demo_frontier_revealed := false
+var demo_rival_revealed := false
 var last_message := "Extend the road from the waiting carrier."
 var game_finished := false
 var victory := false
@@ -367,6 +376,8 @@ func start_new_run(width: int = MAP_WIDTH, height: int = MAP_HEIGHT, seed_value:
 	dusk_warning_sent = false
 	horn_warning_sent = false
 	raid_plan = {}
+	demo_frontier_revealed = false
+	demo_rival_revealed = false
 	last_message = "Choose any clear, visible 4x4 site for the Town Hall."
 	game_finished = false
 	victory = false
@@ -672,6 +683,7 @@ func advance_tick() -> void:
 		return
 	var stamp := _profile_stamp()
 	_update_time(TICK_SECONDS)
+	_update_demo_beats()
 	_profile_finish("time_day_night", stamp)
 	if rivalry != null:
 		stamp = _profile_stamp()
@@ -1241,6 +1253,159 @@ func request_player_claim() -> Dictionary:
 	return request_begin_binding()
 
 
+func is_military_unlocked() -> bool:
+	if elapsed_seconds + 0.001 >= WATCHTOWER_UNLOCK_SECONDS:
+		return true
+	if is_night or day_count >= 2:
+		return true
+	return _player_has_completed_building(Defs.BUILDING_WATCHTOWER)
+
+
+func _player_has_completed_building(building_type: String) -> bool:
+	for building in buildings:
+		if bool(building.get("construction", false)):
+			continue
+		if String(building.get("type", "")) == building_type:
+			return true
+	return false
+
+
+func _capped_raid_size(planned: int) -> int:
+	if planned <= 0:
+		return 0
+	if _player_has_completed_building(Defs.BUILDING_BARRACKS):
+		# The Director: after the Barracks is up, Night 2's five is the
+		# demo's ceiling. Later nights stay visible without snowballing
+		# past a keep that has one tower and one training yard.
+		return mini(planned, RaidTuning.NIGHT2_SIZE)
+	return mini(planned, RaidTuning.NIGHT1_SIZE)
+
+
+func _has_frontier_outpost() -> bool:
+	var hall := _footprint_center(town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
+	for building in buildings:
+		if bool(building.get("construction", false)):
+			continue
+		if String(building.get("type", "")) != Defs.BUILDING_OUTPOST:
+			continue
+		if _tile_distance(hall, Vector2i(building.get("position", hall))) >= 16.0:
+			return true
+	if rivalry != null:
+		for structure in rivalry.get_structures(RivalryTuning.PLAYER_REALM):
+			var kind := String(structure.get("type", ""))
+			if kind != Defs.BUILDING_OUTPOST and kind != RivalryTuning.STRUCTURE_CLAIMANT_OUTPOST:
+				continue
+			if int(structure.get("hp", 0)) <= 0:
+				continue
+			if _tile_distance(hall, Vector2i(structure.get("position", hall))) >= 16.0:
+				return true
+	return false
+
+
+func _update_demo_beats() -> void:
+	if game_finished or not is_town_hall_founded():
+		return
+	if not demo_frontier_revealed and elapsed_seconds + 0.001 >= DEMO_FRONTIER_SECONDS:
+		_reveal_demo_frontier()
+	if not demo_rival_revealed and elapsed_seconds + 0.001 >= DEMO_RIVAL_SECONDS:
+		_reveal_demo_rival()
+	if elapsed_seconds + 0.001 >= DEMO_VICTORY_SECONDS:
+		_maybe_demo_hold_victory()
+
+
+func _reveal_demo_frontier() -> void:
+	demo_frontier_revealed = true
+	var hall := _footprint_center(town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
+	var crater_dir := crater_direction_from(hall)
+	if crater_dir.length_squared() < 0.01:
+		crater_dir = Vector2(shard_position - hall)
+	if crater_dir.length_squared() < 0.01:
+		crater_dir = Vector2(0.0, -1.0)
+	crater_dir = crater_dir.normalized()
+	var marker := hall + Vector2i(roundi(crater_dir.x * float(DEMO_FRONTIER_DISTANCE)), roundi(crater_dir.y * float(DEMO_FRONTIER_DISTANCE)))
+	marker.x = clampi(marker.x, 2, map_size.x - 3)
+	marker.y = clampi(marker.y, 2, map_size.y - 3)
+	if String(get_tile(marker)) in [Defs.TILE_TREE, Defs.TILE_ROCK] and marker != shard_position:
+		_set_tile(marker, Defs.TILE_GRASS)
+		tree_deposits.erase(_tile_key(marker))
+		rock_deposits.erase(_tile_key(marker))
+	founding_site["frontier_marker"] = marker
+	var steps := maxi(absi(marker.x - hall.x), absi(marker.y - hall.y))
+	for index in range(steps + 1):
+		var fraction := 0.0 if steps <= 0 else float(index) / float(steps)
+		var along := Vector2i(
+			roundi(lerpf(float(hall.x), float(marker.x), fraction)),
+			roundi(lerpf(float(hall.y), float(marker.y), fraction))
+		)
+		_reveal_radius(along, 4)
+	_reveal_radius(marker, 8)
+	_reveal_radius(shard_position, 10)
+	add_map_marker("frontier", marker, "Frontier", 0.0)
+	add_map_marker("shard", shard_position, "The Shard", 0.0)
+	if rivalry != null and rivalry.has_method("force_place_structure"):
+		# The Director: the hold victory needs a stake ≥16 tiles from the
+		# hall. Plant one on the marker so the goal is reachable and real.
+		rivalry.force_place_structure(RivalryTuning.PLAYER_REALM, RivalryTuning.STRUCTURE_CLAIMANT_OUTPOST, marker)
+	var compass := crater_compass_from(hall)
+	last_message = "THE SHARD LIES %s — a frontier marker is within reach." % compass
+	_add_log(last_message)
+	push_notice("info", "THE SHARD", last_message, "warning")
+	_record_event("frontier_revealed", last_message, {"marker": marker, "shard": shard_position})
+	intention_flags["scouted_frontier"] = true
+	shard_contacted = true
+
+
+func _reveal_demo_rival() -> void:
+	demo_rival_revealed = true
+	var hall := _footprint_center(town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
+	var seat := hall + Vector2i(20, 0)
+	var best := 100000
+	for seat_value in rival_seats:
+		var candidate := Vector2i(seat_value)
+		var d := _manhattan(hall, candidate)
+		if d < best:
+			best = d
+			seat = candidate
+	var toward := Vector2(seat - hall)
+	if toward.length_squared() < 0.01:
+		toward = Vector2(1.0, 0.0)
+	toward = toward.normalized()
+	var presence := hall + Vector2i(roundi(toward.x * 22.0), roundi(toward.y * 22.0))
+	presence.x = clampi(presence.x, 2, map_size.x - 4)
+	presence.y = clampi(presence.y, 2, map_size.y - 4)
+	if _in_founding_clearing(presence) or String(get_tile(presence)) == Defs.TILE_SHARD:
+		presence = hall + Vector2i(roundi(toward.x * 26.0), roundi(toward.y * 26.0))
+	if String(get_tile(presence)) in [Defs.TILE_TREE, Defs.TILE_ROCK]:
+		_set_tile(presence, Defs.TILE_GRASS)
+		tree_deposits.erase(_tile_key(presence))
+		rock_deposits.erase(_tile_key(presence))
+	founding_site["rival_presence"] = presence
+	_reveal_radius(presence, 7)
+	if rivalry != null and rivalry.has_method("force_place_structure"):
+		rivalry.force_place_structure(RivalryTuning.AI_REALM, RivalryTuning.STRUCTURE_CLAIMANT_OUTPOST, presence)
+	add_map_marker("rival", presence, "Rival", 0.0)
+	last_message = "A rival Claimant Outpost has been sighted on the frontier."
+	_add_log(last_message)
+	push_notice("danger", "RIVAL", last_message, "warning")
+	_record_event("rival_encounter", last_message, {"tile": presence})
+
+
+func _maybe_demo_hold_victory() -> void:
+	if game_finished or victory:
+		return
+	if int(stats.get("days_survived", 0)) < 4:
+		return
+	if not _player_has_completed_building(Defs.BUILDING_WATCHTOWER):
+		return
+	if not _player_has_completed_building(Defs.BUILDING_BARRACKS):
+		return
+	if not _has_frontier_outpost():
+		return
+	if not is_revealed(shard_position):
+		return
+	_finish_run(true, "THE REALM HOLDS — five days on the frontier. Binding the Shard remains the longer war.")
+
+
 func request_begin_binding() -> Dictionary:
 	if rivalry == null:
 		return _failure("Unavailable", "Binding is not ready.")
@@ -1778,6 +1943,47 @@ func request_clear(tile: Vector2i) -> Dictionary:
 	return _success(last_message)
 
 
+func _spawn_site_clearer(tile: Vector2i) -> void:
+	if not _tile_is_clearable_tree(tile) and String(get_tile(tile)) != Defs.TILE_ROCK:
+		return
+	for worker in workers:
+		if String(worker.get("type", "")) == "clearer" and worker.get("clear_target", Vector2i(-1, -1)) == tile:
+			return
+	var spawn := _first_connected_road_tile()
+	if not is_inside_map(spawn):
+		spawn = _town_hall_entrance_tile()
+	var work_tile := _nearest_tree_work_tile(spawn, tile)
+	if work_tile.x < 0:
+		work_tile = tile
+	var path := _find_worker_path(spawn, work_tile)
+	if spawn != work_tile and path.is_empty():
+		return
+	workers.append({
+		"id": next_worker_id,
+		"type": "clearer",
+		"building_id": 0,
+		"role_key": "clear:%s" % _tile_key(tile),
+		"return_type": "retire",
+		"position": spawn,
+		"path": path,
+		"state": "Walking to clear land",
+		"arrival_state": "Clearing land",
+		"move_elapsed": 0.0,
+		"activity_timer": 2.5,
+		"clear_target": tile,
+		"work_position": work_tile,
+		"capacity": 0,
+		"carried_resource": "",
+		"carried_amount": 0,
+		"task": {},
+		"shelter_position": Vector2i(-1, -1),
+		"hp": WORKER_MAX_HP,
+		"max_hp": WORKER_MAX_HP,
+		"hungry": false
+	})
+	next_worker_id += 1
+
+
 func request_clear_area(tiles: Array) -> Dictionary:
 	var marked := 0
 	for tile_value in tiles:
@@ -1833,11 +2039,43 @@ func _notice_if_new(title: String, body: String, category: String, cooldown_seco
 	push_notice(category, title, body, severity)
 
 
+func _storehouse_blocker_copy() -> String:
+	if _has_storehouse_site():
+		return "The Storehouse is already being built."
+	var cost: Dictionary = Defs.building_cost(Defs.BUILDING_STOREHOUSE)
+	var missing: Array[String] = []
+	for resource_type in cost.keys():
+		var need := int(cost[resource_type])
+		var have := get_available_resource(String(resource_type))
+		if have < need:
+			missing.append("%d more %s" % [need - have, Defs.resource_name(String(resource_type))])
+	if missing.is_empty():
+		return "Place a Storehouse — the materials are in the hall."
+	return "Storehouse needs %s." % ", ".join(missing)
+
+
+func _has_storehouse_site() -> bool:
+	for building in buildings:
+		if bool(building.get("construction", false)) and String(building.get("planned_type", "")) == Defs.BUILDING_STOREHOUSE:
+			return true
+	return false
+
+
+func _demo_defeat_hint() -> String:
+	if not _player_has_completed_building(Defs.BUILDING_WATCHTOWER):
+		return "Your first Watchtower was unfinished when raiders arrived."
+	if not _player_has_completed_building(Defs.BUILDING_BARRACKS):
+		return "Finish a Barracks so soldiers can meet the next raid."
+	return "Keep the Watchtower manned and repair the Hall before the next night."
+
+
 func _emit_routine_notices() -> void:
 	for building in buildings:
 		var status := String(building.get("status", "")).to_lower()
 		if "storage full" in status:
-			_notice_if_new("STORAGE FULL", "Build a Storehouse or free capacity.", "economy", 48.0)
+			if _player_has_completed_building(Defs.BUILDING_STOREHOUSE):
+				continue
+			_notice_if_new("STORAGE FULL", _storehouse_blocker_copy(), "economy", 90.0)
 			_offer_onboarding("storehouse_needed", "STOREHOUSE ADDS STORAGE. Build one to expand capacity for all resources. Farm→Bakery produces Bread to feed the settlement.")
 		if String(building.get("type", "")) == Defs.BUILDING_BAKERY and "waiting for wheat" in status:
 			var wheat_elsewhere := get_available_resource(Defs.RESOURCE_WHEAT) > int(building.get("local_inventory", {}).get(Defs.RESOURCE_WHEAT, 0))
@@ -1925,6 +2163,7 @@ func _assign_idle_workers_to_priority_clears() -> void:
 			work_tile = target
 		var path := _find_worker_path(Vector2i(worker.get("position", target)), work_tile)
 		if Vector2i(worker.get("position", target)) != work_tile and path.is_empty():
+			targets.push_front(target)
 			continue
 		worker["return_type"] = String(worker.get("type", "carrier"))
 		worker["return_capacity"] = int(worker.get("capacity", 0))
@@ -1936,9 +2175,19 @@ func _assign_idle_workers_to_priority_clears() -> void:
 		worker["arrival_state"] = "Gathering"
 		worker["activity_timer"] = 2.4
 		worker["manual_order"] = false
-	while not targets.is_empty() and workers_free() > 0 and _clearer_count() < 6:
-		var spawned := request_clear(targets.pop_front())
-		if not bool(spawned.get("success", false)):
+	while not targets.is_empty() and _clearer_count() < 6:
+		var tile: Vector2i = targets.pop_front()
+		var site_tree := int(priority_clear_tiles.get(_tile_key(tile), 0)) >= 10
+		# The Director: footprint trees must be cut even when every peasant
+		# is already on a farm or road, or the Lumber Camp stays on
+		# CLEARING SITE and the first intention never completes.
+		if site_tree:
+			_spawn_site_clearer(tile)
+		elif workers_free() > 0:
+			var spawned := request_clear(tile)
+			if not bool(spawned.get("success", false)):
+				break
+		else:
 			break
 
 
@@ -3391,6 +3640,7 @@ func _generate_map() -> void:
 	_ensure_founding_food(town_center)
 	_place_founding_wyrd_traces(town_center)
 	_strip_founding_isolates(town_center)
+	_ensure_founding_quarry_stone(town_center)
 
 
 func _generate_height_map() -> void:
@@ -4253,6 +4503,115 @@ func _place_founding_nearby_resources(center: Vector2i) -> void:
 	_ensure_nearby_resource(center, Defs.TILE_ROCK, 10)
 
 
+func _founding_quarry_stone_tile(center: Vector2i) -> Vector2i:
+	var stored: Variant = founding_site.get("quarry_stone", Vector2i(-1, -1))
+	if stored is Vector2i:
+		var remembered: Vector2i = stored
+		if remembered.x >= 0 and String(get_tile(remembered)) == Defs.TILE_ROCK:
+			var remembered_d := _tile_distance(center, remembered)
+			if remembered_d >= FOUNDING_QUARRY_STONE_MIN and remembered_d <= FOUNDING_QUARRY_STONE_MAX:
+				return remembered
+	var best := Vector2i(-1, -1)
+	var best_d := 99.0
+	var reach := int(ceil(FOUNDING_QUARRY_STONE_MAX)) + 1
+	for y in range(maxi(0, center.y - reach), mini(map_size.y, center.y + reach + 1)):
+		for x in range(maxi(0, center.x - reach), mini(map_size.x, center.x + reach + 1)):
+			var tile := Vector2i(x, y)
+			if String(get_tile(tile)) != Defs.TILE_ROCK:
+				continue
+			if _in_founding_clearing(tile) or is_founding_creek_tile(tile) or _in_founding_hall_footprint(tile):
+				continue
+			var d := _tile_distance(center, tile)
+			if d < FOUNDING_QUARRY_STONE_MIN or d > FOUNDING_QUARRY_STONE_MAX:
+				continue
+			if not _resource_reachable(center, tile):
+				continue
+			if d < best_d:
+				best = tile
+				best_d = d
+	return best
+
+
+func _ensure_founding_quarry_stone(center: Vector2i) -> void:
+	var existing := _founding_quarry_stone_tile(center)
+	if existing != Vector2i(-1, -1):
+		founding_site["quarry_stone"] = existing
+		return
+	var stone_dir: Vector2 = founding_site.get("stone_dir", Vector2(0.9, 0.1))
+	if stone_dir.length_squared() < 0.01:
+		stone_dir = Vector2(1.0, 0.0)
+	stone_dir = stone_dir.normalized()
+	var crater_dir := crater_direction_from(center)
+	var dirs: Array[Vector2] = [
+		stone_dir,
+		Vector2(-stone_dir.y, stone_dir.x),
+		Vector2(stone_dir.y, -stone_dir.x),
+		-stone_dir,
+		crater_dir,
+		-crater_dir
+	]
+	for dir_value in dirs:
+		var dir: Vector2 = dir_value
+		if dir.length_squared() < 0.01:
+			continue
+		dir = dir.normalized()
+		for dist in [6, 7, 8, 5]:
+			var origin := center + Vector2i(roundi(dir.x * float(dist)), roundi(dir.y * float(dist)))
+			if not _can_place_founding_quarry_cluster(origin, center):
+				continue
+			_place_founding_quarry_cluster(origin)
+			var placed := _founding_quarry_stone_tile(center)
+			if placed != Vector2i(-1, -1):
+				founding_site["quarry_stone"] = placed
+				return
+	var fallback := _first_founding_quarry_gap(center)
+	if fallback != Vector2i(-1, -1):
+		_place_founding_quarry_cluster(fallback)
+		var placed_fallback := _founding_quarry_stone_tile(center)
+		if placed_fallback != Vector2i(-1, -1):
+			founding_site["quarry_stone"] = placed_fallback
+
+
+func _can_place_founding_quarry_cluster(origin: Vector2i, center: Vector2i) -> bool:
+	if not is_inside_map(origin):
+		return false
+	if _in_founding_clearing(origin) or is_founding_creek_tile(origin) or _in_founding_hall_footprint(origin):
+		return false
+	var d := _tile_distance(center, origin)
+	if d < FOUNDING_QUARRY_STONE_MIN or d > FOUNDING_QUARRY_STONE_MAX:
+		return false
+	if String(get_tile(origin)) == Defs.TILE_SHARD:
+		return false
+	return true
+
+
+func _place_founding_quarry_cluster(origin: Vector2i) -> void:
+	for oy in range(0, 2):
+		for ox in range(0, 2):
+			var tile := origin + Vector2i(ox, oy)
+			if not is_inside_map(tile):
+				continue
+			if _in_founding_clearing(tile) or is_founding_creek_tile(tile) or _in_founding_hall_footprint(tile):
+				continue
+			if String(get_tile(tile)) == Defs.TILE_SHARD:
+				continue
+			_set_tile(tile, Defs.TILE_ROCK)
+			rock_deposits[_tile_key(tile)] = 24
+			tree_deposits.erase(_tile_key(tile))
+
+
+func _first_founding_quarry_gap(center: Vector2i) -> Vector2i:
+	for radius in range(5, 9):
+		for ox in range(-radius, radius + 1):
+			for oy in range(-radius, radius + 1):
+				if maxi(absi(ox), absi(oy)) != radius:
+					continue
+				var tile := center + Vector2i(ox, oy)
+				if _can_place_founding_quarry_cluster(tile, center):
+					return tile
+	return Vector2i(-1, -1)
+
+
 func _ensure_founding_food(center: Vector2i) -> void:
 	var food_tiles: Array[Vector2i] = []
 	for food in founding_site.get("food_tiles", []):
@@ -4558,6 +4917,8 @@ func founding_audit() -> Dictionary:
 		water_d = minf(water_d, _tile_distance(center, Vector2i(creek_tile)))
 	var tree_d := _tile_distance(center, tree_tile) if tree_tile != Vector2i(-1, -1) else 99.0
 	var rock_d := _tile_distance(center, rock_tile) if rock_tile != Vector2i(-1, -1) else 99.0
+	var quarry_tile := _founding_quarry_stone_tile(center)
+	var quarry_d := _tile_distance(center, quarry_tile) if quarry_tile != Vector2i(-1, -1) else 99.0
 	var food_d := 99.0
 	for food in founding_site.get("food_tiles", []):
 		food_d = minf(food_d, _tile_distance(center, Vector2i(food)))
@@ -4602,6 +4963,9 @@ func founding_audit() -> Dictionary:
 		"water_near": water_d <= float(FOUNDING_RESOURCE_NEAR),
 		"tree_near": tree_d <= float(FOUNDING_RESOURCE_NEAR),
 		"rock_near": rock_d <= float(FOUNDING_RESOURCE_NEAR),
+		"quarry_stone": quarry_tile,
+		"quarry_stone_dist": quarry_d,
+		"quarry_stone_band": quarry_tile != Vector2i(-1, -1) and quarry_d >= FOUNDING_QUARRY_STONE_MIN and quarry_d <= FOUNDING_QUARRY_STONE_MAX,
 		"food_near": food_d <= float(FOUNDING_RESOURCE_NEAR),
 		"wyrd_marker": wyrd_ok,
 		"wyrd_traces": founding_site.get("wyrd_tiles", []).size(),
@@ -5161,7 +5525,8 @@ func _process_carriers(delta: float) -> void:
 	for worker in workers:
 		if String(worker.get("type", "")) != "carrier":
 			continue
-		if String(worker["state"]) == "Idle":
+		var carrier_state := String(worker["state"])
+		if carrier_state == "Idle" or (carrier_state == "No shelter" and not is_night):
 			_assign_carrier_task(worker)
 		elif String(worker["state"]) == "Building":
 			var task: Dictionary = worker.get("task", {})
@@ -5825,7 +6190,7 @@ func _send_worker_to_shelter(worker: Dictionary) -> void:
 	var start: Vector2i = worker["position"]
 	var is_carrier := String(worker.get("type", "")) == "carrier"
 	for entrance in _shelter_entries():
-		var candidate: Array = _find_road_path(start, [entrance]) if is_carrier else _find_worker_path(start, entrance)
+		var candidate: Array = _path_to_access(start, [entrance]) if is_carrier else _find_worker_path(start, entrance)
 		if start != entrance and candidate.is_empty():
 			continue
 		if not found or candidate.size() < best_path.size():
@@ -5912,7 +6277,10 @@ func _advance_carrier(worker: Dictionary, delta: float) -> void:
 	worker["move_elapsed"] = 0.0
 
 	var next_tile: Vector2i = worker["path"].pop_front()
-	if not _is_walkable_road(next_tile):
+	# The Director: hauls stay on roads when a spine path exists. Grass is
+	# allowed when the job had to leave the network (road-build spur or a
+	# carrier stranded after dusk) so construction is not soft-locked.
+	if not _is_walkable_road(next_tile) and not _is_worker_walkable(next_tile, worker["path"].is_empty()):
 		worker["path"] = []
 		worker["state"] = "Blocked"
 		last_message = "A broken road blocked a carrier."
@@ -5932,18 +6300,101 @@ func _assign_carrier_task(worker: Dictionary) -> bool:
 func _assign_carrier_task_unprofiled(worker: Dictionary) -> bool:
 	if int(worker.get("carried_amount", 0)) > 0:
 		return _assign_dropoff_for_carried(worker)
-	if _assign_road_build(worker):
-		return true
+	# The Director: planned buildings starve if every carrier lays road
+	# first. Deliver construction materials before the next free road tile.
 	if _assign_construction_supply(worker):
+		return true
+	# Planned buildings starve if carriers keep laying the next free road
+	# while stock is sitting in the hall. Skip road jobs until deliveries
+	# that can actually leave the warehouse have been assigned.
+	if _construction_waiting_for_materials():
+		return false
+	if _assign_road_build(worker):
 		return true
 	if _assign_processor_supply(worker):
 		return true
 	return _assign_output_fetch(worker)
 
 
+func _construction_waiting_for_road() -> bool:
+	for site in buildings:
+		if not bool(site.get("construction", false)):
+			continue
+		if String(site.get("planned_type", "")) == Defs.BUILDING_ROAD:
+			continue
+		if not bool(site.get("connected", false)):
+			return true
+	return false
+
+
+func _road_helps_construction(road_site: Dictionary) -> bool:
+	var road_tile: Vector2i = road_site.get("position", Vector2i.ZERO)
+	for site in buildings:
+		if not bool(site.get("construction", false)):
+			continue
+		if String(site.get("planned_type", "")) in [Defs.BUILDING_ROAD, ""]:
+			continue
+		if bool(site.get("connected", false)):
+			continue
+		var footprint: Vector2i = _building_footprint(site)
+		var origin: Vector2i = site.get("position", Vector2i.ZERO)
+		if _manhattan(origin, road_tile) <= 3:
+			return true
+		for perimeter in _footprint_perimeter(origin, footprint):
+			if _manhattan(perimeter, road_tile) <= 1:
+				return true
+	return false
+
+
+func _construction_waiting_for_materials() -> bool:
+	for site in buildings:
+		if not bool(site.get("construction", false)) or not bool(site.get("connected", false)):
+			continue
+		if String(site.get("planned_type", "")) in [Defs.BUILDING_ROAD, ""]:
+			continue
+		if _construction_materials_ready(site):
+			continue
+		var needed: Dictionary = site.get("materials_needed", {})
+		var delivered: Dictionary = site.get("materials_delivered", {})
+		var in_transit: Dictionary = site.get("materials_in_transit", Defs.empty_inventory())
+		for resource_type in needed.keys():
+			var outstanding := int(needed.get(resource_type, 0)) - int(delivered.get(resource_type, 0)) - int(in_transit.get(resource_type, 0))
+			if outstanding > 0 and int(central_inventory.get(resource_type, 0)) > 0:
+				return true
+	return false
+
+
+func _path_to_access(start: Vector2i, access: Array) -> Array:
+	if access.is_empty():
+		return []
+	if access.has(start):
+		return []
+	var road_path := _find_road_path(start, access)
+	if not road_path.is_empty():
+		return road_path
+	var best_path: Array = []
+	for access_tile_value in access:
+		var access_tile: Vector2i = access_tile_value
+		if start == access_tile:
+			return []
+		var candidate := _find_worker_path(start, access_tile)
+		if candidate.is_empty():
+			continue
+		if best_path.is_empty() or candidate.size() < best_path.size():
+			best_path = candidate
+	return best_path
+
+
 func _assign_road_build(worker: Dictionary) -> bool:
-	if workers_free() <= 0:
+	# The Director: a free peasant is the normal road crew. If a building
+	# is already paid and only waiting on its auto-spur, a carrier may
+	# finish that last tile so construction is not soft-locked.
+	if _construction_waiting_for_materials():
 		return false
+	var unblock := _construction_waiting_for_road()
+	if workers_free() <= 0 and not unblock:
+		return false
+	var candidates: Array = []
 	for site in buildings:
 		if int(site.get("builder_worker_id", 0)) > 0 and not _road_builder_claim_exists(site):
 			site["builder_worker_id"] = 0
@@ -5952,10 +6403,19 @@ func _assign_road_build(worker: Dictionary) -> bool:
 			or not bool(site.get("connected", false)) \
 			or int(site.get("builder_worker_id", 0)) > 0:
 			continue
+		candidates.append(site)
+	if unblock:
+		var helpful: Array = []
+		for site in candidates:
+			if _road_helps_construction(site):
+				helpful.append(site)
+		if not helpful.is_empty():
+			candidates = helpful
+	for site in candidates:
 		var access := _building_access_tiles(site)
 		if access.is_empty():
 			continue
-		var path := _find_road_path(worker["position"], access)
+		var path := _path_to_access(worker["position"], access)
 		if path.is_empty() and not access.has(worker["position"]):
 			continue
 		site["builder_worker_id"] = int(worker["id"])
@@ -6100,7 +6560,7 @@ func _assign_from_central(worker: Dictionary, destination: Dictionary, resource_
 	var start_access := _town_hall_access_tiles()
 	if start_access.is_empty():
 		return false
-	var path := _find_road_path(worker["position"], start_access)
+	var path := _path_to_access(worker["position"], start_access)
 	if path.is_empty() and not start_access.has(worker["position"]):
 		return false
 	worker["task"] = {
@@ -6131,7 +6591,7 @@ func _assign_building_to_marker(worker: Dictionary, source: Dictionary, destinat
 	var access := _building_access_tiles(source)
 	if access.is_empty():
 		return false
-	var path := _find_road_path(worker["position"], access)
+	var path := _path_to_access(worker["position"], access)
 	if path.is_empty() and not access.has(worker["position"]):
 		return false
 	worker["task"] = {
@@ -6209,7 +6669,7 @@ func _assign_dropoff_for_carried(worker: Dictionary) -> bool:
 		worker["state"] = "Blocked"
 		return false
 
-	var path := _find_road_path(worker["position"], access)
+	var path := _path_to_access(worker["position"], access)
 	if path.is_empty() and not access.has(worker["position"]):
 		worker["state"] = "Blocked"
 		return false
@@ -6280,9 +6740,19 @@ func _carrier_dropoff(worker: Dictionary) -> bool:
 
 func _retry_blocked_carrier(worker: Dictionary) -> void:
 	if int(worker.get("carried_amount", 0)) > 0:
-		_assign_dropoff_for_carried(worker)
-	else:
-		_clear_worker(worker)
+		if _assign_dropoff_for_carried(worker) and String(worker.get("state", "")) != "Blocked":
+			return
+		var task: Dictionary = worker.get("task", {})
+		# The Director: a carrier who already picked up construction wood
+		# used to stay Blocked forever when the last road tile around the
+		# keep had no path, leaving materials_in_transit stuck and the
+		# Lumber Camp on "Waiting for deliveries" for the whole match.
+		if String(task.get("purpose", "")) == "construction":
+			worker["path"] = []
+			worker["state"] = "Dropoff"
+			worker["arrival_state"] = "Dropoff"
+			return
+	_clear_worker(worker)
 
 
 func _clear_worker(worker: Dictionary, cancel_task: bool = true) -> void:
@@ -7091,14 +7561,17 @@ func _update_time(delta: float) -> void:
 		last_message = RaidIntents.dusk_message()
 		_add_log("Dusk approaches.")
 		playtest_log.note(self, "dusk_warning", last_message)
-	if not is_night and not horn_warning_sent and remaining <= RaidIntents.HORN_WARNING_SECONDS:
+	if not is_night and not horn_warning_sent and remaining <= RaidIntents.RAID_WARNING_SECONDS:
 		horn_warning_sent = true
-		if _hostile_forces_nearby():
-			if raid_plan.is_empty():
-				_prepare_raid_plan()
-			last_message = RaidIntents.horn_message(String(raid_plan.get("bearing", "the woods")))
-			_add_log(last_message)
-			playtest_log.note(self, "horn_warning", last_message)
+		if raid_plan.is_empty():
+			_prepare_raid_plan()
+		var origin: Vector2i = raid_plan.get("origin", shard_position)
+		add_map_marker("raid", origin, "RAID", elapsed_seconds + 90.0)
+		last_message = RaidIntents.raid_warning_message(String(raid_plan.get("bearing", "the woods")))
+		_add_log(last_message)
+		push_notice("danger", "RAID WARNING", last_message, "critical")
+		playtest_log.note(self, "horn_warning", last_message)
+		_record_event("raid_warning", last_message, {"origin": origin, "bearing": String(raid_plan.get("bearing", ""))})
 	if not is_night and not night_warning_sent and remaining <= NIGHT_WARNING_SECONDS:
 		night_warning_sent = true
 		path_grid_dirty = true
@@ -7119,10 +7592,11 @@ func _update_time(delta: float) -> void:
 			String(dusk_forecast.get("threat", "QUIET")),
 			String(dusk_forecast.get("activity", "Light"))
 		])
-		last_message = "NIGHTFALL — Threat: %s. Likely activity: %s." % [
-			String(dusk_forecast.get("threat", "QUIET")),
-			String(dusk_forecast.get("activity", "Light"))
-		]
+		if not horn_warning_sent and not String(last_message).begins_with("RAID IN"):
+			last_message = "NIGHTFALL — Threat: %s. Likely activity: %s." % [
+				String(dusk_forecast.get("threat", "QUIET")),
+				String(dusk_forecast.get("activity", "Light"))
+			]
 	if not is_night and not night_final_warning_sent and remaining <= NIGHT_FINAL_WARNING_SECONDS:
 		night_final_warning_sent = true
 		path_grid_dirty = true
@@ -7202,7 +7676,7 @@ func _end_night() -> void:
 func _spawn_wave() -> void:
 	var pressure := get_wyrd_pressure()
 	var plan := Wyrdfall.wave_plan(float(pressure.get("value", 0.0)), day_count, day_count <= 1, reckoning_active)
-	var wave_size := int(plan.get("size", 0))
+	var wave_size := _capped_raid_size(int(plan.get("size", 0)))
 	var hp := int(plan.get("hp", RaidTuning.NIGHT1_HP))
 	var damage := int(plan.get("damage", RaidTuning.NIGHT1_DAMAGE))
 	var armor := int(plan.get("armor", RaidTuning.NIGHT1_ARMOR))
@@ -7298,6 +7772,7 @@ func _prepare_raid_plan() -> Dictionary:
 	raid_plan = {
 		"intent": intent,
 		"bearing": _bearing_from_town(bearing_tile),
+		"origin": bearing_tile,
 		"target_id": int(target.get("id", 0)),
 		"target_name": _display_building_name(target) if not target.is_empty() else "the settlement"
 	}
@@ -7858,7 +8333,7 @@ func _destroy_building_by_id(building_id: int, reason: String, count_stats: bool
 	_add_log("%s %s." % [_display_building_name(destroyed), reason])
 
 	if building_type == Defs.BUILDING_TOWN_HALL:
-		_finish_run(false, "The Town Hall fell.")
+		_finish_run(false, "The Town Hall fell. %s" % _demo_defeat_hint())
 	if building_id == claim_outpost_id:
 		_cancel_claim("Shard claim cancelled: the Outpost fell.")
 
@@ -9457,7 +9932,7 @@ func _check_population_defeat() -> void:
 	if game_finished or not is_town_hall_founded():
 		return
 	if population_current <= 0:
-		_finish_run(false, "The last settlers are gone.")
+		_finish_run(false, "The last settlers are gone. %s" % _demo_defeat_hint())
 
 
 func _serialize_rival_seats() -> Array:

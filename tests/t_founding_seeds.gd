@@ -212,6 +212,7 @@ func _check_audit(audit: Dictionary, seed_value: int) -> bool:
 	ok = _check(bool(audit.get("water_near", false)), "seed %d water is within %d tiles" % [seed_value, Simulation.FOUNDING_RESOURCE_NEAR]) and ok
 	ok = _check(bool(audit.get("tree_near", false)), "seed %d trees are within %d tiles" % [seed_value, Simulation.FOUNDING_RESOURCE_NEAR]) and ok
 	ok = _check(bool(audit.get("rock_near", false)), "seed %d stone is within %d tiles" % [seed_value, Simulation.FOUNDING_RESOURCE_NEAR]) and ok
+	ok = _check(bool(audit.get("quarry_stone_band", false)), "seed %d has a quarry stone deposit 5–8 tiles from the hall (dist=%.1f)" % [seed_value, float(audit.get("quarry_stone_dist", -1.0))]) and ok
 	ok = _check(bool(audit.get("food_near", false)), "seed %d food is within %d tiles" % [seed_value, Simulation.FOUNDING_RESOURCE_NEAR]) and ok
 	ok = _check(bool(audit.get("wyrd_marker", false)), "seed %d has a wyrd/crater marker toward the start" % seed_value) and ok
 	ok = _check(bool(audit.get("distance_band", false)), "seed %d Town Hall is in the 0.65–0.85 R band" % seed_value) and ok

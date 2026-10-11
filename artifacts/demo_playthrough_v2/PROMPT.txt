@@ -1,0 +1,24 @@
+You are re-reviewing Shard & Sovereign after a demo-balance pass (PR #81, stacked on the 320×320 big-map). The previous review scored the 19-minute defeat 3.0/10.
+
+Read PLAYTHROUGH.md first. Then look at the screenshots in shots/ in this order:
+
+- t00_start.png — founding yard, first quest
+- t05_play.png — house, lumber, farm, tower/barracks/quarry in play, soldiers training
+- t07_first_raid.png — night 1, 2 raiders, 60 s warning, map ping, watchtower up
+- t10_play.png — dawn after night 1, yard intact
+- t12_frontier.png — crater direction west, frontier marker, Shard ping
+- t15_play.png — roads walking west
+- t18_rival.png — a rival Claimant Outpost on the map
+- t20_play.png / t25_play.png / t30_play.png / t35_play.png / t40_play.png — nights 2–4 at a 5-raider cap
+- t44_victory.png — THE REALM HOLDS at 45:00
+- hud_victory_type.png — type proof of the victory card after outline_size 0 (should read THE REALM HOLDS / FIVE DAYS, one stroke)
+- hud_raid_type.png — opening HUD after the same type pass
+
+The bot played like a sensible settler. Seed 260821 survives four nights, sees the Shard and one rival, and hits a labelled prologue victory at minute 45. Binding is explicitly the longer war. HUD outlines are off so 1080p titles should not reprint last glyphs.
+
+Rate the fun of this demo 1–10 for a new player who wanted up to an hour of play. Judge the pacing minute by minute against the previous 3.0/10 defeat. Give a short remaining-fix list only if something still blocks a fun hour.
+
+Return:
+1. Fun score (1–10) and one-sentence reason
+2. Pacing notes (what now works, where it is still dead)
+3. Remaining P0/P1/P2 only if needed — smallest changes, no redesign

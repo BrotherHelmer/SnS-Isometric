@@ -8,7 +8,8 @@ const INTENT_PROBE := "raid_probe"
 
 const PROBE_RETREAT_SECONDS := 48.0
 const DUSK_WARNING_SECONDS := 90.0
-const HORN_WARNING_SECONDS := 45.0
+const RAID_WARNING_SECONDS := 60.0
+const HORN_WARNING_SECONDS := RAID_WARNING_SECONDS
 
 
 static func choose(day_count: int, seed: int) -> String:
@@ -35,6 +36,13 @@ static func label_for(intent: String) -> String:
 
 static func dusk_message() -> String:
 	return "Dusk approaches"
+
+
+static func raid_warning_message(bearing: String, seconds: int = 60) -> String:
+	var place := bearing
+	if not place.begins_with("the "):
+		place = "the %s" % place
+	return "RAID IN %d SECONDS — hostiles from %s." % [seconds, place]
 
 
 static func horn_message(bearing: String) -> String:

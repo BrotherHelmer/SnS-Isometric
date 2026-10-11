@@ -133,12 +133,22 @@ static func set_font(control: Control, font: Font, size: int, color = null) -> v
 		control.add_theme_color_override("default_color" if control is RichTextLabel else "font_color", color)
 
 
+## The Director: Cinzel VF + outline_size reprints the last glyph (HOLDSO / RAIDOID
+## on 1080p, especially lavapipe). Keep type as a single stroke plus a 1 px shadow.
+static func apply_readable_type(control: Control) -> void:
+	control.add_theme_constant_override("outline_size", 0)
+	control.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0))
+	control.add_theme_color_override("font_shadow_color", Color(0.02, 0.03, 0.04, 0.82))
+	control.add_theme_constant_override("shadow_offset_x", 1)
+	control.add_theme_constant_override("shadow_offset_y", 1)
+	control.add_theme_constant_override("shadow_outline_size", 0)
+
+
 static func title_label(text: String, size: int = SIZE_TITLE, color: Color = COLOR_GOLD) -> Label:
 	var label := Label.new()
 	label.text = text
 	set_font(label, display_font(700), size, color)
-	label.add_theme_color_override("font_outline_color", COLOR_OUTLINE)
-	label.add_theme_constant_override("outline_size", 3)
+	apply_readable_type(label)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return label
 
@@ -151,8 +161,7 @@ static func hotkey_badge(text: String) -> Label:
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	set_font(label, ui_font(600), SIZE_BADGE, COLOR_BADGE)
-	label.add_theme_color_override("font_outline_color", COLOR_OUTLINE)
-	label.add_theme_constant_override("outline_size", 2)
+	apply_readable_type(label)
 	var box := StyleBoxFlat.new()
 	box.bg_color = Color(0.02, 0.04, 0.05, 0.78)
 	box.border_color = Color(0.73, 0.56, 0.4, 0.45)
@@ -296,8 +305,7 @@ static func apply_button(button: Button, active_toggle := false) -> void:
 	button.add_theme_color_override("font_pressed_color", COLOR_GOLD)
 	button.add_theme_color_override("font_hover_pressed_color", COLOR_GOLD)
 	button.add_theme_color_override("font_disabled_color", Color("#8a8474"))
-	button.add_theme_color_override("font_outline_color", COLOR_OUTLINE)
-	button.add_theme_constant_override("outline_size", 3)
+	apply_readable_type(button)
 
 
 static func caption(text: String, size: int = SIZE_CAPTION) -> Label:
@@ -306,8 +314,7 @@ static func caption(text: String, size: int = SIZE_CAPTION) -> Label:
 	label.add_theme_font_override("font", ui_font(600))
 	label.add_theme_font_size_override("font_size", maxi(size, SIZE_MIN))
 	label.add_theme_color_override("font_color", COLOR_GOLD_DIM)
-	label.add_theme_color_override("font_outline_color", COLOR_OUTLINE)
-	label.add_theme_constant_override("outline_size", 3)
+	apply_readable_type(label)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return label
 
@@ -333,20 +340,26 @@ static func hud_theme() -> Theme:
 	theme.set_color("font_hover_color", "Button", Color("#fff3d2"))
 	theme.set_color("font_pressed_color", "Button", COLOR_GOLD)
 	theme.set_color("font_disabled_color", "Button", Color("#8a8474"))
-	theme.set_color("font_outline_color", "Button", COLOR_OUTLINE)
-	theme.set_constant("outline_size", "Button", 3)
+	theme.set_color("font_outline_color", "Button", Color(0, 0, 0, 0))
+	theme.set_constant("outline_size", "Button", 0)
+	theme.set_color("font_shadow_color", "Button", Color(0.02, 0.03, 0.04, 0.82))
+	theme.set_constant("shadow_offset_x", "Button", 1)
+	theme.set_constant("shadow_offset_y", "Button", 1)
 	theme.set_color("font_color", "OptionButton", COLOR_TEXT)
 	theme.set_color("font_color", "Label", COLOR_TEXT)
-	theme.set_color("font_outline_color", "Label", COLOR_OUTLINE)
-	theme.set_constant("outline_size", "Label", 3)
+	theme.set_color("font_outline_color", "Label", Color(0, 0, 0, 0))
+	theme.set_constant("outline_size", "Label", 0)
+	theme.set_color("font_shadow_color", "Label", Color(0.02, 0.03, 0.04, 0.82))
+	theme.set_constant("shadow_offset_x", "Label", 1)
+	theme.set_constant("shadow_offset_y", "Label", 1)
 	theme.set_color("default_color", "RichTextLabel", COLOR_TEXT)
-	theme.set_color("font_outline_color", "RichTextLabel", COLOR_OUTLINE)
-	theme.set_constant("outline_size", "RichTextLabel", 2)
+	theme.set_color("font_outline_color", "RichTextLabel", Color(0, 0, 0, 0))
+	theme.set_constant("outline_size", "RichTextLabel", 0)
 	theme.set_stylebox("panel", "PanelContainer", frame("panel"))
 	theme.set_stylebox("panel", "TooltipPanel", frame("panel", 9.0))
 	theme.set_color("font_color", "TooltipLabel", COLOR_TEXT)
-	theme.set_color("font_outline_color", "TooltipLabel", COLOR_OUTLINE)
-	theme.set_constant("outline_size", "TooltipLabel", 2)
+	theme.set_color("font_outline_color", "TooltipLabel", Color(0, 0, 0, 0))
+	theme.set_constant("outline_size", "TooltipLabel", 0)
 	theme.set_font_size("font_size", "TooltipLabel", 14)
 	theme.set_stylebox("panel", "PopupMenu", frame("panel", 6.0))
 	theme.set_color("font_color", "PopupMenu", COLOR_TEXT)

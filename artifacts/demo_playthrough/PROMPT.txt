@@ -1,0 +1,19 @@
+You are reviewing a recorded autoplay of Shard & Sovereign (isometric cozy-horror colony sim) on the 320×320 big-map build (PR #80 / test #13, seed 260821).
+
+Read PLAYTHROUGH.md first. Then look at the screenshots in shots/ in this order:
+
+- t00_start.png — founding yard, first quest
+- t05_play.png — storage full, idle settlers, still “Build a Quarry”
+- t07_first_night.png / t07_first_raid.png — night 1 raid toast, unfinished first quest
+- t10_play.png — after night 1
+- t15_play.png — day 2, lumber destroyed, same quest
+- t19_defeat.png — Town Hall fell at 19:23
+
+The bot played like a sensible settler (roads, house, lumber, farm, then quarry / tower / barracks). The match ended in defeat before 20 minutes. There is no Binding, no visible rival, no 60-minute victory.
+
+Rate the fun of this demo 1–10 for a new player who wanted up to an hour of play. Judge the pacing minute by minute. Give a prioritised fix list to make a fun 1-hour demo. Prefer the smallest changes that add goals, tension, and a readable ending. Do not propose a broad redesign.
+
+Return:
+1. Fun score (1–10) and one-sentence reason
+2. Pacing notes (what works, where it goes dead)
+3. Prioritised fix list (P0 blockers, P1 1-hour demo gaps, P2 polish)

@@ -1485,7 +1485,7 @@ func _create_ui() -> void:
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label.clip_text = true
 		HudSkin.set_font(label, HudSkin.ui_font(600), HudSkin.SIZE_MIN)
-		label.add_theme_constant_override("outline_size", 3)
+		HudSkin.apply_readable_type(label)
 		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		btn_vbox.add_child(label)
 		var cost_label := Label.new()
@@ -3320,7 +3320,6 @@ func is_build_unlocked(building_type: String) -> bool:
 	var has_house := _player_has_building(Defs.BUILDING_HOUSE)
 	var has_tower := _player_has_building(Defs.BUILDING_WATCHTOWER)
 	var wheat := int(sim.central_inventory.get(Defs.RESOURCE_WHEAT, 0))
-	var night_near: bool = bool(sim.is_night) or float(sim.DAY_LENGTH_SECONDS) - float(sim.phase_time) <= 90.0
 	match building_type:
 		Defs.BUILDING_QUARRY, Defs.BUILDING_SAWMILL, Defs.TOOL_CLEAR_AREA:
 			return has_lumber or int(sim.day_count) >= 2
@@ -3329,7 +3328,7 @@ func is_build_unlocked(building_type: String) -> bool:
 		Defs.BUILDING_STOREHOUSE:
 			return has_house
 		Defs.BUILDING_WATCHTOWER, Defs.BUILDING_WALL, Defs.BUILDING_BARRACKS:
-			return night_near or has_tower or int(sim.day_count) >= 2
+			return sim.is_military_unlocked() or has_tower
 		Defs.BUILDING_LUMEN_PILLAR, Defs.BUILDING_OUTPOST:
 			return has_tower or (has_lumber and has_house and int(sim.day_count) >= 2)
 		_:
@@ -3345,7 +3344,7 @@ func unlock_hint(building_type: String) -> String:
 		Defs.BUILDING_STOREHOUSE:
 			return "Unlocks after a House"
 		Defs.BUILDING_WATCHTOWER, Defs.BUILDING_WALL, Defs.BUILDING_BARRACKS:
-			return "Unlocks as night draws near"
+			return "Available from the second minute"
 		Defs.BUILDING_LUMEN_PILLAR, Defs.BUILDING_OUTPOST:
 			return "Unlocks after you raise a Watchtower"
 		_:
@@ -3747,7 +3746,8 @@ func _create_result_overlay(root: Control) -> void:
 	result_title = Label.new()
 	result_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	Identity.apply_label(result_title, "title")
-	result_title.add_theme_font_size_override("font_size", 26)
+	HudSkin.set_font(result_title, HudSkin.display_font(700), 26, Identity.COLOR_LUMEN)
+	HudSkin.apply_readable_type(result_title)
 	box.add_child(result_title)
 	result_body = RichTextLabel.new()
 	result_body.bbcode_enabled = true
@@ -3866,7 +3866,13 @@ func _toggle_result_stats() -> void:
 func _refresh_result_body() -> void:
 	var stats := last_result_stats
 	var won := bool(stats.get("victory", false))
-	result_title.text = "SHARD BOUND\nREALM SECURED" if won else "THE REALM HAS FALLEN"
+	var reason := String(stats.get("defeat_reason", ""))
+	if won and reason.contains("HOLDS"):
+		result_title.text = "THE REALM HOLDS\nFIVE DAYS"
+	elif won:
+		result_title.text = "SHARD BOUND\nREALM SECURED"
+	else:
+		result_title.text = "THE REALM HAS FALLEN"
 	var minutes := int(float(stats.get("elapsed_seconds", 0.0)) / 60.0)
 	var seconds := int(float(stats.get("elapsed_seconds", 0.0))) % 60
 	var lines: Array[String] = [
@@ -4378,8 +4384,7 @@ func _add_idle_workers_button(host: Control) -> Button:
 		button.add_theme_stylebox_override(state, box)
 	HudSkin.set_font(button, HudSkin.ui_font(700), HudSkin.SIZE_MIN, Color("#ffcf7a"))
 	button.add_theme_color_override("font_hover_color", HudSkin.COLOR_GOLD)
-	button.add_theme_color_override("font_outline_color", HudSkin.COLOR_OUTLINE)
-	button.add_theme_constant_override("outline_size", 2)
+	HudSkin.apply_readable_type(button)
 	button.pressed.connect(_on_idle_workers_pressed)
 	button.visible = false
 	host.add_child(button)
@@ -4422,7 +4427,45 @@ func _tick_idle_workers(idle: int) -> void:
 	if now - idle_notice_last < IDLE_NOTICE_COOLDOWN_SECONDS and now >= idle_notice_last:
 		return
 	idle_notice_last = now
-	_push_notice_feed("Idle workers", "%d settler%s been idle for %ds. Build a Lumber Camp, Quarry or Farm to put them to work." % [idle, " has" if idle == 1 else "s have", int(now - idle_workers_since)], "warning")
+	_push_notice_feed("Idle workers", _idle_workers_copy(sim, idle, int(now - idle_workers_since)), "warning")
+
+
+func _idle_workers_copy(sim, idle: int, idle_for: int) -> String:
+	var who := "%d settler%s been idle for %ds. " % [idle, " has" if idle == 1 else "s have", idle_for]
+	if not _sim_has_building(sim, Defs.BUILDING_LUMBER_CAMP):
+		return who + "Build a Lumber Camp to put them to work."
+	if not _sim_has_building(sim, Defs.BUILDING_QUARRY):
+		return who + "Build a Quarry so stone reaches the yard."
+	if not _sim_has_building(sim, Defs.BUILDING_STOREHOUSE):
+		return who + "Storehouse needs %s." % _storehouse_need_copy(sim)
+	if not _sim_has_building(sim, Defs.BUILDING_SAWMILL):
+		return who + "A Sawmill turns wood into the planks a Storehouse needs."
+	return who + "Open BUILD and place another workplace."
+
+
+func _sim_has_building(sim, building_type: String) -> bool:
+	if sim == null or not sim.has_method("get_buildings"):
+		return false
+	for building in sim.get_buildings():
+		if bool(building.get("construction", false)):
+			if String(building.get("planned_type", "")) == building_type:
+				return true
+		elif String(building.get("type", "")) == building_type:
+			return true
+	return false
+
+
+func _storehouse_need_copy(sim) -> String:
+	var cost: Dictionary = Defs.building_cost(Defs.BUILDING_STOREHOUSE)
+	var missing: Array[String] = []
+	for resource_type in cost.keys():
+		var need := int(cost[resource_type])
+		var have := int(sim.get_available_resource(resource_type)) if sim != null and sim.has_method("get_available_resource") else 0
+		if have < need:
+			missing.append("%d more %s" % [need - have, Defs.resource_name(String(resource_type))])
+	if missing.is_empty():
+		return "the site is ready — place it"
+	return ", ".join(missing)
 
 
 func _hud_divider() -> Control:
