@@ -664,7 +664,9 @@ func stream_chunks(budget_usec: int = STREAM_BUDGET_USEC) -> void:
 	_enqueue_desired_chunks()
 	var built := 0
 	while not chunk_queue.is_empty():
-		if Time.get_ticks_usec() - t0 >= budget_usec and built > 0:
+		if built > 0 and Time.get_ticks_usec() - t0 >= budget_usec:
+			break
+		if built >= 1:
 			break
 		var coord: Vector2i = chunk_queue.pop_front()
 		var wanted := _desired_lod(coord)
@@ -816,16 +818,39 @@ func _recount_chunks() -> void:
 
 
 func _build_chunk_terrain(host: Node3D, coord: Vector2i, lod: int, rebuild_collision: bool) -> void:
+	# Heightfield, not 1024 voxel cells. The old per-tile path called
+	# _compute_terrain_color 25× and relief 8× per cell — one chunk
+	# hitch was 300–500 ms on lavapipe.
+	var origin := _chunk_origin(coord)
+	var verts := CHUNK_TILES + 1
+	var heights := PackedFloat32Array()
+	var colors := PackedColorArray()
+	heights.resize(verts * verts)
+	colors.resize(verts * verts)
+	var half := ScaleProfile.LOGICAL_CELL_METRES * 0.5
+	for j in verts:
+		for i in verts:
+			var tile := Vector2i(
+				clampi(origin.x + i, 0, map_size.x - 1),
+				clampi(origin.y + j, 0, map_size.y - 1)
+			)
+			var world := ScaleProfile.tile_to_flat_world(Vector2(tile), map_size)
+			var sim_y := float(simulation.get_height(tile)) * ScaleProfile.TERRAIN_ELEVATION_UNIT_METRES
+			heights[j * verts + i] = sim_y + _visual_relief_y(Vector2(world.x, world.z))
+			colors[j * verts + i] = _fast_chunk_color(tile)
 	var surface := SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var origin := _chunk_origin(coord)
-	# Always walk every tile. A step>1 leaves holes because each cell
-	# is one logical quad. Far LOD saves cost on vegetation, not dirt.
-	for y in range(origin.y, origin.y + CHUNK_TILES):
-		for x in range(origin.x, origin.x + CHUNK_TILES):
-			var tile := Vector2i(x, y)
-			if simulation.is_inside_map(tile):
-				_add_terrain_cell(surface, tile)
+	for j in CHUNK_TILES:
+		for i in CHUNK_TILES:
+			var tile := Vector2i(origin.x + i, origin.y + j)
+			if not simulation.is_inside_map(tile):
+				continue
+			var c00 := ScaleProfile.tile_to_flat_world(Vector2(tile), map_size)
+			var p00 := Vector3(c00.x - half, heights[j * verts + i], c00.z - half)
+			var p10 := Vector3(c00.x + half, heights[j * verts + i + 1], c00.z - half)
+			var p11 := Vector3(c00.x + half, heights[(j + 1) * verts + i + 1], c00.z + half)
+			var p01 := Vector3(c00.x - half, heights[(j + 1) * verts + i], c00.z + half)
+			_add_quad_colored(surface, p00, p10, p11, p01, Vector3.UP, colors[j * verts + i], colors[j * verts + i + 1], colors[(j + 1) * verts + i + 1], colors[(j + 1) * verts + i])
 	var mesh := surface.commit()
 	if mesh == null:
 		return
@@ -840,11 +865,29 @@ func _build_chunk_terrain(host: Node3D, coord: Vector2i, lod: int, rebuild_colli
 		body.name = "TerrainPicker"
 		body.set_meta("selection_kind", "terrain")
 		var collision := CollisionShape3D.new()
-		var shape := ConcavePolygonShape3D.new()
-		shape.set_faces(mesh.get_faces())
-		collision.shape = shape
+		var box := BoxShape3D.new()
+		var cell := ScaleProfile.LOGICAL_CELL_METRES
+		box.size = Vector3(cell * float(CHUNK_TILES), 4.0, cell * float(CHUNK_TILES))
+		collision.shape = box
+		var mid := _chunk_origin(coord) + Vector2i(CHUNK_TILES / 2, CHUNK_TILES / 2)
+		body.position = tile_to_world(Vector2(mid))
 		body.add_child(collision)
 		host.add_child(body)
+
+
+func _fast_chunk_color(tile: Vector2i) -> Color:
+	if simulation.is_water_tile(tile):
+		return Color(0.204, 0.369, 0.392, 0.55)
+	if _is_road_tile(tile):
+		return Color(0.682, 0.565, 0.427, 0.98)
+	var tile_type := String(simulation.get_tile(tile))
+	if tile_type == Defs.TILE_TREE:
+		return Color(0.220, 0.275, 0.145, 0.40)
+	if tile_type == Defs.TILE_ROCK:
+		return Color(0.522, 0.514, 0.451, 0.32)
+	if tile_type == Defs.TILE_SHARD:
+		return Color(0.275, 0.349, 0.388, 0.40)
+	return Color(0.408, 0.455, 0.227, 0.0)
 
 
 func _build_chunk_water(host: Node3D, coord: Vector2i, lod: int) -> void:
@@ -872,8 +915,6 @@ func _build_chunk_water(host: Node3D, coord: Vector2i, lod: int) -> void:
 	mat.albedo_color = Color("#345E64")
 	mat.roughness = 0.18
 	mat.metallic = 0.08
-	water.material_override = mat
-	water.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var batch := MultiMesh.new()
 	batch.transform_format = MultiMesh.TRANSFORM_3D
 	batch.mesh = mesh

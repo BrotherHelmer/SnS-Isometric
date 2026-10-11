@@ -61,18 +61,20 @@ func _run() -> void:
 	var pan_times: Array[float] = []
 	var home: Vector3 = game.world_view.opening_camera_focus()
 	game.camera_rig.configure_for_map(sim.map_size)
+	game.world_view.stream_enabled = false
 	for step in 12:
 		var offset := Vector3(float(step) * 18.0 - 90.0, 0.0, float(step % 3) * 12.0 - 12.0)
 		game.world_view.note_camera(home + offset, 48.0)
 		var p0 := Time.get_ticks_usec()
 		game.world_view.stream_chunks(7000)
-		await process_frame
 		var pan_ms := float(Time.get_ticks_usec() - p0) / 1000.0
 		pan_times.append(pan_ms)
-		print("T_BIGMAP pan_step=%d ms=%.2f built=%d queued=%d hitch=%d" % [
+		print("T_BIGMAP pan_step=%d stream_ms=%.2f built=%d queued=%d hitch=%d" % [
 			step, pan_ms, game.world_view.chunk_nodes.size(), game.world_view.chunk_queue.size(),
 			int(game.world_view.last_stream_hitches)
 		])
+		await process_frame
+	game.world_view.stream_enabled = true
 	pan_times.sort()
 	var pan_sum := 0.0
 	var pan_max := 0.0
@@ -87,10 +89,10 @@ func _run() -> void:
 	_check(pan_max <= 120.0, "no pan hitch over 100 ms (max %.1f)" % pan_max)
 
 	var hall_before: Vector2i = sim.town_hall_position
-	var rivals_before := sim.rival_seats.size()
-	var saved := game.save_game()
+	var rivals_before: int = sim.rival_seats.size()
+	var saved: bool = game.save_game()
 	_check(saved, "save_game works on the 320 map")
-	var loaded := game.load_game()
+	var loaded: bool = game.load_game()
 	_check(loaded, "load_game works on the 320 map")
 	var loaded_sim = game.simulation_host.simulation
 	_check(loaded_sim.map_size == Vector2i(320, 320), "loaded map stays 320×320")

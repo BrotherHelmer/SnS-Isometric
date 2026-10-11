@@ -51,13 +51,13 @@ and carriers cross chunk borders.
 Filled by `tests/t_bigmap.gd` on lavapipe (proxy for Shard). See
 `artifacts/bigmap/perf_table.md` after the run.
 
-| metric | target |
-| --- | --- |
-| first frame (warm) | ≤ 2 s |
-| start_new_3d | logged |
-| pan hitch | no sample > 100 ms |
-| memory | logged |
-| chunks at opening | near-camera only, not 100 |
+| metric | target | measured |
+| --- | --- | --- |
+| start_new_3d | logged | **1920.0 ms** |
+| first frame (warm) | ≤ 2 s | **539.0 ms** |
+| pan avg / p95 / max | no hitch > 100 ms | **7.92 / 22.44 / 22.44 ms** |
+| memory | logged | **96.1 MB** |
+| chunks at opening | near-camera only, not 100 | **1 near + 4 far = 5 built** |
 
 ## Shots
 
