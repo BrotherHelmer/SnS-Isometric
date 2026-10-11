@@ -86,13 +86,16 @@ Hall `(76, 188)`, Shard `(157, 156)`, 3 rivals. First quest at 4:00. Storehouse 
 | Gate | Result |
 | --- | --- |
 | 4-seed `--accept` Binding | **PASS** all four at 47:04 |
+| 3D playthrough 260821 | **PASS** Binding at 47:04, 19 PNG shots |
 | t_crater_war | PASS |
 | t_demo_balance | PASS (hold is a milestone, not a win) |
 | t_raid_warnings | PASS |
 | t_intentions | PASS |
 | t_hud_type | PASS |
 | export audit | **MISSING 0** (`one_shard_crater_war.gd` packed) |
-| 3D playthrough 260821 | **PASS** Binding at 47:04, 19 PNG shots |
+| t_bigmap | **PASS** — start_new_3d **856 ms**, first frame **736 ms**, Master **1.000** |
+| t_gfx_perf | **PASS** (`GFX_PERF_DONE`) |
+| t_founding_seeds | **sim 100/100**, **render 100/100** |
 
 ## What still fails / is dull
 
