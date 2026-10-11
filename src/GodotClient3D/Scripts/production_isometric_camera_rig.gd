@@ -5,6 +5,9 @@ const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_p
 
 const CLOSE_ZOOM := 16.0
 const NORMAL_ZOOM := 26.0
+# First-screen cleanup: start a step back from NORMAL so the founding
+# yard and HUD do not crush the keep. Wheel / presets still use 26.
+const OPENING_ZOOM := 32.0
 # GFX-J: zoom-out cap ~1.5× gameplay coverage so the player cannot
 # pull back onto a diamond island in a flat void.
 const STRATEGIC_ZOOM := 39.0
@@ -32,9 +35,11 @@ func _ready() -> void:
 	camera.near = 0.2
 	camera.far = 8000.0
 	camera.position = Vector3(0.0, 32.0, 32.0)
+	# Local -45° X, not look_at: after the parent moves, look_at(global
+	# position) uses a stale camera transform and aims at the ocean.
+	camera.rotation_degrees = Vector3(-45.0, 0.0, 0.0)
 	camera.current = true
 	add_child(camera)
-	camera.look_at(Vector3.ZERO, Vector3.UP)
 	rotation.y = PREFERRED_YAW
 	position = target_position
 
@@ -137,6 +142,8 @@ func compose_view(world_position: Vector3, orthographic_size: float) -> void:
 	position = target_position
 	if camera != null:
 		camera.size = target_zoom
+		camera.position = Vector3(0.0, 32.0, 32.0)
+		camera.rotation_degrees = Vector3(-45.0, 0.0, 0.0)
 
 
 func _pan(amount: Vector2, immediate := false, source := "script") -> void:

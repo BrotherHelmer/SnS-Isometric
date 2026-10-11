@@ -156,6 +156,9 @@ func _create_completed_model() -> void:
 	if building_type == "WALL":
 		_create_wall_model()
 		return
+	if building_type == "TOWN_HALL":
+		_create_founding_hall_model()
+		return
 	var packed := load(Catalog.building_path(building_type)) as PackedScene
 	if packed == null:
 		return
@@ -167,6 +170,194 @@ func _create_completed_model() -> void:
 	# The Director: GFX-I trim-sheet remap after the mesh is live.
 	BuildingMaterials.apply(model_root, entity_id, building_type)
 	_apply_principal_trim()
+
+
+func _create_founding_hall_model() -> void:
+	# The Director: starter Town Hall is a small stone civic house with a
+	# green roof and a visible south door. The keep mesh is CASTLE only.
+	model_root = Node3D.new()
+	model_root.name = "SemanticModel_TOWN_HALL"
+	model_root.position.z = _model_offset_z()
+	add_child(model_root)
+	# Authored founding shell: stone walls, green roof, south door.
+	# Packed keep/castle stays on CASTLE so the upgrade keeps the keep.
+	_build_procedural_founding_hall(model_root)
+	BuildingMaterials.apply(model_root, entity_id, building_type)
+
+
+func _fit_node_to_size(node: Node, target: Vector3) -> void:
+	if node is Node3D:
+		var n3 := node as Node3D
+		var aabb := AABB()
+		var first := true
+		for child in n3.find_children("*", "MeshInstance3D", true, false):
+			var mesh_i := child as MeshInstance3D
+			if mesh_i.mesh == null:
+				continue
+			var local := mesh_i.mesh.get_aabb()
+			var world := mesh_i.transform * local
+			if first:
+				aabb = world
+				first = false
+			else:
+				aabb = aabb.merge(world)
+		if first or aabb.size.x < 0.05 or aabb.size.y < 0.05:
+			return
+		var sx := target.x / maxf(aabb.size.x, 0.05)
+		var sy := target.y / maxf(aabb.size.y, 0.05)
+		var sz := target.z / maxf(aabb.size.z, 0.05)
+		var s := clampf(minf(sx, minf(sy, sz)), 0.35, 8.0)
+		n3.scale = Vector3.ONE * s
+		n3.position.y = -aabb.position.y * s
+
+
+func _build_procedural_founding_hall(host: Node3D) -> void:
+	# Starter civic hall: stone plinth, green roof, south door and porch.
+	# Smaller than the keep. No crenellations — those stay on CASTLE.
+	var stone := _material(BuildingMaterials.CASTLE_LIMESTONE, 0.0)
+	var masonry := _material(BuildingMaterials.CASTLE_MASONRY, 0.0)
+	var timber := _material(BuildingMaterials.DARK_TIMBER, 0.0)
+	var roof := _material(BuildingMaterials.HALL_SLATE, 0.0)
+	var plaster := _material(BuildingMaterials.WARM_PLASTER, 0.0)
+	var cloth := _material(Color("#3F7380"), 0.0)
+	var w := 5.85
+	var d := 4.70
+	var wall_h := 2.72
+	var plinth := MeshInstance3D.new()
+	plinth.name = "CivicPlinth_Hall"
+	var plinth_mesh := BoxMesh.new()
+	plinth_mesh.size = Vector3(w + 0.28, 0.28, d + 0.28)
+	plinth.mesh = plinth_mesh
+	plinth.position = Vector3(0.0, 0.14, 0.0)
+	plinth.material_override = masonry
+	host.add_child(plinth)
+	var walls := MeshInstance3D.new()
+	walls.name = "CivicWall_Hall"
+	var wall_mesh := BoxMesh.new()
+	wall_mesh.size = Vector3(w, wall_h, d)
+	walls.mesh = wall_mesh
+	walls.position = Vector3(0.0, 0.28 + wall_h * 0.5, 0.0)
+	walls.material_override = stone
+	host.add_child(walls)
+	var plaster_band := MeshInstance3D.new()
+	plaster_band.name = "CivicPlaster_Hall"
+	var band_mesh := BoxMesh.new()
+	band_mesh.size = Vector3(w * 0.90, wall_h * 0.38, 0.08)
+	plaster_band.mesh = band_mesh
+	plaster_band.position = Vector3(0.0, 0.28 + wall_h * 0.58, d * 0.50)
+	plaster_band.material_override = plaster
+	host.add_child(plaster_band)
+	for corner in [Vector3(-w * 0.48, 0.28 + wall_h * 0.5, -d * 0.48), Vector3(w * 0.48, 0.28 + wall_h * 0.5, -d * 0.48), Vector3(-w * 0.48, 0.28 + wall_h * 0.5, d * 0.48), Vector3(w * 0.48, 0.28 + wall_h * 0.5, d * 0.48)]:
+		var post := MeshInstance3D.new()
+		post.name = "CivicTimber_Post"
+		var post_mesh := BoxMesh.new()
+		post_mesh.size = Vector3(0.18, wall_h + 0.08, 0.18)
+		post.mesh = post_mesh
+		post.position = corner
+		post.material_override = timber
+		host.add_child(post)
+	var roof_body := MeshInstance3D.new()
+	roof_body.name = "CivicRoof_Hall"
+	var roof_mesh := PrismMesh.new()
+	roof_mesh.size = Vector3(w * 1.14, 2.35, d * 1.18)
+	roof_body.mesh = roof_mesh
+	roof_body.position = Vector3(0.0, 0.28 + wall_h + 1.14, 0.0)
+	roof_body.rotation.y = PI * 0.5
+	roof_body.material_override = roof
+	host.add_child(roof_body)
+	var lean := MeshInstance3D.new()
+	lean.name = "CivicLeanTo"
+	var lean_mesh := BoxMesh.new()
+	lean_mesh.size = Vector3(1.85, 1.85, 1.55)
+	lean.mesh = lean_mesh
+	lean.position = Vector3(-w * 0.52, 0.28 + 0.92, 0.15)
+	lean.material_override = stone
+	host.add_child(lean)
+	var lean_roof := MeshInstance3D.new()
+	lean_roof.name = "CivicLeanTo_Roof"
+	var lean_roof_mesh := BoxMesh.new()
+	lean_roof_mesh.size = Vector3(2.15, 0.16, 1.85)
+	lean_roof.mesh = lean_roof_mesh
+	lean_roof.position = Vector3(-w * 0.54, 2.15, 0.15)
+	lean_roof.rotation.z = 0.18
+	lean_roof.material_override = roof
+	host.add_child(lean_roof)
+	var chimney := MeshInstance3D.new()
+	chimney.name = "CivicChimney"
+	var chim_mesh := BoxMesh.new()
+	chim_mesh.size = Vector3(0.58, 1.55, 0.58)
+	chimney.mesh = chim_mesh
+	chimney.position = Vector3(-1.65, 0.28 + wall_h + 2.05, -0.95)
+	chimney.material_override = masonry
+	host.add_child(chimney)
+	var porch_hall := MeshInstance3D.new()
+	porch_hall.name = "CivicPorch_Hall"
+	var porch_hall_mesh := BoxMesh.new()
+	porch_hall_mesh.size = Vector3(2.55, 2.25, 1.45)
+	porch_hall.mesh = porch_hall_mesh
+	porch_hall.position = Vector3(0.0, 0.28 + 1.12, d * 0.50 + 0.72)
+	porch_hall.material_override = stone
+	host.add_child(porch_hall)
+	var porch_roof := MeshInstance3D.new()
+	porch_roof.name = "CivicPorch_Roof"
+	var porch_roof_mesh := PrismMesh.new()
+	porch_roof_mesh.size = Vector3(2.85, 1.05, 1.75)
+	porch_roof.mesh = porch_roof_mesh
+	porch_roof.position = Vector3(0.0, 0.28 + 2.85, d * 0.50 + 0.72)
+	porch_roof.rotation.y = PI * 0.5
+	porch_roof.material_override = roof
+	host.add_child(porch_roof)
+	var door := MeshInstance3D.new()
+	door.name = "CivicDoor"
+	var door_mesh := BoxMesh.new()
+	door_mesh.size = Vector3(1.42, 2.05, 0.14)
+	door.mesh = door_mesh
+	door.position = Vector3(0.0, 0.28 + 1.05, d * 0.50 + 1.48)
+	door.material_override = timber
+	host.add_child(door)
+	var lintel := MeshInstance3D.new()
+	lintel.name = "CivicDoor_Lintel"
+	var lintel_mesh := BoxMesh.new()
+	lintel_mesh.size = Vector3(1.78, 0.22, 0.20)
+	lintel.mesh = lintel_mesh
+	lintel.position = Vector3(0.0, 0.28 + 2.18, d * 0.50 + 1.50)
+	lintel.material_override = masonry
+	host.add_child(lintel)
+	for side in [-1.0, 1.0]:
+		var window := MeshInstance3D.new()
+		window.name = "CivicWindow"
+		var win_mesh := BoxMesh.new()
+		win_mesh.size = Vector3(0.78, 0.82, 0.08)
+		window.mesh = win_mesh
+		window.position = Vector3(side * 1.72, 0.28 + 1.62, d * 0.50 + 0.05)
+		window.material_override = _material(Color("#F5B36B"), 0.0)
+		host.add_child(window)
+	var step := MeshInstance3D.new()
+	step.name = "CivicDoor_Step"
+	var step_mesh := BoxMesh.new()
+	step_mesh.size = Vector3(2.05, 0.18, 0.85)
+	step.mesh = step_mesh
+	step.position = Vector3(0.0, 0.12, d * 0.50 + 1.72)
+	step.material_override = masonry
+	host.add_child(step)
+	var pole := MeshInstance3D.new()
+	pole.name = "CivicBanner_Pole"
+	var pole_mesh := CylinderMesh.new()
+	pole_mesh.top_radius = 0.07
+	pole_mesh.bottom_radius = 0.08
+	pole_mesh.height = 4.20
+	pole.mesh = pole_mesh
+	pole.position = Vector3(2.35, 2.20, d * 0.50 + 1.15)
+	pole.material_override = timber
+	host.add_child(pole)
+	var pennant := MeshInstance3D.new()
+	pennant.name = "CivicBanner"
+	var pennant_mesh := BoxMesh.new()
+	pennant_mesh.size = Vector3(1.05, 0.62, 0.06)
+	pennant.mesh = pennant_mesh
+	pennant.position = Vector3(2.92, 3.85, d * 0.50 + 1.15)
+	pennant.material_override = cloth
+	host.add_child(pennant)
 
 
 func _create_wall_model() -> void:
@@ -374,7 +565,6 @@ func _create_workyard() -> void:
 	match building_type:
 		"TOWN_HALL", "CASTLE":
 			_add_prop("lantern", Vector3(2.15, 0.0, 1.65), Vector3.ONE, "FoundingLantern")
-			_add_prop("fence", Vector3(-2.6, 0.0, -1.8), Vector3.ONE, "FoundingFence")
 			_add_prop("cart", Vector3(2.55, 0.0, -0.8), Vector3.ONE * 0.7, "FoundingCart")
 			# Existing civic supplies stay inside the hall's yard and do not add
 			# occupancy, resources or new buildings to the simulation.

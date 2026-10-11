@@ -38,6 +38,11 @@ const FOG_VISIBLE := 0
 const FOG_EXPLORED := 115
 const FOG_UNEXPLORED := 255
 const GROUND_PATCH_CHUNK_METRES := 40.0
+const DRESS_BUILDING_KINDS := [
+	"HOUSE", "BAKERY", "FARM", "LUMBER_CAMP", "SAWMILL", "QUARRY",
+	"STOREHOUSE", "WATCHTOWER", "BARRACKS", "TOWN_HALL", "CASTLE",
+	"WALL", "LUMEN_PILLAR", "CLAIMANT_OUTPOST", "ENEMY_CAMP"
+]
 
 var simulation
 var map_size := Vector2i.ZERO
@@ -1016,9 +1021,8 @@ func _add_terrain_cell(surface: SurfaceTool, tile: Vector2i) -> void:
 
 
 func _visual_relief_y(xz: Vector2) -> float:
-	# Presentation only. Simulation height is unchanged. Village stays
-	# nearly flat; the back ridge grows 0.08–0.18B; creek sits in a
-	# shallow cut; worn paths dip 3–6 cm. No camera-side cliff.
+	# Presentation only. Village stays flat. The pit sinks around the
+	# Shard; displaced earth rises at the excavation rim.
 	if simulation == null or map_size == Vector2i.ZERO:
 		return 0.0
 	var b := ScaleProfile.TOWN_HALL_WIDTH_METRES
@@ -1029,26 +1033,40 @@ func _visual_relief_y(xz: Vector2) -> float:
 	var dx := xz.x - hall_world.x
 	var dz := xz.y - hall_world.z
 	var dist := Vector2(dx, dz).length()
-	var village := 1.0 - smoothstep(7.0, 14.0, dist)
-	var back := smoothstep(-2.0, -14.0, dz)
-	var ridge_h := lerpf(0.08 * b, 0.18 * b, clampf((-dz - 4.0) / 18.0, 0.0, 1.0))
+	var village := 1.0 - smoothstep(6.5, 12.0, dist)
+	var shard_world := ScaleProfile.tile_to_flat_world(Vector2(simulation.shard_position), map_size)
+	var from_shard := Vector2(xz.x - shard_world.x, xz.y - shard_world.z).length()
+	var pit_m := maxf(float(simulation.crater_pit_radius) * ScaleProfile.LOGICAL_CELL_METRES, 14.0)
+	var pit := 0.0
+	if from_shard < pit_m:
+		pit = -0.42 * (1.0 - from_shard / pit_m)
+	elif from_shard < pit_m + 7.0:
+		var rim_t := 1.0 - absf(from_shard - pit_m) / 7.0
+		pit = 0.16 * b * rim_t * (0.85 + 0.15 * sin(xz.x * 0.21 + xz.y * 0.17))
+	var crater_dir := Vector2(0.0, -1.0)
+	if simulation.founding_site is Dictionary:
+		crater_dir = Vector2(simulation.founding_site.get("crater_dir", crater_dir))
+	if crater_dir.length_squared() < 0.01:
+		crater_dir = Vector2(0.0, -1.0)
+	var toward := Vector2(dx, dz).dot(crater_dir.normalized())
+	var back := smoothstep(2.0, 16.0, toward)
+	var ridge_h := lerpf(0.08 * b, 0.18 * b, clampf((toward - 4.0) / 18.0, 0.0, 1.0))
 	var noise := 0.82 + 0.18 * sin(xz.x * 0.11 + xz.y * 0.07)
 	var ridge := back * ridge_h * noise * (1.0 - village)
-	var peri := smoothstep(22.0, 48.0, dist) * 0.07 * b
-	if dz > 3.0:
-		peri *= 0.15
-		ridge = 0.0
-	peri *= (1.0 - village)
-	return ridge + peri + _creek_cut_at(xz) + _road_dip_at(xz)
+	var peri := smoothstep(22.0, 48.0, dist) * 0.07 * b * (1.0 - village)
+	return ridge + peri + pit * (1.0 - village) + _creek_cut_at(xz) + _road_dip_at(xz)
 
 
 func _creek_cut_at(xz: Vector2) -> float:
 	if simulation == null or not simulation.is_town_hall_founded():
 		return 0.0
-	var hall: Vector2i = simulation.town_hall_position
 	var best := 999.0
-	for offset in [Vector2i(-5, -2), Vector2i(-4, 1), Vector2i(-4, 4), Vector2i(-3, 6), Vector2i(-4, 9), Vector2i(-6, 12), Vector2i(-8, 15)]:
-		var p := ScaleProfile.tile_to_flat_world(Vector2(hall + offset), map_size)
+	var tiles: Array = simulation.founding_site.get("creek_tiles", []) if simulation.founding_site is Dictionary else []
+	if tiles.is_empty():
+		var hall: Vector2i = simulation.town_hall_position
+		tiles = [hall + Vector2i(-7, -2), hall + Vector2i(-6, 2), hall + Vector2i(-6, 6), hall + Vector2i(-7, 10)]
+	for tile_value in tiles:
+		var p := ScaleProfile.tile_to_flat_world(Vector2(Vector2i(tile_value)), map_size)
 		best = minf(best, Vector2(xz.x - p.x, xz.y - p.z).length())
 	var bank := ScaleProfile.road_width_metres() * 0.85
 	if best > bank + 1.6:
@@ -1120,6 +1138,7 @@ func _compute_terrain_color(tile: Vector2i) -> Color:
 	if edge <= 1:
 		base = base.lerp(Color(0.090, 0.149, 0.165, 0.28) if rock_weight < 3 else Color(0.416, 0.376, 0.329, 0.24), 0.55)
 	var path_w := maxf(_visual_path_weight(tile), _hamlet_path_weight(tile))
+	path_w = maxf(path_w, _forecourt_weight(tile))
 	if path_w > 0.08:
 		base = base.lerp(Color(0.690, 0.520, 0.330, 0.88), clampf(path_w * 0.94, 0.0, 0.94))
 	if _is_farm_field_tile(tile):
@@ -1153,6 +1172,14 @@ func _meadow_weight(tile: Vector2i) -> float:
 	var hall: Vector2i = simulation.town_hall_position
 	var dist := Vector2(tile - hall).length()
 	return clampf(1.0 - absf(dist - 5.5) / 6.5, 0.0, 1.0) * (0.55 + float(_tile_hash(tile, 29) % 40) / 100.0)
+
+
+func _forecourt_weight(tile: Vector2i) -> float:
+	if simulation == null or not simulation.is_town_hall_founded():
+		return 0.0
+	var entrance: Vector2i = simulation._town_hall_entrance_tile()
+	var d := Vector2(tile).distance_to(Vector2(entrance) + Vector2(0.0, 0.8))
+	return clampf(1.0 - d / 3.45, 0.0, 1.0) * 0.98
 
 
 func _visual_path_weight(tile: Vector2i) -> float:
@@ -1309,6 +1336,9 @@ func _rebuild_nature_multimeshes() -> void:
 			if _nature_suppressed_near_activity(tile):
 				continue
 			var neighbors := _same_type_neighbors(tile, Defs.TILE_TREE)
+			# Isolated meadow trees read as saplings beside the hall.
+			if neighbors <= 1 and _near_founding_meadow(tile):
+				continue
 			var visual_count := 2 if stage >= 1 and neighbors >= 3 and foliage_density >= 0.75 and _tile_hash(tile, 19) % 3 != 0 else 1
 			if foliage_density < 0.50 and _tile_hash(tile, 91) % 3 == 0:
 				visual_count = 0
@@ -1341,8 +1371,8 @@ func _rebuild_nature_multimeshes() -> void:
 		for index in batch.size():
 			if index % 2 != 0:
 				continue
-			tree_floors.append(ContactAO.flatten_transform(batch[index], 1.7))
-	ContactAO.spawn_multimesh(resource_visuals_root, tree_floors, 0.34)
+			tree_floors.append(ContactAO.flatten_transform(batch[index], 1.05))
+	ContactAO.spawn_multimesh(resource_visuals_root, tree_floors, 0.18)
 
 
 func _sync_grass(force: bool) -> void:
@@ -1379,6 +1409,8 @@ func _rebuild_grass_multimeshes() -> void:
 				continue
 			if _is_road_tile(tile) or _is_farm_field_tile(tile):
 				continue
+			if _in_founding_yard(tile) or _forecourt_weight(tile) > 0.12:
+				continue
 			if density < 0.55 and _tile_hash(tile, 11) % 3 == 0:
 				continue
 			var meadow := _meadow_weight(tile)
@@ -1386,6 +1418,8 @@ func _rebuild_grass_multimeshes() -> void:
 			var near_yard := yard.has(_tile_key(tile))
 			var path_w := _visual_path_weight(tile)
 			if path_w > 0.45:
+				continue
+			if _near_founding_meadow(tile) and forest_edge == 0:
 				continue
 			# GFX-N: cluster at forest edges and landmarks. Sparse meadow
 			# center so construction stays readable.
@@ -1408,13 +1442,13 @@ func _rebuild_grass_multimeshes() -> void:
 			if (forest_edge >= 1 or near_yard) and _tile_hash(tile, 47) % 3 == 0 and Catalog.FLOWERS.size() > 0:
 				var flower_path := String(Catalog.FLOWERS[_tile_hash(tile, 61) % Catalog.FLOWERS.size()])
 				_append_nature_transform(transforms_by_path, flower_path, tile, 4, 0.60, 1.12, 0.46)
-			if meadow > 0.20 and forest_edge == 0 and near_yard and _tile_hash(tile, 59) % 6 == 0 and Catalog.UNDERSTORY.size() > 0:
+			if meadow > 0.20 and forest_edge == 0 and near_yard and _tile_hash(tile, 59) % 6 == 0 and Catalog.UNDERSTORY.size() > 0 and not _in_founding_yard(tile, 8.5) and not _near_founding_meadow(tile):
 				var meadow_bush := String(Catalog.UNDERSTORY[_tile_hash(tile, 73) % Catalog.UNDERSTORY.size()])
 				_append_nature_transform(transforms_by_path, meadow_bush, tile, 8, 0.55, 0.96, 0.30)
-			if forest_edge >= 1 and forest_edge <= 3 and _tile_hash(tile, 53) % 2 == 0 and Catalog.UNDERSTORY.size() > 0:
+			if forest_edge >= 1 and forest_edge <= 3 and _tile_hash(tile, 53) % 2 == 0 and Catalog.UNDERSTORY.size() > 0 and not _in_founding_yard(tile, 8.5):
 				var bush_path := String(Catalog.UNDERSTORY[_tile_hash(tile, 71) % Catalog.UNDERSTORY.size()])
 				_append_nature_transform(transforms_by_path, bush_path, tile, 6, 0.50, 0.55, 0.30)
-			if forest_edge >= 1 and _tile_hash(tile, 101) % 4 == 0 and Catalog.ROCKS.size() > 0:
+			if forest_edge >= 1 and _tile_hash(tile, 101) % 4 == 0 and Catalog.ROCKS.size() > 0 and not _in_founding_yard(tile, 8.5):
 				var rock_path := String(Catalog.ROCKS[_tile_hash(tile, 109) % Catalog.ROCKS.size()])
 				_append_nature_transform(transforms_by_path, rock_path, tile, 7, 0.58, 0.50, 0.20)
 	_spawn_nature_multimeshes(grass_root, transforms_by_path)
@@ -1507,6 +1541,8 @@ func _rebuild_ground_patches() -> void:
 			if occupied.has(_tile_key(tile)) or _is_road_tile(tile) or _is_farm_field_tile(tile):
 				continue
 			if not simulation.is_revealed(tile):
+				continue
+			if _in_founding_yard(tile) or _forecourt_weight(tile) > 0.12:
 				continue
 			if _visual_path_weight(tile) > 0.40 or _hamlet_path_weight(tile) > 0.40:
 				continue
@@ -1698,7 +1734,101 @@ func _tile_occupied_by_structure(tile: Vector2i) -> bool:
 	return false
 
 
+func _in_founding_yard(tile: Vector2i, radius := 8.0) -> bool:
+	if simulation == null or not simulation.is_town_hall_founded():
+		return false
+	if simulation.has_method("_in_founding_clearing"):
+		return bool(simulation._in_founding_clearing(tile))
+	var hall: Vector2i = simulation.town_hall_position
+	var footprint := Defs.building_footprint(Defs.BUILDING_TOWN_HALL)
+	var center := Vector2(hall) + Vector2(footprint - Vector2i.ONE) * 0.5
+	return Vector2(tile).distance_to(center) < radius
+
+
+func _near_founding_meadow(tile: Vector2i) -> bool:
+	if simulation == null or not simulation.is_town_hall_founded():
+		return false
+	var hall: Vector2i = simulation.town_hall_position
+	var footprint := Defs.building_footprint(Defs.BUILDING_TOWN_HALL)
+	var center := Vector2(hall) + Vector2(footprint - Vector2i.ONE) * 0.5
+	return Vector2(tile).distance_to(center) < 12.5
+
+
+func founding_yard_blockers(radius := 8.0) -> Dictionary:
+	# Presentation + sim blockers inside the opening yard. Uses the
+	# seeded ellipse when the simulation has a founding site.
+	var trees := 0
+	var rocks := 0
+	var tree_tiles: Array[Vector2i] = []
+	if simulation == null or not simulation.is_town_hall_founded():
+		return {"trees": 0, "rocks": 0, "radius": radius, "tree_tiles": tree_tiles}
+	var hall: Vector2i = simulation.town_hall_position
+	var footprint := Defs.building_footprint(Defs.BUILDING_TOWN_HALL)
+	var center := Vector2(hall) + Vector2(footprint - Vector2i.ONE) * 0.5
+	var rx := radius
+	var ry := radius
+	if simulation.founding_site is Dictionary and not simulation.founding_site.is_empty():
+		rx = float(simulation.founding_site.get("rx", radius))
+		ry = float(simulation.founding_site.get("ry", radius))
+	var reach := int(ceil(maxf(rx, ry)))
+	var origin := Vector2i(int(round(center.x)), int(round(center.y)))
+	for oy in range(-reach, reach + 1):
+		for ox in range(-reach, reach + 1):
+			var tile := origin + Vector2i(ox, oy)
+			if not simulation.is_inside_map(tile):
+				continue
+			if simulation.has_method("_in_founding_clearing"):
+				if not bool(simulation._in_founding_clearing(tile)):
+					continue
+			elif Vector2(tile).distance_to(center) >= radius:
+				continue
+			var kind := String(simulation.get_tile(tile))
+			if kind == Defs.TILE_TREE:
+				trees += 1
+				tree_tiles.append(tile)
+			elif kind == Defs.TILE_ROCK:
+				rocks += 1
+	return {"trees": trees, "rocks": rocks, "radius": maxf(rx, ry), "tree_tiles": tree_tiles}
+
+
+func non_inspectable_building_meshes(radius_tiles := 16.0) -> Array[String]:
+	# Dress cottage / fake-building meshes that are not BuildingView
+	# nodes. radius_tiles < 0 scans the whole map.
+	var names: Array[String] = []
+	if resource_visuals_root == null:
+		return names
+	var hall := Vector2i.ZERO
+	var has_hall := false
+	if simulation != null and bool(simulation.is_town_hall_founded()):
+		has_hall = true
+		hall = Vector2i(simulation.town_hall_position)
+	_collect_non_inspectable_buildings(resource_visuals_root, hall, radius_tiles, has_hall, names)
+	return names
+
+
+func _is_dress_building_name(label: String) -> bool:
+	for kind in DRESS_BUILDING_KINDS:
+		if label.begins_with("Dress_%s" % kind):
+			return true
+	return false
+
+
+func _collect_non_inspectable_buildings(node: Node, hall: Vector2i, radius_tiles: float, has_hall: bool, names: Array[String]) -> void:
+	var label := String(node.name)
+	if _is_dress_building_name(label):
+		var include := radius_tiles < 0.0 or not has_hall
+		if not include and node is Node3D:
+			var tile := world_to_tile((node as Node3D).global_position)
+			include = Vector2(tile).distance_to(Vector2(hall)) <= radius_tiles
+		if include:
+			names.append(label)
+	for child in node.get_children():
+		_collect_non_inspectable_buildings(child, hall, radius_tiles, has_hall, names)
+
+
 func _nature_suppressed_near_activity(tile: Vector2i) -> bool:
+	if _in_founding_yard(tile, 8.0):
+		return true
 	for building_value in simulation.get_buildings():
 		var building: Dictionary = building_value
 		var type_name := String(building.get("planned_type", "")) if bool(building.get("construction", false)) else String(building.get("type", ""))
@@ -1887,34 +2017,57 @@ func _create_shard_marker() -> void:
 	var origin := tile_to_world(Vector2(simulation.shard_position))
 	shard_beacon.position = Vector3(origin.x, 0.0, origin.z)
 	environment_root.add_child(shard_beacon)
+	var pit_r := 7.4
+	if simulation.get("crater_pit_radius") != null:
+		pit_r = maxf(float(simulation.crater_pit_radius) * ScaleProfile.LOGICAL_CELL_METRES * 0.42, 6.2)
 
-	var scar := MeshInstance3D.new()
-	scar.name = "ImpactScar"
-	var scar_mesh := CylinderMesh.new()
-	scar_mesh.top_radius = 6.4
-	scar_mesh.bottom_radius = 7.2
-	scar_mesh.height = 0.16
-	scar.mesh = scar_mesh
-	scar.position = Vector3(0.35, 0.04, -0.55)
-	var scar_material := StandardMaterial3D.new()
-	scar_material.albedo_color = Color("#2a3644")
-	scar_material.roughness = 0.92
-	scar.material_override = scar_material
-	shard_beacon.add_child(scar)
+	# Irregular excavated bowl — never a flattened sphere (those read as
+	# a dark oval pad) and never a glowing column.
+	var pit := MeshInstance3D.new()
+	pit.name = "ImpactPit"
+	pit.mesh = _impact_bowl_mesh(pit_r * 0.92, 1.15)
+	pit.position = Vector3(0.10, 0.02, -0.08)
+	var pit_mat := StandardMaterial3D.new()
+	pit_mat.albedo_color = Color("#2C2A26")
+	pit_mat.roughness = 0.96
+	pit.material_override = pit_mat
+	pit.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	shard_beacon.add_child(pit)
+
+	var earth := StandardMaterial3D.new()
+	earth.albedo_color = Color("#4A4338")
+	earth.roughness = 0.94
+	var cracked := StandardMaterial3D.new()
+	cracked.albedo_color = Color("#3A3834")
+	cracked.roughness = 0.90
+	var spoil := [
+		{"pos": Vector3(3.6, 0.0, 1.8), "wide": 2.6, "tall": 0.72, "rot": 0.4},
+		{"pos": Vector3(-3.9, 0.0, -1.4), "wide": 2.2, "tall": 0.58, "rot": -0.7},
+		{"pos": Vector3(1.8, 0.0, -3.6), "wide": 2.4, "tall": 0.64, "rot": 1.1},
+		{"pos": Vector3(-2.6, 0.0, 3.2), "wide": 2.0, "tall": 0.50, "rot": 2.2},
+		{"pos": Vector3(4.2, 0.0, -2.4), "wide": 1.8, "tall": 0.46, "rot": -1.4}
+	]
+	for i in spoil.size():
+		var mound := MeshInstance3D.new()
+		mound.name = "ImpactSpoil_%d" % i
+		mound.mesh = _bevelled_ridge_mesh(11 + i * 7, float(spoil[i]["wide"]), float(spoil[i]["tall"]))
+		mound.position = spoil[i]["pos"]
+		mound.rotation = Vector3(0.0, float(spoil[i]["rot"]), 0.0)
+		mound.material_override = earth if i % 2 == 0 else cracked
+		mound.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		shard_beacon.add_child(mound)
 
 	shard_crystal_material = StandardMaterial3D.new()
-	shard_crystal_material.albedo_color = Color(0.38, 0.78, 0.88, 0.88)
+	shard_crystal_material.albedo_color = Color(0.38, 0.50, 0.54, 0.90)
 	shard_crystal_material.emission_enabled = true
-	shard_crystal_material.emission = Color("#3b8fbd")
-	shard_crystal_material.emission_energy_multiplier = 2.8
-	shard_crystal_material.roughness = 0.18
-	shard_crystal_material.metallic = 0.12
-	shard_crystal_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	shard_crystal_material.emission = Color("#243e46")
+	shard_crystal_material.emission_energy_multiplier = 0.32
+	shard_crystal_material.roughness = 0.48
+	shard_crystal_material.metallic = 0.14
 	var crystal_specs := [
-		{"size": Vector3(1.55, 6.4, 1.22), "pos": Vector3(0.0, 3.2, 0.0), "rot": Vector3(8.0, 18.0, 184.0)},
-		{"size": Vector3(0.85, 3.6, 0.72), "pos": Vector3(0.95, 2.1, 0.55), "rot": Vector3(16.0, 48.0, 162.0)},
-		{"size": Vector3(0.62, 2.4, 0.55), "pos": Vector3(-0.82, 1.55, -0.70), "rot": Vector3(-12.0, -32.0, 198.0)},
-		{"size": Vector3(0.38, 1.45, 0.32), "pos": Vector3(0.35, 1.05, 1.25), "rot": Vector3(28.0, 80.0, 140.0)}
+		{"size": Vector3(1.05, 1.55, 0.72), "pos": Vector3(0.28, 0.22, 0.16), "rot": Vector3(28.0, 18.0, 102.0)},
+		{"size": Vector3(0.68, 1.05, 0.48), "pos": Vector3(-0.82, 0.08, 0.70), "rot": Vector3(-18.0, 48.0, 88.0)},
+		{"size": Vector3(0.55, 0.82, 0.38), "pos": Vector3(0.95, 0.04, -0.58), "rot": Vector3(34.0, -36.0, 112.0)}
 	]
 	for index in crystal_specs.size():
 		var spec: Dictionary = crystal_specs[index]
@@ -1930,122 +2083,65 @@ func _create_shard_marker() -> void:
 
 	shard_beacon_column = MeshInstance3D.new()
 	shard_beacon_column.name = "ShardColumn"
-	var column := CylinderMesh.new()
-	column.top_radius = 0.12
-	column.bottom_radius = 0.72
-	column.height = 32.0
-	shard_beacon_column.mesh = column
-	shard_beacon_column.position = Vector3(0.0, 18.0, 0.0)
-	var column_material := StandardMaterial3D.new()
-	column_material.albedo_color = Color(0.35, 0.78, 0.92, 0.16)
-	column_material.emission_enabled = true
-	column_material.emission = Color("#5ec8e0")
-	column_material.emission_energy_multiplier = 1.8
-	column_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	column_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	shard_beacon_column.material_override = column_material
+	var vein := BoxMesh.new()
+	vein.size = Vector3(0.18, 0.08, 2.4)
+	shard_beacon_column.mesh = vein
+	shard_beacon_column.position = Vector3(0.4, 0.06, -0.2)
+	shard_beacon_column.rotation_degrees = Vector3(0.0, 28.0, 0.0)
+	var vein_mat := StandardMaterial3D.new()
+	vein_mat.albedo_color = Color(0.30, 0.44, 0.48, 0.62)
+	vein_mat.emission_enabled = true
+	vein_mat.emission = Color("#244850")
+	vein_mat.emission_energy_multiplier = 0.22
+	vein_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	shard_beacon_column.material_override = vein_mat
+	shard_beacon_column.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	shard_beacon.add_child(shard_beacon_column)
 
 	shard_beacon_light = OmniLight3D.new()
 	shard_beacon_light.name = "ShardLight"
-	shard_beacon_light.light_color = Color("#7ad7ea")
-	shard_beacon_light.light_energy = 2.8
-	shard_beacon_light.omni_range = 20.0
+	shard_beacon_light.light_color = Color("#5a848c")
+	shard_beacon_light.light_energy = 0.32
+	shard_beacon_light.omni_range = 5.5
 	shard_beacon_light.shadow_enabled = false
-	shard_beacon_light.position = Vector3(0.0, 5.4, 0.0)
+	shard_beacon_light.position = Vector3(0.0, 1.1, 0.0)
 	shard_beacon.add_child(shard_beacon_light)
 
-	var mist := CPUParticles3D.new()
-	mist.name = "ShardMist"
-	mist.emitting = true
-	mist.amount = 36
-	mist.lifetime = 5.2
-	mist.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
-	mist.emission_sphere_radius = 3.2
-	mist.direction = Vector3.UP
-	mist.spread = 24.0
-	mist.gravity = Vector3(0.0, 0.22, 0.0)
-	mist.initial_velocity_min = 0.25
-	mist.initial_velocity_max = 1.05
-	mist.scale_amount_min = 0.22
-	mist.scale_amount_max = 0.58
-	var mist_material := StandardMaterial3D.new()
-	mist_material.albedo_color = Color(0.55, 0.82, 0.95, 0.18)
-	mist_material.emission_enabled = true
-	mist_material.emission = Color("#6bcfe0")
-	mist_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mist_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mist.mesh = SphereMesh.new()
-	(mist.mesh as SphereMesh).radius = 0.28
-	(mist.mesh as SphereMesh).height = 0.56
-	mist.material_override = mist_material
-	mist.position = Vector3(0.2, 1.1, -0.15)
-	shard_beacon.add_child(mist)
-
-	var motes := CPUParticles3D.new()
-	motes.name = "ShardMotes"
-	motes.emitting = true
-	motes.amount = 18
-	motes.lifetime = 2.8
-	motes.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
-	motes.emission_sphere_radius = 1.6
-	motes.direction = Vector3.UP
-	motes.gravity = Vector3(0.0, 0.55, 0.0)
-	motes.initial_velocity_min = 0.4
-	motes.initial_velocity_max = 1.6
-	motes.scale_amount_min = 0.06
-	motes.scale_amount_max = 0.14
-	var mote_material := StandardMaterial3D.new()
-	mote_material.albedo_color = Color(0.72, 0.88, 1.0, 0.55)
-	mote_material.emission_enabled = true
-	mote_material.emission = Color("#9ae8f2")
-	mote_material.emission_energy_multiplier = 2.2
-	mote_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	motes.mesh = SphereMesh.new()
-	(motes.mesh as SphereMesh).radius = 0.08
-	(motes.mesh as SphereMesh).height = 0.16
-	motes.material_override = mote_material
-	motes.position = Vector3(0.0, 2.8, 0.0)
-	shard_beacon.add_child(motes)
-
 	var debris_offsets := [
-		Vector3(2.8, 0.22, 1.1), Vector3(-2.1, 0.18, 2.4), Vector3(3.6, 0.28, -1.8),
-		Vector3(-3.4, 0.16, -0.9), Vector3(1.2, 0.32, -3.3), Vector3(-0.6, 0.42, 3.6),
-		Vector3(4.4, 0.2, 0.6), Vector3(-4.1, 0.24, 1.8), Vector3(2.2, 0.36, 3.1),
-		Vector3(-1.8, 0.14, -3.8), Vector3(5.1, 0.18, -2.4)
+		Vector3(2.4, 0.18, 1.0), Vector3(-1.8, 0.12, 2.1), Vector3(3.1, 0.20, -1.4),
+		Vector3(-2.8, 0.10, -0.8), Vector3(1.1, 0.22, -2.6), Vector3(-0.4, 0.28, 2.8),
+		Vector3(3.6, 0.14, 0.5), Vector3(-3.2, 0.16, 1.4), Vector3(1.8, 0.24, 2.4),
+		Vector3(-1.5, 0.10, -2.9)
 	]
 	for fragment_index in debris_offsets.size():
 		var fragment := MeshInstance3D.new()
 		fragment.name = "ImpactRock_%d" % fragment_index
 		var rock := PrismMesh.new()
-		rock.size = Vector3(0.42 + float(fragment_index % 4) * 0.22, 0.28 + float(fragment_index % 3) * 0.16, 0.34)
+		rock.size = Vector3(0.55 + float(fragment_index % 4) * 0.18, 0.32 + float(fragment_index % 3) * 0.14, 0.40)
 		fragment.mesh = rock
 		fragment.position = debris_offsets[fragment_index]
 		fragment.rotation = Vector3(0.31 * fragment_index, 0.7 * fragment_index, 0.22 * fragment_index)
 		var rock_material := StandardMaterial3D.new()
-		rock_material.albedo_color = Color("#3d4650").lerp(Color("#4a6270"), float(fragment_index % 3) / 3.0)
+		rock_material.albedo_color = Color("#3d4650").lerp(Color("#5a5348"), float(fragment_index % 3) / 3.0)
 		fragment.material_override = rock_material
+		fragment.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		shard_beacon.add_child(fragment)
 
 
 func _update_shard_beacon(wyrdfall: Dictionary) -> void:
-	if shard_beacon_light == null or shard_beacon_column == null:
+	if shard_beacon_light == null:
 		return
 	var binding := bool(wyrdfall.get("binding_active", false)) or bool(wyrdfall.get("reckoning", false))
 	var progress := clampf(float(wyrdfall.get("binding_percent", 0.0)) / 100.0, 0.0, 1.0)
-	var pulse := 1.0 + (0.18 + 0.28 * progress if binding else 0.05) * (0.5 + 0.5 * sin(float(Time.get_ticks_msec()) / 280.0))
-	shard_beacon_light.light_energy = (3.4 if binding else 2.8) * pulse
-	shard_beacon_light.light_color = Color("#7ad7ea").lerp(Color("#a48cff"), progress if binding else 0.0)
-	var material := shard_beacon_column.material_override as StandardMaterial3D
-	if material != null:
-		material.emission_energy_multiplier = (3.2 if binding else 1.8) * pulse
-		material.albedo_color.a = 0.32 if binding else 0.16
+	var pulse := 1.0 + (0.10 + 0.16 * progress if binding else 0.03) * (0.5 + 0.5 * sin(float(Time.get_ticks_msec()) / 280.0))
+	shard_beacon_light.light_energy = (0.85 if binding else 0.32) * pulse
+	shard_beacon_light.light_color = Color("#5a848c").lerp(Color("#7a6a98"), progress if binding else 0.0)
+	if shard_beacon_column != null:
+		var material := shard_beacon_column.material_override as StandardMaterial3D
+		if material != null:
+			material.emission_energy_multiplier = (0.55 if binding else 0.22) * pulse
 	if shard_crystal_material != null:
-		shard_crystal_material.emission_energy_multiplier = (3.6 if binding else 2.8) * pulse
-	if shard_beacon != null:
-		var motes := shard_beacon.get_node_or_null("ShardMotes") as CPUParticles3D
-		if motes != null:
-			motes.speed_scale = 1.35 if binding else 1.0
+		shard_crystal_material.emission_energy_multiplier = (0.70 if binding else 0.32) * pulse
 
 
 func _sync_wyrd_springs(sites: Array) -> void:
@@ -3330,9 +3426,9 @@ func _edge_tree_path(x: int, y: int, ring: int) -> String:
 
 
 func _rebuild_opening_dressing() -> void:
-	# Presentation-only opening hamlet. Cottages, fences, a well, carts
-	# and stacked wood are camera dressing — they do not consume
-	# TILE_GRASS or change simulation placement / economy.
+	# Opening landscape only: forest frame, ridge, creek and coast.
+	# No dress cottages or building-like props. Anything that looks
+	# like a building must be a real, inspectable sim building.
 	if simulation == null or resource_visuals_root == null:
 		return
 	if not simulation.is_town_hall_founded():
@@ -3365,6 +3461,12 @@ func _rebuild_opening_dressing() -> void:
 				continue
 			if _visual_path_weight(tile) > 0.28 or _hamlet_path_weight(tile) > 0.28:
 				continue
+			if _in_founding_yard(tile):
+				continue
+			if _opening_faces_build_sector(tile, hall):
+				continue
+			if _opening_faces_crater(tile, hall):
+				continue
 			var dist := Vector2(float(ox), float(oy)).length()
 			if dist < inner or dist > outer:
 				continue
@@ -3385,16 +3487,21 @@ func _rebuild_opening_dressing() -> void:
 		_append_nature_transform(transforms_by_path, _tree_path_for_tile(tile, 0, 3), tile, 0, 0.70, 1.05, 0.42)
 		planted += 1
 		planted_tiles.append(tile)
-	# GFX-S: understory and saplings soften the ring. Coverage stays
-	# planted / candidates (0.38–0.58). These extras do not count.
+	# Mature edge only. No saplings or understory in the founding yard.
 	for tile in planted_tiles:
+		if _in_founding_yard(tile):
+			continue
 		if Catalog.UNDERSTORY.size() > 0 and _tile_hash(tile, 83) % 3 == 0:
 			_append_nature_transform(transforms_by_path, String(Catalog.UNDERSTORY[_tile_hash(tile, 71) % Catalog.UNDERSTORY.size()]), tile, 6, 0.80, 0.72, 0.28)
-		if _tile_hash(tile, 91) % 5 == 0:
-			_append_nature_transform(transforms_by_path, _tree_path_for_tile(tile, 1, 1), tile, 1, 0.55, 0.48, 0.22)
 	for tile in candidates:
+		if _in_founding_yard(tile):
+			continue
 		var fringe := Vector2(float(tile.x - hall.x), float(tile.y - hall.y)).length()
 		if fringe > inner + 1.35 or fringe < inner:
+			continue
+		if _opening_faces_build_sector(tile, hall):
+			continue
+		if _opening_faces_crater(tile, hall):
 			continue
 		if _tile_hash(tile, 103) % 5 != 0:
 			continue
@@ -3403,20 +3510,19 @@ func _rebuild_opening_dressing() -> void:
 	_spawn_nature_multimeshes(host, transforms_by_path)
 	var coverage := 0.0 if candidates.is_empty() else float(planted) / float(candidates.size())
 	host.set_meta("opening_clearing_cells", inner)
+	var yard_r := 8.0
+	if simulation.founding_site is Dictionary:
+		yard_r = maxf(float(simulation.founding_site.get("rx", 8.0)), float(simulation.founding_site.get("ry", 7.0)))
+	host.set_meta("opening_yard_cells", yard_r)
 	host.set_meta("opening_forest_coverage", coverage)
 	host.set_meta("opening_forest_count", planted)
 	host.set_meta("opening_perimeter_count", candidates.size())
 
 
 func _opening_hamlet_spec() -> Array:
-	# Four cottages + one shed. Anchors sit outside the hall's 4×4.
-	return [
-		{"kind": "HOUSE", "ox": -3, "oy": 0, "yaw": 90.0, "w": 2, "h": 2},
-		{"kind": "HOUSE", "ox": 5, "oy": 1, "yaw": 0.0, "w": 2, "h": 2},
-		{"kind": "HOUSE", "ox": 1, "oy": -3, "yaw": 180.0, "w": 2, "h": 2},
-		{"kind": "HOUSE", "ox": -2, "oy": 5, "yaw": 0.0, "w": 2, "h": 2},
-		{"kind": "BAKERY", "ox": 5, "oy": 4, "yaw": -15.0, "w": 3, "h": 3},
-	]
+	# Empty on purpose. Dress cottages read as real buildings while
+	# HUD Buildings stays 1. Showcase stamps inspectable houses instead.
+	return []
 
 
 func _opening_hamlet_tiles(hall: Vector2i) -> Dictionary:
@@ -3426,8 +3532,6 @@ func _opening_hamlet_tiles(hall: Vector2i) -> Dictionary:
 		for oy in range(int(spec["h"])):
 			for ox in range(int(spec["w"])):
 				reserved[_tile_key(hall + Vector2i(int(spec["ox"]) + ox, int(spec["oy"]) + oy))] = true
-	for pad in [Vector2i(-1, -2), Vector2i(4, -1), Vector2i(-1, 4), Vector2i(2, 5)]:
-		reserved[_tile_key(hall + pad)] = true
 	for spec_value in _opening_ridge_tiles(hall):
 		reserved[_tile_key(spec_value)] = true
 	return reserved
@@ -3454,77 +3558,105 @@ func _hamlet_path_weight(tile: Vector2i) -> float:
 
 
 func _spawn_opening_hamlet(host: Node3D, hall: Vector2i, reserved: Dictionary) -> void:
-	var cottages := 0
-	for spec_value in _opening_hamlet_spec():
-		var spec: Dictionary = spec_value
-		var tile := hall + Vector2i(int(spec["ox"]), int(spec["oy"]))
-		if not _dress_footprint_free(tile, int(spec["w"]), int(spec["h"])):
-			continue
-		if _spawn_dress_cottage(host, String(spec["kind"]), tile, int(spec["w"]), int(spec["h"]), float(spec["yaw"])):
-			cottages += 1
-	# Well from barrel + stone + fence. No authored well mesh.
-	_spawn_dress_prop(host, "barrel", hall + Vector2i(-1, -2), 0.0, 1.05, "DressWellBarrel")
-	_spawn_dress_prop(host, "stone_stack", hall + Vector2i(-1, -2), 40.0, 0.72, "DressWellStone", Vector3(-0.55, 0.0, 0.35))
-	_spawn_dress_prop(host, "fence", hall + Vector2i(-1, -2), 0.0, 0.85, "DressWellFence", Vector3(0.9, 0.0, 0.0))
-	_spawn_dress_prop(host, "cart", hall + Vector2i(4, -1), -18.0, 0.78, "DressCart")
-	_spawn_dress_prop(host, "wood_stack", hall + Vector2i(2, 5), 12.0, 1.05, "DressWoodNorth")
-	_spawn_dress_prop(host, "wood_stack", hall + Vector2i(1, -3), -8.0, 0.92, "DressWoodSouth", Vector3(1.4, 0.0, -0.6))
-	_spawn_dress_prop(host, "fence", hall + Vector2i(-3, -1), 90.0, 1.0, "DressFenceWestA")
-	_spawn_dress_prop(host, "fence", hall + Vector2i(-3, 1), 90.0, 1.0, "DressFenceWestB")
-	_spawn_dress_prop(host, "fence", hall + Vector2i(5, 0), 0.0, 1.0, "DressFenceEast")
-	_spawn_dress_prop(host, "fence", hall + Vector2i(-4, 3), 90.0, 1.0, "DressFenceWestC")
-	_spawn_dress_prop(host, "fence", hall + Vector2i(6, 3), 0.0, 1.0, "DressFenceEastB")
-	_spawn_dress_prop(host, "barrel", hall + Vector2i(5, 1), 25.0, 0.88, "DressBarrelEast", Vector3(-0.8, 0.0, 1.1))
-	_spawn_dress_prop(host, "stone_stack", hall + Vector2i(4, 3), 12.0, 0.55, "DressCrossroadsStone")
-	_spawn_dress_prop(host, "crate", hall + Vector2i(4, 2), -8.0, 0.72, "DressSignCrate", Vector3(0.4, 0.0, 0.2))
-	_spawn_dress_prop(host, "fence", hall + Vector2i(-2, 3), 0.0, 1.0, "DressFenceNorthA")
-	_spawn_dress_prop(host, "fence", hall + Vector2i(3, 3), 0.0, 1.0, "DressFenceNorthB")
-	_spawn_dress_prop(host, "cart", hall + Vector2i(-2, 4), 22.0, 0.70, "DressCartWest")
-	_spawn_dress_prop(host, "crate", hall + Vector2i(3, 2), 12.0, 0.68, "DressCrateEast")
-	_spawn_dress_prop(host, "long_crate", hall + Vector2i(5, 2), -6.0, 0.70, "DressLongCrate")
-	_spawn_dress_prop(host, "crate", hall + Vector2i(-4, 2), 8.0, 0.65, "DressCrateWest")
-	_spawn_opening_crops(host, hall + Vector2i(3, -4))
-	_spawn_dress_pond(host, hall + Vector2i(-5, -3), Vector2(5.4, 3.6), "DressPond")
-	_spawn_dress_prop(host, "stone_stack", hall + Vector2i(-5, -2), 22.0, 0.70, "DressPondStoneA", Vector3(1.6, 0.0, 0.8))
-	_spawn_dress_prop(host, "fence", hall + Vector2i(-6, -4), 0.0, 0.92, "DressPondFence")
+	# Terrain dressing only. Cottages, fences, stacks and carts used
+	# to read as a hamlet the player could not inspect or own.
 	_spawn_dress_coast(host, hall)
 	_spawn_opening_ridge(host, hall)
-	host.set_meta("hamlet_cottages", cottages)
+	host.set_meta("hamlet_cottages", 0)
 	host.set_meta("hamlet_reserved", reserved.size())
 	host.set_meta("hamlet_pond", 1)
 	host.set_meta("hamlet_ridge", 1)
 
 
+func _opening_faces_build_sector(tile: Vector2i, hall: Vector2i) -> bool:
+	if simulation == null or not (simulation.founding_site is Dictionary):
+		return false
+	var open_dir := Vector2(simulation.founding_site.get("open_dir", Vector2(0.2, 1.0)))
+	if open_dir.length_squared() < 0.01:
+		return false
+	var dir := Vector2(tile - hall)
+	if dir.length_squared() < 0.01:
+		return false
+	return dir.normalized().dot(open_dir.normalized()) > 0.28
+
+
+func _opening_faces_crater(tile: Vector2i, hall: Vector2i) -> bool:
+	# Leave a sight-line toward the Shard so the opening camera sees
+	# wyrd crystals, scorched ground, and the crater rim.
+	if simulation == null or not (simulation.founding_site is Dictionary):
+		return false
+	var crater_dir := Vector2(simulation.founding_site.get("crater_dir", Vector2(0.0, -1.0)))
+	if crater_dir.length_squared() < 0.01:
+		crater_dir = Vector2(0.0, -1.0)
+	var dir := Vector2(tile - hall)
+	if dir.length_squared() < 0.01:
+		return false
+	return dir.normalized().dot(crater_dir.normalized()) > 0.32
+
+
 func _opening_forest_score(tile: Vector2i, hall: Vector2i) -> float:
-	# Camera looks from +Y. Prefer the back (-Y) and west (-X) so the
-	# opening meadow stays readable and the forest frames 40–55%.
-	var d := tile - hall
-	return -float(d.y) * 1.35 - float(d.x) * 0.40 + float(_tile_hash(tile, 3) % 7) * 0.08
+	var forest_dir := Vector2(-0.8, -0.4)
+	if simulation != null and simulation.founding_site is Dictionary:
+		forest_dir = Vector2(simulation.founding_site.get("forest_dir", forest_dir))
+	if forest_dir.length_squared() < 0.01:
+		forest_dir = Vector2(-0.8, -0.4)
+	var d := Vector2(tile - hall)
+	var score := d.normalized().dot(forest_dir.normalized()) * 3.2 + float(_tile_hash(tile, 3) % 7) * 0.08
+	if _opening_faces_build_sector(tile, hall):
+		score -= 6.0
+	if _opening_faces_crater(tile, hall):
+		score -= 8.0
+	return score
 
 
 func _opening_ridge_tiles(hall: Vector2i) -> Array[Vector2i]:
-	# GFX-P: one back/upper formation. No large foreground rocks.
-	# Camera looks from +tile.y, so back is -Y.
-	return [
-		hall + Vector2i(4, -3),
-		hall + Vector2i(5, -4),
-		hall + Vector2i(6, -3),
-		hall + Vector2i(7, -4),
-		hall + Vector2i(5, -2),
-		hall + Vector2i(3, -4),
-		hall + Vector2i(6, -5),
-		hall + Vector2i(4, -5),
-	]
+	# Rim sits toward the crater so the opening reads as a meteor bowl.
+	var toward := Vector2(0.0, -1.0)
+	if simulation != null and simulation.founding_site is Dictionary:
+		toward = Vector2(simulation.founding_site.get("crater_dir", toward))
+	if toward.length_squared() < 0.01:
+		toward = Vector2(0.0, -1.0)
+	toward = toward.normalized()
+	var ridge_side := 0.0
+	if simulation != null and simulation.founding_site is Dictionary:
+		ridge_side = float(simulation.founding_site.get("ridge_side", 0))
+	var side := Vector2(-toward.y, toward.x)
+	toward = (toward + side * ridge_side * 0.22).normalized()
+	side = Vector2(-toward.y, toward.x)
+	var tiles: Array[Vector2i] = []
+	for spec in [
+		{"along": 8.0, "side": 0.0}, {"along": 9.0, "side": 1.2}, {"along": 8.0, "side": -1.4},
+		{"along": 10.0, "side": 0.6}, {"along": 7.0, "side": 1.8}, {"along": 9.0, "side": -2.0},
+		{"along": 10.0, "side": -0.8}, {"along": 8.0, "side": 2.4}
+	]:
+		tiles.append(hall + Vector2i(
+			roundi(toward.x * float(spec["along"]) + side.x * float(spec["side"])),
+			roundi(toward.y * float(spec["along"]) + side.y * float(spec["side"]))
+		))
+	return tiles
+
+
+func opening_camera_yaw() -> float:
+	# Keep the classic isometric boom. Orbiting yaw by the crater heading
+	# swings the 32 m offset over the 2400 m ocean pad, so south/west
+	# seeds render as a teal void. Hall placement still walks 360°.
+	return ProductionIsometricCameraRig3D.PREFERRED_YAW
 
 
 func opening_camera_focus() -> Vector3:
-	# Town Hall at about 53% across, 56% down in the opening viewport.
+	# Hall in the lower-middle; crater rim in the upper third.
 	if simulation == null or not simulation.is_town_hall_founded():
 		return Vector3.ZERO
 	var hall: Vector2i = simulation.town_hall_position
 	var center := tile_to_world(Vector2(hall) + Vector2(1.5, 1.5))
-	var w := ScaleProfile.TOWN_HALL_WIDTH_METRES
-	return center + Vector3(-0.12 * w, 0.0, 0.18 * w)
+	var shard := tile_to_world(Vector2(simulation.shard_position))
+	# Pull toward the map centre / shard so the 32 m boom stays over the
+	# playable slab. Coastal halls otherwise look straight at the ocean pad.
+	var inland := Vector3(-center.x, 0.0, -center.z)
+	if inland.length_squared() < 1.0:
+		inland = Vector3(shard.x - center.x, 0.0, shard.z - center.z)
+	var pull := clampf(Vector2(center.x, center.z).length() * 0.38, 10.0, 22.0)
+	return center + inland.normalized() * pull
 
 
 func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
@@ -3563,26 +3695,34 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 		if Catalog.ROCKS.size() > 1:
 			_spawn_kaykit_ridge_rock(ridge, tile, index, 0.55 + float(index % 4) * 0.10)
 		index += 1
+	var crater_dir := Vector2(0.0, -1.0)
+	if simulation != null and simulation.founding_site is Dictionary:
+		crater_dir = Vector2(simulation.founding_site.get("crater_dir", crater_dir))
+	if crater_dir.length_squared() < 0.01:
+		crater_dir = Vector2(0.0, -1.0)
+	crater_dir = crater_dir.normalized()
+	var crater_side := Vector2(-crater_dir.y, crater_dir.x)
+	var crater_yaw := atan2(crater_dir.x, -crater_dir.y)
 	var formation := MeshInstance3D.new()
 	formation.name = "RidgeFormation"
 	formation.mesh = _back_ridge_formation_mesh(b * 1.72, b * 0.52)
-	var anchor := tiles[2] if tiles.size() > 2 else hall + Vector2i(0, -7)
-	formation.position = tile_to_world(Vector2(anchor)) + Vector3(0.0, 0.0, -0.8)
-	formation.rotation.y = 0.18
+	var anchor := tiles[2] if tiles.size() > 2 else hall + Vector2i(roundi(crater_dir.x * 7.0), roundi(crater_dir.y * 7.0))
+	formation.position = tile_to_world(Vector2(anchor)) + Vector3(crater_dir.x * 0.8, 0.0, crater_dir.y * 0.8)
+	formation.rotation.y = crater_yaw + 0.18
 	formation.material_override = grass_b
 	ridge.add_child(formation)
 	var peak_a := MeshInstance3D.new()
 	peak_a.name = "RidgeFormationCap"
 	peak_a.mesh = _back_ridge_formation_mesh(b * 0.72, b * 0.46)
-	peak_a.position = formation.position + Vector3(-2.4, 0.0, -1.6)
-	peak_a.rotation.y = -0.38
+	peak_a.position = formation.position + Vector3(-crater_side.x * 2.4 - crater_dir.x * 1.6, 0.0, -crater_side.y * 2.4 - crater_dir.y * 1.6)
+	peak_a.rotation.y = crater_yaw - 0.38
 	peak_a.material_override = grass_c
 	ridge.add_child(peak_a)
 	var peak_b := MeshInstance3D.new()
 	peak_b.name = "RidgeFormationShade"
 	peak_b.mesh = _back_ridge_formation_mesh(b * 0.58, b * 0.28)
-	peak_b.position = formation.position + Vector3(2.8, 0.0, -0.9)
-	peak_b.rotation.y = 0.62
+	peak_b.position = formation.position + Vector3(crater_side.x * 2.8 - crater_dir.x * 0.9, 0.0, crater_side.y * 2.8 - crater_dir.y * 0.9)
+	peak_b.rotation.y = crater_yaw + 0.62
 	peak_b.material_override = grass_a
 	ridge.add_child(peak_b)
 	for ledge_i in 6:
@@ -3591,18 +3731,34 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 		var ledge_mesh := BoxMesh.new()
 		ledge_mesh.size = Vector3(1.55 + float(ledge_i) * 0.28, 0.34, 0.62)
 		ledge.mesh = ledge_mesh
-		ledge.position = formation.position + Vector3(-2.6 + float(ledge_i) * 1.05, 0.12 + float(ledge_i % 3) * 0.18, 0.85 - float(ledge_i) * 0.12)
-		ledge.rotation.y = 0.18 + float(ledge_i) * 0.22
+		var along := -2.6 + float(ledge_i) * 1.05
+		var out := 0.85 - float(ledge_i) * 0.12
+		ledge.position = formation.position + Vector3(crater_side.x * along + crater_dir.x * out, 0.12 + float(ledge_i % 3) * 0.18, crater_side.y * along + crater_dir.y * out)
+		ledge.rotation.y = crater_yaw + 0.18 + float(ledge_i) * 0.22
 		ledge.material_override = rock_lo if ledge_i % 2 == 0 else rock_hi
+		ledge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		ridge.add_child(ledge)
 	var trees: Dictionary = {}
+	var forest_dir := Vector2(-0.8, -0.4)
+	if simulation != null and simulation.founding_site is Dictionary:
+		forest_dir = Vector2(simulation.founding_site.get("forest_dir", forest_dir))
+	if forest_dir.length_squared() < 0.01:
+		forest_dir = Vector2(-0.8, -0.4)
+	forest_dir = forest_dir.normalized()
+	var forest_side := Vector2(-forest_dir.y, forest_dir.x)
 	for tree_i in 7:
-		var tree_tile: Vector2i = hall + Vector2i(2 + (tree_i % 4), -2 - int(tree_i / 3))
+		var tree_tile: Vector2i = hall + Vector2i(
+			roundi(forest_dir.x * (6.0 + float(tree_i % 3)) + forest_side.x * float(tree_i - 3) * 0.8),
+			roundi(forest_dir.y * (6.0 + float(tree_i % 3)) + forest_side.y * float(tree_i - 3) * 0.8)
+		)
+		if _in_founding_yard(tree_tile) or _opening_faces_crater(tree_tile, hall):
+			continue
 		if simulation.is_inside_map(tree_tile):
-			_append_nature_transform(trees, _tree_path_for_tile(tree_tile, 0, 2), tree_tile, tree_i, 0.55, 0.72, 0.38)
+			_append_nature_transform(trees, _tree_path_for_tile(tree_tile, 0, 3), tree_tile, tree_i, 0.70, 1.00, 0.38)
 	if not trees.is_empty():
 		_spawn_nature_multimeshes(ridge, trees)
 	_spawn_meandering_creek(ridge, hall, r)
+	_spawn_founding_crater_traces(ridge, hall)
 
 
 func _spawn_kaykit_ridge_rock(ridge: Node3D, tile: Vector2i, index: int, scale_mul: float) -> void:
@@ -3628,25 +3784,88 @@ func _spawn_kaykit_ridge_rock(ridge: Node3D, tile: Vector2i, index: int, scale_m
 	ridge.add_child(prop)
 
 
+func _spawn_founding_crater_traces(ridge: Node3D, hall: Vector2i) -> void:
+	# Small embedded fragments and cracked earth toward the pit.
+	# No glowing columns and no oval pads — those read as VFX, not impact.
+	if simulation == null or not (simulation.founding_site is Dictionary):
+		return
+	var glass := StandardMaterial3D.new()
+	glass.albedo_color = Color(0.40, 0.54, 0.58, 0.88)
+	glass.emission_enabled = true
+	glass.emission = Color("#2a5460")
+	glass.emission_energy_multiplier = 0.26
+	glass.roughness = 0.38
+	glass.metallic = 0.16
+	var cracked := _ridge_material(Color("#3A3834"), 0.94)
+	var crater_dir := Vector2(simulation.founding_site.get("crater_dir", Vector2(0.0, -1.0)))
+	if crater_dir.length_squared() < 0.01:
+		crater_dir = Vector2(0.0, -1.0)
+	var index := 0
+	for tile_value in simulation.founding_site.get("wyrd_tiles", []):
+		var tile := Vector2i(tile_value)
+		if not simulation.is_inside_map(tile):
+			continue
+		var origin := tile_to_world(Vector2(tile))
+		var shard := MeshInstance3D.new()
+		shard.name = "DressWyrdTrace_%d" % index
+		var prism := PrismMesh.new()
+		prism.size = Vector3(0.42 + float(index % 3) * 0.10, 0.85 + float(index) * 0.12, 0.34)
+		shard.mesh = prism
+		shard.position = origin + Vector3(0.0, 0.18, 0.0)
+		shard.rotation_degrees = Vector3(22.0, float(index) * 31.0, 98.0)
+		shard.material_override = glass
+		ridge.add_child(shard)
+		var spoil := MeshInstance3D.new()
+		spoil.name = "DressWyrdTrail_%d" % index
+		var box := BoxMesh.new()
+		box.size = Vector3(1.15, 0.16, 0.72)
+		spoil.mesh = box
+		spoil.position = origin + Vector3(0.12, 0.04, -0.08)
+		spoil.rotation.y = atan2(crater_dir.x, crater_dir.y) + float(index) * 0.28
+		spoil.material_override = cracked
+		spoil.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		ridge.add_child(spoil)
+		index += 1
+	ridge.set_meta("wyrd_traces", index)
+
+
 func _spawn_meandering_creek(ridge: Node3D, hall: Vector2i, road_w: float) -> void:
-	# GFX-P: west-forest ribbon. Continues under the trees. Not a
-	# diagonal wedge across the village. Width 0.55–0.75R ±12%.
-	var tiles: Array[Vector2i] = [
-		hall + Vector2i(-5, -2),
-		hall + Vector2i(-4, 1),
-		hall + Vector2i(-4, 4),
-		hall + Vector2i(-3, 6),
-		hall + Vector2i(-4, 9),
-		hall + Vector2i(-6, 12),
-		hall + Vector2i(-8, 15),
-	]
+	# Seeded creek from the founding site. Falls back to a west ribbon.
+	var tiles: Array[Vector2i] = []
+	if simulation != null and simulation.founding_site is Dictionary:
+		for tile_value in simulation.founding_site.get("creek_tiles", []):
+			tiles.append(Vector2i(tile_value))
+	if tiles.size() < 5:
+		tiles = [
+			hall + Vector2i(-7, -2),
+			hall + Vector2i(-6, 1),
+			hall + Vector2i(-6, 4),
+			hall + Vector2i(-5, 7),
+			hall + Vector2i(-6, 10),
+			hall + Vector2i(-8, 13),
+			hall + Vector2i(-9, 16),
+		]
 	var points: Array[Vector3] = []
 	for tile in tiles:
 		if simulation != null and simulation.is_inside_map(tile):
 			points.append(tile_to_world(Vector2(tile)) + Vector3(0.0, 0.04, 0.0))
 	if points.size() < 5:
 		return
-	var width := clampf(road_w * 0.82, road_w * 0.70, road_w * 0.95)
+	var water_type := "river"
+	if simulation != null and simulation.founding_site is Dictionary:
+		water_type = String(simulation.founding_site.get("water_type", "river"))
+	var width_mul := 1.18
+	if water_type == "lake":
+		width_mul = 2.25
+	elif water_type == "pond":
+		width_mul = 1.55
+	var width := clampf(road_w * width_mul, road_w * 1.00, road_w * 2.40)
+	if water_type == "pond" or water_type == "lake":
+		var mid := points[int(points.size() / 2)]
+		_spawn_dress_pond(ridge, simulation.town_hall_position if simulation != null else Vector2i.ZERO, Vector2(6.8 if water_type == "lake" else 4.2, 4.8 if water_type == "lake" else 3.1), "DressPond")
+		var pond: MeshInstance3D = ridge.get_node_or_null("DressPond")
+		if pond != null:
+			pond.position = mid + Vector3(0.0, 0.02, 0.0)
 	var bank := _ridge_material(Color("#786C50"), 0.92)
 	var wet := _ridge_material(Color("#3D5552"), 0.55)
 	var shallow := _ridge_material(Color("#5AA0A0"), 0.28)
@@ -3684,6 +3903,37 @@ func _spawn_meandering_creek(ridge: Node3D, hall: Vector2i, road_w: float) -> vo
 	creek.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	ridge.add_child(creek)
 	_dress_creek_shoreline(ridge, points)
+	_spawn_founding_bridges(ridge, width)
+
+
+func _spawn_founding_bridges(ridge: Node3D, width: float) -> void:
+	if simulation == null or not (simulation.founding_site is Dictionary):
+		return
+	var wood := _ridge_material(Color("#6B4E32"), 0.86)
+	var rail := _ridge_material(Color("#4A3826"), 0.90)
+	var index := 0
+	for tile_value in simulation.founding_site.get("bridge_tiles", []):
+		var tile := Vector2i(tile_value)
+		if simulation.has_method("is_founding_creek_tile") and not bool(simulation.is_founding_creek_tile(tile)):
+			continue
+		var deck := MeshInstance3D.new()
+		deck.name = "DressBridge_%d" % index
+		var deck_mesh := BoxMesh.new()
+		deck_mesh.size = Vector3(maxf(width + 0.70, 3.1), 0.16, maxf(width * 0.42, 1.25))
+		deck.mesh = deck_mesh
+		deck.position = tile_to_world(Vector2(tile)) + Vector3(0.0, 0.14, 0.0)
+		deck.material_override = wood
+		ridge.add_child(deck)
+		for side in [-1.0, 1.0]:
+			var post := MeshInstance3D.new()
+			post.name = "DressBridgeRail_%d_%d" % [index, int(side)]
+			var post_mesh := BoxMesh.new()
+			post_mesh.size = Vector3(0.10, 0.52, maxf(width * 0.38, 1.15))
+			post.mesh = post_mesh
+			post.position = deck.position + Vector3(side * (width * 0.42 + 0.22), 0.30, 0.0)
+			post.material_override = rail
+			ridge.add_child(post)
+		index += 1
 
 
 func _dress_creek_shoreline(ridge: Node3D, points: Array[Vector3]) -> void:
@@ -3782,6 +4032,30 @@ func _ridge_material(color: Color, roughness: float) -> StandardMaterial3D:
 	return material
 
 
+func _impact_bowl_mesh(radius: float, depth: float) -> ArrayMesh:
+	# Jagged excavation, not a disc. Rim stays at grade; the floor sinks.
+	var tool := SurfaceTool.new()
+	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var count := 13
+	var rim: Array[Vector3] = []
+	var mid: Array[Vector3] = []
+	for i in count:
+		var ang := TAU * float(i) / float(count)
+		var jag := 0.72 + float((i * 5) % 7) * 0.055
+		var rx := radius * jag
+		var rz := radius * jag * 0.84
+		rim.append(Vector3(cos(ang) * rx, 0.04, sin(ang) * rz))
+		mid.append(Vector3(cos(ang) * rx * 0.52, -depth * 0.42, sin(ang) * rz * 0.52))
+	var floor := Vector3(0.10, -depth, -0.06)
+	for i in count:
+		var n := (i + 1) % count
+		_ridge_tri(tool, rim[i], rim[n], mid[n])
+		_ridge_tri(tool, rim[i], mid[n], mid[i])
+		_ridge_tri(tool, mid[i], mid[n], floor)
+	tool.generate_normals()
+	return tool.commit()
+
+
 func _bevelled_ridge_mesh(seed_id: int, width: float, height: float) -> ArrayMesh:
 	# Low-poly bevelled rock: irregular top ring, darker implicit sides.
 	var tool := SurfaceTool.new()
@@ -3854,14 +4128,26 @@ func _spawn_dress_pond(host: Node3D, tile: Vector2i, size: Vector2, node_name: S
 
 
 func _spawn_dress_coast(host: Node3D, hall: Vector2i) -> void:
-	# GFX-Q: west water-edge apron so the pond reads into the creek cut.
+	# Sit the coast plane on the seeded water so it does not read as a
+	# floating green slab on the meadow.
+	var coast_dir := Vector2(-1.0, 0.15)
+	if simulation != null and simulation.founding_site is Dictionary:
+		coast_dir = Vector2(simulation.founding_site.get("coast_dir", coast_dir))
+	if coast_dir.length_squared() < 0.01:
+		coast_dir = Vector2(-1.0, 0.15)
+	coast_dir = coast_dir.normalized()
+	var anchor := hall + Vector2i(roundi(coast_dir.x * 7.0), roundi(coast_dir.y * 6.0))
+	if simulation != null and simulation.founding_site is Dictionary:
+		var creek: Array = simulation.founding_site.get("creek_tiles", [])
+		if not creek.is_empty():
+			anchor = Vector2i(creek[int(creek.size() / 2)])
 	var edge := MeshInstance3D.new()
 	edge.name = "DressCoastEdge"
 	var mesh := PlaneMesh.new()
-	mesh.size = Vector2(4.2, 7.4)
+	mesh.size = Vector2(1.8, 2.2)
 	edge.mesh = mesh
-	edge.position = tile_to_world(Vector2(hall + Vector2i(-6, 1))) + Vector3(0.4, 0.03, 0.0)
-	edge.rotation.y = 0.18
+	edge.position = tile_to_world(Vector2(anchor)) + Vector3(0.0, 0.02, 0.0)
+	edge.rotation.y = atan2(coast_dir.x, coast_dir.y)
 	var water := StandardMaterial3D.new()
 	water.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
 	water.albedo_color = Color("#345F65")
@@ -3873,14 +4159,15 @@ func _spawn_dress_coast(host: Node3D, hall: Vector2i) -> void:
 	var bank := MeshInstance3D.new()
 	bank.name = "DressCoastBank"
 	var bank_mesh := BoxMesh.new()
-	bank_mesh.size = Vector3(4.8, 0.16, 0.55)
+	bank_mesh.size = Vector3(3.2, 0.12, 0.42)
 	bank.mesh = bank_mesh
-	bank.position = edge.position + Vector3(1.6, 0.02, 0.2)
-	bank.rotation.y = 0.22
+	bank.position = edge.position + Vector3(-coast_dir.x * 0.9, 0.02, -coast_dir.y * 0.9)
+	bank.rotation.y = atan2(coast_dir.x, coast_dir.y)
 	var mud := StandardMaterial3D.new()
 	mud.albedo_color = Color("#786C50")
 	mud.roughness = 0.92
 	bank.material_override = mud
+	bank.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	host.add_child(bank)
 	host.set_meta("hamlet_coast", 1)
 

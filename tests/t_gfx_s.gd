@@ -56,12 +56,12 @@ func _check_grade() -> void:
 
 
 func _check_assets() -> void:
-	_check(Catalog.building_path("TOWN_HALL").contains("civic_keep"), "Town Hall is the authored civic keep")
-	_check(Catalog.building_path("CASTLE").contains("civic_castle"), "Castle is the authored civic castle")
+	_check(Catalog.building_path("TOWN_HALL").contains("town_hall"), "Town Hall is the founding hall")
+	_check(Catalog.building_path("CASTLE").contains("civic_keep"), "Castle upgrade is the civic keep")
 	_check(Catalog.building_path("HOUSE").contains("building_home_A_green"), "house keeps the KayKit home mesh")
 	_check(Catalog.building_path("LUMBER_CAMP").contains("building_lumbermill_green"), "workshop keeps the KayKit mill mesh")
-	_check(FileAccess.file_exists(Catalog.building_path("TOWN_HALL")), "civic_keep.gltf exists")
-	_check(FileAccess.file_exists(Catalog.building_path("CASTLE")), "civic_castle.gltf exists")
+	_check(FileAccess.file_exists(Catalog.building_path("TOWN_HALL")), "founding hall mesh exists")
+	_check(FileAccess.file_exists(Catalog.building_path("CASTLE")), "civic keep upgrade exists")
 	_check(FileAccess.file_exists(Catalog.ARCH_TEXTURES["stone"]), "stone 1K map exists")
 	_check(FileAccess.file_exists(Catalog.ARCH_TEXTURES["plaster"]), "plaster 1K map exists")
 	_check(FileAccess.file_exists(Catalog.ARCH_TEXTURES["timber"]), "timber 1K map exists")
@@ -69,7 +69,7 @@ func _check_assets() -> void:
 	_check(FileAccess.file_exists("res://src/GodotClient3D/Shaders/settlement_architecture.gdshader"), "architecture shader exists")
 	_check(not BuildingMaterials._is_kaykit_hexagon("TOWN_HALL"), "civic hall is not on the KayKit remap")
 	_check(BuildingMaterials._is_civic_keep("TOWN_HALL") and BuildingMaterials._is_civic_keep("CASTLE"), "civic keep classifier covers hall and castle")
-	_check(is_equal_approx(ScaleProfile.building_scale("TOWN_HALL"), 1.0), "authored keep is world-metre scale 1.0")
+	_check(is_equal_approx(ScaleProfile.building_scale("TOWN_HALL"), 1.0), "founding hall is world-metre scale 1.0")
 	_check(BuildingMaterials.CASTLE_LIMESTONE.is_equal_approx(Color("#CDBFA2")), "castle limestone is #CDBFA2")
 	_check(BuildingMaterials.WARM_PLASTER.is_equal_approx(Color("#E0D0B2")), "castle plaster is #E0D0B2")
 	_check(BuildingMaterials.CASTLE_MASONRY.is_equal_approx(Color("#82796A")), "castle masonry is #82796A")
@@ -110,10 +110,16 @@ func _check_live_scene() -> void:
 	_check(master_lin >= 0.995 and master_lin <= 1.005, "Master volume is 1.0")
 	_check(game.world_view.has_method("_visual_relief_y"), "terrain relief helper exists")
 	var hall_flat := ScaleProfile.tile_to_flat_world(Vector2(game.simulation_host.simulation.town_hall_position + Vector2i(2, 2)), game.world_view.map_size)
+	var crater_dir := Vector2(0.0, -1.0)
+	if game.simulation_host.simulation.founding_site is Dictionary:
+		crater_dir = Vector2(game.simulation_host.simulation.founding_site.get("crater_dir", crater_dir))
+	if crater_dir.length_squared() < 0.01:
+		crater_dir = Vector2(0.0, -1.0)
+	crater_dir = crater_dir.normalized()
 	var village_relief: float = game.world_view._visual_relief_y(Vector2(hall_flat.x, hall_flat.z))
-	var back_relief: float = game.world_view._visual_relief_y(Vector2(hall_flat.x + 10.0, hall_flat.z - 20.0))
-	var front_relief: float = game.world_view._visual_relief_y(Vector2(hall_flat.x, hall_flat.z + 16.0))
-	print("GFX_S relief village=%.3f back=%.3f front=%.3f" % [village_relief, back_relief, front_relief])
+	var back_relief: float = game.world_view._visual_relief_y(Vector2(hall_flat.x + crater_dir.x * 14.0, hall_flat.z + crater_dir.y * 14.0))
+	var front_relief: float = game.world_view._visual_relief_y(Vector2(hall_flat.x - crater_dir.x * 16.0, hall_flat.z - crater_dir.y * 16.0))
+	print("GFX_S relief village=%.3f back=%.3f front=%.3f crater_dir=%s" % [village_relief, back_relief, front_relief, str(crater_dir)])
 	_check(absf(village_relief) <= 0.08, "village tiles stay nearly flat")
 	_check(back_relief >= 0.70 and back_relief <= 2.10, "back ridge relief is 0.08–0.18B")
 	_check(front_relief <= 0.35, "no camera-side cliff")
@@ -159,9 +165,10 @@ func _check_live_scene() -> void:
 		if formation != null and formation.material_override is StandardMaterial3D:
 			var ridge_col := (formation.material_override as StandardMaterial3D).albedo_color
 			_check(ridge_col.g > ridge_col.r, "ridge formation is grassy, not tan sand")
-		_check(dress.find_child("DressCoastEdge", true, false) != null, "opening has a west water edge")
-		_check(dress.find_child("DressCartWest", true, false) != null, "opening gained a second cart")
-		_check(dress.find_child("DressLongCrate", true, false) != null, "opening gained extra crates")
+		_check(dress.find_child("DressCoastEdge", true, false) != null, "opening has a seeded water edge")
+		_check(int(dress.get_meta("hamlet_cottages", 0)) == 0, "opening plants no dress cottages")
+		_check(dress.find_child("DressCartWest", true, false) == null, "opening no longer dresses a second cart")
+		_check(dress.find_child("DressLongCrate", true, false) == null, "opening no longer dresses extra crates")
 	var creek: Node = dress.find_child("DressCreek", true, false) if dress != null else null
 	if creek is MeshInstance3D:
 		var water_mat := (creek as MeshInstance3D).material_override as StandardMaterial3D
@@ -178,23 +185,10 @@ func _check_live_scene() -> void:
 			break
 	_check(hall_view != null, "Town Hall view exists")
 	if hall_view != null:
-		_check(hall_view.find_child("CivicWall_Keep", true, false) != null, "keep has named CivicWall geometry")
-		_check(hall_view.find_child("CivicRoof_Hall", true, false) != null, "keep has named CivicRoof geometry")
-		_check(hall_view.find_child("CivicDoor", true, false) != null, "keep has a timber door")
-		_check(hall_view.find_child("CivicCrenel_Front_0", true, false) != null, "keep has crenellations")
-		_check(hall_view.find_child("CivicGate", true, false) != null, "keep has a named gate")
-		_check(hall_view.find_child("CivicGate_Arch", true, false) != null, "keep has a gate arch")
-		_check(hall_view.find_child("CivicRecess_Gate", true, false) != null, "gatehouse has a recessed portal")
-		_check(hall_view.find_child("CivicButtress_L", true, false) != null, "gatehouse has a left buttress")
-		_check(hall_view.find_child("CivicButtress_R", true, false) != null, "gatehouse has a right buttress")
-		_check(hall_view.find_child("CivicString_Course", true, false) != null, "facade has a string course")
-		_check(hall_view.find_child("CivicHerald", true, false) != null, "gatehouse flies a herald")
-		_check(hall_view.find_child("CivicWall_KeepRaised", true, false) != null, "central keep is raised above the hall")
-		_check(hall_view.find_child("CivicRoof_Keep", true, false) != null, "keep roof is a second mass")
-		_check(hall_view.find_child("CivicRoof_Wing", true, false) != null, "wing roof is a third mass")
-		_check(hall_view.find_child("CivicWall_TowerTall", true, false) != null, "asymmetric tall tower exists")
-		_check(hall_view.find_child("CivicBanner", true, false) != null, "keep flies a banner")
-		_check(hall_view.find_child("TrimPlinth", true, false) != null, "principal trim names stay")
+		_check(hall_view.find_child("CivicWall_Hall", true, false) != null, "founding hall has stone walls")
+		_check(hall_view.find_child("CivicRoof_Hall", true, false) != null, "founding hall has a green roof")
+		_check(hall_view.find_child("CivicDoor", true, false) != null, "founding hall has a timber door")
+		_check(hall_view.find_child("CivicCrenel_Front_0", true, false) == null, "founding hall is not a crenellated keep")
 		var roof: MeshInstance3D = hall_view.find_child("CivicRoof_Hall", true, false) as MeshInstance3D
 		_check(roof != null and roof.mesh != null, "slate roof is authored geometry, not an atlas classify")
 		var tall: MeshInstance3D = hall_view.find_child("CivicWall_TowerTall", true, false) as MeshInstance3D
@@ -207,12 +201,12 @@ func _check_live_scene() -> void:
 	var world_src := FileAccess.get_file_as_string("res://src/GodotClient3D/Scripts/production_world_view_3d.gd")
 	_check(world_src.contains("_stamp_segment_distance") and world_src.contains("_collect_road_segments"), "roads keep the world-space distance field")
 	_check(world_src.contains("road_width_metres() * 0.72"), "visual road width is 0.72 of authored")
-	_check(world_src.contains("(-5, -2)") or world_src.contains("Vector2i(-5, -2)"), "creek starts west of the hamlet")
-	_check(world_src.contains("(-3, 6)") or world_src.contains("Vector2i(-3, 6)"), "creek swings into the visible meadow")
+	_check(world_src.contains("founding_site") or world_src.contains("creek_tiles"), "creek follows the seeded founding site")
+	_check(world_src.contains("_spawn_founding_bridges"), "bridges are spawned on the creek crossing")
 	_check(world_src.contains("_stamp_building_aprons"), "building aprons are stamped as worn earth")
 	_check(world_src.contains("_tuft_transform") and world_src.contains("zone == \"settlement\""), "vegetation uses three MultiMesh zones")
 	_check(world_src.contains("in_clump") and world_src.contains("3.0"), "ground patches plant in 3x3 clumps")
-	_check(world_src.contains("planted_tiles") and world_src.contains("understory and saplings"), "opening forest adds understory without changing coverage")
+	_check(world_src.contains("No saplings") or world_src.contains("no saplings"), "opening forest keeps saplings out of the yard")
 	_check(game.world_view.ground_patch_root != null and game.world_view.ground_patch_root.get_child_count() >= 3, "ground patches instanced several MultiMeshes")
 	var showcase := Showcase.apply(game.simulation_host.simulation)
 	_check(bool(showcase.get("ok", false)), "showcase still stamps")

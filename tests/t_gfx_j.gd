@@ -99,7 +99,7 @@ func _check_live_scene() -> void:
 	_check(not screen_src.contains("float edge_veil"), "screen shroud has no island haze veil")
 	var dress: Node = game.world_view.resource_visuals_root.get_node_or_null("OpeningDress")
 	_check(dress != null and dress.get_child_count() > 0, "opening has dress children")
-	_check(int(dress.get_meta("hamlet_cottages", 0)) >= 3, "opening still dresses at least three cottages")
+	_check(int(dress.get_meta("hamlet_cottages", 0)) == 0, "opening plants no dress cottages")
 	var ridge: Node = dress.find_child("DressRidge", true, false)
 	_check(ridge != null, "opening has a ridge landmark")
 	_check(dress.find_child("DressCreek", true, false) != null, "opening ridge includes a creek")

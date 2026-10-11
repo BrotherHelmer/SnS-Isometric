@@ -83,7 +83,9 @@ func _run() -> void:
 		get_tree().quit(2)
 		return
 
-	game.start_new_3d(game.DEFAULT_SEED)
+	var shot_seed := _resolve_seed(game)
+	print("GPU_SHOTS seed=%d" % shot_seed)
+	game.start_new_3d(shot_seed)
 	game._hide_start_menu()
 	game.simulation_host.paused = true
 	var sim = game.simulation_host.simulation
@@ -111,7 +113,7 @@ func _run() -> void:
 	tree.current_scene = game
 	await tree.process_frame
 	await tree.process_frame
-	game.start_new_3d(game.DEFAULT_SEED)
+	game.start_new_3d(shot_seed)
 	game._hide_start_menu()
 	game.simulation_host.paused = true
 	sim = game.simulation_host.simulation
@@ -163,6 +165,20 @@ func _run() -> void:
 
 	print("GPU_SHOTS PASS dir=%s" % dest)
 	tree.quit(0)
+
+
+func _resolve_seed(game: Node) -> int:
+	var env := OS.get_environment("SNS_GFX_SEED")
+	if env != "":
+		return int(env)
+	var args := OS.get_cmdline_user_args()
+	for i in args.size():
+		var argument := String(args[i])
+		if argument.begins_with("--gfx-seed="):
+			return int(argument.trim_prefix("--gfx-seed="))
+		if argument == "--gfx-seed" and i + 1 < args.size():
+			return int(args[i + 1])
+	return int(game.DEFAULT_SEED)
 
 
 func _ensure_patrol_guard(sim) -> Dictionary:

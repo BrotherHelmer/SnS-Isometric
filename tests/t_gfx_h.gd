@@ -77,10 +77,10 @@ func _check_live_scene() -> void:
 	_check(game.world_view.has_method("_spawn_dress_pond"), "opening pond exists")
 	var dress: Node = game.world_view.resource_visuals_root.get_node_or_null("OpeningDress")
 	_check(dress != null and dress.get_child_count() > 0, "opening has dress children")
-	_check(int(dress.get_meta("hamlet_cottages", 0)) >= 3, "opening still dresses at least three cottages")
+	_check(int(dress.get_meta("hamlet_cottages", 0)) == 0, "opening plants no dress cottages")
 	_check(dress.find_child("DressPond", true, false) != null, "opening has a millpond")
-	_check(dress.find_child("DressWheat_0_0", true, false) != null, "opening has crop rows")
-	_check(dress.find_child("DressWellBarrel", true, false) != null, "opening still has a well")
+	_check(dress.find_child("DressWheat_0_0", true, false) == null, "opening no longer dresses crop rows")
+	_check(dress.find_child("DressWellBarrel", true, false) == null, "opening no longer dresses a well")
 	if game.world_view.terrain_mesh_instance != null and game.world_view.terrain_mesh_instance.material_override is ShaderMaterial:
 		var ground := game.world_view.terrain_mesh_instance.material_override as ShaderMaterial
 		var lush: Vector3 = ground.get_shader_parameter("meadow_lush")
@@ -117,7 +117,7 @@ func _sim_night_check(game) -> void:
 	var dress: Node = game.world_view.resource_visuals_root.get_node_or_null("OpeningDress")
 	if dress != null:
 		var window: OmniLight3D = dress.find_child("DressWindow", true, false) as OmniLight3D
-		_check(window != null and window.visible, "hamlet windows glow at night")
+		_check(window == null, "dress cottages no longer glow because they are gone")
 
 
 func _check(ok: bool, message: String) -> void:

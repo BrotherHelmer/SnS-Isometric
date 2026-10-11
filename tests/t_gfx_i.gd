@@ -99,8 +99,8 @@ func _check_live_scene() -> void:
 	_check(chunked >= 2, "ground patches are chunked MultiMeshes")
 	var dress: Node = game.world_view.resource_visuals_root.get_node_or_null("OpeningDress")
 	_check(dress != null and dress.get_child_count() > 0, "opening has dress children")
-	_check(int(dress.get_meta("hamlet_cottages", 0)) >= 3, "opening still dresses at least three cottages")
-	_check(dress.find_child("DressWheat_0_0", true, false) != null, "opening still has crop rows")
+	_check(int(dress.get_meta("hamlet_cottages", 0)) == 0, "opening plants no dress cottages")
+	_check(dress.find_child("DressWheat_0_0", true, false) == null, "opening no longer dresses crop rows")
 	_check(dress.find_child("DressRidge", true, false) != null, "opening has a ridge landmark")
 	_check(dress.find_child("DressCreek", true, false) != null, "opening ridge includes a creek")
 	var fog_cfg: Dictionary = game.world_view.fog_configuration()
@@ -141,7 +141,7 @@ func _sim_night_check(game) -> void:
 	var dress: Node = game.world_view.resource_visuals_root.get_node_or_null("OpeningDress")
 	if dress != null:
 		var window: OmniLight3D = dress.find_child("DressWindow", true, false) as OmniLight3D
-		_check(window != null and window.visible, "hamlet windows glow at night")
+		_check(window == null, "dress cottages no longer glow because they are gone")
 
 
 func _check(ok: bool, message: String) -> void:
