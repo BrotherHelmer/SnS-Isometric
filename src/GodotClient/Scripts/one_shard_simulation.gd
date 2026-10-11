@@ -1778,6 +1778,47 @@ func request_clear(tile: Vector2i) -> Dictionary:
 	return _success(last_message)
 
 
+func _spawn_site_clearer(tile: Vector2i) -> void:
+	if not _tile_is_clearable_tree(tile) and String(get_tile(tile)) != Defs.TILE_ROCK:
+		return
+	for worker in workers:
+		if String(worker.get("type", "")) == "clearer" and worker.get("clear_target", Vector2i(-1, -1)) == tile:
+			return
+	var spawn := _first_connected_road_tile()
+	if not is_inside_map(spawn):
+		spawn = _town_hall_entrance_tile()
+	var work_tile := _nearest_tree_work_tile(spawn, tile)
+	if work_tile.x < 0:
+		work_tile = tile
+	var path := _find_worker_path(spawn, work_tile)
+	if spawn != work_tile and path.is_empty():
+		return
+	workers.append({
+		"id": next_worker_id,
+		"type": "clearer",
+		"building_id": 0,
+		"role_key": "clear:%s" % _tile_key(tile),
+		"return_type": "retire",
+		"position": spawn,
+		"path": path,
+		"state": "Walking to clear land",
+		"arrival_state": "Clearing land",
+		"move_elapsed": 0.0,
+		"activity_timer": 2.5,
+		"clear_target": tile,
+		"work_position": work_tile,
+		"capacity": 0,
+		"carried_resource": "",
+		"carried_amount": 0,
+		"task": {},
+		"shelter_position": Vector2i(-1, -1),
+		"hp": WORKER_MAX_HP,
+		"max_hp": WORKER_MAX_HP,
+		"hungry": false
+	})
+	next_worker_id += 1
+
+
 func request_clear_area(tiles: Array) -> Dictionary:
 	var marked := 0
 	for tile_value in tiles:
@@ -1925,6 +1966,7 @@ func _assign_idle_workers_to_priority_clears() -> void:
 			work_tile = target
 		var path := _find_worker_path(Vector2i(worker.get("position", target)), work_tile)
 		if Vector2i(worker.get("position", target)) != work_tile and path.is_empty():
+			targets.push_front(target)
 			continue
 		worker["return_type"] = String(worker.get("type", "carrier"))
 		worker["return_capacity"] = int(worker.get("capacity", 0))
@@ -1936,9 +1978,19 @@ func _assign_idle_workers_to_priority_clears() -> void:
 		worker["arrival_state"] = "Gathering"
 		worker["activity_timer"] = 2.4
 		worker["manual_order"] = false
-	while not targets.is_empty() and workers_free() > 0 and _clearer_count() < 6:
-		var spawned := request_clear(targets.pop_front())
-		if not bool(spawned.get("success", false)):
+	while not targets.is_empty() and _clearer_count() < 6:
+		var tile: Vector2i = targets.pop_front()
+		var site_tree := int(priority_clear_tiles.get(_tile_key(tile), 0)) >= 10
+		# The Director: footprint trees must be cut even when every peasant
+		# is already on a farm or road, or the Lumber Camp stays on
+		# CLEARING SITE and the first intention never completes.
+		if site_tree:
+			_spawn_site_clearer(tile)
+		elif workers_free() > 0:
+			var spawned := request_clear(tile)
+			if not bool(spawned.get("success", false)):
+				break
+		else:
 			break
 
 
@@ -5932,9 +5984,11 @@ func _assign_carrier_task(worker: Dictionary) -> bool:
 func _assign_carrier_task_unprofiled(worker: Dictionary) -> bool:
 	if int(worker.get("carried_amount", 0)) > 0:
 		return _assign_dropoff_for_carried(worker)
-	if _assign_road_build(worker):
-		return true
+	# The Director: planned buildings starve if every carrier lays road
+	# first. Deliver construction materials before the next free road tile.
 	if _assign_construction_supply(worker):
+		return true
+	if _assign_road_build(worker):
 		return true
 	if _assign_processor_supply(worker):
 		return true
@@ -6280,9 +6334,19 @@ func _carrier_dropoff(worker: Dictionary) -> bool:
 
 func _retry_blocked_carrier(worker: Dictionary) -> void:
 	if int(worker.get("carried_amount", 0)) > 0:
-		_assign_dropoff_for_carried(worker)
-	else:
-		_clear_worker(worker)
+		if _assign_dropoff_for_carried(worker) and String(worker.get("state", "")) != "Blocked":
+			return
+		var task: Dictionary = worker.get("task", {})
+		# The Director: a carrier who already picked up construction wood
+		# used to stay Blocked forever when the last road tile around the
+		# keep had no path, leaving materials_in_transit stuck and the
+		# Lumber Camp on "Waiting for deliveries" for the whole match.
+		if String(task.get("purpose", "")) == "construction":
+			worker["path"] = []
+			worker["state"] = "Dropoff"
+			worker["arrival_state"] = "Dropoff"
+			return
+	_clear_worker(worker)
 
 
 func _clear_worker(worker: Dictionary, cancel_task: bool = true) -> void:

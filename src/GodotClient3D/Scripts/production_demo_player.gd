@@ -51,10 +51,11 @@ func _result() -> Dictionary:
 
 
 func _pursue_economy(sim) -> void:
-	if _pending_sites(sim) >= MAX_PENDING_SITES:
+	if _pending_buildings(sim) >= MAX_PENDING_SITES:
 		last_idle_reason = "construction queue full"
 		return
-	_extend_roads(sim, _early_road_target(sim), 1)
+	if _has_completed(sim, Defs.BUILDING_LUMBER_CAMP) or _pending_buildings(sim) == 0:
+		_extend_roads(sim, _early_road_target(sim), 1)
 	if _count(sim, Defs.BUILDING_HOUSE) < 1:
 		_try_build(sim, Defs.BUILDING_HOUSE, sim.town_hall_position + Vector2i(5, 4))
 		return
@@ -64,9 +65,12 @@ func _pursue_economy(sim) -> void:
 	if _count(sim, Defs.BUILDING_FARM) < 1:
 		_try_build(sim, Defs.BUILDING_FARM, _aim_food(sim, Vector2i(7, 9)))
 		return
-	if _unlocked(sim, Defs.BUILDING_QUARRY) and _count(sim, Defs.BUILDING_QUARRY) < 1:
-		if _try_quarry(sim):
-			return
+	if _count(sim, Defs.BUILDING_QUARRY) < 1:
+		if _unlocked(sim, Defs.BUILDING_QUARRY):
+			_try_quarry(sim)
+		else:
+			last_idle_reason = "waiting for Lumber Camp so Quarry unlocks"
+		return
 	if _unlocked(sim, Defs.BUILDING_STOREHOUSE) and _count(sim, Defs.BUILDING_STOREHOUSE) < 1 and _need_storage(sim):
 		_try_build(sim, Defs.BUILDING_STOREHOUSE, sim.town_hall_position + Vector2i(4, 10))
 		return
@@ -192,21 +196,33 @@ func _try_quarry(sim) -> bool:
 	if not _can_afford(sim, Defs.BUILDING_QUARRY):
 		last_idle_reason = "cannot afford Quarry"
 		return false
-	var rock := _nearest_kind(sim, sim.town_hall_position, Defs.TILE_ROCK, 28)
-	if rock.x < 0:
+	var rocks := _revealed_kind(sim, sim.town_hall_position, Defs.TILE_ROCK, 32)
+	if rocks.is_empty():
 		last_failures.append("QUARRY: no revealed rock")
+		_extend_roads(sim, _aim_resource(sim, Defs.TILE_ROCK, Vector2i(8, 2)), 2)
 		return false
 	var footprint: Vector2i = Defs.building_footprint(Defs.BUILDING_QUARRY)
-	for oy in range(-(footprint.y - 1), 1):
-		for ox in range(-(footprint.x - 1), 1):
-			var origin := rock + Vector2i(ox, oy)
-			if bool(sim.validate_placement(Defs.BUILDING_QUARRY, origin).get("success", false)):
-				var result: Dictionary = sim.request_build(Defs.BUILDING_QUARRY, origin)
-				if bool(result.get("success", false)):
-					_note(sim, Defs.BUILDING_QUARRY, origin, String(result.get("message", "")))
-					return true
-	_extend_roads(sim, rock, 2)
-	last_failures.append("QUARRY: rock at %s has no valid footprint" % str(rock))
+	var road_aim := Vector2i(rocks[0])
+	var reasons: Dictionary = {}
+	for rock_value in rocks:
+		var rock: Vector2i = rock_value
+		for oy in range(-(footprint.y - 1), 1):
+			for ox in range(-(footprint.x - 1), 1):
+				var origin := rock + Vector2i(ox, oy)
+				var validation: Dictionary = sim.validate_placement(Defs.BUILDING_QUARRY, origin)
+				if bool(validation.get("success", false)):
+					var result: Dictionary = sim.request_build(Defs.BUILDING_QUARRY, origin)
+					if bool(result.get("success", false)):
+						_note(sim, Defs.BUILDING_QUARRY, origin, String(result.get("message", "")))
+						return true
+				else:
+					var reason := String(validation.get("reason", String(validation.get("message", "unknown"))))
+					reasons[reason] = int(reasons.get(reason, 0)) + 1
+					if reason == "RoadConnection" or String(validation.get("message", "")).contains("road"):
+						road_aim = rock
+	_extend_roads(sim, road_aim, 2)
+	last_failures.append("QUARRY: %d rocks visible, none placeable yet %s" % [rocks.size(), str(reasons)])
+	print("DEMO_AI quarry_fail rocks=%d reasons=%s aim=%s" % [rocks.size(), str(reasons), str(road_aim)])
 	return false
 
 
@@ -323,9 +339,12 @@ func _best_site(sim, building_type: String, target: Vector2i) -> Vector2i:
 				var tile := target + Vector2i(ox, oy)
 				if not sim.is_inside_map(tile):
 					continue
-				if not bool(sim.validate_placement(building_type, tile).get("success", false)):
+				var validation: Dictionary = sim.validate_placement(building_type, tile)
+				if not bool(validation.get("success", false)):
 					continue
 				var score := absi(tile.x - target.x) + absi(tile.y - target.y)
+				if building_type != Defs.BUILDING_QUARRY and String(validation.get("message", "")).contains("CLEARING"):
+					score += 8
 				if score < best_score:
 					best = tile
 					best_score = score
@@ -360,8 +379,14 @@ func _aim_food(sim, fallback_offset: Vector2i) -> Vector2i:
 
 
 func _nearest_kind(sim, origin: Vector2i, kind: String, max_dist: int) -> Vector2i:
-	var best := Vector2i(-1, -1)
-	var best_d := max_dist + 1
+	var found := _revealed_kind(sim, origin, kind, max_dist)
+	if found.is_empty():
+		return Vector2i(-1, -1)
+	return found[0]
+
+
+func _revealed_kind(sim, origin: Vector2i, kind: String, max_dist: int) -> Array[Vector2i]:
+	var found: Array[Vector2i] = []
 	for y in range(maxi(0, origin.y - max_dist), mini(sim.map_size.y, origin.y + max_dist + 1)):
 		for x in range(maxi(0, origin.x - max_dist), mini(sim.map_size.x, origin.x + max_dist + 1)):
 			var tile := Vector2i(x, y)
@@ -369,11 +394,9 @@ func _nearest_kind(sim, origin: Vector2i, kind: String, max_dist: int) -> Vector
 				continue
 			if not sim.is_revealed(tile):
 				continue
-			var d := absi(tile.x - origin.x) + absi(tile.y - origin.y)
-			if d < best_d:
-				best = tile
-				best_d = d
-	return best
+			found.append(tile)
+	found.sort_custom(func(a, b): return absi(a.x - origin.x) + absi(a.y - origin.y) < absi(b.x - origin.x) + absi(b.y - origin.y))
+	return found
 
 
 func _scout_target(sim) -> Vector2i:
@@ -461,10 +484,17 @@ func _count_pending(sim, building_type: String) -> int:
 
 
 func _pending_sites(sim) -> int:
+	return _pending_buildings(sim) + _pending_roads(sim)
+
+
+func _pending_buildings(sim) -> int:
 	var total := 0
 	for building in sim.get_buildings():
-		if bool(building.get("construction", false)):
-			total += 1
+		if not bool(building.get("construction", false)):
+			continue
+		if String(building.get("planned_type", "")) == Defs.BUILDING_ROAD:
+			continue
+		total += 1
 	return total
 
 

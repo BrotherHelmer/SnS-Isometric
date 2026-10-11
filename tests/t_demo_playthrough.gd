@@ -180,7 +180,7 @@ func _maybe_rival(sim) -> void:
 	if sim.rivalry == null:
 		return
 	var line := String(sim.rivalry.get_rival_status_line())
-	if line.contains("Outpost") or line.contains("Binding") or line.contains("roads pushing"):
+	if float(sim.elapsed_seconds) >= 600.0 and (line.contains("Outpost") or line.contains("Binding")):
 		saw_rival = true
 		_note_event(sim, "rival", line)
 		captured["pending_rival"] = true
