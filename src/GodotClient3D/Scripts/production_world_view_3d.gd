@@ -1168,8 +1168,8 @@ func _forecourt_weight(tile: Vector2i) -> float:
 	if simulation == null or not simulation.is_town_hall_founded():
 		return 0.0
 	var entrance: Vector2i = simulation._town_hall_entrance_tile()
-	var d := Vector2(tile).distance_to(Vector2(entrance) + Vector2(0.0, 0.6))
-	return clampf(1.0 - d / 2.35, 0.0, 1.0) * 0.92
+	var d := Vector2(tile).distance_to(Vector2(entrance) + Vector2(0.0, 0.8))
+	return clampf(1.0 - d / 3.45, 0.0, 1.0) * 0.98
 
 
 func _visual_path_weight(tile: Vector2i) -> float:
@@ -1326,6 +1326,9 @@ func _rebuild_nature_multimeshes() -> void:
 			if _nature_suppressed_near_activity(tile):
 				continue
 			var neighbors := _same_type_neighbors(tile, Defs.TILE_TREE)
+			# Isolated meadow trees read as saplings beside the hall.
+			if neighbors <= 1 and _near_founding_meadow(tile):
+				continue
 			var visual_count := 2 if stage >= 1 and neighbors >= 3 and foliage_density >= 0.75 and _tile_hash(tile, 19) % 3 != 0 else 1
 			if foliage_density < 0.50 and _tile_hash(tile, 91) % 3 == 0:
 				visual_count = 0
@@ -1425,7 +1428,7 @@ func _rebuild_grass_multimeshes() -> void:
 			if (forest_edge >= 1 or near_yard) and _tile_hash(tile, 47) % 3 == 0 and Catalog.FLOWERS.size() > 0:
 				var flower_path := String(Catalog.FLOWERS[_tile_hash(tile, 61) % Catalog.FLOWERS.size()])
 				_append_nature_transform(transforms_by_path, flower_path, tile, 4, 0.60, 1.12, 0.46)
-			if meadow > 0.20 and forest_edge == 0 and near_yard and _tile_hash(tile, 59) % 6 == 0 and Catalog.UNDERSTORY.size() > 0 and not _in_founding_yard(tile, 8.5):
+			if meadow > 0.20 and forest_edge == 0 and near_yard and _tile_hash(tile, 59) % 6 == 0 and Catalog.UNDERSTORY.size() > 0 and not _in_founding_yard(tile, 8.5) and not _near_founding_meadow(tile):
 				var meadow_bush := String(Catalog.UNDERSTORY[_tile_hash(tile, 73) % Catalog.UNDERSTORY.size()])
 				_append_nature_transform(transforms_by_path, meadow_bush, tile, 8, 0.55, 0.96, 0.30)
 			if forest_edge >= 1 and forest_edge <= 3 and _tile_hash(tile, 53) % 2 == 0 and Catalog.UNDERSTORY.size() > 0 and not _in_founding_yard(tile, 8.5):
@@ -1724,6 +1727,15 @@ func _in_founding_yard(tile: Vector2i, radius := 8.0) -> bool:
 	var footprint := Defs.building_footprint(Defs.BUILDING_TOWN_HALL)
 	var center := Vector2(hall) + Vector2(footprint - Vector2i.ONE) * 0.5
 	return Vector2(tile).distance_to(center) < radius
+
+
+func _near_founding_meadow(tile: Vector2i) -> bool:
+	if simulation == null or not simulation.is_town_hall_founded():
+		return false
+	var hall: Vector2i = simulation.town_hall_position
+	var footprint := Defs.building_footprint(Defs.BUILDING_TOWN_HALL)
+	var center := Vector2(hall) + Vector2(footprint - Vector2i.ONE) * 0.5
+	return Vector2(tile).distance_to(center) < 12.5
 
 
 func founding_yard_blockers(radius := 8.0) -> Dictionary:
@@ -3469,6 +3481,8 @@ func _rebuild_opening_dressing() -> void:
 				continue
 			if _in_founding_yard(tile):
 				continue
+			if _opening_faces_build_sector(tile, hall):
+				continue
 			var dist := Vector2(float(ox), float(oy)).length()
 			if dist < inner or dist > outer:
 				continue
@@ -3500,6 +3514,8 @@ func _rebuild_opening_dressing() -> void:
 			continue
 		var fringe := Vector2(float(tile.x - hall.x), float(tile.y - hall.y)).length()
 		if fringe > inner + 1.35 or fringe < inner:
+			continue
+		if _opening_faces_build_sector(tile, hall):
 			continue
 		if _tile_hash(tile, 103) % 5 != 0:
 			continue
@@ -3567,11 +3583,26 @@ func _spawn_opening_hamlet(host: Node3D, hall: Vector2i, reserved: Dictionary) -
 	host.set_meta("hamlet_ridge", 1)
 
 
+func _opening_faces_build_sector(tile: Vector2i, hall: Vector2i) -> bool:
+	if simulation == null or not (simulation.founding_site is Dictionary):
+		return false
+	var open_dir := Vector2(simulation.founding_site.get("open_dir", Vector2(0.2, 1.0)))
+	if open_dir.length_squared() < 0.01:
+		return false
+	var dir := Vector2(tile - hall)
+	if dir.length_squared() < 0.01:
+		return false
+	return dir.normalized().dot(open_dir.normalized()) > 0.28
+
+
 func _opening_forest_score(tile: Vector2i, hall: Vector2i) -> float:
 	# Camera looks from +Y. Prefer the back (-Y) and west (-X) so the
 	# opening meadow stays readable and the forest frames 40–55%.
 	var d := tile - hall
-	return -float(d.y) * 1.35 - float(d.x) * 0.40 + float(_tile_hash(tile, 3) % 7) * 0.08
+	var score := -float(d.y) * 1.35 - float(d.x) * 0.40 + float(_tile_hash(tile, 3) % 7) * 0.08
+	if _opening_faces_build_sector(tile, hall):
+		score -= 6.0
+	return score
 
 
 func _opening_ridge_tiles(hall: Vector2i) -> Array[Vector2i]:
@@ -3590,16 +3621,18 @@ func _opening_ridge_tiles(hall: Vector2i) -> Array[Vector2i]:
 
 
 func opening_camera_focus() -> Vector3:
-	# Frame the hall, south door, open build sector and a nearby stand.
+	# Frame the hall door, trodden forecourt, short road and the creek.
 	if simulation == null or not simulation.is_town_hall_founded():
 		return Vector3.ZERO
 	var hall: Vector2i = simulation.town_hall_position
 	var center := tile_to_world(Vector2(hall) + Vector2(1.5, 1.5))
 	var w := ScaleProfile.TOWN_HALL_WIDTH_METRES
 	var open_dir := Vector2(0.15, 1.0)
+	var creek_side := -1.0
 	if simulation.founding_site is Dictionary:
 		open_dir = Vector2(simulation.founding_site.get("open_dir", open_dir))
-	return center + Vector3(open_dir.x * 0.22 * w - 0.06 * w, 0.0, 0.38 * w + open_dir.y * 0.10 * w)
+		creek_side = float(simulation.founding_site.get("creek_side", -1))
+	return center + Vector3(creek_side * 0.22 * w + open_dir.x * 0.16 * w, 0.0, 0.58 * w + open_dir.y * 0.08 * w)
 
 
 func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
@@ -3673,8 +3706,10 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 	var trees: Dictionary = {}
 	for tree_i in 7:
 		var tree_tile: Vector2i = hall + Vector2i(2 + (tree_i % 4), -2 - int(tree_i / 3))
+		if _in_founding_yard(tree_tile):
+			continue
 		if simulation.is_inside_map(tree_tile):
-			_append_nature_transform(trees, _tree_path_for_tile(tree_tile, 0, 2), tree_tile, tree_i, 0.55, 0.72, 0.38)
+			_append_nature_transform(trees, _tree_path_for_tile(tree_tile, 0, 3), tree_tile, tree_i, 0.70, 1.00, 0.38)
 	if not trees.is_empty():
 		_spawn_nature_multimeshes(ridge, trees)
 	_spawn_meandering_creek(ridge, hall, r)
@@ -3725,7 +3760,7 @@ func _spawn_meandering_creek(ridge: Node3D, hall: Vector2i, road_w: float) -> vo
 			points.append(tile_to_world(Vector2(tile)) + Vector3(0.0, 0.04, 0.0))
 	if points.size() < 5:
 		return
-	var width := clampf(road_w * 0.82, road_w * 0.70, road_w * 0.95)
+	var width := clampf(road_w * 1.18, road_w * 1.00, road_w * 1.40)
 	var bank := _ridge_material(Color("#786C50"), 0.92)
 	var wet := _ridge_material(Color("#3D5552"), 0.55)
 	var shallow := _ridge_material(Color("#5AA0A0"), 0.28)

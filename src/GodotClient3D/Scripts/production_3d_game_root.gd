@@ -773,9 +773,9 @@ func _create_lighting() -> void:
 	environment.tonemap_white = 6.0
 	environment.ssao_enabled = bool(quality_profile.get("ssao", quality_profile.get("shadows", true)))
 	environment.ssao_radius = 0.55
-	environment.ssao_intensity = 0.68
-	environment.ssao_power = 1.05
-	environment.ssao_detail = 0.28
+	environment.ssao_intensity = 1.10
+	environment.ssao_power = 1.18
+	environment.ssao_detail = 0.36
 	environment.ssao_horizon = 0.08
 	environment.ssao_sharpness = 0.98
 	environment.ssao_light_affect = 0.08
@@ -798,9 +798,9 @@ func _create_lighting() -> void:
 	environment.set("glow_levels/6", 0.0)
 	environment.set("glow_levels/7", 0.0)
 	environment.adjustment_enabled = true
-	environment.adjustment_saturation = 1.04
-	environment.adjustment_contrast = 1.04
-	environment.adjustment_brightness = 1.02
+	environment.adjustment_saturation = 1.12
+	environment.adjustment_contrast = 1.12
+	environment.adjustment_brightness = 1.0
 	environment.adjustment_color_correction = Identity.grade_lut_for("day")
 	# GFX-I: Environment depth haze is off. World-space FOW shroud owns
 	# the unknown. Volumetrics stay off so the village is not veiled.

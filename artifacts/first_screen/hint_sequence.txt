@@ -1,17 +1,17 @@
 t_sec	kind	text
-0.0	quest	A Settlement Begins — Build a Lumberjack
+0.0	quest	A Settlement Begins — Build a Lumber Camp
 25.0	rival	Another realm seeks the Shard
-30.0	quest	A Settlement Begins — Build a Lumberjack
+30.0	quest	A Settlement Begins — Build a Lumber Camp
 30.0	rival	Another realm seeks the Shard
-35.0	quest	A Settlement Begins — Build a Lumberjack
+35.0	quest	A Settlement Begins — Build a Lumber Camp
 35.0	rival	Another realm seeks the Shard
-40.0	quest	A Settlement Begins — Build a Lumberjack
+40.0	quest	A Settlement Begins — Build a Lumber Camp
 40.0	rival	Another realm seeks the Shard
-45.0	quest	A Settlement Begins — Build a Lumberjack
+45.0	quest	A Settlement Begins — Build a Lumber Camp
 45.0	rival	Another realm seeks the Shard
-50.0	quest	A Settlement Begins — Build a Lumberjack
+50.0	quest	A Settlement Begins — Build a Lumber Camp
 50.0	rival	Another realm seeks the Shard
-55.0	quest	A Settlement Begins — Build a Lumberjack
+55.0	quest	A Settlement Begins — Build a Lumber Camp
 55.0	rival	Another realm seeks the Shard
-60.0	quest	A Settlement Begins — Build a Lumberjack
+60.0	quest	A Settlement Begins — Build a Lumber Camp
 60.0	rival	Another realm seeks the Shard

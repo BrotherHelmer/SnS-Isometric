@@ -588,18 +588,15 @@ func _spawn_founding_yard_props(_entrance: Vector2i) -> void:
 	# Modest supplies only. No cottages, workshops or fake farms.
 	decorative_props.clear()
 	var entrance := _town_hall_entrance_tile()
-	var site_rng := RandomNumberGenerator.new()
-	site_rng.seed = rng_seed * 41 + 19
 	var props := [
 		{"type": "wood_stack", "off": Vector2i(-2, 1), "rot": 14.0, "scale": 0.82},
 		{"type": "crate", "off": Vector2i(2, 1), "rot": 8.0, "scale": 0.95},
 		{"type": "stump", "off": Vector2i(-3, 2), "rot": 22.0, "scale": 0.68},
 		{"type": "cart", "off": Vector2i(3, 2), "rot": -10.0, "scale": 0.72},
+		{"type": "lantern", "off": Vector2i(1, 0), "rot": 0.0, "scale": 1.00},
 	]
 	var id := 1
 	for spec in props:
-		if site_rng.randf() < 0.22 and id > 2:
-			continue
 		decorative_props.append({
 			"id": id,
 			"type": String(spec["type"]),
@@ -3268,6 +3265,7 @@ func _generate_map() -> void:
 	_clear_founding_yard(rival_center, FOUNDING_YARD_RADIUS)
 	_place_founding_nearby_resources(town_center)
 	_generate_founding_creek(town_center)
+	_strip_founding_isolates(town_center)
 
 	_set_tile(shard_position, Defs.TILE_SHARD)
 	for offset in _radius_offsets(4):
@@ -3299,6 +3297,7 @@ func _generate_map() -> void:
 	_clear_founding_yard(rival_center, FOUNDING_YARD_RADIUS)
 	_place_founding_nearby_resources(town_center)
 	_generate_founding_creek(town_center)
+	_strip_founding_isolates(town_center)
 
 
 func _generate_height_map() -> void:
@@ -3431,7 +3430,11 @@ func _place_random_resources() -> void:
 			continue
 		var toward_shard := _tile_distance(tile, shard_position)
 		var toward_home := _tile_distance(tile, town_center)
-		var tree_chance := 0.74 if toward_home < 16.0 else (0.48 if toward_shard < 12.0 else 0.62)
+		# Founding site owns the opening meadow. Random isolates there
+		# read as saplings in the middle of the yard.
+		if toward_home < 16.0:
+			continue
+		var tree_chance := 0.48 if toward_shard < 12.0 else 0.62
 		if rng.randf() < tree_chance:
 			_set_tile(tile, Defs.TILE_TREE)
 			tree_deposits[_tile_key(tile)] = 6 if toward_shard > 10.0 else 4
@@ -3489,7 +3492,7 @@ func _ensure_founding_apron(center: Vector2i) -> void:
 
 
 func _compose_settlement_landscape(center: Vector2i) -> void:
-	# Mature forest on 2–3 sides. The open sector stays buildable.
+	# Mature forest on 2–3 sides. The open sector stays a buildable meadow.
 	var open_dir: Vector2 = founding_site.get("open_dir", Vector2(0.2, 1.0))
 	if open_dir.length_squared() < 0.01:
 		open_dir = Vector2(0.2, 1.0)
@@ -3497,26 +3500,27 @@ func _compose_settlement_landscape(center: Vector2i) -> void:
 	var site_rng := RandomNumberGenerator.new()
 	site_rng.seed = rng_seed * 67 + 5
 	var sides := 2 if site_rng.randf() < 0.35 else 3
+	var inner := maxf(float(founding_site.get("rx", 8.0)), float(founding_site.get("ry", 7.0))) + 0.35
 	for offset in _radius_offsets(14):
 		var tile: Vector2i = center + offset
 		if not is_inside_map(tile) or _in_founding_clearing(tile):
 			continue
 		var dist := _tile_distance(tile, center)
-		if dist < 7.0 or dist > 13.5:
+		if dist < inner or dist > 13.5:
 			continue
 		var dir := Vector2(tile - center)
 		if dir.length_squared() < 0.01:
 			continue
 		var facing := dir.normalized().dot(open_dir)
-		if facing > 0.22:
+		if facing > 0.18:
 			continue
 		if sides == 2 and absf(dir.normalized().dot(Vector2(-open_dir.y, open_dir.x))) < 0.18:
 			continue
 		if get_tile(tile) != Defs.TILE_GRASS:
 			continue
-		if site_rng.randf() < 0.58:
+		if site_rng.randf() < 0.78:
 			_set_tile(tile, Defs.TILE_TREE)
-			tree_deposits[_tile_key(tile)] = 6
+			tree_deposits[_tile_key(tile)] = 18
 	var shoulder := center + Vector2i(
 		roundi(-open_dir.y * 9.0 + open_dir.x * 2.0),
 		roundi(open_dir.x * 9.0 + open_dir.y * 2.0)
@@ -3567,6 +3571,7 @@ func _init_founding_site() -> void:
 		"bridge_tiles": [],
 		"food_tiles": [],
 		"road_tiles": [],
+		"creek_side": -1,
 	}
 
 
@@ -3620,26 +3625,66 @@ func _generate_founding_creek(center: Vector2i) -> void:
 	var site_rng := RandomNumberGenerator.new()
 	site_rng.seed = rng_seed * 53 + 7
 	var side := -1 if site_rng.randf() < 0.62 else 1
-	var start := center + Vector2i(side * site_rng.randi_range(8, 12), site_rng.randi_range(-6, -2))
+	founding_site["creek_side"] = side
+	var start := center + Vector2i(side * site_rng.randi_range(6, 8), site_rng.randi_range(-3, 1))
 	var tiles: Array[Vector2i] = []
 	var p := start
-	var dir := Vector2(float(side) * 0.18, 1.0)
+	var dir := Vector2(float(side) * 0.12, 1.0)
 	var guard := 0
-	while tiles.size() < 8 and guard < 18:
+	while tiles.size() < 11 and guard < 22:
 		guard += 1
 		if is_inside_map(p) and not _in_founding_clearing(p):
 			if tiles.is_empty() or tiles[tiles.size() - 1] != p:
+				if not tiles.is_empty():
+					_append_creek_gap(tiles, tiles[tiles.size() - 1], p)
 				tiles.append(p)
-		dir = (dir + Vector2(site_rng.randf_range(-0.32, 0.32), 0.88)).normalized()
-		p = p + Vector2i(roundi(dir.x), maxi(1, roundi(dir.y)))
-	if tiles.size() < 5:
+		dir = (dir + Vector2(site_rng.randf_range(-0.38, 0.38), 0.88)).normalized()
+		p = p + Vector2i(clampi(roundi(dir.x), -1, 1), 1)
+	if tiles.size() < 8:
 		tiles.clear()
-		for i in 8:
-			var fallback := center + Vector2i(side * 9, -4 + i * 2)
-			if is_inside_map(fallback):
+		for i in 11:
+			var fallback := center + Vector2i(side * 7, -3 + i)
+			if is_inside_map(fallback) and not _in_founding_clearing(fallback):
 				tiles.append(fallback)
+			elif is_inside_map(fallback):
+				tiles.append(fallback + Vector2i(side * 2, 0))
 	founding_site["creek_tiles"] = tiles
 	_choose_founding_bridge(center, tiles)
+
+
+func _strip_founding_isolates(center: Vector2i) -> void:
+	# Lone trees in the opening meadow read as saplings. Keep clusters.
+	for oy in range(-14, 15):
+		for ox in range(-14, 15):
+			var tile := center + Vector2i(ox, oy)
+			if not is_inside_map(tile) or _in_founding_clearing(tile):
+				continue
+			if String(get_tile(tile)) != Defs.TILE_TREE:
+				continue
+			var neighbors := 0
+			for n in _neighbors(tile):
+				if String(get_tile(n)) == Defs.TILE_TREE:
+					neighbors += 1
+			if neighbors >= 2:
+				continue
+			if int(tree_deposits.get(_tile_key(tile), 0)) >= 16:
+				continue
+			_set_tile(tile, Defs.TILE_GRASS)
+			tree_deposits.erase(_tile_key(tile))
+
+
+func _append_creek_gap(tiles: Array[Vector2i], from_tile: Vector2i, to_tile: Vector2i) -> void:
+	var steps := maxi(absi(to_tile.x - from_tile.x), absi(to_tile.y - from_tile.y))
+	if steps <= 1:
+		return
+	for index in range(1, steps):
+		var fraction := float(index) / float(steps)
+		var mid := Vector2i(
+			roundi(lerpf(float(from_tile.x), float(to_tile.x), fraction)),
+			roundi(lerpf(float(from_tile.y), float(to_tile.y), fraction))
+		)
+		if is_inside_map(mid) and tiles[tiles.size() - 1] != mid:
+			tiles.append(mid)
 
 
 func _choose_founding_bridge(center: Vector2i, creek_tiles: Array[Vector2i]) -> void:
@@ -3664,7 +3709,7 @@ func _choose_founding_bridge(center: Vector2i, creek_tiles: Array[Vector2i]) -> 
 	if perp == Vector2i.ZERO:
 		perp = Vector2i(1, 0)
 	for step in [-1, 0, 1]:
-		var tile := best + perp * step
+		var tile: Vector2i = best + perp * step
 		if is_inside_map(tile):
 			bridges.append(tile)
 	founding_site["bridge_tiles"] = bridges
@@ -3678,7 +3723,7 @@ func _place_founding_nearby_resources(center: Vector2i) -> void:
 	var tree_c := center + Vector2i(roundi(-open_dir.x * 9.0 + left.x * 3.0), roundi(-open_dir.y * 9.0 + left.y * 3.0))
 	var rock_c := center + Vector2i(roundi(left.x * 8.0 + open_dir.x * 2.0), roundi(left.y * 8.0 + open_dir.y * 2.0))
 	var food_c := center + Vector2i(roundi(open_dir.x * 7.0 - left.x * 3.0), roundi(open_dir.y * 7.0 - left.y * 3.0))
-	_place_resource_cluster(tree_c, Defs.TILE_TREE, 10, 8)
+	_place_resource_cluster(tree_c, Defs.TILE_TREE, 10, 18)
 	_place_resource_cluster(rock_c, Defs.TILE_ROCK, 6, 22)
 	var food_tiles: Array[Vector2i] = []
 	for i in 4:
@@ -3711,12 +3756,13 @@ func _ensure_nearby_resource(center: Vector2i, tile_type: String, max_dist: int)
 	if is_inside_map(tile):
 		_set_tile(tile, tile_type)
 		if tile_type == Defs.TILE_TREE:
-			tree_deposits[_tile_key(tile)] = 8
+			tree_deposits[_tile_key(tile)] = 18
 		else:
 			rock_deposits[_tile_key(tile)] = 22
 
 
 func _nearest_resource_tile(origin: Vector2i, tile_type: String, max_dist: int) -> Vector2i:
+	var walkable := _walkable_from(origin, max_dist + 2)
 	var best := Vector2i(-1, -1)
 	var best_d := float(max_dist + 1)
 	for y in range(maxi(0, origin.y - max_dist), mini(map_size.y, origin.y + max_dist + 1)):
@@ -3725,7 +3771,7 @@ func _nearest_resource_tile(origin: Vector2i, tile_type: String, max_dist: int) 
 			if String(get_tile(tile)) != tile_type:
 				continue
 			var d := _tile_distance(tile, origin)
-			if d < best_d and _resource_reachable(origin, tile):
+			if d < best_d and (walkable.has(_tile_key(tile)) or _tile_distance(tile, origin) <= 1.5):
 				best_d = d
 				best = tile
 	return best
@@ -3734,22 +3780,28 @@ func _nearest_resource_tile(origin: Vector2i, tile_type: String, max_dist: int) 
 func _resource_reachable(from_tile: Vector2i, to_tile: Vector2i) -> bool:
 	if not is_inside_map(from_tile) or not is_inside_map(to_tile):
 		return false
-	var pending: Array[Vector2i] = [from_tile]
-	var seen: Dictionary = {_tile_key(from_tile): true}
+	if _tile_distance(from_tile, to_tile) <= 1.5:
+		return true
+	return _walkable_from(from_tile, 14).has(_tile_key(to_tile))
+
+
+func _walkable_from(origin: Vector2i, max_dist: int) -> Dictionary:
+	var pending: Array[Vector2i] = [origin]
+	var seen: Dictionary = {_tile_key(origin): true}
 	var guard := 0
-	while not pending.is_empty() and guard < 420:
+	while not pending.is_empty() and guard < 380:
 		guard += 1
 		var cur: Vector2i = pending.pop_front()
-		if cur == to_tile or _tile_distance(cur, to_tile) <= 1.5:
-			return true
 		for n in _neighbors(cur):
 			if seen.has(_tile_key(n)) or not is_inside_map(n):
+				continue
+			if _tile_distance(origin, n) > float(max_dist):
 				continue
 			if is_founding_creek_tile(n) and not _is_founding_bridge_tile(n):
 				continue
 			seen[_tile_key(n)] = true
 			pending.append(n)
-	return false
+	return seen
 
 
 func _is_founding_bridge_tile(tile: Vector2i) -> bool:
@@ -3767,7 +3819,7 @@ func _lay_founding_roads() -> void:
 		dir = Vector2i(0, 1)
 	var roads: Array[Vector2i] = []
 	for i in 4:
-		var tile := entrance + dir * i
+		var tile: Vector2i = entrance + dir * i
 		if not is_inside_map(tile):
 			continue
 		if get_building_at_tile(tile).is_empty():
@@ -3840,15 +3892,23 @@ func founding_audit() -> Dictionary:
 	var creek_continuous := creek.size() >= 5
 	if creek_continuous:
 		for i in range(1, creek.size()):
-			if _tile_distance(Vector2i(creek[i]), Vector2i(creek[i - 1])) > 1.6:
+			if _tile_distance(Vector2i(creek[i]), Vector2i(creek[i - 1])) > 2.3:
 				creek_continuous = false
 				break
 	var intention := Intentions.current(self)
 	var quest_label := ""
 	for row in intention.get("criteria", []):
-		if String(row.get("type", "")) == "LUMBER_CAMP":
-			quest_label = String(row.get("label", ""))
+		var label := String(row.get("label", ""))
+		if label.contains("Lumber Camp"):
+			quest_label = label
 			break
+	if quest_label == "":
+		for spec in Intentions._catalog():
+			if String(spec.get("id", "")) != Intentions.ID_ESTABLISH:
+				continue
+			for row in spec.get("criteria", []):
+				if String(row.get("type", "")) == "LUMBER_CAMP":
+					quest_label = String(row.get("label", ""))
 	var lumber_objective := false
 	for obj in objectives:
 		if String(obj.get("id", "")) == "lumber" and String(obj.get("text", "")).contains("Lumber Camp"):

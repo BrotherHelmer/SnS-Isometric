@@ -212,80 +212,151 @@ func _fit_node_to_size(node: Node, target: Vector3) -> void:
 
 
 func _build_procedural_founding_hall(host: Node3D) -> void:
+	# Starter civic hall: stone plinth, green roof, south door and porch.
+	# Smaller than the keep. No crenellations — those stay on CASTLE.
 	var stone := _material(BuildingMaterials.CASTLE_LIMESTONE, 0.0)
 	var masonry := _material(BuildingMaterials.CASTLE_MASONRY, 0.0)
 	var timber := _material(BuildingMaterials.DARK_TIMBER, 0.0)
 	var roof := _material(BuildingMaterials.HALL_SLATE, 0.0)
 	var plaster := _material(BuildingMaterials.WARM_PLASTER, 0.0)
-	var w := 5.20
-	var d := 4.40
-	var wall_h := 2.55
+	var cloth := _material(Color("#3F7380"), 0.0)
+	var w := 5.85
+	var d := 4.70
+	var wall_h := 2.72
+	var plinth := MeshInstance3D.new()
+	plinth.name = "CivicPlinth_Hall"
+	var plinth_mesh := BoxMesh.new()
+	plinth_mesh.size = Vector3(w + 0.28, 0.28, d + 0.28)
+	plinth.mesh = plinth_mesh
+	plinth.position = Vector3(0.0, 0.14, 0.0)
+	plinth.material_override = masonry
+	host.add_child(plinth)
 	var walls := MeshInstance3D.new()
 	walls.name = "CivicWall_Hall"
 	var wall_mesh := BoxMesh.new()
 	wall_mesh.size = Vector3(w, wall_h, d)
 	walls.mesh = wall_mesh
-	walls.position = Vector3(0.0, wall_h * 0.5, 0.0)
+	walls.position = Vector3(0.0, 0.28 + wall_h * 0.5, 0.0)
 	walls.material_override = stone
 	host.add_child(walls)
 	var plaster_band := MeshInstance3D.new()
 	plaster_band.name = "CivicPlaster_Hall"
 	var band_mesh := BoxMesh.new()
-	band_mesh.size = Vector3(w * 0.92, wall_h * 0.42, 0.08)
+	band_mesh.size = Vector3(w * 0.90, wall_h * 0.38, 0.08)
 	plaster_band.mesh = band_mesh
-	plaster_band.position = Vector3(0.0, wall_h * 0.58, d * 0.50)
+	plaster_band.position = Vector3(0.0, 0.28 + wall_h * 0.58, d * 0.50)
 	plaster_band.material_override = plaster
 	host.add_child(plaster_band)
+	for corner in [Vector3(-w * 0.48, 0.28 + wall_h * 0.5, -d * 0.48), Vector3(w * 0.48, 0.28 + wall_h * 0.5, -d * 0.48), Vector3(-w * 0.48, 0.28 + wall_h * 0.5, d * 0.48), Vector3(w * 0.48, 0.28 + wall_h * 0.5, d * 0.48)]:
+		var post := MeshInstance3D.new()
+		post.name = "CivicTimber_Post"
+		var post_mesh := BoxMesh.new()
+		post_mesh.size = Vector3(0.18, wall_h + 0.08, 0.18)
+		post.mesh = post_mesh
+		post.position = corner
+		post.material_override = timber
+		host.add_child(post)
 	var roof_body := MeshInstance3D.new()
 	roof_body.name = "CivicRoof_Hall"
 	var roof_mesh := PrismMesh.new()
-	roof_mesh.size = Vector3(w * 1.12, 2.15, d * 1.16)
+	roof_mesh.size = Vector3(w * 1.14, 2.35, d * 1.18)
 	roof_body.mesh = roof_mesh
-	roof_body.position = Vector3(0.0, wall_h + 1.05, 0.0)
+	roof_body.position = Vector3(0.0, 0.28 + wall_h + 1.14, 0.0)
 	roof_body.rotation.y = PI * 0.5
 	roof_body.material_override = roof
 	host.add_child(roof_body)
+	var lean := MeshInstance3D.new()
+	lean.name = "CivicLeanTo"
+	var lean_mesh := BoxMesh.new()
+	lean_mesh.size = Vector3(1.85, 1.85, 1.55)
+	lean.mesh = lean_mesh
+	lean.position = Vector3(-w * 0.52, 0.28 + 0.92, 0.15)
+	lean.material_override = stone
+	host.add_child(lean)
+	var lean_roof := MeshInstance3D.new()
+	lean_roof.name = "CivicLeanTo_Roof"
+	var lean_roof_mesh := BoxMesh.new()
+	lean_roof_mesh.size = Vector3(2.15, 0.16, 1.85)
+	lean_roof.mesh = lean_roof_mesh
+	lean_roof.position = Vector3(-w * 0.54, 2.15, 0.15)
+	lean_roof.rotation.z = 0.18
+	lean_roof.material_override = roof
+	host.add_child(lean_roof)
 	var chimney := MeshInstance3D.new()
 	chimney.name = "CivicChimney"
 	var chim_mesh := BoxMesh.new()
-	chim_mesh.size = Vector3(0.55, 1.35, 0.55)
+	chim_mesh.size = Vector3(0.58, 1.55, 0.58)
 	chimney.mesh = chim_mesh
-	chimney.position = Vector3(-1.55, wall_h + 1.85, -0.85)
+	chimney.position = Vector3(-1.65, 0.28 + wall_h + 2.05, -0.95)
 	chimney.material_override = masonry
 	host.add_child(chimney)
 	var door := MeshInstance3D.new()
 	door.name = "CivicDoor"
 	var door_mesh := BoxMesh.new()
-	door_mesh.size = Vector3(1.15, 2.05, 0.10)
+	door_mesh.size = Vector3(1.28, 2.18, 0.12)
 	door.mesh = door_mesh
-	door.position = Vector3(0.0, 1.05, d * 0.50 + 0.06)
+	door.position = Vector3(0.0, 0.28 + 1.09, d * 0.50 + 0.07)
 	door.material_override = timber
 	host.add_child(door)
 	var lintel := MeshInstance3D.new()
 	lintel.name = "CivicDoor_Lintel"
 	var lintel_mesh := BoxMesh.new()
-	lintel_mesh.size = Vector3(1.45, 0.18, 0.16)
+	lintel_mesh.size = Vector3(1.62, 0.20, 0.18)
 	lintel.mesh = lintel_mesh
-	lintel.position = Vector3(0.0, 2.14, d * 0.50 + 0.08)
+	lintel.position = Vector3(0.0, 0.28 + 2.22, d * 0.50 + 0.09)
 	lintel.material_override = masonry
 	host.add_child(lintel)
+	var porch := MeshInstance3D.new()
+	porch.name = "CivicPorch"
+	var porch_mesh := BoxMesh.new()
+	porch_mesh.size = Vector3(2.35, 0.14, 1.15)
+	porch.mesh = porch_mesh
+	porch.position = Vector3(0.0, 0.28 + wall_h - 0.08, d * 0.50 + 0.62)
+	porch.material_override = timber
+	host.add_child(porch)
 	for side in [-1.0, 1.0]:
+		var porch_post := MeshInstance3D.new()
+		porch_post.name = "CivicPorch_Post"
+		var porch_post_mesh := BoxMesh.new()
+		porch_post_mesh.size = Vector3(0.14, 2.35, 0.14)
+		porch_post.mesh = porch_post_mesh
+		porch_post.position = Vector3(side * 1.05, 0.28 + 1.18, d * 0.50 + 1.05)
+		porch_post.material_override = timber
+		host.add_child(porch_post)
 		var window := MeshInstance3D.new()
 		window.name = "CivicWindow"
 		var win_mesh := BoxMesh.new()
-		win_mesh.size = Vector3(0.72, 0.78, 0.08)
+		win_mesh.size = Vector3(0.78, 0.82, 0.08)
 		window.mesh = win_mesh
-		window.position = Vector3(side * 1.55, 1.55, d * 0.50 + 0.05)
+		window.position = Vector3(side * 1.72, 0.28 + 1.62, d * 0.50 + 0.05)
 		window.material_override = _material(Color("#F5B36B"), 0.0)
 		host.add_child(window)
 	var step := MeshInstance3D.new()
 	step.name = "CivicDoor_Step"
 	var step_mesh := BoxMesh.new()
-	step_mesh.size = Vector3(1.70, 0.14, 0.55)
+	step_mesh.size = Vector3(1.95, 0.16, 0.72)
 	step.mesh = step_mesh
-	step.position = Vector3(0.0, 0.07, d * 0.50 + 0.38)
+	step.position = Vector3(0.0, 0.12, d * 0.50 + 0.52)
 	step.material_override = masonry
 	host.add_child(step)
+	var pole := MeshInstance3D.new()
+	pole.name = "CivicBanner_Pole"
+	var pole_mesh := CylinderMesh.new()
+	pole_mesh.top_radius = 0.05
+	pole_mesh.bottom_radius = 0.06
+	pole_mesh.height = 3.40
+	pole.mesh = pole_mesh
+	pole.position = Vector3(2.15, 1.82, d * 0.50 + 0.85)
+	pole.material_override = timber
+	host.add_child(pole)
+	var pennant := MeshInstance3D.new()
+	pennant.name = "CivicBanner"
+	var pennant_mesh := BoxMesh.new()
+	pennant_mesh.size = Vector3(0.72, 0.42, 0.05)
+	pennant.mesh = pennant_mesh
+	pennant.position = Vector3(2.52, 3.22, d * 0.50 + 0.85)
+	pennant.material_override = cloth
+	host.add_child(pennant)
 
 
 func _create_wall_model() -> void:
