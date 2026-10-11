@@ -1,0 +1,525 @@
+elapsed,day,night,event,detail,seconds_since_command,idle_gap
+0.0,1,0,"build_placed","Construction started.",0.0,0
+16.0,1,0,"build_placed","Construction started.",0.0,0
+32.0,1,0,"build_placed","Construction started.",0.0,0
+56.0,1,0,"build_placed","Construction started.",0.0,0
+82.4,1,0,"intention_complete","A Settlement Begins",26.4,0
+82.4,1,0,"intention_complete","Feed the Settlement",26.4,0
+88.0,1,0,"build_placed","Construction started.",0.0,0
+117.4,1,0,"resource_blocked","SAWMILL: Waiting for logs",29.4,0
+117.8,1,0,"resource_blocked","QUARRY: Output storage full",29.8,0
+120.0,1,0,"build_placed","Construction started.",0.0,0
+127.6,1,0,"resource_blocked","SAWMILL: Waiting for logs",7.6,0
+144.9,1,0,"resource_blocked","FARM: Output storage full",24.9,0
+153.1,1,0,"resource_blocked","SAWMILL: Waiting for logs",33.1,1
+161.1,1,0,"resource_blocked","WATCHTOWER: Waiting for worker",41.1,1
+168.0,1,0,"build_placed","Construction started.",0.0,0
+176.0,1,0,"build_placed","Construction started.",0.0,0
+188.8,1,0,"resource_blocked","SAWMILL: Waiting for logs",12.8,0
+204.6,1,0,"resource_blocked","LUMBER CAMP: Output storage full",28.6,0
+235.6,1,0,"resource_blocked","LUMBER CAMP: Output storage full",59.6,1
+244.9,1,0,"resource_blocked","SAWMILL: Waiting for logs",68.9,1
+272.0,1,0,"build_placed","Construction started.",0.0,0
+284.2,1,0,"intention_complete","Prepare for Nightfall",12.2,0
+286.9,1,0,"resource_blocked","FARM: Output storage full",14.9,0
+288.4,1,0,"resource_blocked","BAKERY: Waiting for wheat",16.4,0
+304.0,1,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+311.2,1,0,"resource_blocked","SAWMILL: Waiting for logs",7.2,0
+319.3,1,0,"resource_blocked","LUMBER CAMP: Output storage full",15.3,0
+320.0,1,0,"build_placed","Construction started.",0.0,0
+330.0,1,0,"dusk_warning","Dusk approaches",10.0,0
+339.4,1,0,"resource_blocked","BAKERY: Waiting for wheat",19.4,0
+360.0,1,0,"horn_warning","RAID IN 60 SECONDS — hostiles from the east. They mean Town Hall.",40.0,1
+420.0,1,1,"raid_started","wave=2 intent=raid_probe",100.0,1
+420.0,1,1,"night_started","Night 1",100.0,1
+433.1,1,1,"building_damaged","Watchtower is under attack.",113.1,1
+434.7,1,1,"building_damaged","Watchtower is under attack.",114.7,1
+435.3,1,1,"building_damaged","Watchtower is under attack.",115.3,1
+436.9,1,1,"building_damaged","Watchtower is under attack.",116.9,1
+437.5,1,1,"building_damaged","Watchtower is under attack.",117.5,1
+439.1,1,1,"building_damaged","Watchtower is under attack.",119.1,1
+439.7,1,1,"building_damaged","Watchtower is under attack.",119.7,1
+441.3,1,1,"building_damaged","Watchtower is under attack.",121.3,1
+443.5,1,1,"building_damaged","Watchtower is under attack.",123.5,1
+445.7,1,1,"building_damaged","Watchtower is under attack.",125.7,1
+447.9,1,1,"building_damaged","Watchtower is under attack.",127.9,1
+450.1,1,1,"building_damaged","Watchtower is under attack.",130.1,1
+452.3,1,1,"building_damaged","Watchtower is under attack.",132.3,1
+600.1,2,0,"dawn","Day 2",280.1,1
+600.1,2,0,"dawn_aftermath","DAWN — Night 1 survived",280.1,1
+600.1,2,0,"intention_complete","Where Did They Come From?",280.1,1
+601.1,2,0,"resource_blocked","BAKERY: Waiting for wheat",281.1,1
+601.7,2,0,"resource_blocked","LUMBER CAMP: Output storage full",281.7,1
+603.5,2,0,"resource_blocked","SAWMILL: Waiting for logs",283.5,1
+673.4,2,0,"resource_blocked","QUARRY: Output storage full",353.4,1
+720.0,2,0,"build_placed","Construction started.",0.0,0
+734.0,2,0,"discovery","An overturned cart; still packed. +7 Wood  +4 Bread",14.0,0
+736.0,2,0,"build_placed","Construction started.",0.0,0
+738.3,2,0,"resource_blocked","QUARRY: No resources in range",2.3,0
+738.4,2,0,"resource_blocked","QUARRY: Output storage full",2.4,0
+812.6,2,0,"resource_blocked","SAWMILL: Waiting for logs",76.6,1
+822.8,2,0,"resource_blocked","SAWMILL: Waiting for logs",86.8,1
+829.6,2,0,"resource_blocked","LUMBER CAMP: Output storage full",93.6,1
+834.7,2,0,"resource_blocked","LUMBER CAMP: Output storage full",98.7,1
+839.8,2,0,"resource_blocked","LUMBER CAMP: Output storage full",103.8,1
+841.8,2,0,"resource_blocked","LUMBER CAMP: Output storage full",105.8,1
+843.2,2,0,"resource_blocked","SAWMILL: Waiting for logs",107.2,1
+848.9,2,0,"resource_blocked","LUMBER CAMP: Output storage full",112.9,1
+853.4,2,0,"resource_blocked","SAWMILL: Waiting for logs",117.4,1
+861.1,2,0,"resource_blocked","LUMBER CAMP: Output storage full",125.1,1
+866.2,2,0,"resource_blocked","LUMBER CAMP: Output storage full",130.2,1
+871.2,2,0,"resource_blocked","LUMBER CAMP: Output storage full",135.2,1
+873.3,2,0,"resource_blocked","LUMBER CAMP: Output storage full",137.3,1
+882.1,2,0,"resource_blocked","LUMBER CAMP: Output storage full",146.1,1
+889.1,2,0,"resource_blocked","SAWMILL: Waiting for logs",153.1,1
+891.7,2,0,"resource_blocked","LUMBER CAMP: Output storage full",155.7,1
+896.8,2,0,"resource_blocked","LUMBER CAMP: Output storage full",160.8,1
+903.9,2,0,"resource_blocked","LUMBER CAMP: Output storage full",167.9,1
+909.5,2,0,"resource_blocked","SAWMILL: Waiting for logs",173.5,1
+911.2,2,0,"resource_blocked","LUMBER CAMP: Output storage full",175.2,1
+917.2,2,0,"resource_blocked","LUMBER CAMP: Output storage full",181.2,1
+921.6,2,0,"resource_blocked","LUMBER CAMP: Output storage full",185.6,1
+926.7,2,0,"resource_blocked","LUMBER CAMP: Output storage full",190.7,1
+930.1,2,0,"dusk_warning","Dusk approaches",194.1,1
+935.0,2,0,"resource_blocked","SAWMILL: Waiting for logs",199.0,1
+943.9,2,0,"resource_blocked","LUMBER CAMP: Output storage full",207.9,1
+947.2,2,0,"resource_blocked","LUMBER CAMP: Output storage full",211.2,1
+952.3,2,0,"resource_blocked","LUMBER CAMP: Output storage full",216.3,1
+959.4,2,0,"resource_blocked","LUMBER CAMP: Output storage full",223.4,1
+960.1,2,0,"horn_warning","RAID IN 60 SECONDS — hostiles from the east. They mean Storehouse.",224.1,1
+960.5,2,0,"resource_blocked","SAWMILL: Waiting for logs",224.5,1
+961.6,2,0,"resource_blocked","LUMBER CAMP: Output storage full",225.6,1
+966.5,2,0,"resource_blocked","LUMBER CAMP: Output storage full",230.5,1
+970.6,2,0,"resource_blocked","LUMBER CAMP: Output storage full",234.6,1
+980.9,2,0,"resource_blocked","SAWMILL: Waiting for logs",244.9,1
+989.3,2,0,"resource_blocked","LUMBER CAMP: Output storage full",253.3,1
+996.2,2,0,"resource_blocked","SAWMILL: Waiting for logs",260.2,1
+1004.0,2,0,"resource_blocked","BAKERY: Waiting for wheat",268.0,1
+1007.8,2,0,"resource_blocked","LUMBER CAMP: Output storage full",271.8,1
+1020.1,2,1,"raid_started","wave=5 intent=raid_probe",284.1,1
+1020.1,2,1,"night_started","Night 2",284.1,1
+1022.5,2,1,"building_damaged","Storehouse is under attack.",286.5,1
+1023.2,2,1,"building_damaged","Storehouse is under attack.",287.2,1
+1031.9,2,1,"building_damaged","Bakery is under attack.",295.9,1
+1040.3,2,1,"building_damaged","Quarry is under attack.",304.3,1
+1044.1,2,1,"building_damaged","Watchtower is under attack.",308.1,1
+1048.7,2,1,"building_damaged","Watchtower is under attack.",312.7,1
+1093.6,2,1,"discovery","Broken stone ridges hold a rich quarry.",357.6,1
+1200.2,3,0,"dawn","Day 3",464.2,1
+1200.2,3,0,"dawn_aftermath","DAWN — Night 2 survived",464.2,1
+1200.3,3,0,"resource_blocked","LUMBER CAMP: Output storage full",464.3,1
+1201.8,3,0,"resource_blocked","SAWMILL: Waiting for logs",465.8,1
+1204.5,3,0,"resource_blocked","BAKERY: Waiting for wheat",468.5,1
+1211.6,3,0,"resource_blocked","LUMBER CAMP: Output storage full",475.6,1
+1217.4,3,0,"resource_blocked","LUMBER CAMP: Output storage full",481.4,1
+1220.9,3,0,"resource_blocked","LUMBER CAMP: Output storage full",484.9,1
+1232.4,3,0,"resource_blocked","SAWMILL: Waiting for logs",496.4,1
+1246.8,3,0,"resource_blocked","LUMBER CAMP: Output storage full",510.8,1
+1247.7,3,0,"resource_blocked","SAWMILL: Waiting for logs",511.7,1
+1279.0,3,0,"resource_blocked","FARM: Output storage full",543.0,1
+1288.0,3,0,"build_placed","Construction started.",0.0,0
+1293.3,3,0,"resource_blocked","LUMBER CAMP: Output storage full",5.3,0
+1303.8,3,0,"resource_blocked","SAWMILL: Waiting for logs",15.8,0
+1304.0,3,0,"build_placed","Construction started.",0.0,0
+1320.5,3,0,"resource_blocked","LUMBER CAMP: Output storage full",16.5,0
+1324.9,3,0,"resource_blocked","LUMBER CAMP: Output storage full",20.9,0
+1339.8,3,0,"resource_blocked","LUMBER CAMP: Output storage full",35.8,1
+1371.3,3,0,"resource_blocked","FARM: Output storage full",67.3,1
+1380.9,3,0,"resource_blocked","LUMBER CAMP: Output storage full",76.9,1
+1383.6,3,0,"resource_blocked","LUMBER CAMP: Output storage full",79.6,1
+1385.4,3,0,"resource_blocked","SAWMILL: Waiting for logs",81.4,1
+1388.0,3,0,"resource_blocked","LUMBER CAMP: Output storage full",84.0,1
+1388.0,3,0,"resource_blocked","FARM: Output storage full",84.0,1
+1390.1,3,0,"resource_blocked","LUMBER CAMP: Output storage full",86.1,1
+1397.9,3,0,"resource_blocked","LUMBER CAMP: Output storage full",93.9,1
+1400.7,3,0,"resource_blocked","SAWMILL: Waiting for logs",96.7,1
+1401.7,3,0,"resource_blocked","FARM: Output storage full",97.7,1
+1407.0,3,0,"resource_blocked","LUMBER CAMP: Output storage full",103.0,1
+1407.0,3,0,"resource_blocked","FARM: Output storage full",103.0,1
+1416.0,3,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+1421.1,3,0,"resource_blocked","SAWMILL: Waiting for logs",5.1,0
+1424.0,3,0,"scout_order","Bjorn scouts toward the fog.",0.0,0
+1427.2,3,0,"resource_blocked","LUMBER CAMP: Output storage full",3.2,0
+1427.2,3,0,"resource_blocked","FARM: Output storage full",3.2,0
+1430.9,3,0,"resource_blocked","FARM: Output storage full",6.9,0
+1432.0,3,0,"scout_order","Leif scouts toward the fog.",0.0,0
+1439.1,3,0,"resource_blocked","LUMBER CAMP: Output storage full",7.1,0
+1439.1,3,0,"resource_blocked","FARM: Output storage full",7.1,0
+1444.9,3,0,"resource_blocked","LUMBER CAMP: Output storage full",12.9,0
+1444.9,3,0,"resource_blocked","FARM: Output storage full",12.9,0
+1447.4,3,0,"resource_blocked","LUMBER CAMP: Output storage full",15.4,0
+1448.0,3,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+1454.5,3,0,"resource_blocked","LUMBER CAMP: Output storage full",6.5,0
+1456.0,3,0,"scout_order","Bjorn scouts toward the fog.",0.0,0
+1461.9,3,0,"resource_blocked","SAWMILL: Waiting for logs",5.9,0
+1464.0,3,0,"scout_order","Leif scouts toward the fog.",0.0,0
+1464.6,3,0,"resource_blocked","BAKERY: Waiting for wheat",0.6,0
+1465.0,3,0,"resource_blocked","LUMBER CAMP: Output storage full",1.0,0
+1465.0,3,0,"resource_blocked","FARM: Output storage full",1.0,0
+1471.8,3,0,"resource_blocked","LUMBER CAMP: Output storage full",7.8,0
+1471.8,3,0,"resource_blocked","FARM: Output storage full",7.8,0
+1481.7,3,0,"resource_blocked","LUMBER CAMP: Output storage full",17.7,0
+1481.7,3,0,"resource_blocked","FARM: Output storage full",17.7,0
+1484.6,3,0,"resource_blocked","LUMBER CAMP: Output storage full",20.6,0
+1485.0,3,0,"resource_blocked","FARM: Output storage full",21.0,0
+1487.4,3,0,"resource_blocked","SAWMILL: Waiting for logs",23.4,0
+1488.0,3,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+1496.0,3,0,"scout_order","Bjorn scouts toward the fog.",0.0,0
+1501.0,3,0,"resource_blocked","LUMBER CAMP: Output storage full",5.0,0
+1501.4,3,0,"resource_blocked","FARM: Output storage full",5.4,0
+1504.0,3,0,"scout_order","Leif scouts toward the fog.",0.0,0
+1507.8,3,0,"resource_blocked","SAWMILL: Waiting for logs",3.8,0
+1513.5,3,0,"resource_blocked","LUMBER CAMP: Output storage full",9.5,0
+1513.5,3,0,"resource_blocked","FARM: Output storage full",9.5,0
+1515.6,3,0,"resource_blocked","BAKERY: Waiting for wheat",11.6,0
+1518.6,3,0,"resource_blocked","LUMBER CAMP: Output storage full",14.6,0
+1520.0,3,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+1523.2,3,0,"resource_blocked","LUMBER CAMP: Output storage full",3.2,0
+1523.2,3,0,"resource_blocked","FARM: Output storage full",3.2,0
+1530.2,3,0,"dusk_warning","Dusk approaches",10.2,0
+1530.9,3,0,"resource_blocked","BAKERY: Waiting for wheat",10.9,0
+1533.9,3,0,"resource_blocked","LUMBER CAMP: Output storage full",13.9,0
+1533.9,3,0,"resource_blocked","FARM: Output storage full",13.9,0
+1544.0,3,0,"scout_order","Bjorn scouts toward the fog.",0.0,0
+1548.6,3,0,"resource_blocked","SAWMILL: Waiting for logs",4.6,0
+1548.8,3,0,"resource_blocked","LUMBER CAMP: Output storage full",4.8,0
+1552.0,3,0,"scout_order","Leif scouts toward the fog.",0.0,0
+1553.9,3,0,"resource_blocked","LUMBER CAMP: Output storage full",1.9,0
+1553.9,3,0,"resource_blocked","FARM: Output storage full",1.9,0
+1560.0,3,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+1560.2,3,0,"horn_warning","RAID IN 60 SECONDS — hostiles from the south. They mean Town Hall.",0.2,0
+1563.2,3,0,"resource_blocked","LUMBER CAMP: Output storage full",3.2,0
+1563.2,3,0,"resource_blocked","FARM: Output storage full",3.2,0
+1568.0,3,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+1570.2,3,0,"resource_blocked","LUMBER CAMP: Output storage full",2.2,0
+1570.2,3,0,"resource_blocked","FARM: Output storage full",2.2,0
+1576.0,3,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+1581.6,3,0,"resource_blocked","LUMBER CAMP: Output storage full",5.6,0
+1584.0,3,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+1584.3,3,0,"resource_blocked","SAWMILL: Waiting for logs",0.3,0
+1592.0,3,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+1592.1,3,0,"resource_blocked","BAKERY: Waiting for wheat",0.1,0
+1597.1,3,0,"resource_blocked","LUMBER CAMP: Output storage full",5.1,0
+1598.5,3,0,"resource_blocked","FARM: Output storage full",6.5,0
+1600.0,3,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+1608.0,3,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+1616.0,3,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+1620.2,3,1,"raid_started","wave=5 intent=raid_center",4.2,0
+1620.2,3,1,"night_started","Night 3",4.2,0
+1623.7,3,1,"building_damaged","Storehouse is under attack.",7.7,0
+1800.3,4,0,"dawn","Day 4",184.3,1
+1800.3,4,0,"dawn_aftermath","DAWN — Night 3 survived",184.3,1
+1800.4,4,0,"resource_blocked","LUMBER CAMP: Output storage full",184.4,1
+1802.8,4,0,"resource_blocked","BAKERY: Waiting for wheat",186.8,1
+1805.2,4,0,"resource_blocked","SAWMILL: Waiting for logs",189.2,1
+1807.0,4,0,"resource_blocked","FARM: Output storage full",191.0,1
+1808.2,4,0,"resource_blocked","LUMBER CAMP: No resources in range",192.2,1
+1809.7,4,0,"resource_blocked","LUMBER CAMP: Output storage full",193.7,1
+1811.3,4,0,"resource_blocked","LUMBER CAMP: No resources in range",195.3,1
+1814.8,4,0,"resource_blocked","FARM: Output storage full",198.8,1
+1826.1,4,0,"resource_blocked","FARM: Output storage full",210.1,1
+1828.7,4,0,"resource_blocked","FARM: Output storage full",212.7,1
+1832.0,4,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+1837.8,4,0,"resource_blocked","FARM: Output storage full",5.8,0
+1840.0,4,0,"scout_order","Bjorn scouts toward the fog.",0.0,0
+1848.0,4,0,"resource_blocked","FARM: Output storage full",8.0,0
+1848.0,4,0,"scout_order","Leif scouts toward the fog.",0.0,0
+1848.7,4,0,"resource_blocked","BAKERY: Waiting for wheat",0.7,0
+1858.2,4,0,"resource_blocked","FARM: Output storage full",10.2,0
+1868.7,4,0,"resource_blocked","SAWMILL: Output storage full",20.7,0
+1872.0,4,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+1879.2,4,0,"resource_blocked","FARM: Output storage full",7.2,0
+1879.2,4,0,"resource_blocked","SAWMILL: Output storage full",7.2,0
+1880.0,4,0,"scout_order","Bjorn scouts toward the fog.",0.0,0
+1881.8,4,0,"resource_blocked","SAWMILL: Output storage full",1.8,0
+1886.8,4,0,"resource_blocked","SAWMILL: Waiting for logs",6.8,0
+1888.0,4,0,"scout_order","Leif scouts toward the fog.",0.0,0
+1896.0,4,0,"resource_blocked","FARM: Output storage full",8.0,0
+1896.0,4,0,"resource_blocked","SAWMILL: Output storage full",8.0,0
+1897.0,4,0,"resource_blocked","SAWMILL: Waiting for logs",9.0,0
+1904.8,4,0,"resource_blocked","BAKERY: Waiting for wheat",16.8,0
+1909.0,4,0,"resource_blocked","FARM: Output storage full",21.0,0
+1909.0,4,0,"resource_blocked","SAWMILL: Output storage full",21.0,0
+1912.0,4,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+1912.3,4,0,"resource_blocked","SAWMILL: Waiting for logs",0.3,0
+1920.0,4,0,"scout_order","Bjorn scouts toward the fog.",0.0,0
+1925.2,4,0,"resource_blocked","BAKERY: Waiting for wheat",5.2,0
+1928.4,4,0,"resource_blocked","FARM: Output storage full",8.4,0
+1928.4,4,0,"resource_blocked","SAWMILL: Output storage full",8.4,0
+1932.7,4,0,"resource_blocked","SAWMILL: Waiting for logs",12.7,0
+1936.0,4,0,"scout_order","Leif scouts toward the fog.",0.0,0
+1939.9,4,0,"resource_blocked","FARM: Output storage full",3.9,0
+1939.9,4,0,"resource_blocked","SAWMILL: Output storage full",3.9,0
+1942.9,4,0,"resource_blocked","SAWMILL: Waiting for logs",6.9,0
+1947.3,4,0,"resource_blocked","SAWMILL: Output storage full",11.3,0
+1948.0,4,0,"resource_blocked","SAWMILL: Waiting for logs",12.0,0
+1950.2,4,0,"resource_blocked","SAWMILL: Output storage full",14.2,0
+1952.0,4,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+1953.1,4,0,"resource_blocked","SAWMILL: Waiting for logs",1.1,0
+1955.0,4,0,"resource_blocked","SAWMILL: Output storage full",3.0,0
+1958.2,4,0,"resource_blocked","SAWMILL: Waiting for logs",6.2,0
+1966.0,4,0,"resource_blocked","BAKERY: Waiting for wheat",14.0,0
+1966.5,4,0,"resource_blocked","FARM: Output storage full",14.5,0
+1966.5,4,0,"resource_blocked","SAWMILL: Output storage full",14.5,0
+1968.0,4,0,"scout_order","Bjorn scouts toward the fog.",0.0,0
+1968.4,4,0,"resource_blocked","SAWMILL: Waiting for logs",0.4,0
+1976.0,4,0,"scout_order","Leif scouts toward the fog.",0.0,0
+1976.2,4,0,"resource_blocked","BAKERY: Waiting for wheat",0.2,0
+1978.0,4,0,"resource_blocked","SAWMILL: Output storage full",2.0,0
+1978.6,4,0,"resource_blocked","SAWMILL: Waiting for logs",2.6,0
+1979.6,4,0,"resource_blocked","SAWMILL: Output storage full",3.6,0
+1983.7,4,0,"resource_blocked","SAWMILL: Waiting for logs",7.7,0
+1983.8,4,0,"resource_blocked","SAWMILL: Output storage full",7.8,0
+1984.6,4,0,"resource_blocked","FARM: Output storage full",8.6,0
+1988.8,4,0,"resource_blocked","SAWMILL: Waiting for logs",12.8,0
+1992.0,4,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+1998.6,4,0,"resource_blocked","SAWMILL: Output storage full",6.6,0
+1999.0,4,0,"resource_blocked","SAWMILL: Waiting for logs",7.0,0
+2011.6,4,0,"resource_blocked","SAWMILL: Output storage full",19.6,0
+2014.3,4,0,"resource_blocked","SAWMILL: Waiting for logs",22.3,0
+2022.1,4,0,"resource_blocked","BAKERY: Waiting for wheat",30.1,1
+2026.2,4,0,"resource_blocked","FARM: Output storage full",34.2,1
+2026.2,4,0,"resource_blocked","SAWMILL: Output storage full",34.2,1
+2027.2,4,0,"resource_blocked","FARM: Output storage full",35.2,1
+2029.6,4,0,"resource_blocked","SAWMILL: Waiting for logs",37.6,1
+2032.0,4,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2040.0,4,0,"scout_order","Bjorn scouts toward the fog.",0.0,0
+2042.5,4,0,"resource_blocked","BAKERY: Waiting for wheat",2.5,0
+2048.0,4,0,"scout_order","Leif scouts toward the fog.",0.0,0
+2049.9,4,0,"resource_blocked","FARM: Output storage full",1.9,0
+2049.9,4,0,"resource_blocked","SAWMILL: Output storage full",1.9,0
+2050.0,4,0,"resource_blocked","SAWMILL: Waiting for logs",2.0,0
+2052.7,4,0,"resource_blocked","BAKERY: Waiting for wheat",4.7,0
+2060.6,4,0,"resource_blocked","FARM: Output storage full",12.6,0
+2060.6,4,0,"resource_blocked","SAWMILL: Output storage full",12.6,0
+2062.7,4,0,"resource_blocked","FARM: Output storage full",14.7,0
+2065.3,4,0,"resource_blocked","SAWMILL: Waiting for logs",17.3,0
+2072.0,4,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2073.1,4,0,"resource_blocked","BAKERY: Waiting for wheat",1.1,0
+2080.0,4,0,"resource_blocked","FARM: Output storage full",8.0,0
+2080.0,4,0,"resource_blocked","SAWMILL: Output storage full",8.0,0
+2080.0,4,0,"scout_order","Bjorn scouts toward the fog.",0.0,0
+2080.6,4,0,"resource_blocked","SAWMILL: Waiting for logs",0.6,0
+2084.3,4,0,"resource_blocked","FARM: Output storage full",4.3,0
+2084.3,4,0,"resource_blocked","SAWMILL: Output storage full",4.3,0
+2085.7,4,0,"resource_blocked","SAWMILL: Waiting for logs",5.7,0
+2085.8,4,0,"resource_blocked","SAWMILL: Output storage full",5.8,0
+2088.0,4,0,"scout_order","Leif scouts toward the fog.",0.0,0
+2090.8,4,0,"resource_blocked","SAWMILL: Waiting for logs",2.8,0
+2093.1,4,0,"resource_blocked","SAWMILL: Output storage full",5.1,0
+2095.9,4,0,"resource_blocked","SAWMILL: Waiting for logs",7.9,0
+2098.4,4,0,"resource_blocked","FARM: Output storage full",10.4,0
+2098.4,4,0,"resource_blocked","SAWMILL: Output storage full",10.4,0
+2101.0,4,0,"resource_blocked","SAWMILL: Waiting for logs",13.0,0
+2103.7,4,0,"resource_blocked","BAKERY: Waiting for wheat",15.7,0
+2111.7,4,0,"resource_blocked","FARM: Output storage full",23.7,0
+2111.7,4,0,"resource_blocked","SAWMILL: Output storage full",23.7,0
+2112.0,4,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2116.3,4,0,"resource_blocked","SAWMILL: Waiting for logs",4.3,0
+2120.0,4,0,"scout_order","Bjorn scouts toward the fog.",0.0,0
+2124.7,4,0,"resource_blocked","SAWMILL: Output storage full",4.7,0
+2126.5,4,0,"resource_blocked","SAWMILL: Waiting for logs",6.5,0
+2128.0,4,0,"scout_order","Leif scouts toward the fog.",0.0,0
+2130.3,4,0,"dusk_warning","Dusk approaches",2.3,0
+2130.5,4,0,"resource_blocked","SAWMILL: Output storage full",2.5,0
+2131.6,4,0,"resource_blocked","SAWMILL: Waiting for logs",3.6,0
+2131.9,4,0,"resource_blocked","SAWMILL: Output storage full",3.9,0
+2136.7,4,0,"resource_blocked","SAWMILL: Waiting for logs",8.7,0
+2141.8,4,0,"resource_blocked","FARM: Output storage full",13.8,0
+2151.8,4,0,"resource_blocked","SAWMILL: Output storage full",23.8,0
+2152.0,4,0,"resource_blocked","SAWMILL: Waiting for logs",24.0,0
+2152.0,4,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2152.1,4,0,"resource_blocked","SAWMILL: Output storage full",0.1,0
+2157.1,4,0,"resource_blocked","SAWMILL: Waiting for logs",5.1,0
+2160.0,4,0,"scout_order","Bjorn scouts toward the fog.",0.0,0
+2160.3,4,0,"horn_warning","RAID IN 60 SECONDS — hostiles from the east. They mean Wyrd Harvester.",0.3,0
+2164.4,4,0,"resource_blocked","SAWMILL: Output storage full",4.4,0
+2164.9,4,0,"resource_blocked","BAKERY: Waiting for wheat",4.9,0
+2167.3,4,0,"resource_blocked","SAWMILL: Waiting for logs",7.3,0
+2167.4,4,0,"resource_blocked","SAWMILL: Output storage full",7.4,0
+2168.0,4,0,"scout_order","Bjorn scouts toward the fog.",0.0,0
+2172.4,4,0,"resource_blocked","SAWMILL: Waiting for logs",4.4,0
+2174.9,4,0,"resource_blocked","SAWMILL: Output storage full",6.9,0
+2176.0,4,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2177.5,4,0,"resource_blocked","SAWMILL: Waiting for logs",1.5,0
+2184.0,4,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2185.9,4,0,"resource_blocked","FARM: Output storage full",1.9,0
+2185.9,4,0,"resource_blocked","SAWMILL: Output storage full",1.9,0
+2187.7,4,0,"resource_blocked","SAWMILL: Waiting for logs",3.7,0
+2187.8,4,0,"resource_blocked","SAWMILL: Output storage full",3.8,0
+2190.4,4,0,"resource_blocked","BAKERY: Waiting for wheat",6.4,0
+2192.0,4,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2192.8,4,0,"resource_blocked","SAWMILL: Waiting for logs",0.8,0
+2200.0,4,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2208.0,4,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2216.0,4,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2220.3,4,1,"raid_started","wave=5 intent=raid_economy",4.3,0
+2220.3,4,1,"night_started","Night 4",4.3,0
+2224.0,4,1,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2225.4,4,1,"building_damaged","Storehouse is under attack.",1.4,0
+2226.2,4,1,"building_damaged","Storehouse is under attack.",2.2,0
+2227.0,4,1,"building_damaged","Storehouse is under attack.",3.0,0
+2229.5,4,1,"building_damaged","Storehouse is under attack.",5.5,0
+2230.0,4,1,"building_damaged","Storehouse is under attack.",6.0,0
+2231.9,4,1,"building_damaged","Storehouse is under attack.",7.9,0
+2232.0,4,1,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2233.0,4,1,"building_damaged","Sawmill is under attack.",1.0,0
+2233.8,4,1,"building_damaged","Storehouse is under attack.",1.8,0
+2234.1,4,1,"building_damaged","Sawmill is under attack.",2.1,0
+2236.5,4,1,"building_damaged","Storehouse is under attack.",4.5,0
+2236.8,4,1,"building_damaged","Sawmill is under attack.",4.8,0
+2237.6,4,1,"building_damaged","Storehouse is under attack.",5.6,0
+2239.0,4,1,"building_damaged","Sawmill is under attack.",7.0,0
+2239.8,4,1,"building_damaged","Storehouse is under attack.",7.8,0
+2240.0,4,1,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2241.4,4,1,"building_damaged","Storehouse is under attack.",1.4,0
+2241.9,4,1,"building_damaged","Sawmill is under attack.",1.9,0
+2243.3,4,1,"building_damaged","Storehouse is under attack.",3.3,0
+2244.5,4,1,"building_damaged","Sawmill is under attack.",4.5,0
+2246.0,4,1,"building_damaged","Sawmill is under attack.",6.0,0
+2246.0,4,1,"building_damaged","Storehouse is under attack.",6.0,0
+2247.6,4,1,"building_damaged","Storehouse is under attack.",7.6,0
+2248.0,4,1,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2249.0,4,1,"building_damaged","Storehouse is under attack.",1.0,0
+2249.8,4,1,"building_damaged","Storehouse is under attack.",1.8,0
+2251.6,4,1,"building_damaged","Sawmill is under attack.",3.6,0
+2251.7,4,1,"building_damaged","Storehouse is under attack.",3.7,0
+2252.7,4,1,"building_damaged","Sawmill is under attack.",4.7,0
+2254.3,4,1,"building_damaged","Sawmill is under attack.",6.3,0
+2254.9,4,1,"building_damaged","Sawmill is under attack.",6.9,0
+2255.5,4,1,"building_damaged","Storehouse is under attack.",7.5,0
+2256.0,4,1,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2258.0,4,1,"building_damaged","Sawmill is under attack.",2.0,0
+2259.2,4,1,"building_damaged","Sawmill is under attack.",3.2,0
+2259.3,4,1,"building_damaged","Storehouse is under attack.",3.3,0
+2260.9,4,1,"building_damaged","Sawmill is under attack.",4.9,0
+2261.9,4,1,"building_damaged","Storehouse is under attack.",5.9,0
+2263.7,4,1,"building_damaged","Storehouse is under attack.",7.7,0
+2264.0,4,1,"building_damaged","Sawmill is under attack.",8.0,0
+2264.0,4,1,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2264.6,4,1,"building_damaged","Storehouse is under attack.",0.6,0
+2266.2,4,1,"building_damaged","Sawmill is under attack.",2.2,0
+2267.5,4,1,"building_damaged","Storehouse is under attack.",3.5,0
+2269.1,4,1,"building_damaged","Storehouse is under attack.",5.1,0
+2270.2,4,1,"building_damaged","Storehouse is under attack.",6.2,0
+2271.3,4,1,"building_damaged","Storehouse is under attack.",7.3,0
+2271.3,4,1,"building_damaged","Storehouse is under attack.",7.3,0
+2273.5,4,1,"building_damaged","Storehouse is under attack.",9.5,0
+2274.4,4,1,"building_damaged","Sawmill is under attack.",10.4,0
+2275.0,4,1,"building_damaged","Storehouse is under attack.",11.0,0
+2276.9,4,1,"building_damaged","Storehouse is under attack.",12.9,0
+2277.3,4,1,"building_damaged","Storehouse is under attack.",13.3,0
+2279.6,4,1,"building_damaged","Sawmill is under attack.",15.6,0
+2279.7,4,1,"building_damaged","Storehouse is under attack.",15.7,0
+2280.4,4,1,"building_damaged","Sawmill is under attack.",16.4,0
+2282.6,4,1,"building_damaged","Sawmill is under attack.",18.6,0
+2285.2,4,1,"building_damaged","Sawmill is under attack.",21.2,0
+2285.3,4,1,"building_damaged","Storehouse is under attack.",21.3,0
+2288.0,4,1,"build_placed","Construction started.",0.0,0
+2289.2,4,1,"building_damaged","Bakery is under attack.",1.2,0
+2289.5,4,1,"building_damaged","Sawmill is under attack.",1.5,0
+2294.1,4,1,"building_damaged","Sawmill is under attack.",6.1,0
+2294.4,4,1,"building_damaged","Bakery is under attack.",6.4,0
+2297.7,4,1,"building_damaged","Farm is under attack.",9.7,0
+2301.1,4,1,"building_damaged","Sawmill is under attack.",13.1,0
+2306.5,4,1,"building_damaged","Bakery is under attack.",18.5,0
+2307.5,4,1,"building_damaged","Lumber Camp is under attack.",19.5,0
+2307.6,4,1,"building_damaged","Bakery is under attack.",19.6,0
+2313.2,4,1,"building_damaged","Farm is under attack.",25.2,0
+2400.4,5,0,"dawn","Day 5",112.4,1
+2400.4,5,0,"dawn_aftermath","DAWN — Night 4 survived",112.4,1
+2400.6,5,0,"resource_blocked","LUMBER CAMP: No resources in range",112.6,1
+2401.1,5,0,"resource_blocked","BAKERY: Waiting for wheat",113.1,1
+2402.8,5,0,"resource_blocked","FARM: Output storage full",114.8,1
+2411.9,5,0,"resource_blocked","FARM: Output storage full",123.9,1
+2416.0,5,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2424.0,5,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2426.6,5,0,"resource_blocked","FARM: Output storage full",2.6,0
+2432.0,5,0,"scout_order","Bjorn scouts toward the fog.",0.0,0
+2440.0,5,0,"scout_order","Leif scouts toward the fog.",0.0,0
+2447.0,5,0,"resource_blocked","BAKERY: Waiting for wheat",7.0,0
+2451.4,5,0,"resource_blocked","FARM: Output storage full",11.4,0
+2462.9,5,0,"resource_blocked","FARM: Output storage full",22.9,0
+2464.0,5,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2472.0,5,0,"build_placed","Construction started.",0.0,0
+2472.0,5,0,"scout_order","Bjorn scouts toward the fog.",0.0,0
+2480.0,5,0,"scout_order","Leif scouts toward the fog.",0.0,0
+2504.0,5,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2512.0,5,0,"scout_order","Bjorn scouts toward the fog.",0.0,0
+2520.0,5,0,"scout_order","Leif scouts toward the fog.",0.0,0
+2527.9,5,0,"resource_blocked","SAWMILL: Waiting for logs",7.9,0
+2528.6,5,0,"resource_blocked","BAKERY: Waiting for wheat",8.6,0
+2538.8,5,0,"resource_blocked","BAKERY: Waiting for wheat",18.8,0
+2544.0,5,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2545.8,5,0,"resource_blocked","FARM: Output storage full",1.8,0
+2549.0,5,0,"resource_blocked","BAKERY: Waiting for wheat",5.0,0
+2552.6,5,0,"resource_blocked","FARM: Output storage full",8.6,0
+2556.9,5,0,"resource_blocked","FARM: Output storage full",12.9,0
+2560.0,5,0,"scout_order","Bjorn scouts toward the fog.",0.0,0
+2563.6,5,0,"resource_blocked","SAWMILL: Waiting for logs",3.6,0
+2564.3,5,0,"resource_blocked","BAKERY: Waiting for wheat",4.3,0
+2568.0,5,0,"scout_order","Leif scouts toward the fog.",0.0,0
+2583.8,5,0,"resource_blocked","FARM: Output storage full",15.8,0
+2584.0,5,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2594.2,5,0,"resource_blocked","SAWMILL: Waiting for logs",10.2,0
+2600.0,5,0,"scout_order","Bjorn scouts toward the fog.",0.0,0
+2605.1,5,0,"resource_blocked","BAKERY: Waiting for wheat",5.1,0
+2610.2,5,0,"resource_blocked","BAKERY: Waiting for wheat",10.2,0
+2616.0,5,0,"scout_order","Leif scouts toward the fog.",0.0,0
+2622.6,5,0,"resource_blocked","FARM: Output storage full",6.6,0
+2624.0,5,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2629.9,5,0,"resource_blocked","SAWMILL: Waiting for logs",5.9,0
+2630.6,5,0,"resource_blocked","BAKERY: Waiting for wheat",6.6,0
+2634.1,5,0,"resource_blocked","FARM: Output storage full",10.1,0
+2634.1,5,0,"resource_blocked","SAWMILL: Output storage full",10.1,0
+2635.0,5,0,"resource_blocked","SAWMILL: Waiting for logs",11.0,0
+2635.1,5,0,"resource_blocked","SAWMILL: Output storage full",11.1,0
+2640.0,5,0,"scout_order","Bjorn scouts toward the fog.",0.0,0
+2640.1,5,0,"resource_blocked","SAWMILL: Waiting for logs",0.1,0
+2644.0,5,0,"resource_blocked","FARM: Output storage full",4.0,0
+2652.1,5,0,"resource_blocked","FARM: Output storage full",12.1,0
+2662.5,5,0,"resource_blocked","FARM: Output storage full",22.5,0
+2664.0,5,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2672.0,5,0,"scout_order","Leif scouts toward the fog.",0.0,0
+2680.0,5,0,"scout_order","Bjorn scouts toward the fog.",0.0,0
+2687.2,5,0,"resource_blocked","SAWMILL: Output storage full",7.2,0
+2691.1,5,0,"resource_blocked","SAWMILL: Waiting for logs",11.1,0
+2704.0,5,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2712.0,5,0,"scout_order","Leif scouts toward the fog.",0.0,0
+2712.2,5,0,"resource_blocked","BAKERY: Waiting for wheat",0.2,0
+2720.0,5,0,"scout_order","Bjorn scouts toward the fog.",0.0,0
+2720.4,5,0,"resource_blocked","SAWMILL: Output storage full",0.4,0
+2721.7,5,0,"resource_blocked","SAWMILL: Waiting for logs",1.7,0
+2721.8,5,0,"resource_blocked","SAWMILL: Output storage full",1.8,0
+2726.8,5,0,"resource_blocked","SAWMILL: Waiting for logs",6.8,0
+2726.9,5,0,"resource_blocked","SAWMILL: Output storage full",6.9,0
+2730.4,5,0,"dusk_warning","Dusk approaches",10.4,0
+2731.9,5,0,"resource_blocked","SAWMILL: Waiting for logs",11.9,0
+2744.0,5,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2750.9,5,0,"resource_blocked","SAWMILL: Output storage full",6.9,0
+2752.0,5,0,"scout_order","Leif scouts toward the fog.",0.0,0
+2752.3,5,0,"resource_blocked","SAWMILL: Waiting for logs",0.3,0
+2759.5,5,0,"resource_blocked","SAWMILL: Output storage full",7.5,0
+2760.0,5,0,"scout_order","Bjorn scouts toward the fog.",0.0,0
+2760.4,5,0,"horn_warning","RAID IN 60 SECONDS — hostiles from the east. They mean Outpost.",0.4,0
+2762.5,5,0,"resource_blocked","SAWMILL: Waiting for logs",2.5,0
+2766.8,5,0,"resource_blocked","SAWMILL: Output storage full",6.8,0
+2767.6,5,0,"resource_blocked","SAWMILL: Waiting for logs",7.6,0
+2767.7,5,0,"resource_blocked","SAWMILL: Output storage full",7.7,0
+2768.0,5,0,"scout_order","Bjorn scouts toward the fog.",0.0,0
+2772.7,5,0,"resource_blocked","SAWMILL: Waiting for logs",4.7,0
+2773.3,5,0,"resource_blocked","SAWMILL: Output storage full",5.3,0
+2776.0,5,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2777.8,5,0,"resource_blocked","SAWMILL: Waiting for logs",1.8,0
+2777.9,5,0,"resource_blocked","SAWMILL: Output storage full",1.9,0
+2782.9,5,0,"resource_blocked","SAWMILL: Waiting for logs",6.9,0
+2783.0,5,0,"resource_blocked","SAWMILL: Output storage full",7.0,0
+2784.0,5,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2788.0,5,0,"resource_blocked","SAWMILL: Waiting for logs",4.0,0
+2792.0,5,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2800.0,5,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2808.0,5,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2814.2,5,0,"resource_blocked","BAKERY: Waiting for wheat",6.2,0
+2816.0,5,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2820.4,5,1,"raid_started","wave=5 intent=raid_ritual",4.4,0
+2820.4,5,1,"night_started","Night 5",4.4,0

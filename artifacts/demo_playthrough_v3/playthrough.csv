@@ -1,0 +1,355 @@
+game_seconds,game_minutes,day,night,population,housing,soldiers,buildings,roads,wood,planks,stone,wheat,bread,wyrd,stabilized,exposure,quest,events,victory,finished
+0.0,0.00,1,0,2,5,0,1,14,50,18,18,0,18,3,0,0.00,"A Settlement Begins","start",0,0
+8.0,0.13,1,0,2,5,0,1,16,46,18,18,0,18,3,0,0.19,"A Settlement Begins","ROAD HOUSE",0,0
+16.0,0.27,1,0,2,10,0,2,16,46,18,18,0,18,3,0,0.19,"A Settlement Begins","construction queue full",0,0
+24.0,0.40,1,0,2,10,0,2,18,44,18,18,0,18,3,0,0.19,"A Settlement Begins","ROAD LUMBER_CAMP",0,0
+32.0,0.53,1,0,3,10,0,3,18,44,18,18,0,18,3,0,0.19,"A Settlement Begins","construction queue full",0,0
+40.0,0.67,1,0,3,10,0,3,18,45,18,18,0,18,3,0,0.19,"A Settlement Begins","ROAD FARM",0,0
+48.0,0.80,1,0,3,10,0,3,21,45,18,18,0,18,3,0,0.19,"A Settlement Begins","construction queue full",0,0
+56.0,0.93,1,0,3,10,0,3,21,45,18,18,0,18,3,0,0.19,"A Settlement Begins","construction queue full",0,0
+64.0,1.07,1,0,4,10,0,4,21,45,18,18,0,18,3,0,0.19,"A Settlement Begins","construction queue full",0,0
+72.0,1.20,1,0,4,10,0,4,22,50,18,18,0,18,3,0,0.19,"A Settlement Begins","ROAD ROAD",0,0
+80.0,1.33,1,0,4,10,0,4,22,54,18,18,0,18,3,0,0.19,"A Settlement Begins","ROAD",0,0
+88.0,1.47,1,0,4,10,0,4,23,54,18,18,0,18,3,0,0.19,"A Settlement Begins","waiting on workers, stock, or construction",0,0
+96.0,1.60,1,0,5,10,0,4,24,59,18,18,0,18,3,0,0.19,"A Settlement Begins","ROAD",0,0
+104.0,1.73,1,0,5,10,0,4,26,59,18,18,0,18,3,0,0.19,"A Settlement Begins","ROAD",0,0
+112.0,1.87,1,0,5,10,0,4,27,64,18,18,0,18,3,0,0.19,"A Settlement Begins","ROAD ROAD",0,0
+120.0,2.00,1,0,5,10,0,4,28,67,18,18,0,18,3,0,0.19,"A Settlement Begins","ROAD",0,0
+128.0,2.13,1,0,5,10,0,4,28,67,18,18,0,18,3,0,0.19,"A Settlement Begins","WATCHTOWER",0,0
+136.0,2.27,1,0,6,10,0,4,30,67,18,18,0,17,3,0,0.19,"A Settlement Begins","construction queue full",0,0
+144.0,2.40,1,0,6,10,0,4,31,67,18,13,0,17,3,0,0.19,"A Settlement Begins","construction queue full",0,0
+152.0,2.53,1,0,6,10,0,4,31,67,18,10,0,17,3,0,0.19,"A Settlement Begins","construction queue full",0,0
+160.0,2.67,1,0,6,10,0,4,31,67,14,10,0,17,3,0,0.19,"A Settlement Begins","construction queue full",0,0
+168.0,2.80,1,0,6,10,0,4,31,72,14,10,0,17,3,0,0.19,"A Settlement Begins","construction queue full",0,0
+176.0,2.93,1,0,6,10,0,5,31,77,14,10,0,17,3,0,0.19,"A Settlement Begins","construction queue full",0,0
+184.0,3.07,1,0,7,10,0,5,32,82,14,10,5,16,3,0,0.19,"A Settlement Begins","ROAD ROAD",0,0
+192.0,3.20,1,0,7,10,0,5,33,82,14,10,5,16,3,0,0.19,"A Settlement Begins","ROAD QUARRY",0,0
+200.0,3.33,1,0,7,10,0,5,35,82,14,10,5,16,3,0,0.19,"A Settlement Begins","construction queue full",0,0
+208.0,3.47,1,0,7,10,0,5,35,85,14,10,5,16,3,0,0.19,"A Settlement Begins","construction queue full",0,0
+216.0,3.60,1,0,7,10,0,5,35,90,14,10,5,16,3,0,0.19,"A Settlement Begins","construction queue full",0,0
+224.0,3.73,1,0,7,10,0,6,35,90,14,10,5,16,3,0,0.19,"Prepare for Nightfall","construction queue full",0,0
+232.0,3.87,1,0,8,10,0,6,35,100,14,10,5,15,3,0,0.19,"Prepare for Nightfall","ROAD SAWMILL",0,0
+240.0,4.00,1,0,8,10,0,6,37,100,14,10,5,15,3,0,0.19,"Prepare for Nightfall","construction queue full",0,0
+248.0,4.13,1,0,8,10,0,6,38,95,14,10,5,15,3,0,0.19,"Prepare for Nightfall","construction queue full",0,0
+256.0,4.27,1,0,8,10,0,6,38,95,14,10,5,15,3,0,0.19,"Prepare for Nightfall","construction queue full",0,0
+264.0,4.40,1,0,8,10,0,6,38,94,14,10,5,15,3,0,0.19,"Prepare for Nightfall","construction queue full",0,0
+272.0,4.53,1,0,9,10,0,7,38,99,14,10,5,14,3,0,0.19,"Prepare for Nightfall","construction queue full",0,0
+280.0,4.67,1,0,9,10,0,7,38,99,14,10,5,14,3,0,0.19,"Prepare for Nightfall","ROAD STOREHOUSE",0,0
+288.0,4.80,1,0,9,10,0,7,38,100,9,10,5,14,3,0,0.19,"Prepare for Nightfall","construction queue full",0,0
+296.0,4.93,1,0,9,10,0,7,38,100,9,10,5,14,3,0,0.19,"Prepare for Nightfall","construction queue full",0,0
+304.0,5.07,1,0,9,10,0,7,38,100,6,5,5,14,3,0,0.19,"Prepare for Nightfall","construction queue full",0,0
+312.0,5.20,1,0,9,10,0,7,38,102,10,8,5,14,3,0,0.19,"Prepare for Nightfall","BARRACKS",0,0
+320.0,5.33,1,0,10,10,0,7,38,102,10,8,5,13,3,0,0.19,"Prepare for Nightfall","construction queue full",0,0
+328.0,5.47,1,0,10,10,0,8,39,102,10,8,5,13,3,0,0.19,"Prepare for Nightfall","construction queue full",0,0
+336.0,5.60,1,0,10,10,0,8,40,102,5,8,5,13,3,0,0.19,"Prepare for Nightfall","construction queue full",0,0
+344.0,5.73,1,0,10,10,0,8,40,102,5,8,5,13,3,0,0.19,"Prepare for Nightfall","construction queue full",0,0
+352.0,5.87,1,0,10,10,0,8,40,102,0,8,5,13,3,0,0.19,"Prepare for Nightfall","construction queue full",0,0
+360.0,6.00,1,0,10,10,0,8,40,102,0,8,5,13,3,0,0.19,"Prepare for Nightfall","construction queue full",0,0
+368.0,6.13,1,0,10,10,0,8,40,102,0,3,5,13,3,0,0.19,"Prepare for Nightfall","construction queue full",0,0
+376.0,6.27,1,0,10,10,0,8,40,102,0,0,5,13,3,0,0.19,"Prepare for Nightfall","construction queue full",0,0
+384.0,6.40,1,0,10,10,0,8,40,102,0,0,5,13,3,0,0.19,"Prepare for Nightfall","construction queue full",0,0
+392.0,6.53,1,0,10,10,0,8,40,107,0,0,5,13,3,0,0.19,"Prepare for Nightfall","construction queue full",0,0
+400.0,6.67,1,0,10,10,0,9,40,107,0,0,5,13,3,0,0.19,"Prepare for Nightfall","construction queue full",0,0
+408.0,6.80,1,0,10,10,0,9,40,111,0,0,5,13,3,0,0.19,"Prepare for Nightfall","ROAD ROAD",0,0
+416.0,6.93,1,0,10,10,1,9,40,115,0,0,5,11,3,0,0.19,"Extend connected Lumen toward the Shard","cannot afford Bakery",0,0
+424.0,7.07,1,1,10,10,1,9,40,117,0,0,5,1,3,0,0.19,"Extend connected Lumen toward the Shard","night raid",0,0
+432.0,7.20,1,1,10,10,1,9,40,117,0,0,5,1,3,0,0.19,"Extend connected Lumen toward the Shard","night raid",0,0
+440.0,7.33,1,1,10,10,1,9,40,117,0,0,5,1,3,0,0.19,"Extend connected Lumen toward the Shard","night raid",0,0
+448.0,7.47,1,1,10,10,1,9,40,117,0,0,5,1,3,0,0.19,"Extend connected Lumen toward the Shard","night raid",0,0
+456.0,7.60,1,1,10,10,1,9,40,117,0,0,5,1,3,0,0.19,"Extend connected Lumen toward the Shard","night raid",0,0
+464.0,7.73,1,1,10,10,1,9,40,117,0,0,5,1,3,0,0.19,"Extend connected Lumen toward the Shard","night raid",0,0
+472.0,7.87,1,1,10,10,1,9,40,117,0,0,5,1,3,0,0.19,"Extend connected Lumen toward the Shard","night",0,0
+480.0,8.00,1,1,10,10,1,9,40,117,0,0,5,1,3,0,0.19,"Extend connected Lumen toward the Shard","night",0,0
+488.0,8.13,1,1,10,10,1,9,40,117,0,0,5,1,3,0,0.19,"Extend connected Lumen toward the Shard","night",0,0
+496.0,8.27,1,1,10,10,1,9,40,117,0,0,5,1,3,0,0.19,"Extend connected Lumen toward the Shard","night",0,0
+504.0,8.40,1,1,10,10,1,9,40,117,0,0,5,1,3,0,0.19,"Extend connected Lumen toward the Shard","night",0,0
+512.0,8.53,1,1,10,10,1,9,40,117,0,0,5,1,3,0,0.19,"Extend connected Lumen toward the Shard","night",0,0
+520.0,8.67,1,1,10,10,1,9,40,117,0,0,5,1,3,0,0.19,"Extend connected Lumen toward the Shard","night",0,0
+528.0,8.80,1,1,10,10,1,9,40,117,0,0,5,1,3,0,0.19,"Extend connected Lumen toward the Shard","night",0,0
+536.0,8.93,1,1,10,10,1,9,40,117,0,0,5,1,3,0,0.19,"Extend connected Lumen toward the Shard","night",0,0
+544.0,9.07,1,1,10,10,1,9,40,117,0,0,5,1,3,0,0.19,"Extend connected Lumen toward the Shard","night",0,0
+552.0,9.20,1,1,10,10,1,9,40,117,0,0,5,1,3,0,0.19,"Extend connected Lumen toward the Shard","night",0,0
+560.0,9.33,1,1,10,10,1,9,40,117,0,0,5,1,3,0,0.19,"Extend connected Lumen toward the Shard","night",0,0
+568.0,9.47,1,1,10,10,1,9,40,117,0,0,5,1,3,0,0.19,"Extend connected Lumen toward the Shard","night",0,0
+576.0,9.60,1,1,10,10,1,9,40,117,0,0,5,1,3,0,0.19,"Extend connected Lumen toward the Shard","night",0,0
+584.0,9.73,1,1,10,10,1,9,40,117,0,0,5,1,3,0,0.19,"Extend connected Lumen toward the Shard","night",0,0
+592.0,9.87,1,1,10,10,1,9,40,117,0,0,5,1,3,0,0.19,"Extend connected Lumen toward the Shard","night",0,0
+600.0,10.00,1,1,10,10,1,9,40,117,0,0,5,1,3,0,0.19,"Extend connected Lumen toward the Shard","night",0,0
+608.0,10.13,2,0,10,10,1,9,40,121,0,0,5,2,3,0,0.19,"Extend connected Lumen toward the Shard","cannot afford Bakery",0,0
+616.0,10.27,2,0,10,10,2,9,40,122,0,0,5,0,3,0,0.19,"Extend connected Lumen toward the Shard","cannot afford Bakery",0,0
+624.0,10.40,2,0,10,10,2,9,42,122,0,0,5,0,3,0,0.19,"Extend connected Lumen toward the Shard","cannot afford Bakery",0,0
+632.0,10.53,2,0,10,10,2,9,42,122,0,0,5,0,3,0,0.19,"Extend connected Lumen toward the Shard","ROAD ROAD",0,0
+640.0,10.67,2,0,10,10,2,9,42,122,4,4,5,0,3,0,0.19,"Extend connected Lumen toward the Shard","BAKERY",0,0
+648.0,10.80,2,0,10,10,2,9,42,122,0,4,5,0,3,0,0.19,"Extend connected Lumen toward the Shard","construction queue full",0,0
+656.0,10.93,2,0,10,10,2,9,42,122,0,0,5,0,3,0,0.19,"Extend connected Lumen toward the Shard","construction queue full",0,0
+664.0,11.07,2,0,10,10,2,10,42,122,0,0,5,0,3,0,0.19,"Extend connected Lumen toward the Shard","construction queue full",0,0
+672.0,11.20,2,0,10,10,2,10,43,122,0,0,5,0,3,0,0.19,"Extend connected Lumen toward the Shard","HOUSE",0,0
+680.0,11.33,2,0,10,10,2,10,43,122,0,0,5,0,3,0,0.19,"Extend connected Lumen toward the Shard","ROAD",0,0
+688.0,11.47,2,0,10,15,2,11,43,118,0,0,5,0,3,0,0.19,"Extend connected Lumen toward the Shard","construction queue full",0,0
+696.0,11.60,2,0,10,15,2,11,44,118,0,0,5,0,3,0,0.19,"Extend connected Lumen toward the Shard","FARM",0,0
+704.0,11.73,2,0,10,15,2,11,46,114,0,0,8,0,3,0,0.19,"Extend connected Lumen toward the Shard","construction queue full",0,0
+712.0,11.87,2,0,10,15,2,12,48,106,0,0,8,0,0,0,0.00,"Build an Outpost toward the Shard","ROAD LUMEN_PILLAR",0,0
+720.0,12.00,2,0,10,15,2,12,48,116,0,7,8,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD ROAD",0,0
+728.0,12.13,2,0,10,15,2,12,48,121,0,7,8,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","WYRD_HARVESTER",0,0
+736.0,12.27,2,0,10,15,2,12,49,121,0,7,12,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+744.0,12.40,2,0,10,15,2,12,49,126,0,7,12,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD",0,0
+752.0,12.53,2,0,10,15,2,12,50,131,0,7,12,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+760.0,12.67,2,0,10,15,2,12,52,131,0,7,12,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD",0,0
+768.0,12.80,2,0,10,15,2,12,52,136,0,7,12,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD ROAD",0,0
+776.0,12.93,2,0,10,15,2,12,52,141,0,7,12,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+784.0,13.07,2,0,10,15,2,12,54,146,0,7,17,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+792.0,13.20,2,0,10,15,2,12,54,148,0,7,17,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD ROAD",0,0
+800.0,13.33,2,0,10,15,2,12,54,155,0,7,17,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+808.0,13.47,2,0,10,15,2,12,56,157,0,7,17,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+816.0,13.60,2,0,10,15,2,12,56,162,0,7,17,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD ROAD",0,0
+824.0,13.73,2,0,10,15,2,12,57,165,0,7,22,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+832.0,13.87,2,0,10,15,2,12,59,167,0,7,22,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD",0,0
+840.0,14.00,2,0,10,15,2,12,60,177,0,7,22,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD ROAD",0,0
+848.0,14.13,2,0,10,15,2,12,62,177,0,7,32,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD",0,0
+856.0,14.27,2,0,11,15,2,12,64,180,0,7,34,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD ROAD",0,0
+864.0,14.40,2,0,11,15,2,12,64,180,0,7,36,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD ROAD",0,0
+872.0,14.53,2,0,11,15,2,12,64,180,0,7,36,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+880.0,14.67,2,0,11,15,2,12,66,180,0,12,36,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+888.0,14.80,2,0,11,15,2,12,66,180,0,17,41,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD ROAD",0,0
+896.0,14.93,2,0,11,15,2,12,66,180,0,17,43,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+904.0,15.07,2,0,12,15,2,12,68,180,0,17,43,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+912.0,15.20,2,0,12,15,2,12,68,180,0,17,48,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD ROAD",0,0
+920.0,15.33,2,0,12,15,2,12,68,180,0,17,48,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+928.0,15.47,2,0,12,15,2,12,70,180,0,17,48,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+936.0,15.60,2,0,12,15,2,12,70,180,0,21,48,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD ROAD",0,0
+944.0,15.73,2,0,12,15,2,12,70,180,0,21,48,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+952.0,15.87,2,0,13,15,2,12,70,180,0,21,46,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+960.0,16.00,2,0,13,15,2,12,72,180,0,21,54,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+968.0,16.13,2,0,13,15,2,12,72,180,0,21,62,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD ROAD",0,0
+976.0,16.27,2,0,13,15,2,12,72,180,0,21,66,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+984.0,16.40,2,0,13,15,2,12,72,182,0,21,68,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+992.0,16.53,2,0,14,15,2,12,74,182,5,21,68,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+1000.0,16.67,2,0,14,15,2,12,74,182,5,21,68,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD ROAD",0,0
+1008.0,16.80,2,0,14,15,2,12,74,182,5,21,68,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+1016.0,16.93,2,0,14,15,2,12,74,182,5,21,68,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+1024.0,17.07,2,1,14,15,2,12,74,182,5,21,40,0,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1032.0,17.20,2,1,14,15,2,12,74,182,5,21,40,-4,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1040.0,17.33,2,1,14,15,2,12,74,182,5,21,40,-4,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1048.0,17.47,2,1,14,15,2,12,74,182,5,21,40,-4,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1056.0,17.60,2,1,14,15,2,12,74,182,5,21,40,-4,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1064.0,17.73,2,1,14,15,2,12,74,182,5,21,40,-4,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1072.0,17.87,2,1,14,15,2,12,74,182,5,21,40,-4,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1080.0,18.00,2,1,14,15,2,12,74,182,5,21,40,-4,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1088.0,18.13,2,1,14,15,2,12,74,182,5,21,40,-4,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night ASSAULT",0,0
+1096.0,18.27,2,1,14,15,2,12,74,182,5,21,40,-4,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night",0,0
+1104.0,18.40,2,1,14,15,2,12,74,182,5,21,40,-4,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night",0,0
+1112.0,18.53,2,1,14,15,2,12,74,182,5,21,40,-4,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night",0,0
+1120.0,18.67,2,1,14,15,2,12,74,182,5,21,40,-4,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night",0,0
+1128.0,18.80,2,1,14,15,2,12,74,182,5,21,40,-4,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night",0,0
+1136.0,18.93,2,1,14,15,2,12,74,182,5,21,40,-4,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night",0,0
+1144.0,19.07,2,1,14,15,2,12,74,182,5,21,40,-4,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night",0,0
+1152.0,19.20,2,1,14,15,2,12,74,182,5,21,40,-4,0,0,0.00,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night",0,0
+1160.0,19.33,2,1,14,15,2,12,74,190,5,25,40,-4,2,2,0.12,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night",0,0
+1168.0,19.47,2,1,14,15,2,12,74,190,5,25,40,-4,2,2,0.12,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night",0,0
+1176.0,19.60,2,1,14,15,2,12,74,190,5,25,40,-4,2,2,0.12,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night",0,0
+1184.0,19.73,2,1,14,15,2,12,74,190,5,25,40,-4,2,2,0.12,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night",0,0
+1192.0,19.87,2,1,14,15,2,12,74,190,5,25,40,-4,2,2,0.12,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night",0,0
+1200.0,20.00,2,1,14,15,2,12,74,190,5,25,40,-4,2,2,0.12,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night",0,0
+1208.0,20.13,3,0,14,15,2,12,74,190,5,25,40,-2,2,2,0.12,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+1216.0,20.27,3,0,15,15,2,12,74,190,5,25,38,-2,2,2,0.12,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+1224.0,20.40,3,0,15,15,2,12,75,190,5,25,38,-2,2,2,0.12,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+1232.0,20.53,3,0,15,15,2,12,77,190,5,25,43,-2,2,2,0.12,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD",0,0
+1240.0,20.67,3,0,15,15,2,12,77,190,5,25,48,-2,2,2,0.12,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD ROAD",0,0
+1248.0,20.80,3,0,15,15,2,12,77,190,5,25,48,-2,2,2,0.12,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+1256.0,20.93,3,0,15,15,2,12,77,190,5,25,52,-2,2,2,0.12,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+1264.0,21.07,3,0,15,15,2,12,79,190,5,25,57,-2,2,2,0.12,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+1272.0,21.20,3,0,15,15,2,12,79,187,10,23,62,-2,2,2,0.12,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD ROAD",0,0
+1280.0,21.33,3,0,15,15,2,12,79,187,10,23,62,-2,2,2,0.12,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+1288.0,21.47,3,0,15,15,2,12,79,182,10,23,62,-2,2,2,0.12,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+1296.0,21.60,3,0,15,15,2,12,81,182,10,23,62,-2,2,2,0.12,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+1304.0,21.73,3,0,15,15,2,12,81,182,10,23,62,-2,2,2,0.12,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD ROAD",0,0
+1312.0,21.87,3,0,15,15,2,12,81,182,10,23,62,-2,2,2,0.12,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+1320.0,22.00,3,0,15,15,2,13,83,182,10,23,62,-2,2,2,0.42,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+1328.0,22.13,3,0,15,15,2,13,83,182,10,23,67,-2,2,2,0.42,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD HOUSE",0,0
+1336.0,22.27,3,0,15,15,2,13,83,182,10,23,67,-2,3,2,0.49,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+1344.0,22.40,3,0,15,15,2,13,85,182,10,23,67,-2,3,2,0.49,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+1352.0,22.53,3,0,15,15,2,13,85,182,10,23,72,-2,4,2,0.55,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD",0,0
+1360.0,22.67,3,0,15,15,2,13,86,178,10,23,72,-2,4,2,0.55,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+1368.0,22.80,3,0,15,20,2,14,86,178,10,23,72,-2,5,2,0.61,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD",0,0
+1376.0,22.93,3,0,15,20,2,14,87,178,5,23,77,-2,5,2,0.61,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","WYRD_REFINER",0,0
+1384.0,23.07,3,0,15,20,2,14,87,178,5,23,77,-2,6,2,0.68,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD",0,0
+1392.0,23.20,3,0,15,20,2,14,87,180,5,23,77,-2,6,2,0.68,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+1400.0,23.33,3,0,16,20,2,14,88,180,4,19,75,-2,7,2,0.74,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+1408.0,23.47,3,0,16,20,2,14,88,180,4,19,75,-2,7,2,0.74,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD",0,0
+1416.0,23.60,3,0,16,20,2,15,89,180,4,19,75,-2,8,2,0.80,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","construction queue full",0,0
+1424.0,23.73,3,0,16,20,2,15,91,180,4,19,85,-2,8,2,0.80,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD",0,0
+1432.0,23.87,3,0,16,20,2,15,91,180,4,19,88,-2,7,3,0.74,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD ROAD",0,0
+1440.0,24.00,3,0,17,20,2,15,91,180,9,19,86,-2,5,4,0.61,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1448.0,24.13,3,0,17,20,2,15,91,180,9,19,86,-2,4,5,0.55,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1456.0,24.27,3,0,17,20,2,15,92,180,9,19,86,-2,2,6,0.42,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1464.0,24.40,3,0,17,20,2,15,93,180,14,19,86,-2,3,6,0.49,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD",0,0
+1472.0,24.53,3,0,17,20,2,15,93,180,14,19,91,-2,1,7,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD",0,0
+1480.0,24.67,3,0,17,20,2,15,93,180,14,19,91,-2,0,8,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1488.0,24.80,3,0,18,20,2,15,93,180,14,19,94,-2,0,8,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1496.0,24.93,3,0,18,20,2,15,95,180,14,19,99,-2,1,8,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1504.0,25.07,3,0,18,20,2,15,95,180,14,19,104,3,1,8,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD ROAD",0,0
+1512.0,25.20,3,0,18,20,2,15,95,180,14,19,104,2,2,8,0.42,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","SCOUT",0,0
+1520.0,25.33,3,0,18,20,2,15,95,180,14,19,104,2,0,9,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1528.0,25.47,3,0,18,20,3,15,96,180,19,19,104,0,1,9,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1536.0,25.60,3,0,19,20,3,15,97,180,20,19,102,0,1,9,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD",0,0
+1544.0,25.73,3,0,19,20,3,15,97,180,20,19,102,0,2,9,0.42,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD",0,0
+1552.0,25.87,3,0,19,20,3,15,97,180,20,19,102,0,0,10,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1560.0,26.00,3,0,19,20,3,15,98,180,20,19,102,0,1,10,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1568.0,26.13,3,0,19,20,3,15,98,180,20,19,106,0,1,10,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD",0,0
+1576.0,26.27,3,0,20,20,3,15,98,180,20,19,106,0,2,10,0.42,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1584.0,26.40,3,0,20,20,3,15,99,176,20,19,108,0,0,11,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","HOUSE",0,0
+1592.0,26.53,3,0,20,25,3,16,99,176,20,19,110,0,1,11,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD",0,0
+1600.0,26.67,3,0,20,25,3,16,99,176,20,19,110,0,1,11,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1608.0,26.80,3,0,20,25,3,16,99,176,20,19,110,0,0,12,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1616.0,26.93,3,0,20,25,3,16,99,176,20,19,110,0,0,12,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1624.0,27.07,3,1,21,25,3,16,99,176,20,19,66,-2,0,12,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1632.0,27.20,3,1,21,25,3,16,99,176,20,19,66,-6,0,12,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1640.0,27.33,3,1,21,25,3,16,99,175,20,19,66,-11,1,12,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1648.0,27.47,3,1,21,25,3,16,99,175,20,19,66,-11,1,12,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1656.0,27.60,3,1,21,25,3,16,99,175,20,19,66,-11,2,12,0.42,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1664.0,27.73,3,1,21,25,3,16,99,175,20,19,66,-11,0,13,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1672.0,27.87,3,1,21,25,3,16,99,173,20,19,66,-11,1,13,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1680.0,28.00,3,1,21,25,3,16,99,169,20,19,66,-11,1,13,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1688.0,28.13,3,1,21,25,3,16,99,165,20,19,66,-11,0,14,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1696.0,28.27,3,1,21,25,3,16,99,159,20,19,66,-11,0,14,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1704.0,28.40,3,1,21,25,3,16,99,153,20,19,66,-11,1,14,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1712.0,28.53,3,1,21,25,3,16,99,147,20,19,66,-11,1,14,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1720.0,28.67,3,1,21,25,3,16,99,147,20,19,66,-11,0,15,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1728.0,28.80,3,1,21,25,3,16,99,145,20,19,66,-11,0,15,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1736.0,28.93,3,1,21,25,3,16,99,143,20,19,66,-11,1,15,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1744.0,29.07,3,1,21,25,3,16,99,141,20,19,66,-11,1,15,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1752.0,29.20,3,1,21,25,3,16,99,139,20,19,66,-11,2,15,0.42,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1760.0,29.33,3,1,21,25,3,16,99,137,20,19,66,-11,0,16,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1768.0,29.47,3,1,21,25,3,16,99,135,20,19,66,-11,1,16,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1776.0,29.60,3,1,21,25,3,16,99,133,20,19,66,-11,1,16,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1784.0,29.73,3,1,21,25,3,16,99,131,20,19,66,-11,2,16,0.42,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1792.0,29.87,3,1,21,25,3,16,99,129,20,19,66,-11,0,17,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1800.0,30.00,3,1,21,25,3,16,99,127,20,19,66,-11,1,17,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","night raid",0,0
+1808.0,30.13,4,0,21,25,3,16,99,127,20,19,66,-10,1,17,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1816.0,30.27,4,0,21,25,3,16,99,137,20,19,66,-10,2,17,0.42,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1824.0,30.40,4,0,21,25,3,16,99,139,20,19,71,-10,0,18,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1832.0,30.53,4,0,21,25,3,16,101,142,20,19,71,-10,1,18,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1840.0,30.67,4,0,21,25,3,16,101,147,20,19,71,-10,1,18,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD ROAD",0,0
+1848.0,30.80,4,0,22,25,3,16,101,147,25,19,69,-10,2,18,0.42,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1856.0,30.93,4,0,22,25,3,16,101,147,25,19,69,-10,0,19,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1864.0,31.07,4,0,22,25,3,16,101,147,25,19,79,-10,1,19,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1872.0,31.20,4,0,22,25,3,16,103,147,25,19,79,-10,1,19,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1880.0,31.33,4,0,22,25,3,16,103,153,25,19,79,-10,0,20,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD ROAD",0,0
+1888.0,31.47,4,0,22,25,3,16,103,153,25,19,79,-10,0,20,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1896.0,31.60,4,0,23,25,3,16,103,155,25,19,82,-10,1,20,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1904.0,31.73,4,0,23,25,3,16,105,156,25,19,82,-10,1,20,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1912.0,31.87,4,0,23,25,3,16,105,161,25,19,82,-10,2,20,0.42,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD ROAD",0,0
+1920.0,32.00,4,0,23,25,3,16,105,168,25,19,82,-10,0,21,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1928.0,32.13,4,0,23,25,3,16,105,168,25,19,82,-10,1,21,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1936.0,32.27,4,0,24,25,3,16,106,173,25,19,90,-10,1,21,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1944.0,32.40,4,0,24,25,3,16,108,173,25,19,95,-10,2,21,0.42,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD",0,0
+1952.0,32.53,4,0,24,25,3,16,108,180,25,19,97,-10,0,22,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD ROAD",0,0
+1960.0,32.67,4,0,24,25,3,16,108,180,25,19,99,-10,1,22,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1968.0,32.80,4,0,24,25,3,16,108,180,30,19,101,-10,1,22,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1976.0,32.93,4,0,24,25,3,16,110,180,30,19,105,-10,2,22,0.42,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+1984.0,33.07,4,0,25,25,3,16,110,180,35,19,103,-10,0,23,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD ROAD",0,0
+1992.0,33.20,4,0,25,25,3,16,110,180,35,19,103,-10,1,23,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+2000.0,33.33,4,0,25,25,3,16,110,180,35,19,103,-10,1,23,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+2008.0,33.47,4,0,25,25,3,16,110,179,35,19,108,-10,2,23,0.42,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+2016.0,33.60,4,0,25,25,3,16,111,179,40,19,108,-10,0,24,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+2024.0,33.73,4,0,25,25,3,16,113,180,40,19,110,-10,1,24,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD",0,0
+2032.0,33.87,4,0,25,25,3,16,113,180,40,19,112,-10,1,24,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD ROAD",0,0
+2040.0,34.00,4,0,25,25,3,16,113,180,41,19,112,-10,2,24,0.42,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+2048.0,34.13,4,0,25,25,3,16,113,180,41,19,117,-10,0,25,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+2056.0,34.27,4,0,25,25,3,16,113,180,41,19,122,-10,1,25,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+2064.0,34.40,4,0,25,25,3,16,115,180,46,19,125,-10,1,25,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+2072.0,34.53,4,0,25,25,3,16,115,180,46,19,127,-10,0,26,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD ROAD",0,0
+2080.0,34.67,4,0,25,25,3,16,115,180,46,19,127,-10,0,26,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+2088.0,34.80,4,0,25,25,3,16,115,180,46,19,131,-10,1,26,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+2096.0,34.93,4,0,25,25,3,16,116,180,46,19,135,-10,1,26,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+2104.0,35.07,4,0,25,25,3,16,117,180,51,19,137,-10,2,26,0.42,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD",0,0
+2112.0,35.20,4,0,25,25,3,16,119,180,56,19,137,-10,0,27,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD",0,0
+2120.0,35.33,4,0,25,25,3,16,119,180,56,19,140,-10,1,27,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD ROAD",0,0
+2128.0,35.47,4,0,25,25,3,16,119,180,56,19,140,-10,1,27,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+2136.0,35.60,4,0,25,25,3,16,120,180,60,19,140,-5,2,27,0.42,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+2144.0,35.73,4,0,25,25,3,16,120,180,60,19,140,-5,0,28,0.30,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","ROAD",0,0
+2152.0,35.87,4,0,25,25,3,16,120,180,64,19,140,-5,1,28,0.36,"Bind the fissure with 12 Stabilized Wyrd and hold the ritual","waiting on workers, stock, or construction",0,0
+2160.0,36.00,4,0,25,25,3,16,121,180,64,19,140,-5,1,28,0.36,"Stone Shortage","waiting on workers, stock, or construction",0,0
+2168.0,36.13,4,0,25,25,3,16,122,180,64,19,140,5,2,28,0.42,"Stone Shortage","ROAD",0,0
+2176.0,36.27,4,0,25,25,3,16,122,180,64,19,140,8,0,29,0.30,"Stone Shortage","ROAD SCOUT",0,0
+2184.0,36.40,4,0,25,25,4,16,122,180,68,19,140,5,1,29,0.36,"Stone Shortage","SCOUT",0,0
+2192.0,36.53,4,0,25,25,4,16,123,184,72,19,145,4,1,29,0.36,"Stone Shortage","SCOUT",0,0
+2200.0,36.67,4,0,25,25,4,16,123,184,72,19,145,3,2,29,0.42,"Stone Shortage","ROAD SCOUT",0,0
+2208.0,36.80,4,0,25,25,4,16,123,184,72,19,145,2,0,30,0.30,"Stone Shortage","SCOUT",0,0
+2216.0,36.93,4,0,25,25,4,16,123,184,72,19,145,1,1,30,0.36,"Stone Shortage","SCOUT",0,0
+2224.0,37.07,4,1,25,25,4,16,123,184,72,19,95,0,0,30,0.30,"Stone Shortage","night raid SCOUT",0,0
+2232.0,37.20,4,1,25,25,4,16,123,184,72,19,95,-4,1,30,0.36,"Stone Shortage","night raid",0,0
+2240.0,37.33,4,1,25,25,4,16,123,184,72,19,95,-4,1,30,0.36,"Stone Shortage","night raid",0,0
+2248.0,37.47,4,1,25,25,4,16,123,184,72,19,95,-4,2,30,0.42,"Stone Shortage","night raid",0,0
+2256.0,37.60,4,1,25,25,4,16,123,184,72,19,95,-4,0,31,0.30,"Stone Shortage","night raid",0,0
+2264.0,37.73,4,1,25,25,4,16,123,184,72,19,95,-4,1,31,0.36,"Stone Shortage","night raid",0,0
+2272.0,37.87,4,1,25,25,4,16,123,184,72,19,95,-4,1,31,0.36,"Stone Shortage","night",0,0
+2280.0,38.00,4,1,25,25,4,16,123,184,72,19,95,-4,1,31,0.36,"Stone Shortage","night",0,0
+2288.0,38.13,4,1,25,25,4,16,123,184,72,19,95,-4,0,32,0.30,"Stone Shortage","night",0,0
+2296.0,38.27,4,1,25,25,4,16,123,184,72,19,95,-4,0,32,0.30,"Stone Shortage","night",0,0
+2304.0,38.40,4,1,25,25,4,16,123,184,72,19,95,-4,1,32,0.36,"Stone Shortage","night",0,0
+2312.0,38.53,4,1,25,25,4,16,123,184,72,19,95,-4,1,32,0.36,"Stone Shortage","night",0,0
+2320.0,38.67,4,1,25,25,4,16,123,184,72,19,95,-4,0,33,0.30,"Stone Shortage","night",0,0
+2328.0,38.80,4,1,25,25,4,16,123,184,72,19,95,-4,0,33,0.30,"Stone Shortage","night",0,0
+2336.0,38.93,4,1,25,25,4,16,123,184,72,19,95,-4,1,33,0.36,"Stone Shortage","night",0,0
+2344.0,39.07,4,1,25,25,4,16,123,184,72,19,95,-4,1,33,0.36,"Stone Shortage","night",0,0
+2352.0,39.20,4,1,25,25,4,16,123,184,72,19,95,-4,2,33,0.42,"Stone Shortage","night",0,0
+2360.0,39.33,4,1,25,25,4,16,123,184,72,19,95,-4,0,34,0.30,"Stone Shortage","night",0,0
+2368.0,39.47,4,1,25,25,4,16,123,184,72,19,95,-4,1,34,0.36,"Stone Shortage","night",0,0
+2376.0,39.60,4,1,25,25,4,16,123,184,72,19,95,-4,1,34,0.36,"Stone Shortage","night",0,0
+2384.0,39.73,4,1,25,25,4,16,123,184,72,19,95,-4,2,34,0.42,"Stone Shortage","night",0,0
+2392.0,39.87,4,1,25,25,4,16,123,184,72,19,95,-4,0,35,0.30,"Stone Shortage","night",0,0
+2400.0,40.00,4,1,25,25,4,16,123,184,72,19,95,-4,1,35,0.36,"Stone Shortage","night",0,0
+2408.0,40.13,5,0,25,25,4,16,123,184,72,19,95,-3,1,35,0.36,"Stone Shortage","waiting on workers, stock, or construction",0,0
+2416.0,40.27,5,0,25,25,4,16,123,184,72,19,100,-3,0,36,0.30,"Stone Shortage","waiting on workers, stock, or construction",0,0
+2424.0,40.40,5,0,25,25,4,16,123,184,72,19,105,-3,0,36,0.30,"Stone Shortage","waiting on workers, stock, or construction",0,0
+2432.0,40.53,5,0,25,25,4,16,124,184,76,19,108,2,1,36,0.36,"Stone Shortage","waiting on workers, stock, or construction",0,0
+2440.0,40.67,5,0,25,25,4,16,125,184,76,19,108,6,1,36,0.36,"Stone Shortage","ROAD SCOUT",0,0
+2448.0,40.80,5,0,25,25,4,16,125,184,76,19,108,5,0,37,0.30,"Stone Shortage","ROAD SCOUT",0,0
+2456.0,40.93,5,0,25,25,4,16,125,184,76,19,108,4,0,37,0.30,"Stone Shortage","SCOUT",0,0
+2464.0,41.07,5,0,25,25,4,16,126,184,76,19,114,4,1,37,0.36,"Stone Shortage","waiting on workers, stock, or construction",0,0
+2472.0,41.20,5,0,25,25,4,16,126,184,80,19,116,4,1,37,0.36,"Stone Shortage","ROAD",0,0
+2480.0,41.33,5,0,25,25,4,16,127,184,85,19,116,3,0,38,0.30,"Stone Shortage","SCOUT",0,0
+2488.0,41.47,5,0,25,25,4,16,127,184,85,19,120,2,0,38,0.30,"Stone Shortage","ROAD SCOUT",0,0
+2496.0,41.60,5,0,25,25,4,16,127,184,85,19,120,1,1,38,0.36,"Stone Shortage","SCOUT",0,0
+2504.0,41.73,5,0,25,25,4,16,128,184,85,19,126,6,1,38,0.36,"Stone Shortage","waiting on workers, stock, or construction",0,0
+2512.0,41.87,5,0,25,25,4,16,129,184,85,19,126,6,2,38,0.42,"Stone Shortage","ROAD",0,0
+2520.0,42.00,5,0,25,25,4,16,129,184,85,19,130,5,0,39,0.30,"Stone Shortage","ROAD SCOUT",0,0
+2528.0,42.13,5,0,25,25,4,16,129,184,85,19,132,4,1,39,0.36,"Stone Shortage","SCOUT",0,0
+2536.0,42.27,5,0,25,25,4,16,130,184,88,19,134,3,1,39,0.36,"Stone Shortage","SCOUT",0,0
+2544.0,42.40,5,0,25,25,4,16,132,184,88,19,136,2,2,39,0.42,"Stone Shortage","ROAD SCOUT",0,0
+2552.0,42.53,5,0,25,25,4,16,132,184,96,19,136,2,0,40,0.30,"Stone Shortage","ROAD ROAD",0,0
+2560.0,42.67,5,0,25,25,4,16,132,184,96,19,136,2,1,40,0.36,"Stone Shortage","waiting on workers, stock, or construction",0,0
+2568.0,42.80,5,0,25,25,4,16,132,184,96,19,136,1,1,40,0.36,"Stone Shortage","SCOUT",0,0
+2576.0,42.93,5,0,25,25,4,16,133,184,96,19,138,0,0,41,0.30,"Stone Shortage","SCOUT",0,0
+2584.0,43.07,5,0,25,25,4,16,134,184,96,19,140,0,0,41,0.30,"Stone Shortage","ROAD",0,0
+2592.0,43.20,5,0,25,25,4,16,134,184,98,19,140,0,1,41,0.36,"Stone Shortage","ROAD",0,0
+2600.0,43.33,5,0,25,25,4,16,134,184,98,19,140,0,1,41,0.36,"Stone Shortage","waiting on workers, stock, or construction",0,0
+2608.0,43.47,5,0,25,25,4,16,135,184,98,19,140,0,0,42,0.30,"Stone Shortage","waiting on workers, stock, or construction",0,0
+2616.0,43.60,5,0,25,25,4,16,136,184,100,19,140,5,0,42,0.30,"Stone Shortage","ROAD",0,0
+2624.0,43.73,5,0,25,25,4,16,136,184,100,19,140,4,1,42,0.36,"Stone Shortage","ROAD SCOUT",0,0
+2632.0,43.87,5,0,25,25,4,16,136,184,103,19,140,3,1,42,0.36,"Stone Shortage","SCOUT",0,0
+2640.0,44.00,5,0,25,25,4,16,137,184,108,19,140,2,0,43,0.30,"Stone Shortage","SCOUT",0,0
+2648.0,44.13,5,0,25,25,4,16,137,184,108,19,140,2,0,43,0.30,"Stone Shortage","ROAD",0,0
+2656.0,44.27,5,0,25,25,4,16,138,184,110,19,140,2,1,43,0.36,"Stone Shortage","waiting on workers, stock, or construction",0,0
+2664.0,44.40,5,0,25,25,4,16,138,184,110,19,140,7,1,43,0.36,"Stone Shortage","ROAD",0,0
+2672.0,44.53,5,0,25,25,4,16,138,184,110,19,140,6,0,44,0.30,"Stone Shortage","SCOUT",0,0
+2680.0,44.67,5,0,25,25,4,16,140,184,110,19,140,5,0,44,0.30,"Stone Shortage","SCOUT",0,0
+2688.0,44.80,5,0,25,25,4,16,140,184,115,19,140,11,1,44,0.36,"Stone Shortage","ROAD ROAD SCOUT",0,0
+2696.0,44.93,5,0,25,25,4,16,140,184,115,19,140,10,1,44,0.36,"Stone Shortage","SCOUT",0,0
+2704.0,45.07,5,0,25,25,4,16,141,184,115,19,140,14,2,44,0.42,"Stone Shortage","waiting on workers, stock, or construction",0,0
+2712.0,45.20,5,0,25,25,4,16,142,184,120,19,140,14,0,33,0.30,"Stone Shortage","raid ROAD BIND",0,0
+2720.0,45.33,5,0,25,25,4,16,142,184,122,19,140,13,1,33,0.36,"Stone Shortage","raid ROAD SCOUT",0,0
+2728.0,45.47,5,0,25,25,4,16,143,184,122,19,140,12,1,33,0.36,"Stone Shortage","raid SCOUT",0,0
+2736.0,45.60,5,0,25,25,4,16,145,184,122,19,140,16,2,33,0.42,"Stone Shortage","raid ROAD SCOUT",0,0
+2744.0,45.73,5,0,25,25,4,16,145,184,122,19,140,20,0,34,0.30,"Stone Shortage","raid ROAD ROAD SCOUT",0,0
+2752.0,45.87,5,0,25,25,4,16,145,184,122,19,140,19,1,34,0.36,"Stone Shortage","raid SCOUT",0,0
+2760.0,46.00,5,0,25,25,4,16,146,184,122,19,140,20,1,34,0.36,"Stone Shortage","raid SCOUT",0,0
+2768.0,46.13,5,0,25,25,4,16,148,184,134,19,140,19,0,35,0.30,"Stone Shortage","raid ROAD SCOUT",0,0
+2776.0,46.27,5,0,25,25,4,16,148,184,134,19,140,23,0,35,0.30,"Stone Shortage","raid ROAD ROAD SCOUT",0,0
+2784.0,46.40,5,0,25,25,4,16,149,184,134,19,140,22,1,35,0.36,"Stone Shortage","raid SCOUT",0,0
+2792.0,46.53,5,0,25,25,4,16,149,189,134,19,140,26,1,35,0.36,"Stone Shortage","raid ROAD SCOUT",0,0
+2800.0,46.67,5,0,25,25,4,16,149,189,134,19,140,25,0,36,0.30,"Stone Shortage","raid SCOUT",0,0
+2808.0,46.80,5,0,25,25,4,16,149,189,134,19,140,24,0,36,0.30,"Stone Shortage","raid SCOUT",0,0
+2816.0,46.93,5,0,25,25,4,16,149,189,134,19,140,23,1,36,0.36,"Stone Shortage","raid SCOUT",0,0
+2824.0,47.07,5,1,25,25,4,16,149,189,134,19,134,0,0,36,0.30,"Stone Shortage","night raid SCOUT",1,1
