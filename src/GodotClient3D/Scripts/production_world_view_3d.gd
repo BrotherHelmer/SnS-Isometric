@@ -1748,9 +1748,10 @@ func non_inspectable_building_meshes(radius_tiles := 16.0) -> Array[String]:
 	if resource_visuals_root == null:
 		return names
 	var hall := Vector2i.ZERO
-	var has_hall := simulation != null and simulation.is_town_hall_founded()
-	if has_hall:
-		hall = simulation.town_hall_position
+	var has_hall := false
+	if simulation != null and bool(simulation.is_town_hall_founded()):
+		has_hall = true
+		hall = Vector2i(simulation.town_hall_position)
 	_collect_non_inspectable_buildings(resource_visuals_root, hall, radius_tiles, has_hall, names)
 	return names
 
