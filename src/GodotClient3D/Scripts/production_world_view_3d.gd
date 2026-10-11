@@ -3663,10 +3663,12 @@ func opening_camera_focus() -> Vector3:
 	if simulation.founding_site is Dictionary:
 		open_dir = Vector2(simulation.founding_site.get("open_dir", open_dir))
 		crater_dir = Vector2(simulation.founding_site.get("crater_dir", crater_dir))
+	# OPENING_ZOOM 32 shows ~32 m. Pull 12 m toward the pit so the rim
+	# sits in the upper third while the hall stays lower-middle.
 	return center + Vector3(
-		crater_dir.x * 0.38 * w + open_dir.x * 0.16 * w,
+		crater_dir.x * 12.0 + open_dir.x * 2.0,
 		0.0,
-		crater_dir.y * 0.38 * w + open_dir.y * 0.16 * w
+		crater_dir.y * 12.0 + open_dir.y * 2.0
 	)
 
 
