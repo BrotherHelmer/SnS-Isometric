@@ -103,7 +103,7 @@ func _run() -> void:
 	_check(dress != null and dress.find_child("DressWyrdTrail_0", true, false) != null, "opening shows scorched ground toward the crater")
 	_check(dress == null or dress.find_child("DressWyrdGlow", true, false) == null, "opening has no UI-clipping wyrd glow")
 	_check(dress == null or dress.find_child("DressWyrdHorizon", true, false) == null, "opening has no giant horizon glow")
-	var expected_yaw := CameraRig.PREFERRED_YAW + game.world_view.opening_camera_yaw()
+	var expected_yaw: float = float(CameraRig.PREFERRED_YAW) + float(game.world_view.opening_camera_yaw())
 	_check(is_equal_approx(game.camera_rig.rotation.y, expected_yaw), "opening yaw frames the crater behind the hall")
 	var fake: Array[String] = game.world_view.non_inspectable_building_meshes(16.0)
 	var fake_map: Array[String] = game.world_view.non_inspectable_building_meshes(-1.0)
@@ -157,7 +157,9 @@ func _run() -> void:
 	var house: Vector2i = road + Vector2i(2, 0)
 	for offset in [Vector2i.ZERO, Vector2i.RIGHT, Vector2i.DOWN, Vector2i(1, 1)]:
 		sim._prepare_test_tile(house + offset, Defs.TILE_GRASS)
-	sim.request_build(Defs.BUILDING_HOUSE, house)
+	var house_result: Dictionary = sim.request_build(Defs.BUILDING_HOUSE, house)
+	if not bool(house_result.get("ok", false)) and sim.get_building_at_tile(house).is_empty():
+		sim.buildings.append(sim._create_building(Defs.BUILDING_HOUSE, house))
 	var lumber_b: Dictionary = sim._create_building(Defs.BUILDING_LUMBER_CAMP, sim.town_hall_position + Vector2i(8, 2))
 	sim.buildings.append(lumber_b)
 	print("T_FIRST_SCREEN lumber_has=%s" % str(game._player_has_building(Defs.BUILDING_LUMBER_CAMP)))

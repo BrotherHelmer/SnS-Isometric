@@ -3692,10 +3692,11 @@ func _choose_founding_hall_tile() -> Vector2i:
 	var heading := _founding_orbit_heading()
 	var dist_lo := CRATER_RADIUS * FOUNDING_CRATER_DIST_MIN
 	var dist_hi := CRATER_RADIUS * FOUNDING_CRATER_DIST_MAX
-	var fallback := Vector2i(
-		clampi(shard_position.x + roundi(sin(heading) * dist_lo), 4, map_size.x - 10),
-		clampi(shard_position.y + roundi(cos(heading) * dist_lo), 4, map_size.y - 10)
-	)
+	var footprint := Defs.building_footprint(Defs.BUILDING_TOWN_HALL)
+	var fallback := _founding_anchor_from_center(Vector2i(
+		shard_position.x + roundi(sin(heading) * dist_lo),
+		shard_position.y + roundi(cos(heading) * dist_lo)
+	))
 	var best := fallback
 	var best_score := -9999.0
 	for i in 40:
@@ -3704,13 +3705,14 @@ func _choose_founding_hall_tile() -> Vector2i:
 		var dist := site_rng.randf_range(dist_lo, dist_hi)
 		if i >= 36:
 			dist = site_rng.randf_range(CRATER_RADIUS * FOUNDING_CRATER_DIST_FLOOR, dist_hi)
-		var cand := Vector2i(
-			clampi(shard_position.x + roundi(sin(angle) * dist), 4, map_size.x - 10),
-			clampi(shard_position.y + roundi(cos(angle) * dist), 4, map_size.y - 10)
+		var center := Vector2i(
+			shard_position.x + roundi(sin(angle) * dist),
+			shard_position.y + roundi(cos(angle) * dist)
 		)
+		var cand := _founding_anchor_from_center(center)
 		if not _founding_footprint_stable(cand):
 			continue
-		var crater_d := _tile_distance(_founding_footprint_center(cand), shard_position)
+		var crater_d := _tile_distance(_footprint_center(cand, footprint), shard_position)
 		if crater_d < CRATER_RADIUS * FOUNDING_CRATER_DIST_FLOOR or crater_d > CRATER_RADIUS * FOUNDING_CRATER_DIST_MAX:
 			continue
 		var slope := _founding_slope_at(cand)
@@ -3726,18 +3728,26 @@ func _choose_founding_hall_tile() -> Vector2i:
 			best = cand
 	if best_score < -100.0 or not _founding_footprint_stable(best):
 		for dist_try in [dist_lo, (dist_lo + dist_hi) * 0.5, dist_hi, CRATER_RADIUS * FOUNDING_CRATER_DIST_FLOOR]:
-			var cand := Vector2i(
-				clampi(shard_position.x + roundi(sin(heading) * dist_try), 4, map_size.x - 10),
-				clampi(shard_position.y + roundi(cos(heading) * dist_try), 4, map_size.y - 10)
-			)
+			var cand := _founding_anchor_from_center(Vector2i(
+				shard_position.x + roundi(sin(heading) * dist_try),
+				shard_position.y + roundi(cos(heading) * dist_try)
+			))
 			if _founding_footprint_stable(cand):
 				return cand
 	return best
 
 
-func _founding_footprint_center(anchor: Vector2i) -> Vector2i:
+func _founding_anchor_from_center(center: Vector2i) -> Vector2i:
 	var footprint := Defs.building_footprint(Defs.BUILDING_TOWN_HALL)
-	return anchor + Vector2i(int((footprint.x - 1) / 2), int((footprint.y - 1) / 2))
+	var half := Vector2i(footprint.x / 2, footprint.y / 2)
+	return Vector2i(
+		clampi(center.x - half.x, 4, map_size.x - footprint.x - 2),
+		clampi(center.y - half.y, 4, map_size.y - footprint.y - 2)
+	)
+
+
+func _founding_footprint_center(anchor: Vector2i) -> Vector2i:
+	return _footprint_center(anchor, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
 
 
 func _founding_footprint_stable(anchor: Vector2i) -> bool:
