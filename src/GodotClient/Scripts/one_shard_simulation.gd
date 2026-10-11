@@ -3857,29 +3857,41 @@ func _ensure_founding_food(center: Vector2i) -> void:
 	founding_site["food_tiles"] = food_tiles
 
 
+func _in_founding_hall_footprint(tile: Vector2i) -> bool:
+	var footprint := Defs.building_footprint(Defs.BUILDING_TOWN_HALL)
+	return (
+		tile.x >= town_hall_position.x and tile.x < town_hall_position.x + footprint.x
+		and tile.y >= town_hall_position.y and tile.y < town_hall_position.y + footprint.y
+	)
+
+
 func _place_founding_wyrd_traces(center: Vector2i) -> void:
-	# Glowing shard-crystal crumbs and scorched tiles that point at the crater.
+	# The Director: keep the crater readable from the opening camera.
+	# OPENING_ZOOM 32 only frames ~8 tiles behind the hall, so the
+	# crystal trail has to start just past the back wall, not at 11–13.
 	var crater_dir := crater_direction_from(center)
 	founding_site["crater_dir"] = crater_dir
 	var traces: Array[Vector2i] = []
-	for dist in [7, 9, 11, 13]:
+	var entrance := _town_hall_entrance_tile()
+	for dist in [4, 5, 7, 9]:
 		var tile := center + Vector2i(roundi(crater_dir.x * float(dist)), roundi(crater_dir.y * float(dist)))
 		tile.x = clampi(tile.x, 1, map_size.x - 2)
 		tile.y = clampi(tile.y, 1, map_size.y - 2)
-		if not is_inside_map(tile) or _in_founding_clearing(tile) or is_founding_creek_tile(tile):
+		if not is_inside_map(tile) or is_founding_creek_tile(tile):
 			continue
-		if tile == shard_position:
+		if tile == shard_position or get_tile(tile) == Defs.TILE_SHARD:
 			continue
-		if get_tile(tile) == Defs.TILE_SHARD:
+		if _in_founding_hall_footprint(tile) or _tile_distance(tile, entrance) <= 1.6:
 			continue
-		if get_tile(tile) == Defs.TILE_TREE:
+		if get_tile(tile) == Defs.TILE_TREE or get_tile(tile) == Defs.TILE_ROCK:
 			_set_tile(tile, Defs.TILE_GRASS)
 			tree_deposits.erase(_tile_key(tile))
+			rock_deposits.erase(_tile_key(tile))
 		if not traces.has(tile):
 			traces.append(tile)
 	if traces.is_empty():
-		var fallback := center + Vector2i(roundi(crater_dir.x * 8.0), roundi(crater_dir.y * 8.0))
-		if is_inside_map(fallback) and fallback != shard_position:
+		var fallback := center + Vector2i(roundi(crater_dir.x * 5.0), roundi(crater_dir.y * 5.0))
+		if is_inside_map(fallback) and fallback != shard_position and not _in_founding_hall_footprint(fallback):
 			traces.append(fallback)
 	founding_site["wyrd_tiles"] = traces
 
@@ -4505,6 +4517,14 @@ func _reveal_from_world() -> void:
 		_reveal_radius(town_center, INITIAL_REVEAL_RADIUS)
 		return
 	_reveal_radius(town_center, building_vision_radius(Defs.BUILDING_TOWN_HALL))
+	# Settlers live inside the bowl: keep the Shard and the crater
+	# corridor visible from the first camera so the horizon reads.
+	_reveal_radius(shard_position, 7)
+	var crater_dir := crater_direction_from(town_center)
+	for step in [6, 10, 14]:
+		var along := town_center + Vector2i(roundi(crater_dir.x * float(step)), roundi(crater_dir.y * float(step)))
+		if is_inside_map(along):
+			_reveal_radius(along, 4)
 	for building in buildings:
 		if bool(building.get("construction", false)):
 			continue

@@ -3489,6 +3489,8 @@ func _rebuild_opening_dressing() -> void:
 				continue
 			if _opening_faces_build_sector(tile, hall):
 				continue
+			if _opening_faces_crater(tile, hall):
+				continue
 			var dist := Vector2(float(ox), float(oy)).length()
 			if dist < inner or dist > outer:
 				continue
@@ -3522,6 +3524,8 @@ func _rebuild_opening_dressing() -> void:
 		if fringe > inner + 1.35 or fringe < inner:
 			continue
 		if _opening_faces_build_sector(tile, hall):
+			continue
+		if _opening_faces_crater(tile, hall):
 			continue
 		if _tile_hash(tile, 103) % 5 != 0:
 			continue
@@ -3601,13 +3605,30 @@ func _opening_faces_build_sector(tile: Vector2i, hall: Vector2i) -> bool:
 	return dir.normalized().dot(open_dir.normalized()) > 0.28
 
 
+func _opening_faces_crater(tile: Vector2i, hall: Vector2i) -> bool:
+	# Leave a sight-line toward the Shard so the opening camera sees
+	# wyrd crystals, scorched ground, and the crater rim.
+	if simulation == null or not (simulation.founding_site is Dictionary):
+		return false
+	var crater_dir := Vector2(simulation.founding_site.get("crater_dir", Vector2(0.0, -1.0)))
+	if crater_dir.length_squared() < 0.01:
+		crater_dir = Vector2(0.0, -1.0)
+	var dir := Vector2(tile - hall)
+	if dir.length_squared() < 0.01:
+		return false
+	return dir.normalized().dot(crater_dir.normalized()) > 0.32
+
+
 func _opening_forest_score(tile: Vector2i, hall: Vector2i) -> float:
 	# Camera looks from +Y. Prefer the back (-Y) and west (-X) so the
 	# opening meadow stays readable and the forest frames 40–55%.
+	# Do not score the crater corridor: that arc has to stay open.
 	var d := tile - hall
 	var score := -float(d.y) * 1.35 - float(d.x) * 0.40 + float(_tile_hash(tile, 3) % 7) * 0.08
 	if _opening_faces_build_sector(tile, hall):
 		score -= 6.0
+	if _opening_faces_crater(tile, hall):
+		score -= 8.0
 	return score
 
 
@@ -3648,9 +3669,9 @@ func opening_camera_focus() -> Vector3:
 		creek_side = float(simulation.founding_site.get("creek_side", -1))
 		crater_dir = Vector2(simulation.founding_site.get("crater_dir", crater_dir))
 	return center + Vector3(
-		creek_side * 0.14 * w + crater_dir.x * 0.20 * w + open_dir.x * 0.08 * w,
+		creek_side * 0.10 * w + crater_dir.x * 0.62 * w + open_dir.x * 0.05 * w,
 		0.0,
-		0.42 * w + crater_dir.y * 0.16 * w
+		0.28 * w + crater_dir.y * 0.48 * w
 	)
 
 
@@ -3725,7 +3746,7 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 	var trees: Dictionary = {}
 	for tree_i in 7:
 		var tree_tile: Vector2i = hall + Vector2i(2 + (tree_i % 4), -2 - int(tree_i / 3))
-		if _in_founding_yard(tree_tile):
+		if _in_founding_yard(tree_tile) or _opening_faces_crater(tree_tile, hall):
 			continue
 		if simulation.is_inside_map(tree_tile):
 			_append_nature_transform(trees, _tree_path_for_tile(tree_tile, 0, 3), tree_tile, tree_i, 0.70, 1.00, 0.38)
@@ -3758,31 +3779,52 @@ func _spawn_kaykit_ridge_rock(ridge: Node3D, tile: Vector2i, index: int, scale_m
 	ridge.add_child(prop)
 
 
-func _spawn_founding_crater_traces(ridge: Node3D, _hall: Vector2i) -> void:
-	# Reuse the shard-crystal language so the opening points at the crater.
+func _spawn_founding_crater_traces(ridge: Node3D, hall: Vector2i) -> void:
+	# The Director: reuse ShardBeacon glass so the opening camera can
+	# read the crater direction without leaving the founding meadow.
 	if simulation == null or not (simulation.founding_site is Dictionary):
 		return
 	var glass := StandardMaterial3D.new()
-	glass.albedo_color = Color(0.38, 0.78, 0.88, 0.80)
+	glass.albedo_color = Color(0.42, 0.82, 0.92, 0.92)
 	glass.emission_enabled = true
-	glass.emission = Color("#3b8fbd")
-	glass.emission_energy_multiplier = 2.2
-	glass.roughness = 0.18
-	glass.metallic = 0.12
+	glass.emission = Color("#5ec8e0")
+	glass.emission_energy_multiplier = 3.4
+	glass.roughness = 0.14
+	glass.metallic = 0.16
 	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	var scorched := _ridge_material(Color("#2A3644"), 0.94)
+	var tinted := _ridge_material(Color("#3A5A58"), 0.88)
+	var crater_dir := Vector2(simulation.founding_site.get("crater_dir", Vector2(0.0, -1.0)))
+	if crater_dir.length_squared() < 0.01:
+		crater_dir = Vector2(0.0, -1.0)
+	var hall_world := tile_to_world(Vector2(hall) + Vector2(1.5, 1.5))
+	for step in 5:
+		var along := hall_world + Vector3(crater_dir.x * (6.0 + float(step) * 3.2), 0.0, crater_dir.y * (6.0 + float(step) * 3.2))
+		var wash := MeshInstance3D.new()
+		wash.name = "DressWyrdTrail_%d" % step
+		var wash_mesh := CylinderMesh.new()
+		wash_mesh.top_radius = 2.15 - float(step) * 0.12
+		wash_mesh.bottom_radius = 2.55 - float(step) * 0.12
+		wash_mesh.height = 0.08
+		wash.mesh = wash_mesh
+		wash.position = along + Vector3(0.0, 0.02, 0.0)
+		wash.material_override = tinted if step % 2 == 0 else scorched
+		wash.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		ridge.add_child(wash)
 	var index := 0
+	var last_origin := hall_world
 	for tile_value in simulation.founding_site.get("wyrd_tiles", []):
 		var tile := Vector2i(tile_value)
 		if not simulation.is_inside_map(tile):
 			continue
 		var origin := tile_to_world(Vector2(tile))
+		last_origin = origin
 		var stain := MeshInstance3D.new()
 		stain.name = "DressWyrdScar_%d" % index
 		var stain_mesh := CylinderMesh.new()
-		stain_mesh.top_radius = 1.25
-		stain_mesh.bottom_radius = 1.55
-		stain_mesh.height = 0.10
+		stain_mesh.top_radius = 1.85
+		stain_mesh.bottom_radius = 2.25
+		stain_mesh.height = 0.12
 		stain.mesh = stain_mesh
 		stain.position = origin + Vector3(0.0, 0.03, 0.0)
 		stain.material_override = scorched
@@ -3791,21 +3833,40 @@ func _spawn_founding_crater_traces(ridge: Node3D, _hall: Vector2i) -> void:
 		var crystal := MeshInstance3D.new()
 		crystal.name = "DressWyrdTrace_%d" % index
 		var prism := PrismMesh.new()
-		prism.size = Vector3(0.85 + float(index % 3) * 0.18, 2.55 + float(index) * 0.45, 0.68)
+		prism.size = Vector3(1.15 + float(index % 3) * 0.22, 4.20 + float(index) * 0.55, 0.92)
 		crystal.mesh = prism
-		crystal.position = origin + Vector3(0.0, 1.35 + float(index) * 0.18, 0.0)
+		crystal.position = origin + Vector3(0.0, 2.15 + float(index) * 0.22, 0.0)
 		crystal.rotation_degrees = Vector3(8.0, float(index) * 28.0, 176.0)
 		crystal.material_override = glass
 		ridge.add_child(crystal)
 		var glow := OmniLight3D.new()
 		glow.name = "DressWyrdGlow_%d" % index
 		glow.light_color = Color("#7ad7ea")
-		glow.light_energy = 1.35
-		glow.omni_range = 8.5
+		glow.light_energy = 2.15
+		glow.omni_range = 11.0
 		glow.shadow_enabled = false
-		glow.position = origin + Vector3(0.0, 1.1, 0.0)
+		glow.position = origin + Vector3(0.0, 1.6, 0.0)
 		ridge.add_child(glow)
 		index += 1
+	if index > 0:
+		var horizon := MeshInstance3D.new()
+		horizon.name = "DressWyrdHorizon"
+		var column := CylinderMesh.new()
+		column.top_radius = 0.10
+		column.bottom_radius = 0.42
+		column.height = 14.0
+		horizon.mesh = column
+		horizon.position = last_origin + Vector3(0.0, 8.2, 0.0)
+		var column_mat := StandardMaterial3D.new()
+		column_mat.albedo_color = Color(0.40, 0.82, 0.94, 0.28)
+		column_mat.emission_enabled = true
+		column_mat.emission = Color("#5ec8e0")
+		column_mat.emission_energy_multiplier = 2.4
+		column_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		column_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		horizon.material_override = column_mat
+		horizon.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		ridge.add_child(horizon)
 	ridge.set_meta("wyrd_traces", index)
 
 

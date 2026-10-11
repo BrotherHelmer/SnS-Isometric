@@ -77,9 +77,10 @@ func _run() -> void:
 	_check(bool(audit.get("water_near", false)) and bool(audit.get("tree_near", false)), "water and wood are close")
 	_check(bool(audit.get("rock_near", false)) and bool(audit.get("food_near", false)), "stone and food are close")
 	_check(bool(audit.get("wyrd_marker", false)), "a wyrd or crater marker points from the start")
-	print("T_FIRST_SCREEN crater_compass=%s dist=%.1f hall=%s shard=%s" % [
+	print("T_FIRST_SCREEN crater_compass=%s dist=%.1f hall=%s shard=%s dir=%s" % [
 		String(audit.get("crater_compass", "")), float(audit.get("crater_dist", -1.0)),
-		str(audit.get("hall", Vector2i.ZERO)), str(audit.get("shard", Vector2i.ZERO))
+		str(audit.get("hall", Vector2i.ZERO)), str(audit.get("shard", Vector2i.ZERO)),
+		str(audit.get("crater_dir", Vector2.ZERO))
 	])
 	var hall_view = null
 	for view in game.world_view.building_views.values():
@@ -93,6 +94,8 @@ func _run() -> void:
 	var dress: Node = game.world_view.resource_visuals_root.get_node_or_null("OpeningDress")
 	_check(dress != null and float(dress.get_meta("opening_yard_cells", 0.0)) >= 7.0, "opening dress records the 6–8 tile yard")
 	_check(dress != null and int(dress.get_meta("hamlet_cottages", 0)) == 0, "opening dress plants no cottages")
+	_check(dress != null and dress.find_child("DressWyrdTrace_0", true, false) != null, "opening shows a wyrd crystal toward the crater")
+	_check(dress != null and dress.find_child("DressWyrdTrail_0", true, false) != null, "opening shows scorched ground toward the crater")
 	var fake: Array[String] = game.world_view.non_inspectable_building_meshes(16.0)
 	var fake_map: Array[String] = game.world_view.non_inspectable_building_meshes(-1.0)
 	print("T_FIRST_SCREEN dress_buildings_start=%s map=%s" % [str(fake), str(fake_map)])

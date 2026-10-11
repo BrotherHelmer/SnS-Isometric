@@ -2,7 +2,9 @@ extends SceneTree
 
 ## 100-seed founding-site gate. Every new game must have one real Town Hall,
 ## no fake buildings, an irregular clearing, reachable wood/stone/food,
-## bridges that cross the creek, and a Lumber Camp quest.
+## bridges that cross the creek, and a Lumber Camp quest. Lore: the start
+## sits inside the crater on flat land, with water/trees/stone/food within
+## FOUNDING_RESOURCE_NEAR tiles and a visible wyrd/crater marker.
 
 const Simulation = preload("res://src/GodotClient/Scripts/one_shard_simulation.gd")
 const Scene = preload("res://src/GodotClient3D/Scenes/production_3d.tscn")
@@ -33,19 +35,23 @@ func _run() -> void:
 		var ok := _check_audit(audit, seed_value)
 		if ok:
 			passed += 1
-		rows.append("%d\t%d\t%d\t%d\t%.1f\t%.1f\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%.1f\t%.1f\t%s\t%s\t%s\t%s\t%s\t%s" % [
+		var row := "%d\t%d\t%d\t%d\t%.1f\t%.1f" % [
 			seed_value,
 			int(audit.get("functional_buildings", -1)),
 			int(audit.get("fake_buildings", -1)),
 			int(audit.get("clearing_trees", -1)),
 			float(audit.get("clearing_rx", 0.0)),
 			float(audit.get("clearing_ry", 0.0)),
+		]
+		row += "\t%s\t%s\t%s\t%s\t%s\t%s" % [
 			str(audit.get("tree_reachable", false)),
 			str(audit.get("rock_reachable", false)),
 			str(audit.get("food_reachable", false)),
 			str(audit.get("bridges_cross", false)),
 			str(audit.get("quest_target", false)),
 			str(audit.get("inside_crater", false)),
+		]
+		row += "\t%.1f\t%.1f\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % [
 			float(audit.get("crater_dist", -1.0)),
 			float(audit.get("slope", -1.0)),
 			str(audit.get("water_near", false)),
@@ -55,7 +61,8 @@ func _run() -> void:
 			str(audit.get("wyrd_marker", false)),
 			String(audit.get("crater_compass", "")),
 			"PASS" if ok else "FAIL",
-		])
+		]
+		rows.append(row)
 	var sim_ms := float(Time.get_ticks_msec() - t0)
 	print("T_FOUNDING_SEEDS sim_pass=%d/%d sim_ms=%.0f" % [passed, SEED_COUNT, sim_ms])
 
@@ -85,10 +92,12 @@ func _run() -> void:
 		var dress: Node = game.world_view.resource_visuals_root.get_node_or_null("OpeningDress")
 		var traces: Node = dress.find_child("DressWyrdTrace_0", true, false) if dress != null else null
 		var beacon: Node = game.world_view.shard_beacon
-		_check(traces != null or beacon != null, "seed %d has a visible wyrd/crater marker" % seed_value)
-		print("T_FOUNDING_SEEDS crater_seed=%d compass=%s dist=%.1f hall=%s shard=%s" % [
+		_check(traces != null, "seed %d has a DressWyrdTrace visible from the start" % seed_value)
+		_check(beacon != null, "seed %d still has the ShardBeacon toward the crater" % seed_value)
+		print("T_FOUNDING_SEEDS crater_seed=%d compass=%s dist=%.1f hall=%s shard=%s dir=%s" % [
 			seed_value, String(audit.get("crater_compass", "")), float(audit.get("crater_dist", -1.0)),
-			str(audit.get("hall", Vector2i.ZERO)), str(audit.get("shard", Vector2i.ZERO))
+			str(audit.get("hall", Vector2i.ZERO)), str(audit.get("shard", Vector2i.ZERO)),
+			str(audit.get("crater_dir", Vector2.ZERO))
 		])
 
 	var report := dest.path_join("founding_seeds.txt")
