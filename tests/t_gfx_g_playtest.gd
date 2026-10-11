@@ -73,7 +73,7 @@ func _run() -> void:
 	home = game.world_view.tile_to_world(Vector2(sim.town_hall_position) + Vector2(1.5, 1.5))
 	game.camera_rig.compose_view(home, CameraRig.NORMAL_ZOOM)
 	var dress: Node = game.world_view.resource_visuals_root.get_node_or_null("OpeningDress")
-	_check(dress != null and int(dress.get_meta("hamlet_cottages", 0)) >= 3, "opening is a presentation hamlet")
+	_check(dress != null and int(dress.get_meta("hamlet_cottages", 0)) == 0, "opening has no dress cottages")
 	await _sample(game, dest, "opening_day", "opening hamlet at the closer default zoom")
 
 	var guard := _ensure_patrol_guard(sim)

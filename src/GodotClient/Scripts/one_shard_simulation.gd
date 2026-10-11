@@ -580,37 +580,11 @@ func _finish_founding_setup() -> void:
 	_spawn_founding_yard_props(_town_hall_entrance_tile())
 
 
-func _spawn_founding_yard_props(entrance: Vector2i) -> void:
+func _spawn_founding_yard_props(_entrance: Vector2i) -> void:
+	# Start with a bare keep yard. Wood stacks and crates read as
+	# industry the player does not own yet. Showcase stamps real
+	# inspectable buildings when a dressed village is needed.
 	decorative_props.clear()
-	var next_prop_id := 1
-	var prop_placements := [
-		{"type": "wood_stack", "offset": Vector2i(-2, -1), "rotation": 0.0, "scale": 1.1},
-		{"type": "wood_stack", "offset": Vector2i(2, -1), "rotation": 45.0, "scale": 0.9},
-		{"type": "wood_stack", "offset": Vector2i(-1, 2), "rotation": -30.0, "scale": 1.0},
-		{"type": "wood_stack", "offset": Vector2i(1, -2), "rotation": 60.0, "scale": 0.95},
-		{"type": "stone_stack", "offset": Vector2i(-3, 0), "rotation": 0.0, "scale": 1.0},
-		{"type": "stone_stack", "offset": Vector2i(3, 0), "rotation": 30.0, "scale": 0.85},
-		{"type": "stone_stack", "offset": Vector2i(1, 3), "rotation": -15.0, "scale": 0.95},
-		{"type": "barrel", "offset": Vector2i(-2, 1), "rotation": 0.0, "scale": 1.0},
-		{"type": "crate", "offset": Vector2i(2, 1), "rotation": 15.0, "scale": 1.0},
-		{"type": "barrel", "offset": Vector2i(-3, 3), "rotation": 0.0, "scale": 1.0},
-		{"type": "crate", "offset": Vector2i(3, 3), "rotation": -20.0, "scale": 0.95},
-		{"type": "crate", "offset": Vector2i(-1, -1), "rotation": 45.0, "scale": 0.9},
-		{"type": "barrel", "offset": Vector2i(0, 2), "rotation": 0.0, "scale": 1.05},
-		{"type": "long_crate", "offset": Vector2i(-3, -2), "rotation": -45.0, "scale": 0.9},
-		{"type": "crate", "offset": Vector2i(2, 3), "rotation": 30.0, "scale": 0.85},
-	]
-	for placement in prop_placements:
-		var prop_tile: Vector2i = entrance + Vector2i(placement["offset"])
-		if is_inside_map(prop_tile) and String(get_tile(prop_tile)) == Defs.TILE_GRASS and get_building_at_tile(prop_tile).is_empty():
-			decorative_props.append({
-				"id": next_prop_id,
-				"type": String(placement["type"]),
-				"position": prop_tile,
-				"rotation": float(placement["rotation"]),
-				"scale": float(placement["scale"])
-			})
-			next_prop_id += 1
 
 
 func advance_tick() -> void:

@@ -1,10 +1,10 @@
 class_name ProductionGfxDShowcase
 extends RefCounted
 
-## Deterministic GFX-D benchmark village. Presentation only — stamps
-## completed buildings onto DEFAULT_SEED so concept comparisons share
-## the same camera, lighting and landscape. Does not change campaign
-## saves or gameplay rules.
+## Deterministic GFX-D benchmark village. Stamps completed, inspectable
+## simulation buildings onto DEFAULT_SEED so concept comparisons share
+## the same camera, lighting and landscape. Does not spawn dress
+## cottages. Does not change campaign saves or gameplay rules.
 
 const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
 

@@ -65,6 +65,12 @@ func _run() -> void:
 	_check(int(blockers.get("rocks", 1)) == 0, "no rocks inside the 8-tile Town Hall yard")
 	var dress: Node = game.world_view.resource_visuals_root.get_node_or_null("OpeningDress")
 	_check(dress != null and float(dress.get_meta("opening_yard_cells", 0.0)) >= 7.0, "opening dress records the 6–8 tile yard")
+	_check(dress != null and int(dress.get_meta("hamlet_cottages", 0)) == 0, "opening dress plants no cottages")
+	var fake: Array[String] = game.world_view.non_inspectable_building_meshes(16.0)
+	var fake_map: Array[String] = game.world_view.non_inspectable_building_meshes(-1.0)
+	print("T_FIRST_SCREEN dress_buildings_start=%s map=%s" % [str(fake), str(fake_map)])
+	_check(fake.is_empty(), "start area has 0 non-inspectable building meshes")
+	_check(fake_map.is_empty(), "map has 0 non-inspectable building meshes")
 
 	_check(game.placement_type == "", "no placement tool armed at start")
 	_check(game.placement_panel == null or not game.placement_panel.visible, "placement hint is hidden at start")

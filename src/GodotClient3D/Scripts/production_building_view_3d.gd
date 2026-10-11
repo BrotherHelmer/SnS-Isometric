@@ -374,7 +374,6 @@ func _create_workyard() -> void:
 	match building_type:
 		"TOWN_HALL", "CASTLE":
 			_add_prop("lantern", Vector3(2.15, 0.0, 1.65), Vector3.ONE, "FoundingLantern")
-			_add_prop("fence", Vector3(-2.6, 0.0, -1.8), Vector3.ONE, "FoundingFence")
 			_add_prop("cart", Vector3(2.55, 0.0, -0.8), Vector3.ONE * 0.7, "FoundingCart")
 			# Existing civic supplies stay inside the hall's yard and do not add
 			# occupancy, resources or new buildings to the simulation.

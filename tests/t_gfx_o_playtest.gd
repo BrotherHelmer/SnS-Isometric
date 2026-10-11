@@ -49,7 +49,7 @@ func _run() -> void:
 	var home: Vector3 = game.world_view.opening_camera_focus()
 	game.camera_rig.compose_view(home, CameraRig.NORMAL_ZOOM)
 	var dress: Node = game.world_view.resource_visuals_root.get_node_or_null("OpeningDress")
-	_check(dress != null and int(dress.get_meta("hamlet_cottages", 0)) >= 3, "opening is a presentation hamlet")
+	_check(dress != null and int(dress.get_meta("hamlet_cottages", 0)) == 0, "opening has no dress cottages")
 	_check(dress != null and dress.find_child("DressRidge", true, false) != null, "opening ridge is dressed")
 	_check(dress != null and dress.find_child("DressCreek", true, false) != null, "opening creek is dressed")
 	_check(dress != null and float(dress.get_meta("opening_clearing_cells", 0.0)) >= 10.5, "opening clearing is 2.5–3W")

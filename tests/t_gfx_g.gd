@@ -80,10 +80,10 @@ func _check_live_scene() -> void:
 		for child in dress.get_children():
 			if String(child.name).begins_with("Dress_HOUSE") or String(child.name).begins_with("Dress_BAKERY"):
 				cottages = maxi(cottages, 1)
-	_check(int(dress.get_meta("hamlet_cottages", 0)) >= 3, "opening dresses at least three cottages")
-	_check(dress.find_child("DressWellBarrel", true, false) != null, "opening has a well")
-	_check(dress.find_child("DressCart", true, false) != null, "opening has a cart")
-	_check(dress.find_child("DressWoodNorth", true, false) != null or dress.find_child("DressWoodSouth", true, false) != null, "opening has stacked wood")
+	_check(int(dress.get_meta("hamlet_cottages", 0)) == 0, "opening plants no dress cottages")
+	_check(dress.find_child("DressWellBarrel", true, false) == null, "opening no longer dresses a well")
+	_check(dress.find_child("DressCart", true, false) == null, "opening no longer dresses a cart")
+	_check(dress.find_child("DressWoodNorth", true, false) == null and dress.find_child("DressWoodSouth", true, false) == null, "opening no longer dresses stacked wood")
 	if game.world_view.terrain_mesh_instance != null and game.world_view.terrain_mesh_instance.material_override is ShaderMaterial:
 		var ground := game.world_view.terrain_mesh_instance.material_override as ShaderMaterial
 		var lush: Vector3 = ground.get_shader_parameter("meadow_lush")
@@ -114,7 +114,7 @@ func _sim_night_check(game) -> void:
 	var dress: Node = game.world_view.resource_visuals_root.get_node_or_null("OpeningDress")
 	if dress != null:
 		var window: OmniLight3D = dress.find_child("DressWindow", true, false) as OmniLight3D
-		_check(window != null and window.visible, "hamlet windows glow at night")
+		_check(window == null, "dress cottages no longer glow because they are gone")
 
 
 func _check(ok: bool, message: String) -> void:

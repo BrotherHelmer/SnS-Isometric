@@ -138,8 +138,9 @@ func _check_live_scene() -> void:
 		_check(dress.find_child("DressCreek", true, false) != null, "opening has a creek")
 		_check(dress.find_child("RidgeFormation", true, false) != null, "opening has one back rock formation")
 		_check(dress.find_child("DressCoastEdge", true, false) != null, "opening has a west water edge")
-		_check(dress.find_child("DressCartWest", true, false) != null, "opening gained a second cart")
-		_check(dress.find_child("DressLongCrate", true, false) != null, "opening gained extra crates")
+		_check(int(dress.get_meta("hamlet_cottages", 0)) == 0, "opening plants no dress cottages")
+		_check(dress.find_child("DressCartWest", true, false) == null, "opening no longer dresses a second cart")
+		_check(dress.find_child("DressLongCrate", true, false) == null, "opening no longer dresses extra crates")
 	var creek: Node = dress.find_child("DressCreek", true, false) if dress != null else null
 	if creek is MeshInstance3D:
 		var water_mat := (creek as MeshInstance3D).material_override as StandardMaterial3D

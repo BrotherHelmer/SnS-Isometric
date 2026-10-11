@@ -80,7 +80,7 @@ func _check_live_scene() -> void:
 	_check(bool(fog_cfg.get("terrain_under_shroud", false)), "terrain continues under the shroud")
 	_check(bool(fog_cfg.get("screen_composited", false)), "K screen shroud is kept")
 	var dress: Node = game.world_view.resource_visuals_root.get_node_or_null("OpeningDress")
-	_check(dress != null and int(dress.get_meta("hamlet_cottages", 0)) >= 3, "opening still dresses cottages")
+	_check(dress != null and int(dress.get_meta("hamlet_cottages", 0)) == 0, "opening plants no dress cottages")
 	var ridge: Node = dress.find_child("DressRidge", true, false) if dress != null else null
 	_check(ridge != null, "opening has a ridge landmark")
 	var creek: Node = dress.find_child("DressCreek", true, false) if dress != null else null

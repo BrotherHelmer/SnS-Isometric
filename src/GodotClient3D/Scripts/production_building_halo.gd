@@ -82,9 +82,6 @@ const TABLE := {
 		{"prop": "crate", "dx": -1, "dy": 1, "yaw": 8.0, "scale": 1.00},
 		{"prop": "lantern", "dx": 1, "dy": -1, "yaw": 0.0, "scale": 1.00},
 		{"prop": "crate", "dx": 2, "dy": -1, "yaw": 4.0, "scale": 0.95},
-		{"prop": "wood_stack", "dx": -1, "dy": 3, "yaw": 6.0, "scale": 0.82},
-		{"prop": "fence", "dx": 4, "dy": -1, "yaw": 0.0, "scale": 1.0},
-		{"prop": "fence", "dx": 5, "dy": -1, "yaw": 0.0, "scale": 1.0},
 	],
 	"CASTLE": [
 		{"prop": "weaponrack", "dx": -1, "dy": 1, "yaw": 90.0, "scale": 0.95},

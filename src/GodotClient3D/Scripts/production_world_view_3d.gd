@@ -38,6 +38,11 @@ const FOG_VISIBLE := 0
 const FOG_EXPLORED := 115
 const FOG_UNEXPLORED := 255
 const GROUND_PATCH_CHUNK_METRES := 40.0
+const DRESS_BUILDING_KINDS := [
+	"HOUSE", "BAKERY", "FARM", "LUMBER_CAMP", "SAWMILL", "QUARRY",
+	"STOREHOUSE", "WATCHTOWER", "BARRACKS", "TOWN_HALL", "CASTLE",
+	"WALL", "LUMEN_PILLAR", "CLAIMANT_OUTPOST", "ENEMY_CAMP"
+]
 
 var simulation
 var map_size := Vector2i.ZERO
@@ -1736,6 +1741,40 @@ func founding_yard_blockers(radius := 8.0) -> Dictionary:
 	return {"trees": trees, "rocks": rocks, "radius": radius, "tree_tiles": tree_tiles}
 
 
+func non_inspectable_building_meshes(radius_tiles := 16.0) -> Array[String]:
+	# Dress cottage / fake-building meshes that are not BuildingView
+	# nodes. radius_tiles < 0 scans the whole map.
+	var names: Array[String] = []
+	if resource_visuals_root == null:
+		return names
+	var hall := Vector2i.ZERO
+	var has_hall := simulation != null and simulation.is_town_hall_founded()
+	if has_hall:
+		hall = simulation.town_hall_position
+	_collect_non_inspectable_buildings(resource_visuals_root, hall, radius_tiles, has_hall, names)
+	return names
+
+
+func _is_dress_building_name(label: String) -> bool:
+	for kind in DRESS_BUILDING_KINDS:
+		if label.begins_with("Dress_%s" % kind):
+			return true
+	return false
+
+
+func _collect_non_inspectable_buildings(node: Node, hall: Vector2i, radius_tiles: float, has_hall: bool, names: Array[String]) -> void:
+	var label := String(node.name)
+	if _is_dress_building_name(label):
+		var include := radius_tiles < 0.0 or not has_hall
+		if not include and node is Node3D:
+			var tile := world_to_tile((node as Node3D).global_position)
+			include = Vector2(tile).distance_to(Vector2(hall)) <= radius_tiles
+		if include:
+			names.append(label)
+	for child in node.get_children():
+		_collect_non_inspectable_buildings(child, hall, radius_tiles, has_hall, names)
+
+
 func _nature_suppressed_near_activity(tile: Vector2i) -> bool:
 	if _in_founding_yard(tile, 8.0):
 		return true
@@ -3370,9 +3409,9 @@ func _edge_tree_path(x: int, y: int, ring: int) -> String:
 
 
 func _rebuild_opening_dressing() -> void:
-	# Presentation-only opening hamlet. Cottages, fences, a well, carts
-	# and stacked wood are camera dressing — they do not consume
-	# TILE_GRASS or change simulation placement / economy.
+	# Opening landscape only: forest frame, ridge, creek and coast.
+	# No dress cottages or building-like props. Anything that looks
+	# like a building must be a real, inspectable sim building.
 	if simulation == null or resource_visuals_root == null:
 		return
 	if not simulation.is_town_hall_founded():
@@ -3450,14 +3489,9 @@ func _rebuild_opening_dressing() -> void:
 
 
 func _opening_hamlet_spec() -> Array:
-	# Four cottages + one shed. Anchors sit outside the hall's 4×4.
-	return [
-		{"kind": "HOUSE", "ox": -3, "oy": 0, "yaw": 90.0, "w": 2, "h": 2},
-		{"kind": "HOUSE", "ox": 5, "oy": 1, "yaw": 0.0, "w": 2, "h": 2},
-		{"kind": "HOUSE", "ox": 1, "oy": -3, "yaw": 180.0, "w": 2, "h": 2},
-		{"kind": "HOUSE", "ox": -2, "oy": 5, "yaw": 0.0, "w": 2, "h": 2},
-		{"kind": "BAKERY", "ox": 5, "oy": 4, "yaw": -15.0, "w": 3, "h": 3},
-	]
+	# Empty on purpose. Dress cottages read as real buildings while
+	# HUD Buildings stays 1. Showcase stamps inspectable houses instead.
+	return []
 
 
 func _opening_hamlet_tiles(hall: Vector2i) -> Dictionary:
@@ -3467,8 +3501,6 @@ func _opening_hamlet_tiles(hall: Vector2i) -> Dictionary:
 		for oy in range(int(spec["h"])):
 			for ox in range(int(spec["w"])):
 				reserved[_tile_key(hall + Vector2i(int(spec["ox"]) + ox, int(spec["oy"]) + oy))] = true
-	for pad in [Vector2i(-1, -2), Vector2i(4, -1), Vector2i(-1, 4), Vector2i(2, 5)]:
-		reserved[_tile_key(hall + pad)] = true
 	for spec_value in _opening_ridge_tiles(hall):
 		reserved[_tile_key(spec_value)] = true
 	return reserved
@@ -3495,42 +3527,12 @@ func _hamlet_path_weight(tile: Vector2i) -> float:
 
 
 func _spawn_opening_hamlet(host: Node3D, hall: Vector2i, reserved: Dictionary) -> void:
-	var cottages := 0
-	for spec_value in _opening_hamlet_spec():
-		var spec: Dictionary = spec_value
-		var tile := hall + Vector2i(int(spec["ox"]), int(spec["oy"]))
-		if not _dress_footprint_free(tile, int(spec["w"]), int(spec["h"])):
-			continue
-		if _spawn_dress_cottage(host, String(spec["kind"]), tile, int(spec["w"]), int(spec["h"]), float(spec["yaw"])):
-			cottages += 1
-	# Well from barrel + stone + fence. No authored well mesh.
-	_spawn_dress_prop(host, "barrel", hall + Vector2i(-1, -2), 0.0, 1.05, "DressWellBarrel")
-	_spawn_dress_prop(host, "stone_stack", hall + Vector2i(-1, -2), 40.0, 0.72, "DressWellStone", Vector3(-0.55, 0.0, 0.35))
-	_spawn_dress_prop(host, "fence", hall + Vector2i(-1, -2), 0.0, 0.85, "DressWellFence", Vector3(0.9, 0.0, 0.0))
-	_spawn_dress_prop(host, "cart", hall + Vector2i(4, -1), -18.0, 0.78, "DressCart")
-	_spawn_dress_prop(host, "wood_stack", hall + Vector2i(2, 5), 12.0, 1.05, "DressWoodNorth")
-	_spawn_dress_prop(host, "wood_stack", hall + Vector2i(1, -3), -8.0, 0.92, "DressWoodSouth", Vector3(1.4, 0.0, -0.6))
-	_spawn_dress_prop(host, "fence", hall + Vector2i(-3, -1), 90.0, 1.0, "DressFenceWestA")
-	_spawn_dress_prop(host, "fence", hall + Vector2i(-3, 1), 90.0, 1.0, "DressFenceWestB")
-	_spawn_dress_prop(host, "fence", hall + Vector2i(5, 0), 0.0, 1.0, "DressFenceEast")
-	_spawn_dress_prop(host, "fence", hall + Vector2i(-4, 3), 90.0, 1.0, "DressFenceWestC")
-	_spawn_dress_prop(host, "fence", hall + Vector2i(6, 3), 0.0, 1.0, "DressFenceEastB")
-	_spawn_dress_prop(host, "barrel", hall + Vector2i(5, 1), 25.0, 0.88, "DressBarrelEast", Vector3(-0.8, 0.0, 1.1))
-	_spawn_dress_prop(host, "stone_stack", hall + Vector2i(4, 3), 12.0, 0.55, "DressCrossroadsStone")
-	_spawn_dress_prop(host, "crate", hall + Vector2i(4, 2), -8.0, 0.72, "DressSignCrate", Vector3(0.4, 0.0, 0.2))
-	_spawn_dress_prop(host, "fence", hall + Vector2i(-2, 3), 0.0, 1.0, "DressFenceNorthA")
-	_spawn_dress_prop(host, "fence", hall + Vector2i(3, 3), 0.0, 1.0, "DressFenceNorthB")
-	_spawn_dress_prop(host, "cart", hall + Vector2i(-2, 4), 22.0, 0.70, "DressCartWest")
-	_spawn_dress_prop(host, "crate", hall + Vector2i(3, 2), 12.0, 0.68, "DressCrateEast")
-	_spawn_dress_prop(host, "long_crate", hall + Vector2i(5, 2), -6.0, 0.70, "DressLongCrate")
-	_spawn_dress_prop(host, "crate", hall + Vector2i(-4, 2), 8.0, 0.65, "DressCrateWest")
-	_spawn_opening_crops(host, hall + Vector2i(3, -4))
+	# Terrain dressing only. Cottages, fences, stacks and carts used
+	# to read as a hamlet the player could not inspect or own.
 	_spawn_dress_pond(host, hall + Vector2i(-5, -3), Vector2(5.4, 3.6), "DressPond")
-	_spawn_dress_prop(host, "stone_stack", hall + Vector2i(-5, -2), 22.0, 0.70, "DressPondStoneA", Vector3(1.6, 0.0, 0.8))
-	_spawn_dress_prop(host, "fence", hall + Vector2i(-6, -4), 0.0, 0.92, "DressPondFence")
 	_spawn_dress_coast(host, hall)
 	_spawn_opening_ridge(host, hall)
-	host.set_meta("hamlet_cottages", cottages)
+	host.set_meta("hamlet_cottages", 0)
 	host.set_meta("hamlet_reserved", reserved.size())
 	host.set_meta("hamlet_pond", 1)
 	host.set_meta("hamlet_ridge", 1)

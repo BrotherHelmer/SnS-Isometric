@@ -152,8 +152,9 @@ func _check_live_scene() -> void:
 			var ridge_col := (formation.material_override as StandardMaterial3D).albedo_color
 			_check(ridge_col.g > ridge_col.r, "ridge formation is grassy, not tan sand")
 		_check(dress.find_child("DressCoastEdge", true, false) != null, "opening has a west water edge")
-		_check(dress.find_child("DressCartWest", true, false) != null, "opening gained a second cart")
-		_check(dress.find_child("DressLongCrate", true, false) != null, "opening gained extra crates")
+		_check(int(dress.get_meta("hamlet_cottages", 0)) == 0, "opening plants no dress cottages")
+		_check(dress.find_child("DressCartWest", true, false) == null, "opening no longer dresses a second cart")
+		_check(dress.find_child("DressLongCrate", true, false) == null, "opening no longer dresses extra crates")
 	var creek: Node = dress.find_child("DressCreek", true, false) if dress != null else null
 	if creek is MeshInstance3D:
 		var water_mat := (creek as MeshInstance3D).material_override as StandardMaterial3D
