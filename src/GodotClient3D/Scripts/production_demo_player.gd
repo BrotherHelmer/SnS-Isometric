@@ -10,8 +10,8 @@ extends RefCounted
 const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
 const Tuning = preload("res://src/GodotClient/Scripts/one_shard_rivalry_tuning.gd")
 
-const MAX_PENDING_ROADS := 6
-const MAX_PENDING_SITES := 5
+const MAX_PENDING_ROADS := 4
+const MAX_PENDING_SITES := 1
 const SITE_RADIUS := 22
 const ROAD_BURST := 2
 

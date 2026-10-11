@@ -159,6 +159,10 @@ func _watch_phase(game, sim) -> void:
 		captured["did_first_night"] = true
 		_note_event(sim, "first_night", "First night began on day %d." % int(sim.day_count))
 		captured["pending_first_night"] = true
+	if bool(sim.raid_active) and not captured.has("did_first_raid"):
+		captured["did_first_raid"] = true
+		_note_event(sim, "first_raid", "Raid active with %d enemies." % int(sim.enemies.size()))
+		captured["pending_first_raid"] = true
 	last_night = night_now
 	if not saw_rival:
 		_maybe_rival(sim)
