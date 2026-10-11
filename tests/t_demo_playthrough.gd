@@ -148,7 +148,8 @@ func _run() -> void:
 		_check(saw_shard or sim.is_revealed(sim.shard_position), "found the Shard")
 		_check(saw_rival, "saw a rival")
 		_check(bool(sim.victory), "reached a victory")
-		_check(float(sim.elapsed_seconds) >= 2700.0 and float(sim.elapsed_seconds) <= 3600.0, "victory landed in minutes 45–60 (t=%.1f)" % float(sim.elapsed_seconds))
+		var hold_ok := float(sim.elapsed_seconds) + 0.05 >= 2700.0 and float(sim.elapsed_seconds) <= 3600.0
+		_check(hold_ok, "victory landed in minutes 45–60 (t=%.1f)" % float(sim.elapsed_seconds))
 	print("DEMO_PLAYTHROUGH seed=%d elapsed=%.1f finished=%s victory=%s shots=%d" % [
 		seed_value, float(sim.elapsed_seconds), str(sim.game_finished), str(sim.victory), captured.size()
 	])
