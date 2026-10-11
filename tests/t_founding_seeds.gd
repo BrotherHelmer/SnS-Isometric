@@ -83,8 +83,8 @@ func _run() -> void:
 		_check(game.objective_button != null and String(game.objective_button.text).contains("Lumber Camp"), "seed %d HUD quest says Lumber Camp" % seed_value)
 		_check(bool(audit.get("inside_crater", false)), "seed %d start is inside the crater" % seed_value)
 		var dress: Node = game.world_view.resource_visuals_root.get_node_or_null("OpeningDress")
-		var traces := dress.find_child("DressWyrdTrace_0", true, false) if dress != null else null
-		var beacon := game.world_view.shard_beacon
+		var traces: Node = dress.find_child("DressWyrdTrace_0", true, false) if dress != null else null
+		var beacon: Node = game.world_view.shard_beacon
 		_check(traces != null or beacon != null, "seed %d has a visible wyrd/crater marker" % seed_value)
 		print("T_FOUNDING_SEEDS crater_seed=%d compass=%s dist=%.1f hall=%s shard=%s" % [
 			seed_value, String(audit.get("crater_compass", "")), float(audit.get("crater_dist", -1.0)),

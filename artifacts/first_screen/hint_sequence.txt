@@ -1,25 +1,17 @@
 t_sec	kind	text
-0.0	quest	A Settlement Begins — Build a Quarry
-5.0	rival	Another realm seeks the Shard
-10.0	quest	A Settlement Begins — Build a Quarry
-10.0	rival	Another realm seeks the Shard
-15.0	quest	A Settlement Begins — Build a Quarry
-15.0	rival	Another realm seeks the Shard
-20.0	quest	A Settlement Begins — Build a Quarry
-20.0	rival	Another realm seeks the Shard
-25.0	quest	A Settlement Begins — Build a Quarry
+0.0	quest	A Settlement Begins — Build a Lumber Camp
 25.0	rival	Another realm seeks the Shard
-30.0	quest	A Settlement Begins — Build a Quarry
+30.0	quest	A Settlement Begins — Build a Lumber Camp
 30.0	rival	Another realm seeks the Shard
-35.0	quest	A Settlement Begins — Build a Quarry
+35.0	quest	A Settlement Begins — Build a Lumber Camp
 35.0	rival	Another realm seeks the Shard
-40.0	quest	A Settlement Begins — Build a Quarry
+40.0	quest	A Settlement Begins — Build a Lumber Camp
 40.0	rival	Another realm seeks the Shard
-45.0	quest	A Settlement Begins — Build a Quarry
+45.0	quest	A Settlement Begins — Build a Lumber Camp
 45.0	rival	Another realm seeks the Shard
-50.0	quest	A Settlement Begins — Build a Quarry
+50.0	quest	A Settlement Begins — Build a Lumber Camp
 50.0	rival	Another realm seeks the Shard
-55.0	quest	A Settlement Begins — Build a Quarry
+55.0	quest	A Settlement Begins — Build a Lumber Camp
 55.0	rival	Another realm seeks the Shard
-60.0	quest	A Settlement Begins — Build a Quarry
+60.0	quest	A Settlement Begins — Build a Lumber Camp
 60.0	rival	Another realm seeks the Shard

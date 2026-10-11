@@ -3780,9 +3780,9 @@ func _spawn_founding_crater_traces(ridge: Node3D, _hall: Vector2i) -> void:
 		var stain := MeshInstance3D.new()
 		stain.name = "DressWyrdScar_%d" % index
 		var stain_mesh := CylinderMesh.new()
-		stain_mesh.top_radius = 0.95
-		stain_mesh.bottom_radius = 1.15
-		stain_mesh.height = 0.08
+		stain_mesh.top_radius = 1.25
+		stain_mesh.bottom_radius = 1.55
+		stain_mesh.height = 0.10
 		stain.mesh = stain_mesh
 		stain.position = origin + Vector3(0.0, 0.03, 0.0)
 		stain.material_override = scorched
@@ -3791,17 +3791,17 @@ func _spawn_founding_crater_traces(ridge: Node3D, _hall: Vector2i) -> void:
 		var crystal := MeshInstance3D.new()
 		crystal.name = "DressWyrdTrace_%d" % index
 		var prism := PrismMesh.new()
-		prism.size = Vector3(0.42 + float(index % 3) * 0.08, 1.15 + float(index % 2) * 0.35, 0.34)
+		prism.size = Vector3(0.85 + float(index % 3) * 0.18, 2.55 + float(index) * 0.45, 0.68)
 		crystal.mesh = prism
-		crystal.position = origin + Vector3(0.0, 0.62, 0.0)
+		crystal.position = origin + Vector3(0.0, 1.35 + float(index) * 0.18, 0.0)
 		crystal.rotation_degrees = Vector3(8.0, float(index) * 28.0, 176.0)
 		crystal.material_override = glass
 		ridge.add_child(crystal)
 		var glow := OmniLight3D.new()
 		glow.name = "DressWyrdGlow_%d" % index
 		glow.light_color = Color("#7ad7ea")
-		glow.light_energy = 0.85
-		glow.omni_range = 5.5
+		glow.light_energy = 1.35
+		glow.omni_range = 8.5
 		glow.shadow_enabled = false
 		glow.position = origin + Vector3(0.0, 1.1, 0.0)
 		ridge.add_child(glow)
