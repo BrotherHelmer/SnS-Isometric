@@ -350,7 +350,9 @@ func _watch_meaningful(sim, thought: Dictionary) -> void:
 		if kind != "" and kind != Defs.BUILDING_ROAD and kind != "ROAD":
 			meaningful = true
 			break
-	if bool(sim.raid_active) and not last_raid_active:
+	if bool(sim.raid_active) or bool(sim.is_night):
+		meaningful = true
+	if sim.crater_war != null and bool(sim.crater_war.ritual_active):
 		meaningful = true
 	last_raid_active = bool(sim.raid_active)
 	if meaningful:

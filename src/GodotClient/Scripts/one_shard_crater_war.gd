@@ -260,7 +260,8 @@ func capture_outpost(structure: Dictionary) -> void:
 		rivalry.capture_structure(int(structure.get("id", 0)), RivalryTuning.PLAYER_REALM)
 	captured_outpost_id = int(structure.get("id", 0))
 	rival_resolution = "capture"
-	capture_at = float(simulation.elapsed_seconds)
+	if capture_at < 0.0:
+		capture_at = float(simulation.elapsed_seconds)
 	rival_interacted = true
 	simulation.central_inventory[Defs.RESOURCE_WOOD] = int(simulation.central_inventory.get(Defs.RESOURCE_WOOD, 0)) + CAPTURE_WOOD
 	simulation.central_inventory[Defs.RESOURCE_STONE] = int(simulation.central_inventory.get(Defs.RESOURCE_STONE, 0)) + CAPTURE_STONE

@@ -117,6 +117,8 @@ func _defend(sim) -> void:
 func _scout(sim) -> void:
 	if scouted and int(sim.day_count) < 3:
 		return
+	if scouted and int(sim.day_count) >= 3 and int(sim.day_count) % 2 == 0:
+		scouted = false
 	if int(sim.soldiers_total) < 1:
 		return
 	if _food(sim) < 4:
@@ -163,11 +165,16 @@ func _pursue_crater_war(sim) -> void:
 			_note(sim, "SURVEY", sim.crater_war.primary_fissure, String(survey.get("message", "")))
 	if sim.crater_war.geologist_surveyed:
 		_extend_roads(sim, sim.crater_war.primary_fissure, 2)
-	if _pending_buildings(sim) >= MAX_PENDING_SITES:
-		return
 	if sim.crater_war.geologist_surveyed and _unlocked(sim, Defs.BUILDING_WYRD_HARVESTER) and _count(sim, Defs.BUILDING_WYRD_HARVESTER) < 1:
 		if _try_build(sim, Defs.BUILDING_WYRD_HARVESTER, sim.crater_war.primary_fissure):
 			return
+	# Corridor Outpost can start while the harvester team is still walking.
+	if not sim.crater_war.route_secured() and _count(sim, Defs.BUILDING_WYRD_HARVESTER) >= 1:
+		if _pending_buildings(sim) <= MAX_PENDING_SITES:
+			if _try_waypoint_outpost(sim):
+				return
+	if _pending_buildings(sim) >= MAX_PENDING_SITES:
+		return
 	if _has_completed(sim, Defs.BUILDING_WYRD_HARVESTER) and _unlocked(sim, Defs.BUILDING_WYRD_REFINER) and _count(sim, Defs.BUILDING_WYRD_REFINER) < 1:
 		if _try_build(sim, Defs.BUILDING_WYRD_REFINER, sim.town_hall_position + Vector2i(9, 4)):
 			return
