@@ -122,8 +122,10 @@ func _check_binding_ritual() -> void:
 	_check(sim.crater_war.rival_resolution == "capture", "capture flips the outpost and pays a reward")
 	_check(int(sim.central_inventory.get(Defs.RESOURCE_WOOD, 0)) >= 8, "capture grants wood")
 	_check(String(sim.last_message).contains("CAPTURED"), "capture copy is visible")
-	sim.elapsed_seconds = CraterWar.RITUAL_EARLIEST_SECONDS
-	_check(sim.crater_war.can_begin(), "Binding is ready at 45:00 with 12 stabilized")
+	_check(sim.crater_war.can_begin(), "Binding is ready once 12 Stabilized is in the store")
+	sim.central_inventory[Defs.RESOURCE_STABILIZED_WYRD] = 11
+	_check(not sim.crater_war.can_begin(), "Binding stays locked below 12 Stabilized")
+	sim.central_inventory[Defs.RESOURCE_STABILIZED_WYRD] = 12
 	var begin: Dictionary = sim.request_begin_binding()
 	_check(bool(begin.get("success", false)), "request_begin_binding starts the crater ritual (%s)" % String(begin.get("message", "")))
 	_check(sim.crater_war.ritual_active, "ritual is active")

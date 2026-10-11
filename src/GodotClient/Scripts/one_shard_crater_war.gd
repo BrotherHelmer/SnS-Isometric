@@ -2,16 +2,16 @@ extends RefCounted
 
 ## The Director: The Crater War vertical slice.
 ## Binding is at the frontier fissure — 12 Stabilized Wyrd plus a 120 s
-## ritual that must be defended. Survival (THE REALM HOLDS) is a milestone,
-## not a win. One rival contests the same fissure; capture, a passage deal,
-## or the rival taking another vent all count as a resolution.
+## ritual that must be defended. The player starts it when the store is
+## ready; there is no clock unlock. Survival (THE REALM HOLDS) is a
+## milestone, not a win. One rival contests the same fissure; capture, a
+## passage deal, or the rival taking another vent all count as a resolution.
 
 const Defs = preload("one_shard_defs.gd")
 const RivalryTuning = preload("one_shard_rivalry_tuning.gd")
 
 const STABILIZED_TO_BIND := 12
 const RITUAL_SECONDS := 120.0
-const RITUAL_EARLIEST_SECONDS := 2700.0
 const HARVEST_INTERVAL := 16.0
 const HARVEST_AMOUNT := 1
 const REFINE_INTERVAL := 10.0
@@ -161,8 +161,6 @@ func harvester_can_sit(tile: Vector2i) -> bool:
 func can_begin() -> bool:
 	if ritual_active or bool(simulation.game_finished):
 		return false
-	if float(simulation.elapsed_seconds) + 0.05 < RITUAL_EARLIEST_SECONDS:
-		return false
 	if stabilized_stock() < STABILIZED_TO_BIND:
 		return false
 	if not simulation._player_has_completed_building(Defs.BUILDING_STOREHOUSE):
@@ -180,8 +178,6 @@ func can_begin() -> bool:
 
 func begin_requirements() -> Dictionary:
 	var missing := PackedStringArray()
-	if float(simulation.elapsed_seconds) + 0.05 < RITUAL_EARLIEST_SECONDS:
-		missing.append("the ritual cannot start before minute 45")
 	if stabilized_stock() < STABILIZED_TO_BIND:
 		missing.append("%d Stabilized Wyrd" % STABILIZED_TO_BIND)
 	if not simulation._player_has_completed_building(Defs.BUILDING_STOREHOUSE):

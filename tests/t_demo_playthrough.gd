@@ -40,6 +40,7 @@ var saw_shard := false
 var saw_storehouse := false
 var saw_capture := false
 var saw_ritual := false
+var first_12_at := -1.0
 var step_index := 0
 var headless := false
 var accept := false
@@ -157,8 +158,9 @@ func _run() -> void:
 		_check(saw_ritual or (sim.crater_war != null and sim.crater_war.ritual_started_at >= 0.0), "defended the Binding ritual")
 		_check(bool(sim.victory), "reached a Binding victory")
 		_check(String(sim.defeat_reason).contains("BOUND"), "victory is Binding, not THE REALM HOLDS")
-		var bind_ok := float(sim.elapsed_seconds) + 0.05 >= 2700.0 and float(sim.elapsed_seconds) <= 3600.0
-		_check(bind_ok, "Binding landed in minutes 45–60 (t=%.1f)" % float(sim.elapsed_seconds))
+		_check(float(sim.elapsed_seconds) <= 3600.0, "Binding landed inside the 60-minute hour (t=%.1f)" % float(sim.elapsed_seconds))
+		if sim.crater_war != null and sim.crater_war.ritual_started_at >= 0.0:
+			_check(sim.crater_war.ritual_started_at + 0.05 < 2700.0, "ritual started when 12 Stabilized was earned, not at 45:00 (t=%.1f)" % sim.crater_war.ritual_started_at)
 		if sim.crater_war != null and sim.crater_war.storehouse_completed_at >= 0.0:
 			_check(sim.crater_war.storehouse_completed_at <= 18.0 * 60.0 + 1.0, "Storehouse completed by minute 18 (t=%.1f)" % sim.crater_war.storehouse_completed_at)
 	print("DEMO_PLAYTHROUGH seed=%d elapsed=%.1f finished=%s victory=%s shots=%d" % [
@@ -285,6 +287,9 @@ func _watch_crater_state(sim) -> void:
 	elif not saw_capture and sim.crater_war.rival_resolution != "":
 		saw_capture = true
 		_note_event(sim, sim.crater_war.rival_resolution, "Rival resolved: %s." % sim.crater_war.rival_resolution)
+	if first_12_at < 0.0 and sim.crater_war.stabilized_stock() >= 12:
+		first_12_at = float(sim.elapsed_seconds)
+		_note_event(sim, "stabilized_12", "Store reached 12 Stabilized Wyrd.")
 	if not saw_ritual and sim.crater_war.ritual_started_at >= 0.0:
 		saw_ritual = true
 		_note_event(sim, "ritual", "BINDING BEGUN — defend the fissure ritual for 120 seconds.")
@@ -454,7 +459,8 @@ func _write_notes(sim, player) -> void:
 			"secondary": str(sim.crater_war.secondary_fissure),
 			"exposure": sim.crater_war.exposure,
 			"stabilized": sim.crater_war.stabilized_stock(),
-			"interacted": sim.crater_war.rival_interacted
+			"interacted": sim.crater_war.rival_interacted,
+			"first_12_at": first_12_at
 		}
 	var notes_name := "notes.json" if seed_value == SEED_DEFAULT else "notes_%d.json" % seed_value
 	var file := FileAccess.open(dest.path_join(notes_name), FileAccess.WRITE)
