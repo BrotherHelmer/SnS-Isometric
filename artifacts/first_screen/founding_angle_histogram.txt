@@ -1,0 +1,12 @@
+sector	label	count	pct
+0	N	11	11.0
+1	NE	12	12.0
+2	E	15	15.0
+3	SE	11	11.0
+4	S	13	13.0
+5	SW	15	15.0
+6	W	12	12.0
+7	NW	11	11.0
+unique_layouts=94
+water_types=lake,pond,river
+max_sector_share=0.150

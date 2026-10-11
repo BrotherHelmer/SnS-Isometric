@@ -1,0 +1,21 @@
+seed	orbit	sector	compass	water	layout	dist	pit
+260821	102.5	2	E	lake	lake_N_E_N_0	18.4	7.5	13946
+260918	229.8	5	SW	pond	pond_S_W_NW_1	17.0	7.3	10602
+261015	10.0	0	N	river	river_NW_SW_SE_1	17.3	9.4	10550
+261112	130.2	2	SE	lake	lake_W_S_NE_0	17.0	9.2	10709
+261209	266.8	5	W	pond	pond_SE_NE_S_-1	18.0	9.0	10109
+261306	45.0	1	NE	river	river_W_N_SE_0	17.0	8.2	10249
+261403	200.6	4	S	lake	lake_E_N_W_0	17.1	7.1	10217
+261500	331.9	7	NW	pond	pond_W_S_W_0	17.0	7.7	10659
+261597	130.2	2	SE	river	river_NE_NW_W_0	17.0	6.8	10654
+261694	270.0	6	W	lake	lake_NE_NW_S_0	17.0	8.5	10547
+261791	45.0	1	NE	pond	pond_NW_NE_SE_0	17.0	9.6	10435
+261888	190.0	4	S	river	river_E_N_E_0	17.3	9.2	10060
+261985	290.6	6	W	lake	lake_SE_SW_N_1	17.1	7.6	10532
+262082	93.4	2	E	pond	pond_NW_SW_NE_1	17.0	7.9	10574
+262179	225.0	5	SW	river	river_N_E_NW_1	17.0	6.6	10040
+262276	356.6	7	N	lake	lake_W_N_E_0	17.0	8.8	10633
+262373	135.0	3	SE	pond	pond_E_N_E_0	17.0	9.8	10546
+262470	249.4	5	W	river	river_NE_SE_S_0	17.1	9.6	10250
+262567	353.3	7	N	lake	lake_S_E_W_-1	17.1	9.6	10665
+262664	173.3	3	S	pond	pond_NW_NE_W_0	17.1	7.5	10171
