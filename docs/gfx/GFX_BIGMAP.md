@@ -46,6 +46,20 @@ and carriers cross chunk borders.
 - Fog of war covers the whole 320 grid. The province atlas
   (`minimap.overview_mode`) is only for the documentation shot.
 
+## Empty first screen (261306 / −Z halls)
+
+The screen shroud used to unproject NDC `z=0`. Under reverse-Z that is
+the far plane. Walking 8000 m back to `y=0.04` threw west / −Z seats
+off the 320 slab, so every pixel became unknown `#17272A`. The overlay
+now rebuilds XZ from the live ortho camera plus scene depth. Opening
+stream always builds the hall chunk and its 8-neighbors; the opening
+camera stays on the hall (6 m toward the crater) and is not yanked
+into a tight FOW box.
+
+The 100-seed founding test now renders every seed and fails if near
+chunks are missing, the hall is out of view, or the 3D area is under
+60% land.
+
 ## Perf table
 
 Filled by `tests/t_bigmap.gd` on lavapipe (proxy for Shard). See
@@ -53,17 +67,19 @@ Filled by `tests/t_bigmap.gd` on lavapipe (proxy for Shard). See
 
 | metric | target | measured |
 | --- | --- | --- |
-| start_new_3d | logged | **2242.0 ms** |
-| first frame (warm) | ≤ 2 s | **622.0 ms** |
-| pan avg / p95 / max | no hitch > 100 ms | **12.71 / 27.59 / 27.59 ms** |
-| memory | logged | **102.2 MB** |
-| chunks at opening | near-camera only, not 100 | **3 near + 4 far = 7 built** |
+| start_new_3d | ≤ 2 s | pending re-measure |
+| first frame (warm) | ≤ 2 s | pending re-measure |
+| pan avg / p95 / max | no hitch > 100 ms | pending re-measure |
+| memory | logged | pending re-measure |
+| chunks at opening | near-camera only, not 100 | pending re-measure |
 
 ## Shots
 
 1920×1080 in `artifacts/bigmap/`:
 
-- `first_260821.png`, `first_261306.png`, `first_261597.png`
+- `first_261403.png` N, `first_260918.png` NE, `first_262761.png` E
+- `first_261500.png` S, `first_261015.png` SW, `first_261306.png` W
+- `six_directions_composite.png`
 - `overview.png` at province zoom
 - `minimap.png` / `minimap_atlas.png` with crater, rivals, resources
 

@@ -19,7 +19,7 @@ const RoadStampShader = preload("res://src/GodotClient3D/Shaders/settlement_road
 const FoliageShader = preload("res://src/GodotClient3D/Shaders/settlement_foliage.gdshader")
 const WaterShader = preload("res://src/GodotClient3D/Shaders/settlement_water.gdshader")
 const HorizonShader = preload("res://src/GodotClient3D/Shaders/settlement_horizon.gdshader")
-const FOG_MASK_DIVISOR := 1
+const FOG_MASK_DIVISOR := 2
 const FOG_VOLUME_PAD_METRES := 0.35
 const WATER_Y := -0.22
 const WATER_PAD_METRES := 2400.0
@@ -45,6 +45,7 @@ const CHUNK_LOD_NEAR := 2
 const STREAM_BUDGET_USEC := 7000
 const STREAM_NEAR_CHUNKS := 1
 const STREAM_FAR_CHUNKS := 3
+const STREAM_OPENING_MAX := 9
 const DRESS_BUILDING_KINDS := [
 	"HOUSE", "BAKERY", "FARM", "LUMBER_CAMP", "SAWMILL", "QUARRY",
 	"STOREHOUSE", "WATCHTOWER", "BARRACKS", "TOWN_HALL", "CASTLE",
@@ -274,6 +275,10 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 	_rebuild_building_halos(true)
 	_create_shard_marker()
 	_stream_opening_chunks()
+	# The first sync_frame used to remesh every opening chunk because
+	# these signatures stayed 0. That doubled start_new_3d past 2 s.
+	terrain_height_signature = _calculate_height_signature()
+	terrain_occupation_signature = _calculate_occupation_signature()
 
 
 func bind_fog_overlay(_camera: Camera3D) -> void:
@@ -594,6 +599,7 @@ func _process(_delta: float) -> void:
 func note_camera(world_position: Vector3, zoom: float) -> void:
 	camera_world = world_position
 	camera_zoom = zoom
+	_sync_fog_screen_camera()
 
 
 func _init_chunk_streaming() -> void:
@@ -615,7 +621,12 @@ func _chunk_span() -> Vector2i:
 
 
 func chunk_of_tile(tile: Vector2i) -> Vector2i:
-	return Vector2i(tile.x / CHUNK_TILES, tile.y / CHUNK_TILES)
+	# Floor, not truncating toward zero. Negative tiles must not share
+	# chunk (0,0) with the origin or -Z halls drop out of the stream.
+	return Vector2i(
+		int(floor(float(tile.x) / float(CHUNK_TILES))),
+		int(floor(float(tile.y) / float(CHUNK_TILES)))
+	)
 
 
 func _chunk_key(coord: Vector2i) -> String:
@@ -642,28 +653,48 @@ func _camera_chunk() -> Vector2i:
 	return chunk_of_tile(tile)
 
 
+func _hall_chunk() -> Vector2i:
+	if simulation == null or not simulation.is_town_hall_founded():
+		return _camera_chunk()
+	return chunk_of_tile(simulation.town_hall_position)
+
+
 func _stream_reach() -> int:
 	return STREAM_FAR_CHUNKS + maxi(0, int(round((camera_zoom - 32.0) / 24.0)))
 
 
 func _stream_opening_chunks() -> void:
+	# The Director: the first frame must show the hall, not the water pad.
+	# Always stream from the hall chunk so a -Z / west seat cannot miss
+	# the start while the boom is still catching up.
 	if simulation != null and simulation.is_town_hall_founded():
 		camera_world = opening_camera_focus()
 		camera_zoom = maxf(camera_zoom, 32.0)
 	_refresh_terrain_lookups()
 	_bake_road_control_texture()
+	var hall := _hall_chunk()
 	var focus := _camera_chunk()
-	var reach := mini(_stream_reach(), STREAM_FAR_CHUNKS)
 	var built_open := 0
+	for oy in range(-1, 2):
+		for ox in range(-1, 2):
+			var coord := hall + Vector2i(ox, oy)
+			if not _chunk_has_tiles(coord):
+				continue
+			_rebuild_chunk(coord, CHUNK_LOD_NEAR, true)
+			built_open += 1
+	var reach := mini(_stream_reach(), STREAM_FAR_CHUNKS)
 	for oy in range(-reach, reach + 1):
 		for ox in range(-reach, reach + 1):
 			var coord := focus + Vector2i(ox, oy)
-			if _chunk_has_tiles(coord) and _chunk_is_wanted(coord):
-				_rebuild_chunk(coord, _desired_lod(coord), true)
-				built_open += 1
-				if built_open >= 20:
-					break
-		if built_open >= 20:
+			if built_open >= STREAM_OPENING_MAX:
+				break
+			if not _chunk_has_tiles(coord) or not _chunk_is_wanted(coord):
+				continue
+			if int(chunk_lod.get(_chunk_key(coord), CHUNK_LOD_NONE)) != CHUNK_LOD_NONE:
+				continue
+			_rebuild_chunk(coord, _desired_lod(coord), true)
+			built_open += 1
+		if built_open >= STREAM_OPENING_MAX:
 			break
 	_enqueue_desired_chunks()
 
@@ -753,11 +784,15 @@ func _desired_lod(coord: Vector2i) -> int:
 		return CHUNK_LOD_NONE
 	if not _chunk_explored_or_visible(coord):
 		return CHUNK_LOD_NONE
+	var hall := _hall_chunk()
+	var hall_cheb := maxi(absi(coord.x - hall.x), absi(coord.y - hall.y))
+	if hall_cheb <= STREAM_NEAR_CHUNKS:
+		return CHUNK_LOD_NEAR
 	var focus := _camera_chunk()
 	var cheb := maxi(absi(coord.x - focus.x), absi(coord.y - focus.y))
 	if cheb <= STREAM_NEAR_CHUNKS:
 		return CHUNK_LOD_NEAR
-	if cheb <= _stream_reach():
+	if cheb <= _stream_reach() or hall_cheb <= _stream_reach():
 		return CHUNK_LOD_FAR
 	return CHUNK_LOD_NONE
 
@@ -765,6 +800,10 @@ func _desired_lod(coord: Vector2i) -> int:
 func _chunk_explored_or_visible(coord: Vector2i) -> bool:
 	# Five corner samples miss a 5-tile crater corridor inside a 32
 	# chunk. Step the chunk so any revealed sliver counts.
+	if simulation != null and simulation.is_town_hall_founded():
+		var hall_cheb := maxi(absi(coord.x - _hall_chunk().x), absi(coord.y - _hall_chunk().y))
+		if hall_cheb <= 1:
+			return true
 	var origin := _chunk_origin(coord)
 	for y in range(origin.y, origin.y + CHUNK_TILES, 4):
 		for x in range(origin.x, origin.x + CHUNK_TILES, 4):
@@ -790,6 +829,7 @@ func _rebuild_chunk(coord: Vector2i, lod: int, rebuild_collision: bool) -> void:
 		return
 	var host := Node3D.new()
 	host.name = "Chunk_%d_%d" % [coord.x, coord.y]
+	host.visible = true
 	chunk_root.add_child(host)
 	_build_chunk_terrain(host, coord, lod, rebuild_collision)
 	_build_chunk_water(host, coord, lod)
@@ -3150,6 +3190,8 @@ func _sync_fog(force: bool) -> void:
 					shroud = FOG_EXPLORED
 			mask_bytes[mask_y * mask_size.x + mask_x] = shroud
 	var upsample := FOG_DISPLAY_UPSAMPLE if map_size.x <= 80 else 2
+	# 320² at divisor 1 was ~400 ms of the 2242 ms start. 2×2 cells still
+	# feather inside the 1.25-cell shader.
 	var display_size := mask_size * upsample
 	# Cubic upsample plus shader jitter = irregular 1–2 cell feather.
 	var mask := Image.create_from_data(mask_size.x, mask_size.y, false, Image.FORMAT_L8, mask_bytes)
@@ -3162,6 +3204,7 @@ func _sync_fog(force: bool) -> void:
 			fog_material.set_shader_parameter("visibility_texture", fog_visibility_texture)
 		if fog_screen_material != null:
 			fog_screen_material.set_shader_parameter("visibility_texture", fog_visibility_texture)
+			_sync_fog_screen_camera()
 	else:
 		fog_visibility_texture.update(mask)
 	if fog_material == null:
@@ -3313,6 +3356,16 @@ func _ensure_fog_skirts() -> void:
 		skirt.visible = true
 
 
+func _sync_fog_screen_camera() -> void:
+	if fog_screen_material == null:
+		return
+	var cam := fog_overlay_camera
+	if cam == null or not is_instance_valid(cam):
+		return
+	fog_screen_material.set_shader_parameter("camera_world_position", cam.global_position)
+	fog_screen_material.set_shader_parameter("camera_near", cam.near)
+
+
 func _hide_fog_screen() -> void:
 	if fog_screen != null and is_instance_valid(fog_screen):
 		fog_screen.visible = false
@@ -3342,6 +3395,7 @@ func _ensure_fog_screen() -> void:
 	fog_screen_material.set_shader_parameter("cell_metres", ScaleProfile.LOGICAL_CELL_METRES)
 	fog_screen_material.set_shader_parameter("feather_cells", 1.25)
 	fog_screen_material.set_shader_parameter("noise_strength", 0.12)
+	_sync_fog_screen_camera()
 	if fog_screen == null or not is_instance_valid(fog_screen):
 		fog_screen = MeshInstance3D.new()
 		fog_screen.name = "ScreenFogOverlay"
@@ -4155,20 +4209,66 @@ func opening_camera_yaw() -> float:
 
 func opening_camera_focus() -> Vector3:
 	# Hall in the lower-middle; crater rim in the upper third.
+	# Pull toward the crater, never toward world origin. Origin-pull on a
+	# west / -Z hall used to slide the 32 m boom onto the water pad.
 	if simulation == null or not simulation.is_town_hall_founded():
 		return Vector3.ZERO
 	var hall: Vector2i = simulation.town_hall_position
 	var center := tile_to_world(Vector2(hall) + Vector2(1.5, 1.5))
 	var shard := tile_to_world(Vector2(simulation.shard_position))
-	# Pull toward the map centre / shard so the 32 m boom stays over the
-	# playable slab. Coastal halls otherwise look straight at the ocean pad.
-	var inland := Vector3(-center.x, 0.0, -center.z)
-	if inland.length_squared() < 1.0:
-		inland = Vector3(shard.x - center.x, 0.0, shard.z - center.z)
-	var pull := clampf(Vector2(center.x, center.z).length() * 0.38, 10.0, 22.0)
-	if map_size.x >= 200:
-		pull = clampf(pull, 8.0, 12.0)
-	return center + inland.normalized() * pull
+	var toward_crater := Vector3(shard.x - center.x, 0.0, shard.z - center.z)
+	if toward_crater.length_squared() < 0.01:
+		toward_crater = Vector3(0.0, 0.0, -1.0)
+	return center + toward_crater.normalized() * 6.0
+
+
+func opening_view_audit(camera: Camera3D = null) -> Dictionary:
+	var hall_tile := Vector2i.ZERO
+	if simulation != null and simulation.is_town_hall_founded():
+		hall_tile = simulation.town_hall_position
+	var hall_chunk := chunk_of_tile(hall_tile)
+	var hall_world := tile_to_world(Vector2(hall_tile) + Vector2(1.5, 1.5))
+	var near_built := 0
+	var near_visible := 0
+	var missing: Array[String] = []
+	for oy in range(-1, 2):
+		for ox in range(-1, 2):
+			var coord := hall_chunk + Vector2i(ox, oy)
+			if not _chunk_has_tiles(coord):
+				continue
+			var key := _chunk_key(coord)
+			var node: Node = chunk_nodes.get(key, null)
+			if node != null and is_instance_valid(node):
+				near_built += 1
+				if (node as Node3D).visible:
+					near_visible += 1
+			else:
+				missing.append(key)
+	var hall_in_view := false
+	var cam := camera
+	if cam == null:
+		cam = fog_overlay_camera
+	if cam != null and is_instance_valid(cam):
+		hall_in_view = cam.is_position_in_frustum(hall_world)
+		var hall_view: Node3D = null
+		for view_value in building_views.values():
+			var view: Node3D = view_value
+			var kind := String(view.building_type)
+			if kind == Defs.BUILDING_TOWN_HALL or kind == "CASTLE":
+				hall_view = view
+				break
+		if hall_view != null:
+			hall_in_view = hall_in_view or cam.is_position_in_frustum(hall_view.global_position)
+	return {
+		"hall_tile": hall_tile,
+		"hall_chunk": hall_chunk,
+		"hall_world": hall_world,
+		"near_built": near_built,
+		"near_visible": near_visible,
+		"missing": missing,
+		"hall_in_view": hall_in_view,
+		"chunks_built": chunk_nodes.size(),
+	}
 
 
 func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:

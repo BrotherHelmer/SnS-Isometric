@@ -745,7 +745,12 @@ func _sync_presentation() -> void:
 	world_view.sync_frame(frame)
 	world_view.note_camera(camera_rig.target_position, camera_rig.target_zoom)
 	var frontier_pad := 48.0 if placement_type != "" else 28.0
-	if camera_rig.target_zoom >= camera_rig.zoom_cap * 0.72:
+	var opening := is_equal_approx(camera_rig.target_zoom, ProductionIsometricCameraRig3D.OPENING_ZOOM)
+	if opening:
+		# Keep the composed hall framing. A tight FOW box on -Z halls
+		# yanked the 32 m boom onto the water pad.
+		pass
+	elif camera_rig.target_zoom >= camera_rig.zoom_cap * 0.72:
 		camera_rig.configure_for_map(simulation_host.simulation.map_size)
 	else:
 		camera_rig.configure_pan_bounds(world_view.revealed_camera_bounds(camera_rig.target_zoom, frontier_pad))
