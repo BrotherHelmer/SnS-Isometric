@@ -5,6 +5,9 @@ const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_p
 
 const CLOSE_ZOOM := 16.0
 const NORMAL_ZOOM := 26.0
+# First-screen cleanup: start a step back from NORMAL so the founding
+# yard and HUD do not crush the keep. Wheel / presets still use 26.
+const OPENING_ZOOM := 32.0
 # GFX-J: zoom-out cap ~1.5× gameplay coverage so the player cannot
 # pull back onto a diamond island in a flat void.
 const STRATEGIC_ZOOM := 39.0

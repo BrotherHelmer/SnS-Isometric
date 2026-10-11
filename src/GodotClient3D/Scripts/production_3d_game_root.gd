@@ -21,8 +21,8 @@ const BUILD_PALETTE := [
 	Defs.BUILDING_ROAD,
 	Defs.BUILDING_HOUSE,
 	Defs.BUILDING_LUMBER_CAMP,
-	Defs.BUILDING_QUARRY,
 	Defs.BUILDING_FARM,
+	Defs.BUILDING_QUARRY,
 	Defs.BUILDING_SAWMILL,
 	Defs.BUILDING_BAKERY,
 	Defs.BUILDING_STOREHOUSE,
@@ -32,6 +32,12 @@ const BUILD_PALETTE := [
 	Defs.BUILDING_LUMEN_PILLAR,
 	Defs.BUILDING_OUTPOST,
 	Defs.TOOL_CLEAR_AREA,
+]
+const STARTER_BUILDINGS := [
+	Defs.BUILDING_ROAD,
+	Defs.BUILDING_HOUSE,
+	Defs.BUILDING_LUMBER_CAMP,
+	Defs.BUILDING_FARM,
 ]
 const BUILD_CATEGORIES := {
 	"ESSENTIALS": [Defs.BUILDING_ROAD, Defs.BUILDING_HOUSE, Defs.BUILDING_LUMBER_CAMP, Defs.BUILDING_FARM, Defs.BUILDING_WATCHTOWER, Defs.BUILDING_OUTPOST],
@@ -164,10 +170,16 @@ const COLOR_UNAFFORDABLE_COST := Color("#ff9d8f")
 const PLACEMENT_HINT_TEXT_WIDTH := 440.0
 const HudSkin = preload("res://src/GodotClient3D/Scripts/production_hud_skin.gd")
 const TOP_BAR_HEIGHT := 46.0
-const CONSOLE_HEIGHT := 184.0
-const MINIMAP_INNER := 128.0
-const BUILD_GRID_COLUMNS := 7
-const BUILD_SLOT_SIZE := Vector2(70, 58)
+# The Director: first-screen cleanup. Helmer's 1080p opening was a
+# 25% HUD wall plus three banners. Keep the console one compact row
+# until later plans unlock.
+const CONSOLE_HEIGHT := 92.0
+const CONSOLE_HEIGHT_EXPANDED := 156.0
+const MINIMAP_INNER := 72.0
+const MINIMAP_COLLAPSED := 44.0
+const BUILD_GRID_COLUMNS := 4
+const BUILD_SLOT_SIZE := Vector2(66, 52)
+const RIVAL_BANNER_DELAY := 24.0
 const BUILD_HOTKEYS := [KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9, KEY_0, KEY_Z, KEY_X, KEY_C, KEY_V]
 const BUILD_HOTKEY_LABELS := ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "Z", "X", "C", "V"]
 const RATE_WINDOW_SECONDS := 30.0
@@ -227,7 +239,10 @@ var continue_button: Button
 var resume_button: Button
 var menu_save_button: Button
 var play_camera_focus := Vector3.ZERO
-var play_camera_zoom := ProductionIsometricCameraRig3D.NORMAL_ZOOM
+var play_camera_zoom := ProductionIsometricCameraRig3D.OPENING_ZOOM
+var placement_invalid_shown := false
+var minimap_expanded := false
+var first_screen_hint_log: Array[Dictionary] = []
 var reach_guidance_shown := false
 var last_objective_id := ""
 var last_run_seed := DEFAULT_SEED
@@ -489,7 +504,11 @@ func _handle_hud_hotkey(event: InputEventKey) -> bool:
 		return false
 	var slot := BUILD_HOTKEYS.find(event.keycode)
 	if slot >= 0 and slot < build_strip_types.size():
-		begin_placement(build_strip_types[slot])
+		var hot_type := String(build_strip_types[slot])
+		if is_build_unlocked(hot_type):
+			begin_placement(hot_type)
+			return true
+		_show_toast("Not yet", unlock_hint(hot_type), "info", 2.4)
 		return true
 	match event.keycode:
 		KEY_SPACE:
@@ -562,10 +581,15 @@ func start_new_3d(seed_value := DEFAULT_SEED) -> void:
 	selected_worker_id = 0
 	selected_entity_kind = ""
 	cancel_placement()
+	first_screen_hint_log.clear()
+	placement_invalid_shown = false
+	minimap_expanded = false
 	_initialize_presentation()
 	simulation_host.paused = false
 	_hide_start_menu()
 	_show_status("Settlement founded.", 3.0)
+	_log_first_screen_hint("quest", objective_button.text if objective_button != null else "A Settlement Begins")
+	_layout_hud_console()
 
 
 func save_game() -> bool:
@@ -589,6 +613,11 @@ func load_game() -> bool:
 
 
 func begin_placement(building_type: String) -> void:
+	if not is_build_unlocked(building_type):
+		_show_toast("Not yet", unlock_hint(building_type), "info", 3.0)
+		_log_first_screen_hint("unlock", unlock_hint(building_type))
+		return
+	placement_invalid_shown = false
 	# Check affordability first
 	if simulation_host.simulation != null and building_type != Defs.TOOL_CLEAR_AREA:
 		var missing_info: Array = _missing_resources(building_type)
@@ -655,6 +684,7 @@ func cancel_placement() -> void:
 	placement_type = ""
 	placement_tile = Vector2i(-1, -1)
 	placement_validation.clear()
+	placement_invalid_shown = false
 	if world_view != null:
 		world_view.set_claim_overlay_visible(false)
 		world_view.clear_road_preview()
@@ -696,7 +726,9 @@ func _initialize_presentation() -> void:
 	world_view.setup(simulation_host.simulation, world_snapshot, quality_profile)
 	world_view.bind_fog_overlay(camera_rig.camera)
 	camera_rig.configure_for_map(simulation_host.simulation.map_size)
-	camera_rig.compose_view(world_view.opening_camera_focus(), ProductionIsometricCameraRig3D.NORMAL_ZOOM)
+	camera_rig.compose_view(world_view.opening_camera_focus(), ProductionIsometricCameraRig3D.OPENING_ZOOM)
+	play_camera_zoom = ProductionIsometricCameraRig3D.OPENING_ZOOM
+	play_camera_focus = camera_rig.target_position
 	if minimap != null:
 		minimap.bind(simulation_host.simulation, world_view, camera_rig)
 	last_synced_tick = -1
@@ -1370,6 +1402,7 @@ func _create_ui() -> void:
 	strip_box.add_child(strip_header)
 	strip_header.add_child(HudSkin.title_label("Build", HudSkin.SIZE_BODY, HudSkin.COLOR_GOLD))
 	var strip_hint := HudSkin.caption("Hover for cost  ·  R rotates", HudSkin.SIZE_MIN)
+	strip_hint.name = "BuildHint"
 	strip_hint.add_theme_color_override("font_color", Color("#8f8a76"))
 	strip_header.add_child(strip_hint)
 	var strip_grid := GridContainer.new()
@@ -1472,10 +1505,19 @@ func _create_ui() -> void:
 	# minimap itself is hidden (menu), so layout never collapses.
 	var map_holder := Control.new()
 	map_holder.name = "MinimapHolder"
-	map_holder.custom_minimum_size = Vector2(MINIMAP_INNER + 12.0, MINIMAP_INNER + 28.0)
+	map_holder.custom_minimum_size = Vector2(MINIMAP_COLLAPSED + 8.0, MINIMAP_COLLAPSED + 16.0)
 	map_holder.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	map_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	map_holder.mouse_filter = Control.MOUSE_FILTER_STOP
 	console_row.add_child(map_holder)
+	var map_toggle := Button.new()
+	map_toggle.name = "MapToggle"
+	map_toggle.text = "Map"
+	map_toggle.tooltip_text = "Show the province map"
+	map_toggle.custom_minimum_size = Vector2(MINIMAP_COLLAPSED, MINIMAP_COLLAPSED)
+	map_toggle.set_anchors_preset(Control.PRESET_CENTER)
+	map_toggle.pressed.connect(_toggle_minimap)
+	HudSkin.apply_button(map_toggle)
+	map_holder.add_child(map_toggle)
 	minimap = MinimapScript.new()
 	minimap.focus_requested.connect(_focus_from_minimap)
 	map_holder.add_child(minimap)
@@ -1711,7 +1753,10 @@ func _update_placement_ghost(force := false) -> void:
 		if ghost_clearing_label != null:
 			ghost_clearing_label.visible = false
 		world_view.clear_build_pads()
-		placement_label.text = "%s · drag from the road network" % String(placement_validation.get("message", "Road Building Mode"))
+		if not bool(placement_validation.get("success", false)) and not placement_invalid_shown:
+			placement_label.text = "Road · hold and drag to draw · right-click cancels"
+		else:
+			placement_label.text = "%s · drag from the road network" % String(placement_validation.get("message", "Road Building Mode"))
 		return
 	if placement_type == Defs.TOOL_CLEAR_AREA:
 		var clearable: bool = String(simulation_host.simulation.get_tile(placement_tile)) == Defs.TILE_TREE
@@ -1754,7 +1799,9 @@ func _update_placement_ghost(force := false) -> void:
 		quality = simulation_host.simulation.evaluate_placement_quality(placement_type, placement_tile, placement_rotation)
 	var quality_text := String(quality.get("label", ""))
 	var prefix := "CLEARING REQUIRED" if needs_clearing else ("VALID" if valid else "INVALID")
-	if quality_text != "":
+	if not valid and not placement_invalid_shown:
+		placement_label.text = "%s · click a valid tile · right-click cancels" % Defs.building_name(placement_type)
+	elif quality_text != "":
 		placement_label.text = "%s · %s" % [prefix, quality_text]
 	else:
 		placement_label.text = "%s · %s" % [prefix, String(placement_validation.get("message", ""))]
@@ -1775,6 +1822,8 @@ func _commit_placement() -> void:
 			_set_build_palette_visible(false)
 	else:
 		placement_validation = result
+		placement_invalid_shown = true
+		_log_first_screen_hint("placement", String(result.get("message", "INVALID")))
 		_update_placement_ghost(true)
 
 
@@ -1821,6 +1870,8 @@ func _finish_road_drag(screen_position: Vector2) -> void:
 		_show_status("Planned %d connected road sections." % planned, 3.0)
 		_sync_presentation()
 	elif not bool(result.get("success", false)):
+		placement_invalid_shown = true
+		_log_first_screen_hint("placement", String(result.get("message", "Road route is blocked.")))
 		_show_status(String(result.get("message", "Road route is blocked.")), 3.0)
 	road_preview_route.clear()
 	road_preview_validation.clear()
@@ -2180,6 +2231,8 @@ func _update_ui() -> void:
 	_update_loop_hud()
 	for building_type in build_buttons:
 		var button: Button = build_buttons[building_type]
+		var unlocked := is_build_unlocked(String(building_type))
+		button.visible = unlocked
 		var reason := _build_unavailable_reason(String(building_type))
 		button.disabled = reason != ""
 		var recommend := _should_recommend_frontier(String(building_type))
@@ -2215,7 +2268,15 @@ func _refresh_build_strip_state() -> void:
 			cost_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.0) if affordable else Color("#140806"))
 			cost_label.add_theme_constant_override("outline_size", 0 if affordable else 4)
 		var base_tip: String = build_strip_tooltips[index] if index < build_strip_tooltips.size() else btn.tooltip_text
-		btn.tooltip_text = "" if placing else (base_tip if affordable else base_tip + "\n\nCannot afford yet.")
+		var unlocked := is_build_unlocked(building_type)
+		if index < build_strip_containers.size():
+			(build_strip_containers[index] as Control).visible = unlocked
+		btn.visible = unlocked
+		if unlocked:
+			btn.tooltip_text = "" if placing else (base_tip if affordable else base_tip + "\n\nCannot afford yet.")
+		else:
+			btn.tooltip_text = unlock_hint(building_type)
+	_layout_hud_console()
 
 
 func _missing_resources(building_type: String) -> Array:
@@ -2310,6 +2371,7 @@ func _update_loop_hud() -> void:
 		var tip_title := String(intention.get("title", objective.get("title", "")))
 		var tip_detail := String(intention.get("detail", objective.get("detail", "Click for the next step.")))
 		objective_button.tooltip_text = "%s — %s" % [tip_title, tip_detail]
+		_log_first_screen_hint("quest", objective_button.text)
 	var objective_id := String(objective.get("id", ""))
 	# Issue #1 fix: Do NOT snap camera to shard location automatically
 	# if objective_id == "reach" and not reach_guidance_shown and play_has_begun:
@@ -2347,11 +2409,16 @@ func _update_loop_hud() -> void:
 				var threat := String(Dictionary(wyrdfall.get("forecast", {})).get("threat", "QUIET"))
 				parts.append("Night in %d:%02d · %s" % [int(remaining / 60.0), int(remaining) % 60, threat])
 		var rival_line := String(wyrdfall.get("rival_line", ""))
-		if rival_line != "":
+		if rival_line != "" and _rival_banner_should_show():
 			parts.append(rival_line)
+			_log_first_screen_hint("rival", rival_line)
 		loop_label.text = "  ·  ".join(parts)
 		if status_plate != null:
-			status_plate.visible = (loop_label.text != "" or (bind_button != null and bind_button.visible) or binding_active) and not (alert_panel != null and alert_panel.visible)
+			var raid_or_night := simulation_host.simulation.is_night or binding_active
+			var show_status := (loop_label.text != "" or (bind_button != null and bind_button.visible) or binding_active)
+			if not raid_or_night and not _rival_banner_should_show() and rival_line != "" and parts.is_empty():
+				show_status = false
+			status_plate.visible = show_status and not (alert_panel != null and alert_panel.visible) and not (placement_panel != null and placement_panel.visible and placement_invalid_shown)
 			var raid_now := bool(simulation_host.simulation.is_night) and hostiles > 0
 			loop_label.add_theme_color_override("font_color", Color("#ff9d8f") if raid_now else (Color("#b9c8ff") if simulation_host.simulation.is_night else Color("#e6dcc0")))
 	if bind_button != null:
@@ -2711,29 +2778,19 @@ func _create_town_hall_portrait() -> Control:
 func _update_realm_overview() -> void:
 	var sim = simulation_host.simulation
 	var settlement: Dictionary = current_frame_snapshot.get("settlement", {})
-	var buildings := 0
-	var constructing := 0
-	for building_value in sim.buildings:
-		var typed := Dictionary(building_value)
-		if String(typed.get("type", "")) == Defs.BUILDING_ROAD:
-			continue
-		if bool(typed.get("construction", false)):
-			constructing += 1
-		else:
-			buildings += 1
 	var free_workers := int(sim.workers_free())
 	var food := int(settlement.get("food", 0))
 	var demand := int(settlement.get("next_food_demand", 0))
-	var cells: Array[String] = [
-		_stat_cell("Population  %d / %d" % [int(sim.population_current), int(sim.housing_capacity)], "0,0,22,2"),
-		_stat_cell("Free workers  %s" % ("[color=#8fe08a]%d[/color]" % free_workers if free_workers > 0 else "[color=#ff9d8f]0[/color]"), "0,0,22,2"),
-		_stat_cell("Soldiers  %d" % int(sim.soldiers_total), "0,0,22,2"),
-		_stat_cell("Buildings  %d%s" % [buildings, ("  (+%d rising)" % constructing) if constructing > 0 else ""], "0,0,22,2"),
-		_stat_cell("Bread  %s" % ("%d / %d needed" % [food, demand] if demand > 0 else str(food)), "0,0,22,2"),
-		_stat_cell("Hungry  %s" % ("[color=#ff9d8f]%d[/color]" % int(settlement.get("hungry", 0)) if int(settlement.get("hungry", 0)) > 0 else "0"), "0,0,22,2"),
+	# First-screen: one compact glance until a selection opens the inspector.
+	realm_overview.text = "[font=%s][font_size=16][color=#f0c880]Realm[/color][/font_size][/font]  [color=#b9ab86]%s · %s[/color]\n[color=#e6dcc0]Pop %d/%d  ·  Workers %d  ·  Bread %s[/color]" % [
+		DISPLAY_FONT_PATH,
+		_clock_title(),
+		_phase_countdown_text(),
+		int(sim.population_current),
+		int(sim.housing_capacity),
+		free_workers,
+		("%d/%d" % [food, demand]) if demand > 0 else str(food)
 	]
-	realm_overview.text = "[font=%s][font_size=20][color=#f0c880]Your Realm[/color][/font_size][/font]   [color=#b9ab86]%s  ·  %s[/color]\n[table=2]%s[/table]\n[font_size=12][color=#8f8a76]Click a building or settler to inspect it  ·  H jumps to the Town Hall[/color][/font_size]" % [
-		DISPLAY_FONT_PATH, _clock_title(), _phase_countdown_text(), "".join(cells)]
 
 
 func _building_player_status(building: Dictionary, type_name: String) -> String:
@@ -3153,9 +3210,12 @@ func _tick_minimap(delta: float) -> void:
 		return
 	var menu_visible := startup_overlay != null and startup_overlay.visible
 	var result_visible := result_overlay != null and result_overlay.visible
-	minimap.visible = play_has_begun and not menu_visible and not result_visible
+	minimap.visible = play_has_begun and not menu_visible and not result_visible and minimap_expanded
 	if minimap.visible:
 		minimap.tick(delta, current_frame_snapshot)
+	var map_toggle := hud_root.find_child("MapToggle", true, false) if hud_root != null else null
+	if map_toggle != null:
+		map_toggle.visible = play_has_begun and not menu_visible and not result_visible and not minimap_expanded
 
 
 func _focus_from_minimap(world_position: Vector3) -> void:
@@ -3224,6 +3284,8 @@ func _can_attempt_build(building_type: String) -> bool:
 func _build_unavailable_reason(building_type: String) -> String:
 	if simulation_host.simulation == null:
 		return "No settlement is active"
+	if not is_build_unlocked(building_type):
+		return unlock_hint(building_type)
 	if building_type == Defs.TOOL_CLEAR_AREA:
 		return ""
 	if building_type == Defs.BUILDING_ROAD and simulation_host.simulation.workers_free() <= 0:
@@ -3232,6 +3294,136 @@ func _build_unavailable_reason(building_type: String) -> String:
 		if simulation_host.simulation.get_available_resource(resource_type) < int(Defs.building_cost(building_type)[resource_type]):
 			return "Needs %s" % Defs.formatted_cost(building_type)
 	return ""
+
+
+func is_build_unlocked(building_type: String) -> bool:
+	if building_type in STARTER_BUILDINGS:
+		return true
+	var sim = simulation_host.simulation if simulation_host != null else null
+	if sim == null:
+		return false
+	var has_lumber := _player_has_building(Defs.BUILDING_LUMBER_CAMP)
+	var has_farm := _player_has_building(Defs.BUILDING_FARM)
+	var has_house := _player_has_building(Defs.BUILDING_HOUSE)
+	var has_tower := _player_has_building(Defs.BUILDING_WATCHTOWER)
+	var wood := int(sim.central_inventory.get(Defs.RESOURCE_WOOD, 0))
+	var wheat := int(sim.central_inventory.get(Defs.RESOURCE_WHEAT, 0))
+	var night_near := sim.is_night or float(sim.DAY_LENGTH_SECONDS) - float(sim.phase_time) <= 90.0
+	match building_type:
+		Defs.BUILDING_QUARRY, Defs.BUILDING_SAWMILL, Defs.TOOL_CLEAR_AREA:
+			return has_lumber or wood >= 8 or int(sim.day_count) >= 2
+		Defs.BUILDING_BAKERY:
+			return has_farm or wheat >= 4
+		Defs.BUILDING_STOREHOUSE:
+			return has_house
+		Defs.BUILDING_WATCHTOWER, Defs.BUILDING_WALL, Defs.BUILDING_BARRACKS:
+			return night_near or has_tower or int(sim.day_count) >= 2
+		Defs.BUILDING_LUMEN_PILLAR, Defs.BUILDING_OUTPOST:
+			return has_tower or (has_lumber and has_house and int(sim.day_count) >= 2)
+		_:
+			return true
+
+
+func unlock_hint(building_type: String) -> String:
+	match building_type:
+		Defs.BUILDING_QUARRY, Defs.BUILDING_SAWMILL, Defs.TOOL_CLEAR_AREA:
+			return "Unlocks after a Lumber Camp"
+		Defs.BUILDING_BAKERY:
+			return "Unlocks after a Farm"
+		Defs.BUILDING_STOREHOUSE:
+			return "Unlocks after a House"
+		Defs.BUILDING_WATCHTOWER, Defs.BUILDING_WALL, Defs.BUILDING_BARRACKS:
+			return "Unlocks as night draws near"
+		Defs.BUILDING_LUMEN_PILLAR, Defs.BUILDING_OUTPOST:
+			return "Unlocks after you raise a Watchtower"
+		_:
+			return "Not yet available"
+
+
+func visible_build_types() -> Array[String]:
+	var unlocked: Array[String] = []
+	for building_type in BUILD_PALETTE:
+		if is_build_unlocked(String(building_type)):
+			unlocked.append(String(building_type))
+	return unlocked
+
+
+func _player_has_building(building_type: String) -> bool:
+	var sim = simulation_host.simulation if simulation_host != null else null
+	if sim == null:
+		return false
+	for building_value in sim.buildings:
+		var building: Dictionary = building_value
+		var kind := String(building.get("planned_type", "")) if bool(building.get("construction", false)) else String(building.get("type", ""))
+		if kind == building_type:
+			return true
+	return false
+
+
+func _rival_banner_should_show() -> bool:
+	if simulation_host == null or simulation_host.simulation == null:
+		return false
+	if simulation_host.simulation.is_night:
+		return true
+	if placement_panel != null and placement_panel.visible and placement_invalid_shown:
+		return false
+	if alert_panel != null and alert_panel.visible:
+		return false
+	var elapsed := float(simulation_host.simulation.elapsed_seconds)
+	return elapsed >= RIVAL_BANNER_DELAY or _player_has_building(Defs.BUILDING_HOUSE) or _player_has_building(Defs.BUILDING_LUMBER_CAMP)
+
+
+func _log_first_screen_hint(kind: String, text: String) -> void:
+	if text == "":
+		return
+	if not first_screen_hint_log.is_empty():
+		var last: Dictionary = first_screen_hint_log[first_screen_hint_log.size() - 1]
+		if String(last.get("kind", "")) == kind and String(last.get("text", "")) == text:
+			return
+	var elapsed := 0.0
+	if simulation_host != null and simulation_host.simulation != null:
+		elapsed = float(simulation_host.simulation.elapsed_seconds)
+	first_screen_hint_log.append({"t": snappedf(elapsed, 0.1), "kind": kind, "text": text})
+
+
+func first_screen_banner_count() -> int:
+	var count := 0
+	if objective_button != null and objective_button.visible and String(objective_button.text) != "":
+		count += 1
+	if status_plate != null and status_plate.visible:
+		count += 1
+	if placement_panel != null and placement_panel.visible:
+		count += 1
+	if alert_panel != null and alert_panel.visible:
+		count += 1
+	if nightfall_panel != null and nightfall_panel.visible:
+		count += 1
+	return count
+
+
+func _toggle_minimap() -> void:
+	minimap_expanded = not minimap_expanded
+	_layout_hud_console()
+
+
+func _layout_hud_console() -> void:
+	if hud_console == null:
+		return
+	var unlocked := visible_build_types().size()
+	var rows := 1 if unlocked <= BUILD_GRID_COLUMNS else 2
+	var height := CONSOLE_HEIGHT if rows == 1 else CONSOLE_HEIGHT_EXPANDED
+	if minimap_expanded:
+		height = maxf(height, MINIMAP_INNER + 40.0)
+	hud_console.offset_top = -height
+	if placement_panel != null:
+		placement_panel.offset_top = -height - 70.0
+		placement_panel.offset_bottom = -height - 8.0
+	var map_holder := hud_root.find_child("MinimapHolder", true, false) if hud_root != null else null
+	if map_holder is Control:
+		if minimap_expanded:
+			(map_holder as Control).custom_minimum_size = Vector2(MINIMAP_INNER + 12.0, MINIMAP_INNER + 28.0)
+		else:
+			(map_holder as Control).custom_minimum_size = Vector2(MINIMAP_COLLAPSED + 8.0, MINIMAP_COLLAPSED + 16.0)
 
 
 func _format_inventory(inventory_value) -> String:
@@ -3808,7 +4000,7 @@ func _author_title_composition() -> void:
 func _set_play_chrome_visible(value: bool) -> void:
 	if hud_root == null:
 		return
-	for chrome_name in ["TopBar", "LoopBar", "ProvinceMinimap", "NoticeFeed"]:
+	for chrome_name in ["TopBar", "LoopBar", "ProvinceMinimap", "NoticeFeed", "HudConsole"]:
 		var chrome := hud_root.find_child(chrome_name, true, false)
 		if chrome != null:
 			chrome.visible = value

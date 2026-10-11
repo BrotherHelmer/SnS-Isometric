@@ -1408,13 +1408,13 @@ func _rebuild_grass_multimeshes() -> void:
 			if (forest_edge >= 1 or near_yard) and _tile_hash(tile, 47) % 3 == 0 and Catalog.FLOWERS.size() > 0:
 				var flower_path := String(Catalog.FLOWERS[_tile_hash(tile, 61) % Catalog.FLOWERS.size()])
 				_append_nature_transform(transforms_by_path, flower_path, tile, 4, 0.60, 1.12, 0.46)
-			if meadow > 0.20 and forest_edge == 0 and near_yard and _tile_hash(tile, 59) % 6 == 0 and Catalog.UNDERSTORY.size() > 0:
+			if meadow > 0.20 and forest_edge == 0 and near_yard and _tile_hash(tile, 59) % 6 == 0 and Catalog.UNDERSTORY.size() > 0 and not _in_founding_yard(tile, 8.5):
 				var meadow_bush := String(Catalog.UNDERSTORY[_tile_hash(tile, 73) % Catalog.UNDERSTORY.size()])
 				_append_nature_transform(transforms_by_path, meadow_bush, tile, 8, 0.55, 0.96, 0.30)
-			if forest_edge >= 1 and forest_edge <= 3 and _tile_hash(tile, 53) % 2 == 0 and Catalog.UNDERSTORY.size() > 0:
+			if forest_edge >= 1 and forest_edge <= 3 and _tile_hash(tile, 53) % 2 == 0 and Catalog.UNDERSTORY.size() > 0 and not _in_founding_yard(tile, 8.5):
 				var bush_path := String(Catalog.UNDERSTORY[_tile_hash(tile, 71) % Catalog.UNDERSTORY.size()])
 				_append_nature_transform(transforms_by_path, bush_path, tile, 6, 0.50, 0.55, 0.30)
-			if forest_edge >= 1 and _tile_hash(tile, 101) % 4 == 0 and Catalog.ROCKS.size() > 0:
+			if forest_edge >= 1 and _tile_hash(tile, 101) % 4 == 0 and Catalog.ROCKS.size() > 0 and not _in_founding_yard(tile, 8.5):
 				var rock_path := String(Catalog.ROCKS[_tile_hash(tile, 109) % Catalog.ROCKS.size()])
 				_append_nature_transform(transforms_by_path, rock_path, tile, 7, 0.58, 0.50, 0.20)
 	_spawn_nature_multimeshes(grass_root, transforms_by_path)
@@ -1698,7 +1698,45 @@ func _tile_occupied_by_structure(tile: Vector2i) -> bool:
 	return false
 
 
+func _in_founding_yard(tile: Vector2i, radius := 7.5) -> bool:
+	if simulation == null or not simulation.is_town_hall_founded():
+		return false
+	var hall: Vector2i = simulation.town_hall_position
+	var footprint := Defs.building_footprint(Defs.BUILDING_TOWN_HALL)
+	var center := Vector2(hall) + Vector2(footprint - Vector2i.ONE) * 0.5
+	return Vector2(tile).distance_to(center) < radius
+
+
+func founding_yard_blockers(radius := 7.5) -> Dictionary:
+	# Presentation + sim blockers inside the opening yard. Used by the
+	# first-screen gate: zero trees or rocks in the 6–8 tile clearing.
+	var trees := 0
+	var rocks := 0
+	if simulation == null or not simulation.is_town_hall_founded():
+		return {"trees": 0, "rocks": 0, "radius": radius}
+	var hall: Vector2i = simulation.town_hall_position
+	var footprint := Defs.building_footprint(Defs.BUILDING_TOWN_HALL)
+	var center := Vector2(hall) + Vector2(footprint - Vector2i.ONE) * 0.5
+	var reach := int(ceil(radius))
+	var origin := Vector2i(int(round(center.x)), int(round(center.y)))
+	for oy in range(-reach, reach + 1):
+		for ox in range(-reach, reach + 1):
+			var tile := origin + Vector2i(ox, oy)
+			if not simulation.is_inside_map(tile):
+				continue
+			if Vector2(tile).distance_to(center) >= radius:
+				continue
+			var kind := String(simulation.get_tile(tile))
+			if kind == Defs.TILE_TREE:
+				trees += 1
+			elif kind == Defs.TILE_ROCK:
+				rocks += 1
+	return {"trees": trees, "rocks": rocks, "radius": radius}
+
+
 func _nature_suppressed_near_activity(tile: Vector2i) -> bool:
+	if _in_founding_yard(tile, 7.5):
+		return true
 	for building_value in simulation.get_buildings():
 		var building: Dictionary = building_value
 		var type_name := String(building.get("planned_type", "")) if bool(building.get("construction", false)) else String(building.get("type", ""))
@@ -3403,6 +3441,7 @@ func _rebuild_opening_dressing() -> void:
 	_spawn_nature_multimeshes(host, transforms_by_path)
 	var coverage := 0.0 if candidates.is_empty() else float(planted) / float(candidates.size())
 	host.set_meta("opening_clearing_cells", inner)
+	host.set_meta("opening_yard_cells", 7.5)
 	host.set_meta("opening_forest_coverage", coverage)
 	host.set_meta("opening_forest_count", planted)
 	host.set_meta("opening_perimeter_count", candidates.size())
@@ -3506,14 +3545,14 @@ func _opening_ridge_tiles(hall: Vector2i) -> Array[Vector2i]:
 	# GFX-P: one back/upper formation. No large foreground rocks.
 	# Camera looks from +tile.y, so back is -Y.
 	return [
-		hall + Vector2i(4, -3),
-		hall + Vector2i(5, -4),
-		hall + Vector2i(6, -3),
-		hall + Vector2i(7, -4),
-		hall + Vector2i(5, -2),
-		hall + Vector2i(3, -4),
-		hall + Vector2i(6, -5),
-		hall + Vector2i(4, -5),
+		hall + Vector2i(6, -8),
+		hall + Vector2i(7, -9),
+		hall + Vector2i(8, -8),
+		hall + Vector2i(9, -9),
+		hall + Vector2i(7, -7),
+		hall + Vector2i(5, -9),
+		hall + Vector2i(8, -10),
+		hall + Vector2i(6, -10),
 	]
 
 

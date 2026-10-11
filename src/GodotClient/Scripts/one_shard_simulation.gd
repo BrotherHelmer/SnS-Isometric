@@ -74,6 +74,9 @@ const CITY_PATROL_RADIUS := 12
 const CARRIER_BUILD_ACTION_SECONDS := 0.9
 const ROAD_BUILD_SECONDS := 1.6
 const INITIAL_REVEAL_RADIUS := 12
+# First-screen yard: no TREE/ROCK inside this Euclidean radius of the
+# hall centre. Nearby stands stay at 8+ so lumber still has timber.
+const FOUNDING_YARD_RADIUS := 7.5
 # The Director: building/unit vision. Watchtower is the large scouting
 # ring, Outpost is medium-large, Lumen and other workplaces stay small.
 # Units reveal on tile change so a later scout order can just walk.
@@ -3252,6 +3255,8 @@ func _generate_map() -> void:
 	_ensure_founding_apron(rival_center)
 	_compose_settlement_landscape(town_center)
 	_compose_settlement_landscape(rival_center)
+	_clear_founding_yard(town_center, FOUNDING_YARD_RADIUS)
+	_clear_founding_yard(rival_center, FOUNDING_YARD_RADIUS)
 
 	_set_tile(shard_position, Defs.TILE_SHARD)
 	for offset in _radius_offsets(4):
@@ -3479,12 +3484,12 @@ func _compose_settlement_landscape(center: Vector2i) -> void:
 		toward = Vector2(1.0, -1.0)
 	toward = toward.normalized()
 	var back := -toward
-	for offset in _radius_offsets(10):
+	for offset in _radius_offsets(13):
 		var tile: Vector2i = center + offset
 		if not is_inside_map(tile):
 			continue
 		var dist := _tile_distance(tile, center)
-		if dist < 6.2 or dist > 10.4:
+		if dist < FOUNDING_YARD_RADIUS or dist > 12.5:
 			continue
 		var dir := Vector2(tile - center)
 		if dir.length_squared() < 0.01:
@@ -3493,22 +3498,38 @@ func _compose_settlement_landscape(center: Vector2i) -> void:
 			continue
 		if get_tile(tile) != Defs.TILE_GRASS:
 			continue
-		if rng.randf() < 0.88:
+		# Thin the nearby crescent so the opening yard stays readable.
+		if rng.randf() < 0.36:
 			_set_tile(tile, Defs.TILE_TREE)
 			tree_deposits[_tile_key(tile)] = 6
 	var shoulder := center + Vector2i(
-		roundi(back.x * 8.0 + toward.y * 5.0),
-		roundi(back.y * 8.0 - toward.x * 5.0)
+		roundi(back.x * 10.0 + toward.y * 5.0),
+		roundi(back.y * 10.0 - toward.x * 5.0)
 	)
 	for i in 8:
 		var tile := shoulder + Vector2i(rng.randi_range(-2, 2), rng.randi_range(-2, 2))
-		if not is_inside_map(tile) or _tile_distance(tile, center) < 6.2:
+		if not is_inside_map(tile) or _tile_distance(tile, center) < FOUNDING_YARD_RADIUS:
 			continue
 		if get_tile(tile) != Defs.TILE_GRASS:
 			continue
 		_set_tile(tile, Defs.TILE_ROCK)
 		rock_deposits[_tile_key(tile)] = 22
 		tree_deposits.erase(_tile_key(tile))
+
+
+func _clear_founding_yard(center: Vector2i, radius: float) -> void:
+	var reach := int(ceil(radius))
+	for y in range(center.y - reach, center.y + reach + 1):
+		for x in range(center.x - reach, center.x + reach + 1):
+			var tile := Vector2i(x, y)
+			if not is_inside_map(tile):
+				continue
+			if _tile_distance(tile, center) >= radius:
+				continue
+			if String(get_tile(tile)) in [Defs.TILE_TREE, Defs.TILE_ROCK]:
+				_set_tile(tile, Defs.TILE_GRASS)
+				tree_deposits.erase(_tile_key(tile))
+				rock_deposits.erase(_tile_key(tile))
 
 
 func _clear_corridor(start: Vector2i, finish: Vector2i, half_width: int) -> void:
