@@ -1484,7 +1484,32 @@ func _damage_structure(structure_id: int, amount: int, attacker_realm: String) -
 		knowledge["recent_hostile_activity"] = _structure_center(structure)
 		knowledge["hostile_activity_age"] = 0.0
 	if int(structure["hp"]) <= 0:
+		if attacker_realm == Tuning.PLAYER_REALM \
+			and String(structure.get("type", "")) == Tuning.STRUCTURE_CLAIMANT_OUTPOST \
+			and simulation != null and simulation.crater_war != null \
+			and String(simulation.crater_war.rival_resolution) == "":
+			simulation.crater_war.capture_outpost(structure)
+			return
 		_destroy_structure(structure_id)
+
+
+func capture_structure(structure_id: int, new_realm: String) -> void:
+	var structure := _structure_by_id(structure_id)
+	if structure.is_empty() or not realms.has(new_realm):
+		return
+	var old_realm := String(structure.get("realm_id", ""))
+	if old_realm == new_realm:
+		return
+	if realms.has(old_realm):
+		realms[old_realm]["structures"].erase(structure_id)
+		if String(structure.get("type", "")) == Tuning.STRUCTURE_CLAIMANT_OUTPOST:
+			realms[old_realm]["claim"]["outpost_id"] = 0
+			_reset_claim(old_realm, "Binding interrupted — the Outpost was captured.")
+	if not realms[new_realm]["structures"].has(structure_id):
+		realms[new_realm]["structures"].append(structure_id)
+	structure["realm_id"] = new_realm
+	structure["hp"] = int(Tuning.structure_definition(String(structure.get("type", ""))).get("max_hp", 220))
+	_log_event("%s captured the %s." % [_realm_name(new_realm), Tuning.structure_name(String(structure.get("type", "")))])
 
 
 func _destroy_structure(structure_id: int) -> void:

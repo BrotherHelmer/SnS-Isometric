@@ -80,7 +80,8 @@ func _run() -> void:
 	frontier.stats["days_survived"] = 4
 	frontier.elapsed_seconds = Simulation.DEMO_VICTORY_SECONDS
 	frontier._update_demo_beats()
-	_check(frontier.victory, "THE REALM HOLDS fires at 45 min when the pieces stand")
+	_check(not frontier.victory, "THE REALM HOLDS is no longer a victory")
+	_check(frontier.crater_war != null and frontier.crater_war.hold_milestone_shown, "THE REALM HOLDS is a milestone toast")
 	var copy_sim: Simulation = Simulation.new()
 	copy_sim.start_new_run(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 260821, true)
 	var store_copy := String(copy_sim._storehouse_blocker_copy())

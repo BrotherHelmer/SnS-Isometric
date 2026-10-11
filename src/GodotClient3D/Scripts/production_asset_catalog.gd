@@ -51,6 +51,8 @@ const BUILDINGS := {
 	"WALL": ROOT + "/buildings/building_bridge_A.gltf",
 	"LUMEN_PILLAR": ROOT + "/opening_style/lumen_pillar.tscn",
 	"CLAIMANT_OUTPOST": ROOT + "/opening_style/watchtower.tscn",
+	"WYRD_HARVESTER": ROOT + "/opening_style/lumen_pillar.tscn",
+	"WYRD_REFINER": ROOT + "/opening_style/storehouse.tscn",
 	"ENEMY_CAMP": ROOT + "/opening_style/enemy_camp.tscn",
 }
 
@@ -69,6 +71,7 @@ const CARGO := {
 	"wheat": ROOT + "/opening_style/wheat.tscn",
 	"bread": ROOT + "/buildings/crate_A_small.gltf",
 	"wyrd": ROOT + "/resources/Iron_Bar.gltf",
+	"stabilized_wyrd": ROOT + "/resources/Iron_Bar.gltf",
 }
 
 const WORKYARD_PROPS := {

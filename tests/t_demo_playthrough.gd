@@ -14,7 +14,7 @@ const Intentions = preload("res://src/GodotClient/Scripts/one_shard_intentions.g
 const SEED_DEFAULT := 260821
 const STEP_SECONDS := 8.0
 const MAX_SECONDS_DEFAULT := 3600.0
-const DEST_DEFAULT := "res://artifacts/demo_playthrough_v2"
+const DEST_DEFAULT := "res://artifacts/demo_playthrough_v3"
 
 var failures: Array[String] = []
 var script_errors := 0
@@ -37,6 +37,9 @@ var journal_cursor := 0
 var first_quest_done := false
 var saw_rival := false
 var saw_shard := false
+var saw_storehouse := false
+var saw_capture := false
+var saw_ritual := false
 var step_index := 0
 var headless := false
 var accept := false
@@ -147,9 +150,15 @@ func _run() -> void:
 		_check(float(sim.elapsed_seconds) >= 1500.0 or bool(sim.victory), "survived to minute 25 or later")
 		_check(saw_shard or sim.is_revealed(sim.shard_position), "found the Shard")
 		_check(saw_rival, "saw a rival")
-		_check(bool(sim.victory), "reached a victory")
-		var hold_ok := float(sim.elapsed_seconds) + 0.05 >= 2700.0 and float(sim.elapsed_seconds) <= 3600.0
-		_check(hold_ok, "victory landed in minutes 45–60 (t=%.1f)" % float(sim.elapsed_seconds))
+		_check(saw_storehouse or (sim.crater_war != null and sim.crater_war.storehouse_completed_at >= 0.0), "finished the Storehouse")
+		_check(saw_capture or (sim.crater_war != null and sim.crater_war.rival_resolution != ""), "interacted with the rival / captured the Outpost")
+		_check(saw_ritual or (sim.crater_war != null and sim.crater_war.ritual_started_at >= 0.0), "defended the Binding ritual")
+		_check(bool(sim.victory), "reached a Binding victory")
+		_check(String(sim.defeat_reason).contains("BOUND"), "victory is Binding, not THE REALM HOLDS")
+		var bind_ok := float(sim.elapsed_seconds) + 0.05 >= 2700.0 and float(sim.elapsed_seconds) <= 3600.0
+		_check(bind_ok, "Binding landed in minutes 45–60 (t=%.1f)" % float(sim.elapsed_seconds))
+		if sim.crater_war != null and sim.crater_war.storehouse_completed_at >= 0.0:
+			_check(sim.crater_war.storehouse_completed_at <= 18.0 * 60.0 + 1.0, "Storehouse completed by minute 18 (t=%.1f)" % sim.crater_war.storehouse_completed_at)
 	print("DEMO_PLAYTHROUGH seed=%d elapsed=%.1f finished=%s victory=%s shots=%d" % [
 		seed_value, float(sim.elapsed_seconds), str(sim.game_finished), str(sim.victory), captured.size()
 	])
@@ -202,6 +211,21 @@ func _watch_journal(sim) -> void:
 			saw_rival = true
 			_note_event(sim, "rival", message)
 			captured["pending_rival"] = true
+		if kind == "storehouse_complete" and not saw_storehouse:
+			saw_storehouse = true
+			_note_event(sim, "storehouse", message)
+			captured["pending_storehouse"] = true
+		if kind == "outpost_captured" and not saw_capture:
+			saw_capture = true
+			_note_event(sim, "capture", message)
+			captured["pending_capture"] = true
+		if kind == "passage_deal" or kind == "rival_relocated":
+			saw_rival = true
+			_note_event(sim, kind, message)
+		if kind == "binding_started" and not saw_ritual:
+			saw_ritual = true
+			_note_event(sim, "ritual", message)
+			captured["pending_ritual"] = true
 
 
 func _watch_phase(game, sim) -> void:
@@ -234,6 +258,15 @@ func _watch_phase(game, sim) -> void:
 	if captured.get("pending_rival", false):
 		captured["pending_rival"] = false
 		await _capture(game, sim, "t%02d_rival" % _mm(sim), "Rival encounter.")
+	if captured.get("pending_storehouse", false):
+		captured["pending_storehouse"] = false
+		await _capture(game, sim, "t%02d_storehouse" % _mm(sim), "Storehouse completed.")
+	if captured.get("pending_capture", false):
+		captured["pending_capture"] = false
+		await _capture(game, sim, "t%02d_capture" % _mm(sim), "Claimant Outpost captured.")
+	if captured.get("pending_ritual", false):
+		captured["pending_ritual"] = false
+		await _capture(game, sim, "t%02d_ritual" % _mm(sim), "Binding ritual begun.")
 
 
 func _maybe_rival(sim) -> void:
@@ -330,7 +363,7 @@ func _rival_focus(game, sim) -> Vector3:
 
 func _write_csv_header() -> void:
 	var file := FileAccess.open(csv_path, FileAccess.WRITE)
-	file.store_string("game_seconds,game_minutes,day,night,population,housing,soldiers,buildings,roads,wood,planks,stone,wheat,bread,wyrd,quest,events,victory,finished\n")
+	file.store_string("game_seconds,game_minutes,day,night,population,housing,soldiers,buildings,roads,wood,planks,stone,wheat,bread,wyrd,stabilized,exposure,quest,events,victory,finished\n")
 	file.close()
 
 
@@ -339,7 +372,7 @@ func _log_row(sim, events: String) -> void:
 	if file == null:
 		return
 	file.seek_end()
-	file.store_string("%0.1f,%0.2f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%d,%d\n" % [
+	file.store_string("%0.1f,%0.2f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%0.2f,%s,%s,%d,%d\n" % [
 		float(sim.elapsed_seconds),
 		float(sim.elapsed_seconds) / 60.0,
 		int(sim.day_count),
@@ -355,6 +388,8 @@ func _log_row(sim, events: String) -> void:
 		_stock(sim, Defs.RESOURCE_WHEAT),
 		_stock(sim, Defs.RESOURCE_BREAD),
 		_stock(sim, Defs.RESOURCE_WYRD),
+		_stock(sim, Defs.RESOURCE_STABILIZED_WYRD),
+		float(sim.crater_war.exposure) if sim.crater_war != null else 0.0,
 		_csv(_quest_label(sim)),
 		_csv(events),
 		1 if bool(sim.victory) else 0,

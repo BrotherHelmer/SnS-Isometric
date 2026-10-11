@@ -15,6 +15,7 @@ const RaidIntents = preload("one_shard_raid_intents.gd")
 const Placement = preload("one_shard_placement.gd")
 const Frontier = preload("one_shard_frontier.gd")
 const Dawn = preload("one_shard_dawn.gd")
+const CraterWarRules = preload("one_shard_crater_war.gd")
 
 const SAVE_PATH := "user://one_shard_save.json"
 const AUTOSAVE_PATH := "user://one_shard_autosave.json"
@@ -216,6 +217,7 @@ var presentation_opening_active := false
 var first_player_order_complete := false
 var presentation_worker_id := 0
 var rivalry
+var crater_war
 var world_features: Array = []
 var cumulative_wyrd_extracted := 0
 var peak_wyrd_pressure := 0.0
@@ -351,7 +353,7 @@ func start_new_run(width: int = MAP_WIDTH, height: int = MAP_HEIGHT, seed_value:
 		{"id": "wyrd", "text": "Harvest a Wyrd node with an Outpost", "complete": false},
 		{"id": "lumen", "text": "Extend connected Lumen toward the Shard", "complete": false},
 		{"id": "outpost", "text": "Build an Outpost toward the Shard", "complete": false},
-		{"id": "claim", "text": "Bind the Shard and survive the Reckoning", "complete": false}
+		{"id": "claim", "text": "Bind the fissure with 12 Stabilized Wyrd and hold the ritual", "complete": false}
 	]
 
 	next_building_id = 1
@@ -378,6 +380,10 @@ func start_new_run(width: int = MAP_WIDTH, height: int = MAP_HEIGHT, seed_value:
 	raid_plan = {}
 	demo_frontier_revealed = false
 	demo_rival_revealed = false
+	rivalry = null
+	if crater_war != null:
+		crater_war.reset()
+	crater_war = null
 	last_message = "Choose any clear, visible 4x4 site for the Town Hall."
 	game_finished = false
 	victory = false
@@ -612,6 +618,9 @@ func _finish_founding_setup() -> void:
 	if rivalry == null:
 		rivalry = RivalryRules.new()
 		rivalry.setup(self, rng_seed)
+	if crater_war == null:
+		crater_war = CraterWarRules.new()
+		crater_war.setup(self)
 	_register_wyrd_features()
 	protection_powered = int(central_inventory.get(Defs.RESOURCE_WYRD, 0)) > 0
 	_update_objective_flag("found")
@@ -694,6 +703,8 @@ func advance_tick() -> void:
 			NIGHT_LENGTH_SECONDS
 		)
 		_profile_finish("rivalry_updates", stamp)
+	if crater_war != null:
+		crater_war.tick(TICK_SECONDS)
 	stamp = _profile_stamp()
 	_update_wyrd_network(TICK_SECONDS)
 	_profile_finish("lumen_claim_updates", stamp)
@@ -957,6 +968,11 @@ func validate_placement(building_type: String, tile: Vector2i, rotation: int = 0
 		return _failure("BuildingClearance", "Leave one clear tile between buildings for paths and work yards.")
 	if building_type == Defs.BUILDING_LUMBER_CAMP and _find_nearby_deposit(_footprint_center(tile, footprint), Defs.TILE_TREE, LUMBER_REACH).x < 0:
 		return _failure("NoTrees", "Lumber Camp needs trees within %d tiles." % LUMBER_REACH)
+	if building_type == Defs.BUILDING_WYRD_HARVESTER:
+		if crater_war == null or not crater_war.geologist_surveyed:
+			return _failure("Survey", "The geologist must mark a fissure before a Harvester can sit.")
+		if not crater_war.harvester_can_sit(tile):
+			return _failure("Fissure", "A Wyrd Harvester must sit on or beside a marked fissure.")
 
 	var success_message := "%s can be built." % Defs.building_name(building_type)
 	if not trees_to_clear.is_empty():
@@ -1253,6 +1269,20 @@ func request_player_claim() -> Dictionary:
 	return request_begin_binding()
 
 
+func request_survey() -> Dictionary:
+	if crater_war == null:
+		return _failure("Unavailable", "No geologist is attached to this realm.")
+	if crater_war.primary_fissure.x < 0:
+		return _failure("Fog", "Scout the frontier before the geologist can mark a fissure.")
+	return crater_war.survey_fissures()
+
+
+func request_passage_deal() -> Dictionary:
+	if crater_war == null:
+		return _failure("Unavailable", "No rival is contesting a fissure.")
+	return crater_war.request_passage_deal()
+
+
 func is_military_unlocked() -> bool:
 	if elapsed_seconds + 0.001 >= WATCHTOWER_UNLOCK_SECONDS:
 		return true
@@ -1346,6 +1376,9 @@ func _reveal_demo_frontier() -> void:
 		# The Director: the hold victory needs a stake ≥16 tiles from the
 		# hall. Plant one on the marker so the goal is reachable and real.
 		rivalry.force_place_structure(RivalryTuning.PLAYER_REALM, RivalryTuning.STRUCTURE_CLAIMANT_OUTPOST, marker)
+	if crater_war != null:
+		crater_war.plant_fissures(marker)
+		crater_war.survey_fissures("The geologist marks a Wyrd fissure on the crater road.")
 	var compass := crater_compass_from(hall)
 	last_message = "THE SHARD LIES %s — a frontier marker is within reach." % compass
 	_add_log(last_message)
@@ -1371,6 +1404,8 @@ func _reveal_demo_rival() -> void:
 		toward = Vector2(1.0, 0.0)
 	toward = toward.normalized()
 	var presence := hall + Vector2i(roundi(toward.x * 22.0), roundi(toward.y * 22.0))
+	if crater_war != null and crater_war.primary_fissure.x >= 0:
+		presence = crater_war.rival_presence_tile()
 	presence.x = clampi(presence.x, 2, map_size.x - 4)
 	presence.y = clampi(presence.y, 2, map_size.y - 4)
 	if _in_founding_clearing(presence) or String(get_tile(presence)) == Defs.TILE_SHARD:
@@ -1403,10 +1438,17 @@ func _maybe_demo_hold_victory() -> void:
 		return
 	if not is_revealed(shard_position):
 		return
+	if crater_war != null:
+		crater_war.show_hold_milestone()
+		return
 	_finish_run(true, "THE REALM HOLDS — five days on the frontier. Binding the Shard remains the longer war.")
 
 
 func request_begin_binding() -> Dictionary:
+	if crater_war != null and crater_war.can_begin():
+		var crater_result: Dictionary = crater_war.request_begin()
+		last_message = String(crater_result.get("message", ""))
+		return crater_result
 	if rivalry == null:
 		return _failure("Unavailable", "Binding is not ready.")
 	var result: Dictionary = rivalry.request_begin_claim(RivalryTuning.PLAYER_REALM)
@@ -1512,7 +1554,10 @@ func get_macro_objective() -> Dictionary:
 				has_outpost = true
 	var binding_ready := false
 	var binding_active := false
-	if rivalry != null:
+	if crater_war != null:
+		binding_active = crater_war.ritual_active
+		binding_ready = crater_war.can_begin()
+	if rivalry != null and not binding_active and not binding_ready:
 		var claim: Dictionary = rivalry.get_claim_status(RivalryTuning.PLAYER_REALM)
 		binding_active = bool(claim.get("active", false))
 		binding_ready = bool(Dictionary(claim.get("requirements", {})).get("ready", false))
@@ -1544,21 +1589,26 @@ func get_wyrdfall_presentation() -> Dictionary:
 		rival_line = rivalry.get_rival_status_line()
 	var binding_percent := int(round(clampf(float(player_claim.get("binding_progress", 0.0)) / Wyrdfall.BINDING_DURATION_SECONDS, 0.0, 1.0) * 100.0))
 	var rival_percent := int(round(clampf(float(rival_claim.get("binding_progress", 0.0)) / Wyrdfall.BINDING_DURATION_SECONDS, 0.0, 1.0) * 100.0))
+	var crater := {}
+	if crater_war != null:
+		crater = crater_war.presentation()
 	return {
 		"pressure": pressure,
 		"pressure_tooltip": Wyrdfall.pressure_tooltip(pressure),
 		"forecast": get_night_forecast(),
 		"objective": get_macro_objective(),
-		"binding_ready": bool(Dictionary(player_claim.get("requirements", {})).get("ready", false)) and not bool(player_claim.get("active", false)),
-		"binding_active": bool(player_claim.get("active", false)),
-		"binding_percent": binding_percent,
-		"binding_summary": String(player_claim.get("status", "")),
+		"binding_ready": bool(crater.get("binding_ready", false)) or (bool(Dictionary(player_claim.get("requirements", {})).get("ready", false)) and not bool(player_claim.get("active", false))),
+		"binding_active": bool(crater.get("binding_active", false)) or bool(player_claim.get("active", false)),
+		"binding_percent": int(crater.get("binding_percent", binding_percent)),
+		"binding_summary": String(crater.get("binding_summary", player_claim.get("status", ""))),
 		"rival_binding_active": bool(rival_claim.get("active", false)),
 		"rival_binding_percent": rival_percent,
-		"rival_line": rival_line,
+		"rival_line": String(crater.get("rival_line", rival_line)),
 		"reckoning": reckoning_active,
 		"dawn_summary": dawn_summary.duplicate(true),
-		"onboarding": _pending_onboarding_hint()
+		"onboarding": _pending_onboarding_hint(),
+		"exposure": float(crater.get("exposure", 0.0)),
+		"stabilized": int(crater.get("stabilized", 0))
 	}
 
 
@@ -1693,6 +1743,8 @@ func request_outpost_assault(structure_id: int) -> Dictionary:
 		return _failure("Soldiers", "Train free patrol soldiers at a Barracks and open a route to this Outpost. Tower sentries stay at their posts.")
 	last_message = "%d patrol soldiers ordered to assault the rival Outpost. They remain vulnerable while away." % sent
 	_record_event("outpost_assault_order", last_message, {"structure_id": structure_id, "soldiers": sent})
+	if crater_war != null:
+		crater_war.note_assault(structure_id)
 	return _success(last_message)
 
 
@@ -2478,7 +2530,7 @@ func _update_wyrd_network(delta: float) -> void:
 	protection_powered = int(central_inventory.get(Defs.RESOURCE_WYRD, 0)) > 0
 	if is_night and protection_powered:
 		wyrd_upkeep_progress += get_wyrd_upkeep_per_minute() * delta / 60.0
-		while wyrd_upkeep_progress >= 1.0 and int(central_inventory.get(Defs.RESOURCE_WYRD, 0)) > 0:
+		while wyrd_upkeep_progress >= 1.0 and int(central_inventory.get(Defs.RESOURCE_WYRD, 0)) > CraterWarRules.RAW_RESERVE:
 			central_inventory[Defs.RESOURCE_WYRD] = int(central_inventory.get(Defs.RESOURCE_WYRD, 0)) - 1
 			wyrd_upkeep_progress -= 1.0
 		protection_powered = int(central_inventory.get(Defs.RESOURCE_WYRD, 0)) > 0
@@ -7567,11 +7619,11 @@ func _update_time(delta: float) -> void:
 			_prepare_raid_plan()
 		var origin: Vector2i = raid_plan.get("origin", shard_position)
 		add_map_marker("raid", origin, "RAID", elapsed_seconds + 90.0)
-		last_message = RaidIntents.raid_warning_message(String(raid_plan.get("bearing", "the woods")))
+		last_message = RaidIntents.raid_warning_message(String(raid_plan.get("bearing", "the woods")), 60, String(raid_plan.get("target_name", "")))
 		_add_log(last_message)
 		push_notice("danger", "RAID WARNING", last_message, "critical")
 		playtest_log.note(self, "horn_warning", last_message)
-		_record_event("raid_warning", last_message, {"origin": origin, "bearing": String(raid_plan.get("bearing", ""))})
+		_record_event("raid_warning", last_message, {"origin": origin, "bearing": String(raid_plan.get("bearing", "")), "target": String(raid_plan.get("target_name", ""))})
 	if not is_night and not night_warning_sent and remaining <= NIGHT_WARNING_SECONDS:
 		night_warning_sent = true
 		path_grid_dirty = true
@@ -7750,18 +7802,25 @@ func _night_spawn_origins() -> Array[Vector2i]:
 
 func _prepare_raid_plan() -> Dictionary:
 	var intent := RaidIntents.choose(day_count, rng_seed)
-	var bearing_tile := shard_position
-	for camp in enemy_camps:
-		if bool(camp.get("destroyed", false)):
-			continue
-		bearing_tile = Vector2i(camp.get("position", shard_position))
-		break
-	if bearing_tile == shard_position:
-		var origins := _night_spawn_origins()
-		if not origins.is_empty():
-			bearing_tile = origins[0]
-	var target := {}
-	if intent != RaidIntents.INTENT_CENTER:
+	if crater_war != null and crater_war.ritual_active:
+		intent = RaidIntents.INTENT_RITUAL
+	var wanted_bearing := RaidIntents.choose_bearing(day_count, rng_seed)
+	var bearing_tile := _spawn_origin_for_bearing(wanted_bearing)
+	if bearing_tile.x < 0:
+		bearing_tile = shard_position
+		for camp in enemy_camps:
+			if bool(camp.get("destroyed", false)):
+				continue
+			bearing_tile = Vector2i(camp.get("position", shard_position))
+			break
+		if bearing_tile == shard_position:
+			var origins := _night_spawn_origins()
+			if not origins.is_empty():
+				bearing_tile = origins[0]
+	var target := _raid_named_target(RaidIntents.choose_target_kind(day_count, rng_seed))
+	if crater_war != null and crater_war.ritual_active:
+		target = _ritual_raid_target()
+	if target.is_empty() and intent != RaidIntents.INTENT_CENTER:
 		var yards := _raid_economy_candidates()
 		if not yards.is_empty():
 			target = yards[0]
@@ -7779,6 +7838,71 @@ func _prepare_raid_plan() -> Dictionary:
 	dusk_forecast["raid_intent"] = intent
 	dusk_forecast["bearing"] = raid_plan["bearing"]
 	return raid_plan
+
+
+func _spawn_origin_for_bearing(bearing: String) -> Vector2i:
+	var hall := _footprint_center(town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
+	var wanted := RaidIntents.bearing_angle(bearing)
+	var best := Vector2i(-1, -1)
+	var best_diff := 1000.0
+	for tile in _night_spawn_origins():
+		var delta := Vector2(tile - hall)
+		if delta.length_squared() < 0.01:
+			continue
+		var diff := absf(angle_difference(delta.angle(), wanted))
+		if diff < best_diff:
+			best = tile
+			best_diff = diff
+	return best
+
+
+func _raid_named_target(kind: String) -> Dictionary:
+	if kind == "":
+		return {}
+	for building in buildings:
+		if bool(building.get("construction", false)):
+			continue
+		if String(building.get("type", "")) == kind:
+			return building
+	if kind == Defs.BUILDING_OUTPOST and rivalry != null:
+		for structure in rivalry.get_structures(RivalryTuning.PLAYER_REALM):
+			if String(structure.get("type", "")) == RivalryTuning.STRUCTURE_CLAIMANT_OUTPOST and int(structure.get("hp", 0)) > 0:
+				return structure
+	return {}
+
+
+func _ritual_raid_target() -> Dictionary:
+	if rivalry != null:
+		for structure in rivalry.get_structures(RivalryTuning.PLAYER_REALM):
+			if String(structure.get("type", "")) == RivalryTuning.STRUCTURE_CLAIMANT_OUTPOST and int(structure.get("hp", 0)) > 0:
+				return structure
+	return _raid_named_target(Defs.BUILDING_WYRD_HARVESTER)
+
+
+func spawn_ritual_raid(wave_size: int = 4) -> void:
+	var origin := _spawn_origin_for_bearing(RaidIntents.choose_bearing(day_count + 3, rng_seed))
+	if origin.x < 0:
+		var origins := _night_spawn_origins()
+		if not origins.is_empty():
+			origin = origins[0]
+		else:
+			origin = shard_position
+	var target := _ritual_raid_target()
+	raid_plan = {
+		"intent": RaidIntents.INTENT_RITUAL,
+		"bearing": _bearing_from_town(origin),
+		"origin": origin,
+		"target_id": int(target.get("id", 0)),
+		"target_name": _display_building_name(target) if not target.is_empty() else "the ritual Outpost"
+	}
+	for i in range(maxi(1, wave_size)):
+		_spawn_enemy(origin, RaidTuning.NIGHT1_HP, RaidTuning.NIGHT1_DAMAGE, -0.08 * float(i), 0, ENEMY_RAIDER, RaidTuning.NIGHT1_ARMOR)
+	_begin_raid(0)
+	last_message = "RITUAL RAID — hostiles from %s mean the Binding." % String(raid_plan.get("bearing", "the wilds"))
+	_add_log(last_message)
+	push_notice("danger", "RITUAL", last_message, "critical")
+	_record_event("ritual_raid", last_message, {"size": wave_size, "origin": origin})
+	_emit_audio("enemy")
 
 
 func _raid_economy_candidates() -> Array:
@@ -8073,6 +8197,10 @@ func _find_enemy_target_unprofiled(enemy: Dictionary) -> Dictionary:
 	# economy raids peel to yards; centre raids keep the defended route.
 	if day_count > 1:
 		var raid_intent := String(enemy.get("raid_intent", raid_plan.get("intent", "")))
+		if raid_intent == RaidIntents.INTENT_RITUAL:
+			var ritual_hit := _ritual_raid_target()
+			if not ritual_hit.is_empty():
+				return {"entity": ritual_hit, "kind": "building"}
 		if raid_intent == RaidIntents.INTENT_ECONOMY:
 			var economy := _raid_economy_candidates()
 			var economy_hit := _best_enemy_target(enemy, economy, "building", false)

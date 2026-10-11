@@ -32,6 +32,7 @@ func think(sim) -> Dictionary:
 	_defend(sim)
 	_defend_night(sim)
 	_pursue_economy(sim)
+	_pursue_crater_war(sim)
 	_scout(sim)
 	_expand_toward_shard(sim)
 	_contest_rivals(sim)
@@ -71,12 +72,13 @@ func _pursue_economy(sim) -> void:
 		else:
 			last_idle_reason = "waiting for Lumber Camp so Quarry unlocks"
 		return
-	if _unlocked(sim, Defs.BUILDING_STOREHOUSE) and _count(sim, Defs.BUILDING_STOREHOUSE) < 1 and _need_storage(sim):
+	if _unlocked(sim, Defs.BUILDING_SAWMILL) and _count(sim, Defs.BUILDING_SAWMILL) < 1:
+		_try_build(sim, Defs.BUILDING_SAWMILL, sim.town_hall_position + Vector2i(10, 7))
+		return
+	if _unlocked(sim, Defs.BUILDING_STOREHOUSE) and _count(sim, Defs.BUILDING_STOREHOUSE) < 1:
 		if _try_build(sim, Defs.BUILDING_STOREHOUSE, sim.town_hall_position + Vector2i(4, 10)):
 			return
-		# Do not stall the hour on an unaffordable Storehouse — sawmill first.
-	if _unlocked(sim, Defs.BUILDING_SAWMILL) and _count(sim, Defs.BUILDING_SAWMILL) < 1 and _stock(sim, Defs.RESOURCE_WOOD) >= 8:
-		_try_build(sim, Defs.BUILDING_SAWMILL, sim.town_hall_position + Vector2i(10, 7))
+		last_idle_reason = "waiting on planks/stone for the Storehouse"
 		return
 	if _unlocked(sim, Defs.BUILDING_BAKERY) and _count(sim, Defs.BUILDING_BAKERY) < 1 and _stock(sim, Defs.RESOURCE_WHEAT) >= 4:
 		_try_build(sim, Defs.BUILDING_BAKERY, sim.town_hall_position + Vector2i(8, 11))
@@ -99,6 +101,10 @@ func _defend_night(sim) -> void:
 		_try_build(sim, Defs.BUILDING_WATCHTOWER, sim.town_hall_position + toward + Vector2i(1, 1))
 		return
 	if _pending_buildings(sim) >= MAX_PENDING_SITES:
+		return
+	if not _has_completed(sim, Defs.BUILDING_SAWMILL) and _count(sim, Defs.BUILDING_SAWMILL) < 1:
+		return
+	if not _has_completed(sim, Defs.BUILDING_STOREHOUSE) and _count(sim, Defs.BUILDING_STOREHOUSE) < 1:
 		return
 	if _unlocked(sim, Defs.BUILDING_BARRACKS) and _count(sim, Defs.BUILDING_BARRACKS) < 1:
 		_try_build(sim, Defs.BUILDING_BARRACKS, sim.town_hall_position + Vector2i(6, 2))
@@ -148,13 +154,38 @@ func _expand_toward_shard(sim) -> void:
 		_place_forward_structure(sim, Defs.BUILDING_OUTPOST)
 
 
+func _pursue_crater_war(sim) -> void:
+	if sim.crater_war == null:
+		return
+	if sim.crater_war.primary_fissure.x >= 0 and not sim.crater_war.geologist_surveyed:
+		var survey: Dictionary = sim.request_survey()
+		if bool(survey.get("success", false)):
+			_note(sim, "SURVEY", sim.crater_war.primary_fissure, String(survey.get("message", "")))
+	if _pending_buildings(sim) >= MAX_PENDING_SITES:
+		return
+	if sim.crater_war.geologist_surveyed and _unlocked(sim, Defs.BUILDING_WYRD_HARVESTER) and _count(sim, Defs.BUILDING_WYRD_HARVESTER) < 1:
+		if _try_build(sim, Defs.BUILDING_WYRD_HARVESTER, sim.crater_war.primary_fissure):
+			return
+	if _has_completed(sim, Defs.BUILDING_WYRD_HARVESTER) and _unlocked(sim, Defs.BUILDING_WYRD_REFINER) and _count(sim, Defs.BUILDING_WYRD_REFINER) < 1:
+		_try_build(sim, Defs.BUILDING_WYRD_REFINER, sim.town_hall_position + Vector2i(9, 4))
+
+
 func _contest_rivals(sim) -> void:
-	if sim.rivalry == null or int(sim.soldiers_total) < 1:
+	if sim.rivalry == null:
+		return
+	if sim.crater_war != null and String(sim.crater_war.rival_resolution) == "" and int(sim.soldiers_total) < 1 and _stock(sim, Defs.RESOURCE_WOOD) >= 8:
+		var deal: Dictionary = sim.request_passage_deal()
+		if bool(deal.get("success", false)):
+			_note(sim, "PASSAGE", sim.crater_war.primary_fissure, String(deal.get("message", "")))
+			return
+	if int(sim.soldiers_total) < 1:
 		return
 	for target in sim.rivalry.get_structures("rival"):
 		if String(target.get("type", "")) != Defs.BUILDING_OUTPOST:
 			continue
 		if int(target.get("hp", 0)) <= 0:
+			continue
+		if sim.crater_war != null and String(sim.crater_war.rival_resolution) != "":
 			continue
 		var already := false
 		for guard in sim.workers:
@@ -164,9 +195,20 @@ func _contest_rivals(sim) -> void:
 		var result: Dictionary = sim.request_outpost_assault(int(target.get("id", 0)))
 		if bool(result.get("success", false)):
 			_note(sim, "ASSAULT", Vector2i(target.get("position", Vector2i.ZERO)), String(result.get("message", "")))
+		elif sim.crater_war != null and _stock(sim, Defs.RESOURCE_WOOD) >= 8:
+			var fallback: Dictionary = sim.request_passage_deal()
+			if bool(fallback.get("success", false)):
+				_note(sim, "PASSAGE", sim.crater_war.primary_fissure, String(fallback.get("message", "")))
 
 
 func _try_bind(sim) -> void:
+	if sim.crater_war != null and sim.crater_war.can_begin():
+		var crater_bind: Dictionary = sim.request_begin_binding()
+		if bool(crater_bind.get("success", false)):
+			_note(sim, "BIND", sim.crater_war.primary_fissure, String(crater_bind.get("message", "")))
+		else:
+			last_failures.append("bind: %s" % String(crater_bind.get("message", "")))
+		return
 	if sim.rivalry == null:
 		return
 	var ready: Dictionary = sim.rivalry.claim_requirements("player")
@@ -499,6 +541,8 @@ func _unlocked(sim, building_type: String) -> bool:
 			return sim.is_military_unlocked() or has_tower
 		Defs.BUILDING_LUMEN_PILLAR, Defs.BUILDING_OUTPOST:
 			return has_tower or (has_lumber and has_house and int(sim.day_count) >= 2)
+		Defs.BUILDING_WYRD_HARVESTER, Defs.BUILDING_WYRD_REFINER:
+			return sim.crater_war != null and bool(sim.crater_war.geologist_surveyed)
 		_:
 			return true
 
