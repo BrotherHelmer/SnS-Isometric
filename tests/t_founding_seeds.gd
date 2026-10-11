@@ -38,7 +38,7 @@ func _run() -> void:
 	for i in SEED_COUNT:
 		var seed_value := BASE_SEED + i * 97
 		var sim = Simulation.new()
-		sim.start_new_run(70, 70, seed_value, true)
+		sim.start_new_run(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, seed_value, true)
 		var audit: Dictionary = sim.founding_audit()
 		var ok := _check_audit(audit, seed_value)
 		if ok:
@@ -108,37 +108,66 @@ func _run() -> void:
 	root.add_child(game)
 	await process_frame
 	await process_frame
-	for seed_value in mesh_seeds:
+	var render_pass := 0
+	var render_fail := 0
+	for i in SEED_COUNT:
+		var seed_value := BASE_SEED + i * 97
 		var t1 := Time.get_ticks_msec()
 		game.start_new_3d(int(seed_value))
 		game._hide_start_menu()
 		game.simulation_host.paused = true
 		if game.has_method("_update_ui"):
 			game._update_ui()
+		game.world_view.note_camera(game.world_view.opening_camera_focus(), 32.0)
 		for _i in 3:
 			await process_frame
-		var fake: Array[String] = game.world_view.non_inspectable_building_meshes(-1.0)
+			game.world_view.stream_chunks(7000)
+		await RenderingServer.frame_post_draw
 		var start_ms := float(Time.get_ticks_msec() - t1)
-		print("T_FOUNDING_SEEDS mesh_seed=%d fake=%s start_ms=%.0f" % [seed_value, str(fake), start_ms])
-		_check(fake.is_empty(), "seed %d has 0 fake building meshes" % seed_value)
-		var sim = game.simulation_host.simulation
-		var audit: Dictionary = sim.founding_audit()
-		_check(int(audit.get("functional_buildings", 0)) == 1, "seed %d 3D has one Town Hall" % seed_value)
-		_check(game.objective_button != null and String(game.objective_button.text).contains("Lumber Camp"), "seed %d HUD quest says Lumber Camp" % seed_value)
-		_check(bool(audit.get("inside_crater", false)), "seed %d start is inside the crater" % seed_value)
-		_check(bool(audit.get("distance_band", false)), "seed %d Town Hall is in the harvest distance band" % seed_value)
-		var dress: Node = game.world_view.resource_visuals_root.get_node_or_null("OpeningDress")
-		var traces: Node = dress.find_child("DressWyrdTrace_0", true, false) if dress != null else null
-		var beacon: Node = game.world_view.shard_beacon
-		_check(traces != null, "seed %d has a DressWyrdTrace visible from the start" % seed_value)
-		_check(beacon != null, "seed %d still has the ShardBeacon toward the crater" % seed_value)
-		_check(dress == null or dress.find_child("DressWyrdGlow", true, false) == null, "seed %d has no DressWyrdGlow" % seed_value)
-		print("T_FOUNDING_SEEDS crater_seed=%d compass=%s dist=%.1f hall=%s shard=%s dir=%s orbit=%.1f water=%s layout=%s" % [
-			seed_value, String(audit.get("crater_compass", "")), float(audit.get("crater_dist", -1.0)),
-			str(audit.get("hall", Vector2i.ZERO)), str(audit.get("shard", Vector2i.ZERO)),
-			str(audit.get("crater_dir", Vector2.ZERO)), float(audit.get("orbit_deg", -1.0)),
-			String(audit.get("water_type", "")), String(audit.get("layout_signature", ""))
+		var view: Dictionary = game.world_view.opening_view_audit(game.camera_rig.camera)
+		var image: Image = root.get_viewport().get_texture().get_image()
+		var land := _three_d_land_ratio(image)
+		var ok_view := int(view.get("near_built", 0)) >= 1 and int(view.get("near_visible", 0)) >= 1
+		var ok_hall := bool(view.get("hall_in_view", false))
+		var ok_land := land >= 0.60
+		if ok_view and ok_hall and ok_land:
+			render_pass += 1
+		else:
+			render_fail += 1
+		_check(ok_view, "seed %d opening near chunks are built and visible (built=%d visible=%d missing=%s)" % [
+			seed_value, int(view.get("near_built", 0)), int(view.get("near_visible", 0)), str(view.get("missing", []))
 		])
+		_check(ok_hall, "seed %d hall mesh is in the opening camera" % seed_value)
+		_check(ok_land, "seed %d first frame has >=60%% land in the 3D area (%.1f%%)" % [seed_value, land * 100.0])
+		if seed_value in mesh_seeds or not (ok_view and ok_hall and ok_land):
+			print("T_FOUNDING_SEEDS render_seed=%d land=%.3f near=%d/%d hall=%s start_ms=%.0f" % [
+				seed_value, land, int(view.get("near_visible", 0)), int(view.get("near_built", 0)),
+				str(ok_hall), start_ms
+			])
+		if seed_value in mesh_seeds:
+			var fake: Array[String] = game.world_view.non_inspectable_building_meshes(-1.0)
+			print("T_FOUNDING_SEEDS mesh_seed=%d fake=%s start_ms=%.0f" % [seed_value, str(fake), start_ms])
+			_check(fake.is_empty(), "seed %d has 0 fake building meshes" % seed_value)
+			var sim = game.simulation_host.simulation
+			var audit: Dictionary = sim.founding_audit()
+			_check(int(audit.get("functional_buildings", 0)) == 1, "seed %d 3D has one Town Hall" % seed_value)
+			_check(game.objective_button != null and String(game.objective_button.text).contains("Lumber Camp"), "seed %d HUD quest says Lumber Camp" % seed_value)
+			_check(bool(audit.get("inside_crater", false)), "seed %d start is inside the crater" % seed_value)
+			_check(bool(audit.get("distance_band", false)), "seed %d Town Hall is in the harvest distance band" % seed_value)
+			var dress: Node = game.world_view.resource_visuals_root.get_node_or_null("OpeningDress")
+			var traces: Node = dress.find_child("DressWyrdTrace_0", true, false) if dress != null else null
+			var beacon: Node = game.world_view.shard_beacon
+			_check(traces != null, "seed %d has a DressWyrdTrace visible from the start" % seed_value)
+			_check(beacon != null, "seed %d still has the ShardBeacon toward the crater" % seed_value)
+			_check(dress == null or dress.find_child("DressWyrdGlow", true, false) == null, "seed %d has no DressWyrdGlow" % seed_value)
+			print("T_FOUNDING_SEEDS crater_seed=%d compass=%s dist=%.1f hall=%s shard=%s dir=%s orbit=%.1f water=%s layout=%s" % [
+				seed_value, String(audit.get("crater_compass", "")), float(audit.get("crater_dist", -1.0)),
+				str(audit.get("hall", Vector2i.ZERO)), str(audit.get("shard", Vector2i.ZERO)),
+				str(audit.get("crater_dir", Vector2.ZERO)), float(audit.get("orbit_deg", -1.0)),
+				String(audit.get("water_type", "")), String(audit.get("layout_signature", ""))
+			])
+	print("T_FOUNDING_SEEDS render_pass=%d/%d render_fail=%d" % [render_pass, SEED_COUNT, render_fail])
+	_check(render_pass == SEED_COUNT, "every seed opening frame shows built chunks, the hall, and >=60%% land")
 
 	var report := dest.path_join("founding_seeds.txt")
 	var file := FileAccess.open(report, FileAccess.WRITE)
@@ -189,7 +218,36 @@ func _check_audit(audit: Dictionary, seed_value: int) -> bool:
 	ok = _check(bool(audit.get("footprint_stable", false)), "seed %d Town Hall footprint is stable outside the pit" % seed_value) and ok
 	var pit := float(audit.get("pit_radius", 0.0))
 	ok = _check(pit >= Simulation.CRATER_RADIUS * Simulation.CRATER_PIT_RADIUS_MIN - 0.05 and pit <= Simulation.CRATER_RADIUS * Simulation.CRATER_PIT_RADIUS_MAX + 0.05, "seed %d pit radius is 0.30–0.45 R" % seed_value) and ok
+	ok = _check(int(audit.get("rival_count", 0)) >= Simulation.RIVAL_SEAT_MIN and int(audit.get("rival_count", 0)) <= Simulation.RIVAL_SEAT_MAX, "seed %d has 3–4 rival seats" % seed_value) and ok
+	var spread: Dictionary = audit.get("resource_spread", {})
+	ok = _check(int(spread.get("filled_quadrants", 0)) >= 3, "seed %d resources reach at least 3 quadrants" % seed_value) and ok
+	ok = _check(int(spread.get("trees", 0)) >= 80, "seed %d has distributed timber" % seed_value) and ok
+	ok = _check(int(spread.get("water", 0)) >= 5, "seed %d has province water" % seed_value) and ok
+	var map_size: Vector2i = audit.get("map_size", Vector2i.ZERO)
+	ok = _check(map_size.x == Simulation.MAP_WIDTH and map_size.y == Simulation.MAP_HEIGHT, "seed %d is the 320 province" % seed_value) and ok
 	return ok
+
+
+func _three_d_land_ratio(image: Image) -> float:
+	if image == null or image.is_empty():
+		return 0.0
+	var width := image.get_width()
+	var height := image.get_height()
+	var y0 := clampi(int(round(float(height) * 0.09)), 0, height - 1)
+	var y1 := clampi(int(round(float(height) * 0.86)), y0 + 1, height)
+	var void_c := Color("#17272A")
+	var land := 0
+	var total := 0
+	var step := 3
+	for y in range(y0, y1, step):
+		for x in range(0, width, step):
+			var pixel: Color = image.get_pixel(x, y)
+			total += 1
+			var dist := absf(pixel.r - void_c.r) + absf(pixel.g - void_c.g) + absf(pixel.b - void_c.b)
+			var luma := pixel.r * 0.22 + pixel.g * 0.72 + pixel.b * 0.06
+			if dist > 0.10 and luma > 0.12:
+				land += 1
+	return float(land) / float(maxi(total, 1))
 
 
 func _check(condition: bool, label: String) -> bool:

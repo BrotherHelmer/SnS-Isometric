@@ -3,7 +3,7 @@ extends RefCounted
 ## Validate disk data before touching a running realm. Keep the previous valid
 ## file until the replacement has been written, closed and read back.
 const MIN_VERSION := 6
-const MAX_VERSION := 8
+const MAX_VERSION := 9
 const MAX_BYTES := 32 * 1024 * 1024
 const Defs = preload("one_shard_defs.gd")
 
@@ -116,7 +116,7 @@ static func validate(data: Dictionary) -> String:
 		return "missing map dimensions"
 	var width := int(data.map_size.x)
 	var height := int(data.map_size.y)
-	if width < 8 or height < 8 or width > 256 or height > 256:
+	if width < 8 or height < 8 or width > 512 or height > 512:
 		return "unsupported map dimensions"
 	for field in ["map_tiles", "height_map"]:
 		if not data.get(field) is Array or data[field].size() != height:

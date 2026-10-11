@@ -21,9 +21,11 @@ const AUTOSAVE_PATH := "user://one_shard_autosave.json"
 const BEST_SCORE_PATH := "user://one_shard_best_score.json"
 const RUN_JOURNAL_PATH := "user://one_shard_run_journal.jsonl"
 const LAST_RUN_PATH := "user://one_shard_last_run.json"
-const SAVE_VERSION := 8
-const MAP_WIDTH := 70
-const MAP_HEIGHT := 70
+const SAVE_VERSION := 9
+const MAP_WIDTH := 320
+const MAP_HEIGHT := 320
+# Presentation chunks. Simulation stays on the full grid.
+const CHUNK_TILES := 32
 const TICK_SECONDS := 0.10
 const CARRIER_STEP_SECONDS := 0.78
 const LABORER_STEP_SECONDS := 0.95
@@ -78,8 +80,11 @@ const INITIAL_REVEAL_RADIUS := 12
 # hall centre. Nearby stands stay at 8+ so lumber still has timber.
 const FOUNDING_YARD_RADIUS := 8.0
 # Meteor bowl. CRATER_RADIUS is the wyrd harvest zone, not the pit.
-const CRATER_RADIUS := 22.0
-const CRATER_CORE_RADIUS := 8.0
+# Test #13: 5× the 22-tile bowl so a 320 map still has a readable crater.
+const CRATER_RADIUS := 110.0
+const CRATER_CORE_RADIUS := 40.0
+const RIVAL_SEAT_MIN := 3
+const RIVAL_SEAT_MAX := 4
 # ChatGPT #11: hall sits on the 0.70–0.85 R annulus. Floor is 0.65 R.
 # Pit excavation is 0.30–0.45 R. Change these fractions, not call sites.
 const FOUNDING_CRATER_DIST_MIN := 0.70
@@ -119,8 +124,11 @@ var rock_deposits: Dictionary = {}
 var tree_regrowth: Dictionary = {}
 var town_hall_position := Vector2i.ZERO
 var rival_town_hall_position := Vector2i.ZERO
+var rival_seats: Array = []
 var shard_position := Vector2i.ZERO
 var crater_pit_radius := 8.0
+var water_tiles: Dictionary = {}
+var biome_at: Dictionary = {}
 # Seeded founding site. Ellipse clearing, creek path, starter road and
 # nearby resource clusters all come from this dictionary so every new
 # game is different without becoming unplayable.
@@ -403,6 +411,9 @@ func start_new_run(width: int = MAP_WIDTH, height: int = MAP_HEIGHT, seed_value:
 	best_score = _load_best_score()
 
 	founding_site.clear()
+	rival_seats.clear()
+	water_tiles.clear()
+	biome_at.clear()
 	crater_pit_radius = CRATER_RADIUS * 0.36
 	_generate_map()
 	rivalry = null
@@ -1838,6 +1849,8 @@ func _emit_routine_notices() -> void:
 
 
 func _tile_allows_clear_and_build(tile: Vector2i, building_type: String) -> bool:
+	if is_water_tile(tile):
+		return building_type == Defs.BUILDING_ROAD
 	var terrain := String(get_tile(tile))
 	if terrain == Defs.TILE_GRASS:
 		return true
@@ -3269,6 +3282,7 @@ func _prepare_test_tile(tile: Vector2i, tile_type: String) -> void:
 		tree_deposits.erase(_tile_key(tile))
 	if tile_type != Defs.TILE_ROCK:
 		rock_deposits.erase(_tile_key(tile))
+	water_tiles.erase(_tile_key(tile))
 	if is_inside_map(tile) and not height_map.is_empty():
 		var level := get_height(town_hall_position) if is_town_hall_founded() else get_height(tile)
 		height_map[tile.y][tile.x] = level
@@ -3310,37 +3324,37 @@ func _generate_map() -> void:
 	_shape_impact_crater()
 	town_hall_position = _choose_founding_hall_tile()
 	_init_founding_site()
-	rival_town_hall_position = Vector2i(
-		clampi(roundi(float(map_size.x) * 0.77), 1, maxi(1, map_size.x - 6)),
-		clampi(roundi(float(map_size.y) * 0.17), 1, maxi(1, map_size.x - 6))
-	)
+	_place_rival_seats()
 	_flatten_area(_footprint_center(town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL)), 4)
-	_flatten_area(_footprint_center(rival_town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL)), 4)
+	for seat_value in rival_seats:
+		_flatten_area(_footprint_center(Vector2i(seat_value), Defs.building_footprint(Defs.BUILDING_TOWN_HALL)), 4)
 
 	_place_random_resources()
 	var town_center := _footprint_center(town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
-	var rival_center := _footprint_center(rival_town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
 	_clear_area(town_center, 8)
-	_clear_area(rival_center, 8)
 	_place_resource_cluster(town_center + Vector2i(-11, -10), Defs.TILE_TREE, 40, 4)
 	_place_resource_cluster(town_center + Vector2i(12, 9), Defs.TILE_TREE, 34, 6)
 	_place_resource_cluster(town_center + Vector2i(13, 2), Defs.TILE_ROCK, 25, 32)
 	_place_resource_cluster(town_center + Vector2i(5, -14), Defs.TILE_ROCK, 20, 32)
-	_place_resource_cluster(rival_center + Vector2i(11, 10), Defs.TILE_TREE, 40, 4)
-	_place_resource_cluster(rival_center + Vector2i(-12, -9), Defs.TILE_TREE, 34, 6)
-	_place_resource_cluster(rival_center + Vector2i(-13, -2), Defs.TILE_ROCK, 25, 32)
-	_place_resource_cluster(rival_center + Vector2i(-5, 14), Defs.TILE_ROCK, 20, 32)
+	for seat_value in rival_seats:
+		var rival_center := _footprint_center(Vector2i(seat_value), Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
+		_clear_area(rival_center, 8)
+		_place_resource_cluster(rival_center + Vector2i(11, 10), Defs.TILE_TREE, 40, 4)
+		_place_resource_cluster(rival_center + Vector2i(-12, -9), Defs.TILE_TREE, 34, 6)
+		_place_resource_cluster(rival_center + Vector2i(-13, -2), Defs.TILE_ROCK, 25, 32)
+		_place_resource_cluster(rival_center + Vector2i(-5, 14), Defs.TILE_ROCK, 20, 32)
+		_ensure_founding_apron(rival_center)
+		_compose_settlement_landscape(rival_center)
+		_clear_founding_yard(rival_center, FOUNDING_YARD_RADIUS)
 	_ensure_founding_apron(town_center)
-	_ensure_founding_apron(rival_center)
 	_compose_settlement_landscape(town_center)
-	_compose_settlement_landscape(rival_center)
 	_clear_founding_yard(town_center, FOUNDING_YARD_RADIUS)
-	_clear_founding_yard(rival_center, FOUNDING_YARD_RADIUS)
 	_place_founding_nearby_resources(town_center)
 	_generate_founding_creek(town_center)
 	_ensure_founding_food(town_center)
 	_place_founding_wyrd_traces(town_center)
 	_strip_founding_isolates(town_center)
+	_distribute_province_content()
 
 	_set_tile(shard_position, Defs.TILE_SHARD)
 	for offset in _radius_offsets(4):
@@ -3364,12 +3378,14 @@ func _generate_map() -> void:
 		_clear_area(claim_pad, 2)
 		_flatten_area(claim_pad, 2)
 	_clear_corridor(_town_hall_entrance_tile(), shard_position + Vector2i(-5, 0), 1)
-	_clear_corridor(_rival_town_hall_entrance_tile(), shard_position + Vector2i(4, -1), 1)
+	for seat_value in rival_seats:
+		_clear_corridor(_seat_entrance_tile(Vector2i(seat_value)), shard_position + Vector2i(4, -1), 1)
 	_place_wilderness_opportunities()
 	_place_enemy_camps()
 	_register_world_features()
 	_clear_founding_yard(town_center, FOUNDING_YARD_RADIUS)
-	_clear_founding_yard(rival_center, FOUNDING_YARD_RADIUS)
+	for seat_value in rival_seats:
+		_clear_founding_yard(_footprint_center(Vector2i(seat_value), Defs.building_footprint(Defs.BUILDING_TOWN_HALL)), FOUNDING_YARD_RADIUS)
 	_place_founding_nearby_resources(town_center)
 	_generate_founding_creek(town_center)
 	_ensure_founding_food(town_center)
@@ -3380,17 +3396,27 @@ func _generate_map() -> void:
 func _generate_height_map() -> void:
 	var phase_x := rng.randf_range(-PI, PI)
 	var phase_y := rng.randf_range(-PI, PI)
+	var scale := maxf(float(map_size.x) / 70.0, 1.0)
+	var falloff := scale * scale
 	var hill_a := Vector2(map_size) * Vector2(0.24, 0.28)
 	var hill_b := Vector2(map_size) * Vector2(0.76, 0.69)
+	var hill_c := Vector2(map_size) * Vector2(0.18, 0.72)
+	var hill_d := Vector2(map_size) * Vector2(0.82, 0.22)
 	var valley := Vector2(map_size) * Vector2(0.54, 0.47)
+	var ridge_a := Vector2(map_size) * Vector2(0.38, 0.80)
+	var ridge_b := Vector2(map_size) * Vector2(0.70, 0.36)
 	for y in range(map_size.y):
 		for x in range(map_size.x):
 			var point := Vector2(x, y)
-			var broad_waves := sin(float(x) * 0.115 + phase_x) * 0.46 + cos(float(y) * 0.105 + phase_y) * 0.42
-			var cross_wave := sin(float(x + y) * 0.062 + phase_x - phase_y) * 0.28
-			var hills := 1.18 * exp(-point.distance_squared_to(hill_a) / 420.0)
-			hills += 1.05 * exp(-point.distance_squared_to(hill_b) / 520.0)
-			var valley_cut := 0.82 * exp(-point.distance_squared_to(valley) / 390.0)
+			var broad_waves := sin(float(x) * 0.115 / scale + phase_x) * 0.46 + cos(float(y) * 0.105 / scale + phase_y) * 0.42
+			var cross_wave := sin(float(x + y) * 0.062 / scale + phase_x - phase_y) * 0.28
+			var hills := 1.18 * exp(-point.distance_squared_to(hill_a) / (420.0 * falloff))
+			hills += 1.05 * exp(-point.distance_squared_to(hill_b) / (520.0 * falloff))
+			hills += 0.92 * exp(-point.distance_squared_to(hill_c) / (480.0 * falloff))
+			hills += 0.88 * exp(-point.distance_squared_to(hill_d) / (500.0 * falloff))
+			hills += 0.70 * exp(-point.distance_squared_to(ridge_a) / (360.0 * falloff))
+			hills += 0.66 * exp(-point.distance_squared_to(ridge_b) / (340.0 * falloff))
+			var valley_cut := 0.82 * exp(-point.distance_squared_to(valley) / (390.0 * falloff))
 			var elevation := 1.15 + broad_waves + cross_wave + hills - valley_cut
 			height_map[y][x] = clampi(floori(elevation), 0, 3)
 
@@ -3465,7 +3491,10 @@ func _clamp_discovery_tile(tile: Vector2i) -> Vector2i:
 
 func _register_world_features() -> void:
 	_register_feature("shard", shard_position, "The Shard still burns in the impact crater.")
-	_register_feature("rival", rival_town_hall_position, "Another realm is pushing toward the same Shard.")
+	var seat_i := 0
+	for seat_value in rival_seats:
+		_register_feature("rival", Vector2i(seat_value), "Another realm is pushing toward the same Shard.")
+		seat_i += 1
 	for camp in enemy_camps:
 		_register_feature("enemy_camp", Vector2i(camp.get("position", Vector2i.ZERO)), "A hostile camp waits in the fog.")
 
@@ -3484,14 +3513,18 @@ func _register_feature(kind: String, position: Vector2i, message: String) -> voi
 
 func _place_enemy_camps() -> void:
 	var candidates := [
-		Vector2i(9, 10),
-		Vector2i(map_size.x - 13, map_size.y - 14),
-		Vector2i(10, map_size.y - 15),
-		Vector2i(map_size.x - 17, int(map_size.y / 2) + 8)
+		Vector2i(12, 14),
+		Vector2i(map_size.x - 16, map_size.y - 18),
+		Vector2i(14, map_size.y - 18),
+		Vector2i(map_size.x - 20, int(map_size.y / 2) + 10),
+		Vector2i(int(map_size.x * 0.22), int(map_size.y * 0.78)),
+		Vector2i(int(map_size.x * 0.80), int(map_size.y * 0.24)),
+		Vector2i(int(map_size.x * 0.12), int(map_size.y * 0.48)),
+		Vector2i(int(map_size.x * 0.88), int(map_size.y * 0.62))
 	]
 	for position_value in candidates:
 		var position: Vector2i = position_value
-		if _tile_distance(position, town_hall_position) < 18.0 or _tile_distance(position, rival_town_hall_position) < 18.0 or _tile_distance(position, shard_position) < 8.0:
+		if _tile_distance(position, town_hall_position) < 28.0 or _near_any_rival_seat(position, 22.0) or _tile_distance(position, shard_position) < 16.0:
 			continue
 		_clear_area(position, 2)
 		_flatten_area(position, 2)
@@ -3507,9 +3540,12 @@ func _place_enemy_camps() -> void:
 
 func _place_random_resources() -> void:
 	var town_center := _footprint_center(town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
-	for i in range(680):
+	var scatter := 680
+	if map_size.x >= 200:
+		scatter = 2200
+	for i in range(scatter):
 		var tile := Vector2i(rng.randi_range(1, map_size.x - 2), rng.randi_range(1, map_size.y - 2))
-		if _in_founding_clearing(tile) or _tile_distance(tile, rival_town_hall_position) < 8.0:
+		if _in_founding_clearing(tile) or _near_any_rival_seat(tile, 8.0):
 			continue
 		var toward_shard := _tile_distance(tile, shard_position)
 		var toward_home := _tile_distance(tile, town_center)
@@ -3521,9 +3557,12 @@ func _place_random_resources() -> void:
 		if rng.randf() < tree_chance:
 			_set_tile(tile, Defs.TILE_TREE)
 			tree_deposits[_tile_key(tile)] = 6 if toward_shard > 10.0 else 4
-	for i in range(240):
+	var rock_scatter := 240
+	if map_size.x >= 200:
+		rock_scatter = 780
+	for i in range(rock_scatter):
 		var tile := Vector2i(rng.randi_range(1, map_size.x - 2), rng.randi_range(1, map_size.y - 2))
-		if _in_founding_clearing(tile) or _tile_distance(tile, rival_town_hall_position) < 6.0:
+		if _in_founding_clearing(tile) or _near_any_rival_seat(tile, 6.0):
 			continue
 		if get_tile(tile) != Defs.TILE_GRASS:
 			continue
@@ -3532,6 +3571,185 @@ func _place_random_resources() -> void:
 			continue
 		_set_tile(tile, Defs.TILE_ROCK)
 		rock_deposits[_tile_key(tile)] = 24
+
+
+func _place_rival_seats() -> void:
+	# 3–4 other realms on the harvest annulus, opposite the player hall.
+	rival_seats.clear()
+	var seat_rng := RandomNumberGenerator.new()
+	seat_rng.seed = rng_seed * 89 + 29
+	var count := RIVAL_SEAT_MIN + posmod(rng_seed * 7, RIVAL_SEAT_MAX - RIVAL_SEAT_MIN + 1)
+	var player_center := _footprint_center(town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
+	var player_angle := atan2(float(player_center.x - shard_position.x), float(player_center.y - shard_position.y))
+	var footprint := Defs.building_footprint(Defs.BUILDING_TOWN_HALL)
+	for i in count:
+		var best := Vector2i.ZERO
+		var found := false
+		for attempt in 18:
+			var step := TAU * float(i + 1) / float(count + 1)
+			var angle := player_angle + step + seat_rng.randf_range(-0.18, 0.18)
+			var dist := CRATER_RADIUS * seat_rng.randf_range(0.74, 0.96)
+			var center := Vector2i(
+				shard_position.x + roundi(sin(angle) * dist),
+				shard_position.y + roundi(cos(angle) * dist)
+			)
+			var anchor := Vector2i(
+				clampi(center.x - footprint.x / 2, 6, map_size.x - footprint.x - 4),
+				clampi(center.y - footprint.y / 2, 6, map_size.y - footprint.y - 4)
+			)
+			if _tile_distance(anchor, town_hall_position) < 28.0:
+				continue
+			if _tile_distance(_footprint_center(anchor, footprint), shard_position) < crater_pit_radius + 8.0:
+				continue
+			var too_close := false
+			for existing in rival_seats:
+				if _tile_distance(anchor, Vector2i(existing)) < 26.0:
+					too_close = true
+					break
+			if too_close:
+				continue
+			best = anchor
+			found = true
+			break
+		if not found:
+			var fallback_angle := player_angle + TAU * 0.5 + float(i) * 0.85
+			best = Vector2i(
+				clampi(shard_position.x + roundi(sin(fallback_angle) * CRATER_RADIUS * 0.82) - footprint.x / 2, 6, map_size.x - footprint.x - 4),
+				clampi(shard_position.y + roundi(cos(fallback_angle) * CRATER_RADIUS * 0.82) - footprint.y / 2, 6, map_size.y - footprint.y - 4)
+			)
+		rival_seats.append(best)
+	if rival_seats.is_empty():
+		rival_seats.append(Vector2i(
+			clampi(roundi(float(map_size.x) * 0.77), 1, maxi(1, map_size.x - 6)),
+			clampi(roundi(float(map_size.y) * 0.17), 1, maxi(1, map_size.y - 6))
+		))
+	rival_town_hall_position = Vector2i(rival_seats[0])
+
+
+func _near_any_rival_seat(tile: Vector2i, radius: float) -> bool:
+	for seat_value in rival_seats:
+		if _tile_distance(tile, Vector2i(seat_value)) < radius:
+			return true
+	return _tile_distance(tile, rival_town_hall_position) < radius
+
+
+func _seat_entrance_tile(seat: Vector2i) -> Vector2i:
+	var footprint := Defs.building_footprint(Defs.BUILDING_TOWN_HALL)
+	return seat + Vector2i(footprint.x - 3, footprint.y)
+
+
+func _distribute_province_content() -> void:
+	# Fill the 320 province so the map is not an empty lawn outside the
+	# founding bowl. Clusters only — never a full-map scan.
+	var content_rng := RandomNumberGenerator.new()
+	content_rng.seed = rng_seed * 101 + 41
+	var town_center := _footprint_center(town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
+	var forest_count := 10 if map_size.x >= 200 else 3
+	for i in forest_count:
+		var center := _province_cluster_center(content_rng, town_center, 22.0)
+		_place_resource_cluster(center, Defs.TILE_TREE, 48, 8)
+		_place_resource_cluster(center + Vector2i(content_rng.randi_range(-4, 4), content_rng.randi_range(-4, 4)), Defs.TILE_TREE, 28, 6)
+		_mark_biome(center, 10, "forest")
+	var ridge_count := 7 if map_size.x >= 200 else 2
+	for i in ridge_count:
+		var center := _province_cluster_center(content_rng, town_center, 20.0)
+		_place_resource_cluster(center, Defs.TILE_ROCK, 22, 36)
+		_raise_ridge(center, 7, content_rng)
+		_mark_biome(center, 8, "ridge")
+	var lake_count := 3 if map_size.x >= 200 else 1
+	for i in lake_count:
+		var center := _province_cluster_center(content_rng, town_center, 24.0)
+		_stamp_province_lake(center, content_rng.randi_range(5, 8), content_rng)
+	if map_size.x >= 200:
+		_stamp_province_river(content_rng)
+		_stamp_province_river(content_rng)
+	_register_feature("rich_forest", _province_cluster_center(content_rng, town_center, 30.0), "A deep timber stand holds the outer woods.")
+	_register_feature("stone_region", _province_cluster_center(content_rng, town_center, 30.0), "A stone ridge crosses the province.")
+
+
+func _province_cluster_center(content_rng: RandomNumberGenerator, town_center: Vector2i, min_home: float) -> Vector2i:
+	for _i in 16:
+		var tile := Vector2i(
+			content_rng.randi_range(10, map_size.x - 11),
+			content_rng.randi_range(10, map_size.y - 11)
+		)
+		if _tile_distance(tile, town_center) < min_home:
+			continue
+		if _tile_distance(tile, shard_position) < crater_pit_radius + 6.0:
+			continue
+		if _near_any_rival_seat(tile, 14.0):
+			continue
+		if is_water_tile(tile):
+			continue
+		return tile
+	return Vector2i(clampi(map_size.x / 2 + content_rng.randi_range(-40, 40), 12, map_size.x - 13), clampi(map_size.y / 2 + content_rng.randi_range(-40, 40), 12, map_size.y - 13))
+
+
+func _mark_biome(center: Vector2i, radius: int, kind: String) -> void:
+	for offset in _radius_offsets(radius):
+		var tile := center + offset
+		if is_inside_map(tile):
+			biome_at[_tile_key(tile)] = kind
+
+
+func _raise_ridge(center: Vector2i, radius: int, content_rng: RandomNumberGenerator) -> void:
+	var level := mini(3, get_height(center) + 1)
+	for offset in _radius_offsets(radius):
+		var tile := center + offset
+		if not is_inside_map(tile):
+			continue
+		if _in_founding_clearing(tile) or _near_any_rival_seat(tile, 8.0):
+			continue
+		if content_rng.randf() < 0.55:
+			height_map[tile.y][tile.x] = level
+
+
+func _stamp_province_lake(center: Vector2i, radius: int, content_rng: RandomNumberGenerator) -> void:
+	for offset in _radius_offsets(radius + 1):
+		var tile := center + offset
+		if not is_inside_map(tile):
+			continue
+		if _in_founding_clearing(tile) or _near_any_rival_seat(tile, 10.0):
+			continue
+		var jagged := float(radius) + content_rng.randf_range(-1.4, 1.2)
+		if _tile_distance(tile, center) <= jagged:
+			_set_water_tile(tile)
+	_mark_biome(center, radius + 2, "lake")
+	_register_feature("lake", center, "A still lake holds the low ground.")
+
+
+func _stamp_province_river(content_rng: RandomNumberGenerator) -> void:
+	var start := _province_cluster_center(content_rng, _footprint_center(town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL)), 28.0)
+	var heading := content_rng.randf() * TAU
+	var dir := Vector2(sin(heading), cos(heading))
+	var cursor := Vector2(start)
+	for step in 48:
+		var tile := Vector2i(roundi(cursor.x), roundi(cursor.y))
+		if not is_inside_map(tile):
+			break
+		if not _in_founding_clearing(tile) and _tile_distance(tile, shard_position) >= crater_pit_radius + 3.0 and not _near_any_rival_seat(tile, 8.0):
+			_set_water_tile(tile)
+			var bank := tile + Vector2i(roundi(-dir.y), roundi(dir.x))
+			if content_rng.randf() < 0.35 and is_inside_map(bank):
+				_set_water_tile(bank)
+		heading += content_rng.randf_range(-0.28, 0.28)
+		dir = Vector2(sin(heading), cos(heading))
+		cursor += dir * 1.4
+	_register_feature("river", start, "A river cuts across the province.")
+
+
+func _set_water_tile(tile: Vector2i) -> void:
+	if not is_inside_map(tile):
+		return
+	water_tiles[_tile_key(tile)] = true
+	if String(get_tile(tile)) in [Defs.TILE_TREE, Defs.TILE_ROCK]:
+		_set_tile(tile, Defs.TILE_GRASS)
+		tree_deposits.erase(_tile_key(tile))
+		rock_deposits.erase(_tile_key(tile))
+
+
+func is_water_tile(tile: Vector2i) -> bool:
+	return water_tiles.has(_tile_key(tile))
 
 
 func _place_resource_cluster(center: Vector2i, tile_type: String, count: int, deposit_amount: int) -> void:
@@ -3799,6 +4017,10 @@ func _in_founding_clearing(tile: Vector2i) -> bool:
 
 
 func is_founding_creek_tile(tile: Vector2i) -> bool:
+	if is_water_tile(tile):
+		for creek_tile in founding_site.get("creek_tiles", []):
+			if Vector2i(creek_tile) == tile:
+				return true
 	for creek_tile in founding_site.get("creek_tiles", []):
 		if Vector2i(creek_tile) == tile:
 			return true
@@ -3840,6 +4062,8 @@ func _generate_founding_creek(center: Vector2i) -> void:
 					_append_creek_gap(tiles, tiles[tiles.size() - 1], forced)
 				tiles.append(forced)
 	founding_site["creek_tiles"] = tiles
+	for creek_tile in tiles:
+		_set_water_tile(Vector2i(creek_tile))
 	_choose_founding_bridge(center, tiles)
 
 
@@ -4203,6 +4427,11 @@ func _lay_founding_roads() -> void:
 	if heading.length_squared() < 0.01:
 		heading = (out * 0.45 + water_aim * 0.55).normalized()
 	var roads: Array[Vector2i] = []
+	# The Director: the door tile is the seed of connected_roads.
+	# Walking off it first left the whole founding path orphaned.
+	if is_inside_map(entrance) and not _in_founding_hall_footprint(entrance) and get_building_at_tile(entrance).is_empty():
+		_add_completed_building(Defs.BUILDING_ROAD, entrance)
+		roads.append(entrance)
 	var cursor := entrance
 	for _i in 8:
 		var nxt := cursor + Vector2i(clampi(roundi(heading.x), -1, 1), clampi(roundi(heading.y), -1, 1))
@@ -4388,6 +4617,41 @@ func founding_audit() -> Dictionary:
 		"distance_band": crater_d >= CRATER_RADIUS * FOUNDING_CRATER_DIST_FLOOR and crater_d <= CRATER_RADIUS * FOUNDING_CRATER_DIST_MAX,
 		"footprint_stable": _founding_footprint_stable(town_hall_position),
 		"layout_signature": founding_layout_signature(),
+		"map_size": map_size,
+		"rival_count": rival_seats.size(),
+		"rival_seats": rival_seats.duplicate(),
+		"resource_spread": _resource_spread_audit(),
+	}
+
+
+func _resource_spread_audit() -> Dictionary:
+	var quadrants := [0, 0, 0, 0]
+	var trees := 0
+	var rocks := 0
+	var waters := water_tiles.size()
+	var mid := Vector2(float(map_size.x) * 0.5, float(map_size.y) * 0.5)
+	for key_value in tree_deposits.keys():
+		var tile := _tile_from_key(String(key_value))
+		trees += 1
+		var q := 0
+		if tile.x >= int(mid.x):
+			q += 1
+		if tile.y >= int(mid.y):
+			q += 2
+		quadrants[q] += 1
+	for key_value in rock_deposits.keys():
+		rocks += 1
+	var filled := 0
+	for count in quadrants:
+		if int(count) >= 8:
+			filled += 1
+	return {
+		"trees": trees,
+		"rocks": rocks,
+		"water": waters,
+		"quadrants": quadrants,
+		"filled_quadrants": filled,
+		"rival_count": rival_seats.size()
 	}
 
 
@@ -4798,12 +5062,13 @@ func _reveal_from_world() -> void:
 	_reveal_radius(town_center, building_vision_radius(Defs.BUILDING_TOWN_HALL))
 	# Settlers live inside the bowl: keep the Shard and the crater
 	# corridor visible from the first camera so the horizon reads.
-	_reveal_radius(shard_position, 7)
+	_reveal_radius(shard_position, 8)
 	var crater_dir := crater_direction_from(town_center)
-	for step in [6, 10, 14]:
-		var along := town_center + Vector2i(roundi(crater_dir.x * float(step)), roundi(crater_dir.y * float(step)))
+	var span := _tile_distance(town_center, shard_position)
+	for frac in [0.22, 0.45, 0.68, 0.88]:
+		var along := town_center + Vector2i(roundi(crater_dir.x * span * frac), roundi(crater_dir.y * span * frac))
 		if is_inside_map(along):
-			_reveal_radius(along, 4)
+			_reveal_radius(along, 5)
 	for building in buildings:
 		if bool(building.get("construction", false)):
 			continue
@@ -8367,8 +8632,9 @@ func _ensure_path_grid_unprofiled() -> void:
 			var tile_key := _tile_key(tile)
 			var building_type := String(building_types_by_id.get(int(occupied_tiles.get(tile_key, 0)), ""))
 			var terrain := String(get_tile(tile))
-			var blocked := terrain == Defs.TILE_SHARD or (_is_gate_tile(tile) and is_gate_closed())
-			var hostile_blocked := terrain in [Defs.TILE_SHARD, Defs.TILE_TREE, Defs.TILE_ROCK] or (_is_gate_tile(tile) and is_gate_closed())
+			var wet := is_water_tile(tile) and not connected_roads.has(tile_key)
+			var blocked := terrain == Defs.TILE_SHARD or wet or (_is_gate_tile(tile) and is_gate_closed())
+			var hostile_blocked := terrain in [Defs.TILE_SHARD, Defs.TILE_TREE, Defs.TILE_ROCK] or wet or (_is_gate_tile(tile) and is_gate_closed())
 			if building_type != "" and building_type != Defs.BUILDING_ROAD:
 				blocked = true
 				hostile_blocked = true
@@ -8601,7 +8867,12 @@ func _is_adjacent_to_town_hall(tile: Vector2i) -> bool:
 	var town_hall := _find_town_hall()
 	if town_hall.is_empty():
 		return false
-	return tile == _town_hall_entrance_tile()
+	if tile == _town_hall_entrance_tile():
+		return true
+	for hall_tile in _footprint_tiles(town_hall_position, _building_footprint(town_hall)):
+		if absi(hall_tile.x - tile.x) + absi(hall_tile.y - tile.y) == 1:
+			return true
+	return false
 
 
 func _town_hall_entrance_tile() -> Vector2i:
@@ -9189,6 +9460,64 @@ func _check_population_defeat() -> void:
 		_finish_run(false, "The last settlers are gone.")
 
 
+func _serialize_rival_seats() -> Array:
+	var rows := []
+	for seat_value in rival_seats:
+		rows.append(_vector_to_data(Vector2i(seat_value)))
+	return rows
+
+
+func _restore_rival_seats(saved: Array) -> Array:
+	var seats := []
+	for item in saved:
+		seats.append(_vector_from_data(item, Vector2i.ZERO))
+	return seats
+
+
+func _serialize_founding_site() -> Dictionary:
+	var site := founding_site.duplicate(true)
+	for key_value in ["open_dir", "crater_dir", "forest_dir", "stone_dir", "coast_dir"]:
+		if site.has(key_value) and site[key_value] is Vector2:
+			site[key_value] = {"x": site[key_value].x, "y": site[key_value].y}
+	var creek_rows := []
+	for creek_tile in site.get("creek_tiles", []):
+		creek_rows.append(_vector_to_data(Vector2i(creek_tile)))
+	site["creek_tiles"] = creek_rows
+	var bridge_rows := []
+	for bridge_tile in site.get("bridge_tiles", []):
+		bridge_rows.append(_vector_to_data(Vector2i(bridge_tile)))
+	site["bridge_tiles"] = bridge_rows
+	var food_rows := []
+	for food_tile in site.get("food_tiles", []):
+		food_rows.append(_vector_to_data(Vector2i(food_tile)))
+	site["food_tiles"] = food_rows
+	var road_rows := []
+	for road_tile in site.get("road_tiles", []):
+		road_rows.append(_vector_to_data(Vector2i(road_tile)))
+	site["road_tiles"] = road_rows
+	var wyrd_rows := []
+	for wyrd_tile in site.get("wyrd_tiles", []):
+		wyrd_rows.append(_vector_to_data(Vector2i(wyrd_tile)))
+	site["wyrd_tiles"] = wyrd_rows
+	return site
+
+
+func _restore_founding_site(saved: Dictionary) -> Dictionary:
+	var site := saved.duplicate(true)
+	for key_value in ["open_dir", "crater_dir", "forest_dir", "stone_dir", "coast_dir"]:
+		var raw: Variant = site.get(key_value, null)
+		if raw is Dictionary:
+			site[key_value] = Vector2(float(raw.get("x", 0.0)), float(raw.get("y", 0.0)))
+		elif raw is Vector2:
+			site[key_value] = raw
+	for list_key in ["creek_tiles", "bridge_tiles", "food_tiles", "road_tiles", "wyrd_tiles"]:
+		var restored: Array = []
+		for item in site.get(list_key, []):
+			restored.append(_vector_from_data(item, Vector2i.ZERO))
+		site[list_key] = restored
+	return site
+
+
 func _serialize_state() -> Dictionary:
 	return {
 		"version": SAVE_VERSION,
@@ -9203,6 +9532,12 @@ func _serialize_state() -> Dictionary:
 		"tree_regrowth": tree_regrowth,
 		"priority_clear_tiles": priority_clear_tiles,
 		"town_hall_position": _vector_to_data(town_hall_position),
+		"rival_town_hall_position": _vector_to_data(rival_town_hall_position),
+		"rival_seats": _serialize_rival_seats(),
+		"crater_pit_radius": crater_pit_radius,
+		"founding_site": _serialize_founding_site(),
+		"water_tiles": water_tiles.duplicate(true),
+		"biome_at": biome_at.duplicate(true),
 		"shard_position": _vector_to_data(shard_position),
 		"enemy_camps": _serialize_enemy_camps(),
 		"central_inventory": central_inventory,
@@ -9284,6 +9619,12 @@ func _restore_state(data: Dictionary) -> void:
 	tree_regrowth = data.get("tree_regrowth", {})
 	priority_clear_tiles = data.get("priority_clear_tiles", {}).duplicate(true)
 	town_hall_position = _vector_from_data(data.get("town_hall_position", _vector_to_data(Vector2i.ZERO)), Vector2i.ZERO)
+	rival_town_hall_position = _vector_from_data(data.get("rival_town_hall_position", _vector_to_data(Vector2i.ZERO)), Vector2i.ZERO)
+	rival_seats = _restore_rival_seats(data.get("rival_seats", []))
+	crater_pit_radius = float(data.get("crater_pit_radius", CRATER_RADIUS * 0.36))
+	founding_site = _restore_founding_site(data.get("founding_site", {}))
+	water_tiles = data.get("water_tiles", {})
+	biome_at = data.get("biome_at", {})
 	shard_position = _vector_from_data(data.get("shard_position", _vector_to_data(Vector2i.ZERO)), Vector2i.ZERO)
 	enemy_camps = _restore_enemy_camps(data.get("enemy_camps", []))
 	central_inventory = _restore_inventory(data.get("central_inventory", Defs.STARTING_RESOURCES))

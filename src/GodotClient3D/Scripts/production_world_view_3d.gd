@@ -19,7 +19,7 @@ const RoadStampShader = preload("res://src/GodotClient3D/Shaders/settlement_road
 const FoliageShader = preload("res://src/GodotClient3D/Shaders/settlement_foliage.gdshader")
 const WaterShader = preload("res://src/GodotClient3D/Shaders/settlement_water.gdshader")
 const HorizonShader = preload("res://src/GodotClient3D/Shaders/settlement_horizon.gdshader")
-const FOG_MASK_DIVISOR := 1
+const FOG_MASK_DIVISOR := 2
 const FOG_VOLUME_PAD_METRES := 0.35
 const WATER_Y := -0.22
 const WATER_PAD_METRES := 2400.0
@@ -28,7 +28,7 @@ const BEACH_MARGIN_METRES := 5.0
 const COAST_JUT_METRES := 14.0
 const BEACH_APRON_PAD_METRES := 36.0
 const SHORE_FADE_METRES := 4.0
-const HORIZON_RADIUS_METRES := 420.0
+const HORIZON_RADIUS_METRES := 920.0
 const FOG_VOLUME_HEIGHT_METRES := 56.0
 const FOG_VOLUME_CENTER_Y := 18.0
 const FOG_DISPLAY_UPSAMPLE := 8
@@ -38,6 +38,14 @@ const FOG_VISIBLE := 0
 const FOG_EXPLORED := 115
 const FOG_UNEXPLORED := 255
 const GROUND_PATCH_CHUNK_METRES := 40.0
+const CHUNK_TILES := 32
+const CHUNK_LOD_NONE := 0
+const CHUNK_LOD_FAR := 1
+const CHUNK_LOD_NEAR := 2
+const STREAM_BUDGET_USEC := 7000
+const STREAM_NEAR_CHUNKS := 1
+const STREAM_FAR_CHUNKS := 3
+const STREAM_OPENING_MAX := 9
 const DRESS_BUILDING_KINDS := [
 	"HOUSE", "BAKERY", "FARM", "LUMBER_CAMP", "SAWMILL", "QUARRY",
 	"STOREHOUSE", "WATCHTOWER", "BARRACKS", "TOWN_HALL", "CASTLE",
@@ -151,6 +159,17 @@ var road_control_texture: ImageTexture
 var road_debug_enabled := false
 var terrain_debug_mode := 0
 const ROAD_CONTROL_RES := 512
+var chunk_root: Node3D
+var chunk_nodes: Dictionary = {}
+var chunk_lod: Dictionary = {}
+var chunk_queue: Array[Vector2i] = []
+var chunks_near := 0
+var chunks_far := 0
+var last_stream_ms := 0.0
+var last_stream_hitches := 0
+var camera_world := Vector3.ZERO
+var camera_zoom := 32.0
+var stream_enabled := true
 
 
 func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {}) -> void:
@@ -159,6 +178,13 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 			remove_child(child)
 			child.free()
 		terrain_root = null
+		chunk_root = null
+		chunk_nodes.clear()
+		chunk_lod.clear()
+		chunk_queue.clear()
+		chunks_near = 0
+		chunks_far = 0
+		last_stream_hitches = 0
 		water_root = null
 		water_mesh_instance = null
 		water_material = null
@@ -240,18 +266,19 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 	water_detail = clampf(float(quality.get("water_detail", 1.0)), 0.2, 1.0)
 	civilian_animation_budget = maxi(12, roundi(32.0 * clampf(float(quality.get("animation_lod", 1.0)), 0.4, 1.0)))
 	_create_roots()
-	_rebuild_terrain()
+	_init_chunk_streaming()
 	_rebuild_water()
 	_rebuild_world_rim(true)
 	_rebuild_horizon()
-	_sync_nature(true)
-	_sync_grass(true)
-	_rebuild_ground_patches()
 	_sync_fog(true)
-	_rebuild_edge_forest(true)
 	_rebuild_opening_dressing()
 	_rebuild_building_halos(true)
 	_create_shard_marker()
+	_stream_opening_chunks()
+	# The first sync_frame used to remesh every opening chunk because
+	# these signatures stayed 0. That doubled start_new_3d past 2 s.
+	terrain_height_signature = _calculate_height_signature()
+	terrain_occupation_signature = _calculate_occupation_signature()
 
 
 func bind_fog_overlay(_camera: Camera3D) -> void:
@@ -270,12 +297,11 @@ func sync_frame(frame_snapshot: Dictionary) -> void:
 	if next_height_signature != terrain_height_signature:
 		_rebuild_terrain()
 	elif next_occupation != terrain_occupation_signature:
-		_rebake_terrain_occupation()
+		_rebake_occupied_chunks()
 	var revealed_count := int(frame_snapshot.get("revealed_count", simulation.revealed_tiles.size()))
 	var reveal_changed := revealed_count != last_revealed_count
-	# One nature rebuild even when both layout and FOW change (showcase).
-	_sync_nature(reveal_changed)
-	_sync_grass(false)
+	if reveal_changed:
+		_enqueue_revealed_chunks()
 	_sync_fog(false)
 	_sync_roads(frame_snapshot.get("roads", []))
 	_sync_buildings(frame_snapshot.get("buildings", []))
@@ -294,7 +320,6 @@ func sync_frame(frame_snapshot: Dictionary) -> void:
 	if reveal_changed:
 		_rebuild_edge_forest(false)
 		_rebuild_world_rim(false)
-		_rebuild_ground_patches()
 
 
 func tile_to_world(tile_position: Vector2) -> Vector3:
@@ -434,6 +459,13 @@ func presentation_metrics() -> Dictionary:
 		"rival_activity_views": rival_activity_count,
 		"projectile_views": projectile_views.size(),
 		"fog_unknown_tiles": map_size.x * map_size.y - maxi(0, last_revealed_count),
+		"chunks_near": chunks_near,
+		"chunks_far": chunks_far,
+		"chunks_built": chunk_nodes.size(),
+		"chunks_queued": chunk_queue.size(),
+		"chunk_span": _chunk_span(),
+		"stream_ms": last_stream_ms,
+		"stream_hitches": last_stream_hitches,
 	}
 
 
@@ -526,6 +558,7 @@ func _create_roots() -> void:
 	if terrain_root != null:
 		return
 	terrain_root = _named_root("Terrain")
+	chunk_root = _named_root("TerrainChunks")
 	water_root = _named_root("Water")
 	roads_root = _named_root("Roads")
 	road_preview_root = _named_root("RoadPreview")
@@ -558,6 +591,474 @@ func _named_root(root_name: String) -> Node3D:
 	return root
 
 
+func _process(_delta: float) -> void:
+	if stream_enabled and simulation != null and map_size.x > 0:
+		stream_chunks(STREAM_BUDGET_USEC)
+
+
+func note_camera(world_position: Vector3, zoom: float) -> void:
+	camera_world = world_position
+	camera_zoom = zoom
+	_sync_fog_screen_camera()
+
+
+func _init_chunk_streaming() -> void:
+	chunk_nodes.clear()
+	chunk_lod.clear()
+	chunk_queue.clear()
+	chunks_near = 0
+	chunks_far = 0
+	if chunk_root != null:
+		for child in chunk_root.get_children():
+			chunk_root.remove_child(child)
+			child.free()
+
+
+func _chunk_span() -> Vector2i:
+	if CHUNK_TILES <= 0:
+		return Vector2i.ONE
+	return Vector2i(ceili(float(map_size.x) / float(CHUNK_TILES)), ceili(float(map_size.y) / float(CHUNK_TILES)))
+
+
+func chunk_of_tile(tile: Vector2i) -> Vector2i:
+	# Floor, not truncating toward zero. Negative tiles must not share
+	# chunk (0,0) with the origin or -Z halls drop out of the stream.
+	return Vector2i(
+		int(floor(float(tile.x) / float(CHUNK_TILES))),
+		int(floor(float(tile.y) / float(CHUNK_TILES)))
+	)
+
+
+func _chunk_key(coord: Vector2i) -> String:
+	return "%d:%d" % [coord.x, coord.y]
+
+
+func _chunk_from_key(key_value: String) -> Vector2i:
+	var parts := key_value.split(":")
+	if parts.size() != 2:
+		return Vector2i.ZERO
+	return Vector2i(int(parts[0]), int(parts[1]))
+
+
+func _chunk_origin(coord: Vector2i) -> Vector2i:
+	return Vector2i(coord.x * CHUNK_TILES, coord.y * CHUNK_TILES)
+
+
+func _camera_chunk() -> Vector2i:
+	if simulation == null:
+		return Vector2i.ZERO
+	var tile := world_to_tile(camera_world)
+	if not simulation.is_inside_map(tile) and simulation.is_town_hall_founded():
+		tile = simulation.town_hall_position
+	return chunk_of_tile(tile)
+
+
+func _hall_chunk() -> Vector2i:
+	if simulation == null or not simulation.is_town_hall_founded():
+		return _camera_chunk()
+	return chunk_of_tile(simulation.town_hall_position)
+
+
+func _stream_reach() -> int:
+	return STREAM_FAR_CHUNKS + maxi(0, int(round((camera_zoom - 32.0) / 24.0)))
+
+
+func _stream_opening_chunks() -> void:
+	# The Director: the first frame must show the hall, not the water pad.
+	# Always stream from the hall chunk so a -Z / west seat cannot miss
+	# the start while the boom is still catching up.
+	if simulation != null and simulation.is_town_hall_founded():
+		camera_world = opening_camera_focus()
+		camera_zoom = maxf(camera_zoom, 32.0)
+	_refresh_terrain_lookups()
+	_bake_road_control_texture()
+	var hall := _hall_chunk()
+	var focus := _camera_chunk()
+	var built_open := 0
+	for oy in range(-1, 2):
+		for ox in range(-1, 2):
+			var coord := hall + Vector2i(ox, oy)
+			if not _chunk_has_tiles(coord):
+				continue
+			var lod := CHUNK_LOD_NEAR if ox == 0 and oy == 0 else CHUNK_LOD_FAR
+			_rebuild_chunk(coord, lod, true)
+			built_open += 1
+	var reach := mini(_stream_reach(), STREAM_FAR_CHUNKS)
+	for oy in range(-reach, reach + 1):
+		for ox in range(-reach, reach + 1):
+			var coord := focus + Vector2i(ox, oy)
+			if built_open >= STREAM_OPENING_MAX:
+				break
+			if not _chunk_has_tiles(coord) or not _chunk_is_wanted(coord):
+				continue
+			if int(chunk_lod.get(_chunk_key(coord), CHUNK_LOD_NONE)) != CHUNK_LOD_NONE:
+				continue
+			_rebuild_chunk(coord, _desired_lod(coord), true)
+			built_open += 1
+		if built_open >= STREAM_OPENING_MAX:
+			break
+	_enqueue_desired_chunks()
+
+
+func stream_chunks(budget_usec: int = STREAM_BUDGET_USEC) -> void:
+	if simulation == null or map_size.x <= 0:
+		return
+	var t0 := Time.get_ticks_usec()
+	_enqueue_desired_chunks()
+	var built := 0
+	while not chunk_queue.is_empty():
+		if built > 0 and Time.get_ticks_usec() - t0 >= budget_usec:
+			break
+		if built >= 1:
+			break
+		var coord: Vector2i = chunk_queue.pop_front()
+		var wanted := _desired_lod(coord)
+		var current := int(chunk_lod.get(_chunk_key(coord), CHUNK_LOD_NONE))
+		if wanted == CHUNK_LOD_NONE:
+			_unload_chunk(coord)
+			continue
+		if wanted != current:
+			_rebuild_chunk(coord, wanted, true)
+			built += 1
+	last_stream_ms = float(Time.get_ticks_usec() - t0) / 1000.0
+	if last_stream_ms > 100.0:
+		last_stream_hitches += 1
+
+
+func _enqueue_desired_chunks() -> void:
+	var seen: Dictionary = {}
+	for existing in chunk_queue:
+		seen[_chunk_key(existing)] = true
+	var focus := _camera_chunk()
+	var span := _chunk_span()
+	var reach := _stream_reach()
+	for oy in range(-reach, reach + 1):
+		for ox in range(-reach, reach + 1):
+			var coord := focus + Vector2i(ox, oy)
+			if coord.x < 0 or coord.y < 0 or coord.x >= span.x or coord.y >= span.y:
+				continue
+			if not _chunk_is_wanted(coord):
+				continue
+			var key := _chunk_key(coord)
+			var wanted := _desired_lod(coord)
+			if int(chunk_lod.get(key, CHUNK_LOD_NONE)) == wanted:
+				continue
+			if seen.has(key):
+				continue
+			chunk_queue.append(coord)
+			seen[key] = true
+	_enqueue_revealed_chunks()
+
+
+func _enqueue_revealed_chunks() -> void:
+	if simulation == null:
+		return
+	var seen: Dictionary = {}
+	for existing in chunk_queue:
+		seen[_chunk_key(existing)] = true
+	var focus := _camera_chunk()
+	for key_value in simulation.revealed_tiles.keys():
+		var tile: Vector2i = simulation._tile_from_key(String(key_value))
+		var coord := chunk_of_tile(tile)
+		if absi(coord.x - focus.x) > _stream_reach() + 1 or absi(coord.y - focus.y) > _stream_reach() + 1:
+			continue
+		var key := _chunk_key(coord)
+		if int(chunk_lod.get(key, CHUNK_LOD_NONE)) != CHUNK_LOD_NONE:
+			continue
+		if seen.has(key):
+			continue
+		chunk_queue.append(coord)
+		seen[key] = true
+
+
+func _chunk_has_tiles(coord: Vector2i) -> bool:
+	var origin := _chunk_origin(coord)
+	return origin.x < map_size.x and origin.y < map_size.y and origin.x + CHUNK_TILES > 0 and origin.y + CHUNK_TILES > 0
+
+
+func _chunk_is_wanted(coord: Vector2i) -> bool:
+	return _desired_lod(coord) != CHUNK_LOD_NONE
+
+
+func _desired_lod(coord: Vector2i) -> int:
+	if simulation == null or not _chunk_has_tiles(coord):
+		return CHUNK_LOD_NONE
+	if not _chunk_explored_or_visible(coord):
+		return CHUNK_LOD_NONE
+	var hall := _hall_chunk()
+	var hall_cheb := maxi(absi(coord.x - hall.x), absi(coord.y - hall.y))
+	if hall_cheb <= STREAM_NEAR_CHUNKS:
+		return CHUNK_LOD_NEAR
+	var focus := _camera_chunk()
+	var cheb := maxi(absi(coord.x - focus.x), absi(coord.y - focus.y))
+	if cheb <= STREAM_NEAR_CHUNKS:
+		return CHUNK_LOD_NEAR
+	if cheb <= _stream_reach() or hall_cheb <= _stream_reach():
+		return CHUNK_LOD_FAR
+	return CHUNK_LOD_NONE
+
+
+func _chunk_explored_or_visible(coord: Vector2i) -> bool:
+	# Five corner samples miss a 5-tile crater corridor inside a 32
+	# chunk. Step the chunk so any revealed sliver counts.
+	if simulation != null and simulation.is_town_hall_founded():
+		var hall_cheb := maxi(absi(coord.x - _hall_chunk().x), absi(coord.y - _hall_chunk().y))
+		if hall_cheb <= 1:
+			return true
+	var origin := _chunk_origin(coord)
+	for y in range(origin.y, origin.y + CHUNK_TILES, 4):
+		for x in range(origin.x, origin.x + CHUNK_TILES, 4):
+			var tile := Vector2i(x, y)
+			if simulation.is_inside_map(tile) and simulation.is_revealed(tile):
+				return true
+	return false
+
+
+func _rebuild_all_built_chunks() -> void:
+	var keys: Array = chunk_nodes.keys()
+	for key_value in keys:
+		var coord := _chunk_from_key(String(key_value))
+		var lod := int(chunk_lod.get(key_value, CHUNK_LOD_NEAR))
+		_rebuild_chunk(coord, lod, true)
+
+
+func _rebuild_chunk(coord: Vector2i, lod: int, rebuild_collision: bool) -> void:
+	if chunk_root == null:
+		return
+	_unload_chunk(coord)
+	if lod == CHUNK_LOD_NONE:
+		return
+	var host := Node3D.new()
+	host.name = "Chunk_%d_%d" % [coord.x, coord.y]
+	host.visible = true
+	chunk_root.add_child(host)
+	_build_chunk_terrain(host, coord, lod, rebuild_collision)
+	_build_chunk_water(host, coord, lod)
+	_build_chunk_nature(host, coord, lod)
+	if lod == CHUNK_LOD_NEAR:
+		_build_chunk_grass(host, coord)
+	_build_chunk_rival_seat(host, coord, lod)
+	chunk_nodes[_chunk_key(coord)] = host
+	chunk_lod[_chunk_key(coord)] = lod
+	_recount_chunks()
+
+
+func _unload_chunk(coord: Vector2i) -> void:
+	var key := _chunk_key(coord)
+	if chunk_nodes.has(key):
+		var node: Node = chunk_nodes[key]
+		if node != null and is_instance_valid(node):
+			node.queue_free()
+		chunk_nodes.erase(key)
+	chunk_lod.erase(key)
+	_recount_chunks()
+
+
+func _recount_chunks() -> void:
+	chunks_near = 0
+	chunks_far = 0
+	for key_value in chunk_lod.keys():
+		var lod := int(chunk_lod[key_value])
+		if lod == CHUNK_LOD_NEAR:
+			chunks_near += 1
+		elif lod == CHUNK_LOD_FAR:
+			chunks_far += 1
+
+
+func _build_chunk_terrain(host: Node3D, coord: Vector2i, lod: int, rebuild_collision: bool) -> void:
+	# Heightfield, not 1024 voxel cells. The old per-tile path called
+	# _compute_terrain_color 25× and relief 8× per cell — one chunk
+	# hitch was 300–500 ms on lavapipe.
+	var origin := _chunk_origin(coord)
+	var verts := CHUNK_TILES + 1
+	var heights := PackedFloat32Array()
+	var colors := PackedColorArray()
+	heights.resize(verts * verts)
+	colors.resize(verts * verts)
+	var half := ScaleProfile.LOGICAL_CELL_METRES * 0.5
+	for j in verts:
+		for i in verts:
+			var tile := Vector2i(
+				clampi(origin.x + i, 0, map_size.x - 1),
+				clampi(origin.y + j, 0, map_size.y - 1)
+			)
+			var world := ScaleProfile.tile_to_flat_world(Vector2(tile), map_size)
+			var sim_y := float(simulation.get_height(tile)) * ScaleProfile.TERRAIN_ELEVATION_UNIT_METRES
+			heights[j * verts + i] = sim_y + _visual_relief_y(Vector2(world.x, world.z))
+			colors[j * verts + i] = _fast_chunk_color(tile)
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for j in CHUNK_TILES:
+		for i in CHUNK_TILES:
+			var tile := Vector2i(origin.x + i, origin.y + j)
+			if not simulation.is_inside_map(tile):
+				continue
+			var c00 := ScaleProfile.tile_to_flat_world(Vector2(tile), map_size)
+			var p00 := Vector3(c00.x - half, heights[j * verts + i], c00.z - half)
+			var p10 := Vector3(c00.x + half, heights[j * verts + i + 1], c00.z - half)
+			var p11 := Vector3(c00.x + half, heights[(j + 1) * verts + i + 1], c00.z + half)
+			var p01 := Vector3(c00.x - half, heights[(j + 1) * verts + i], c00.z + half)
+			_add_quad_colored(surface, p00, p10, p11, p01, Vector3.UP, colors[j * verts + i], colors[j * verts + i + 1], colors[(j + 1) * verts + i + 1], colors[(j + 1) * verts + i])
+	var mesh := surface.commit()
+	if mesh == null:
+		return
+	var instance := MeshInstance3D.new()
+	instance.name = "Terrain"
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	instance.mesh = mesh
+	_apply_ground_material(instance)
+	host.add_child(instance)
+	if rebuild_collision and lod == CHUNK_LOD_NEAR:
+		var body := StaticBody3D.new()
+		body.name = "TerrainPicker"
+		body.set_meta("selection_kind", "terrain")
+		var collision := CollisionShape3D.new()
+		var box := BoxShape3D.new()
+		var cell := ScaleProfile.LOGICAL_CELL_METRES
+		box.size = Vector3(cell * float(CHUNK_TILES), 4.0, cell * float(CHUNK_TILES))
+		collision.shape = box
+		var mid := _chunk_origin(coord) + Vector2i(CHUNK_TILES / 2, CHUNK_TILES / 2)
+		body.position = tile_to_world(Vector2(mid))
+		body.add_child(collision)
+		host.add_child(body)
+
+
+func _fast_chunk_color(tile: Vector2i) -> Color:
+	if simulation.is_water_tile(tile):
+		return Color(0.204, 0.369, 0.392, 0.55)
+	if _is_road_tile(tile):
+		return Color(0.682, 0.565, 0.427, 0.98)
+	var tile_type := String(simulation.get_tile(tile))
+	if tile_type == Defs.TILE_TREE:
+		return Color(0.220, 0.275, 0.145, 0.40)
+	if tile_type == Defs.TILE_ROCK:
+		return Color(0.522, 0.514, 0.451, 0.32)
+	if tile_type == Defs.TILE_SHARD:
+		return Color(0.275, 0.349, 0.388, 0.40)
+	return Color(0.408, 0.455, 0.227, 0.0)
+
+
+func _build_chunk_water(host: Node3D, coord: Vector2i, lod: int) -> void:
+	if simulation == null or not simulation.get("water_tiles"):
+		return
+	var waters: Dictionary = simulation.water_tiles
+	if waters.is_empty():
+		return
+	var origin := _chunk_origin(coord)
+	var points: Array[Vector3] = []
+	var step := 1 if lod == CHUNK_LOD_NEAR else 2
+	for y in range(origin.y, origin.y + CHUNK_TILES, step):
+		for x in range(origin.x, origin.x + CHUNK_TILES, step):
+			var tile := Vector2i(x, y)
+			if not simulation.is_inside_map(tile):
+				continue
+			if not waters.has("%d,%d" % [tile.x, tile.y]):
+				continue
+			points.append(tile_to_world(Vector2(tile)))
+	if points.is_empty():
+		return
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(ScaleProfile.LOGICAL_CELL_METRES * float(step) * 0.92, 0.08, ScaleProfile.LOGICAL_CELL_METRES * float(step) * 0.92)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color("#345E64")
+	mat.roughness = 0.18
+	mat.metallic = 0.08
+	var batch := MultiMesh.new()
+	batch.transform_format = MultiMesh.TRANSFORM_3D
+	batch.mesh = mesh
+	batch.instance_count = points.size()
+	for i in points.size():
+		var xf := Transform3D()
+		xf.origin = Vector3(points[i].x, WATER_Y, points[i].z)
+		batch.set_instance_transform(i, xf)
+	var instance := MultiMeshInstance3D.new()
+	instance.name = "ChunkWater"
+	instance.multimesh = batch
+	instance.material_override = mat
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	host.add_child(instance)
+
+
+func _build_chunk_nature(host: Node3D, coord: Vector2i, lod: int) -> void:
+	if simulation == null:
+		return
+	var origin := _chunk_origin(coord)
+	var transforms_by_path: Dictionary = {}
+	var step := 1 if lod == CHUNK_LOD_NEAR else 2
+	for y in range(origin.y, origin.y + CHUNK_TILES, step):
+		for x in range(origin.x, origin.x + CHUNK_TILES, step):
+			var tile := Vector2i(x, y)
+			if not simulation.is_inside_map(tile) or not simulation.is_revealed(tile):
+				continue
+			var tile_type := String(simulation.get_tile(tile))
+			if tile_type == Defs.TILE_TREE:
+				if _nature_suppressed_near_activity(tile):
+					continue
+				if _same_type_neighbors(tile, Defs.TILE_TREE) <= 1 and _near_founding_meadow(tile):
+					continue
+				if lod == CHUNK_LOD_FAR:
+					_append_nature_transform(transforms_by_path, _tree_path_for_tile(tile, 0, 2), tile, 0, 0.45, 0.85, 0.12)
+				else:
+					var neighbors := _same_type_neighbors(tile, Defs.TILE_TREE)
+					var path_value := _tree_path_for_tile(tile, 0, neighbors)
+					var scales := _tree_scale_range(path_value, neighbors)
+					_append_nature_transform(transforms_by_path, path_value, tile, 0, 0.55, float(scales.x), float(scales.y))
+			elif tile_type == Defs.TILE_ROCK and lod == CHUNK_LOD_NEAR:
+				if _nature_suppressed_near_activity(tile):
+					continue
+				var rock_path := String(Catalog.ROCKS[_tile_hash(tile, 101) % Catalog.ROCKS.size()]) if Catalog.ROCKS.size() > 0 else ""
+				if rock_path != "":
+					_append_nature_transform(transforms_by_path, rock_path, tile, 0, 0.66, 0.70, 0.18)
+	_spawn_nature_multimeshes(host, transforms_by_path)
+
+
+func _build_chunk_grass(host: Node3D, coord: Vector2i) -> void:
+	if simulation == null or Catalog.GRASS.is_empty():
+		return
+	var origin := _chunk_origin(coord)
+	var transforms_by_path: Dictionary = {}
+	var occupied := _terrain_occupied_cache if _terrain_lookups_ready else _structure_tiles()
+	for y in range(origin.y, origin.y + CHUNK_TILES):
+		for x in range(origin.x, origin.x + CHUNK_TILES):
+			var tile := Vector2i(x, y)
+			if not simulation.is_inside_map(tile) or not simulation.is_revealed(tile):
+				continue
+			if String(simulation.get_tile(tile)) != Defs.TILE_GRASS:
+				continue
+			if occupied.has(_tile_key(tile)) or _is_road_tile(tile):
+				continue
+			if _in_founding_yard(tile):
+				continue
+			var forest_edge := _same_type_neighbors(tile, Defs.TILE_TREE)
+			if forest_edge < 1 and _tile_hash(tile, 19) % 7 != 0:
+				continue
+			var grass_path := String(Catalog.GRASS[_tile_hash(tile, 83) % Catalog.GRASS.size()])
+			_append_nature_transform(transforms_by_path, grass_path, tile, 0, 0.95, 1.32, 0.70)
+	_spawn_nature_multimeshes(host, transforms_by_path)
+
+
+func _build_chunk_rival_seat(host: Node3D, coord: Vector2i, lod: int) -> void:
+	if simulation == null or not simulation.get("rival_seats"):
+		return
+	var origin := _chunk_origin(coord)
+	var box := Rect2i(origin, Vector2i(CHUNK_TILES, CHUNK_TILES))
+	for seat_value in simulation.rival_seats:
+		var seat := Vector2i(seat_value)
+		if not box.has_point(seat):
+			continue
+		var keep := MeshInstance3D.new()
+		keep.name = "RivalSeat_%d_%d" % [seat.x, seat.y]
+		var mesh := BoxMesh.new()
+		mesh.size = Vector3(7.2, 4.4 if lod == CHUNK_LOD_NEAR else 3.2, 7.2)
+		keep.mesh = mesh
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = Color("#7A2C36")
+		mat.roughness = 0.86
+		keep.material_override = mat
+		keep.position = tile_to_world(Vector2(seat) + Vector2(1.5, 1.5)) + Vector3(0.0, 2.1, 0.0)
+		host.add_child(keep)
+
+
 func _refresh_terrain_lookups() -> void:
 	# O(buildings + roads) once. _is_road_tile used to walk every building
 	# for every tile / corner sample.
@@ -577,6 +1078,11 @@ func _refresh_terrain_lookups() -> void:
 
 
 func _precompute_terrain_colors() -> void:
+	# Full-map colour bake is only cheap on the old 70×70 slab. The 320
+	# province computes colours per streamed chunk instead.
+	if map_size.x * map_size.y > 90 * 90:
+		_terrain_color_grid = PackedColorArray()
+		return
 	var count := map_size.x * map_size.y
 	_terrain_color_grid.resize(count)
 	for y in range(map_size.y):
@@ -596,8 +1102,13 @@ func _rebuild_terrain() -> void:
 	_refresh_terrain_lookups()
 	_precompute_terrain_colors()
 	_bake_road_control_texture()
-	_commit_terrain_mesh(true)
+	if map_size.x <= 80:
+		_commit_terrain_mesh(true)
+	else:
+		_rebuild_all_built_chunks()
 	_rebuild_beach_apron()
+	terrain_height_signature = _calculate_height_signature()
+	terrain_occupation_signature = _calculate_occupation_signature()
 
 
 func _rebake_terrain_occupation() -> void:
@@ -607,7 +1118,20 @@ func _rebake_terrain_occupation() -> void:
 	_refresh_terrain_lookups()
 	_precompute_terrain_colors()
 	_bake_road_control_texture()
-	_commit_terrain_mesh(false)
+	if map_size.x <= 80:
+		_commit_terrain_mesh(false)
+	else:
+		_rebake_occupied_chunks()
+	terrain_occupation_signature = _calculate_occupation_signature()
+
+
+func _rebake_occupied_chunks() -> void:
+	var keys: Array = chunk_nodes.keys()
+	for key_value in keys:
+		var coord := _chunk_from_key(String(key_value))
+		var lod := int(chunk_lod.get(key_value, CHUNK_LOD_NONE))
+		if lod != CHUNK_LOD_NONE:
+			_rebuild_chunk(coord, lod, false)
 
 
 func _commit_terrain_mesh(rebuild_collision: bool) -> void:
@@ -803,29 +1327,35 @@ func _collect_road_segments() -> Array[Vector2]:
 	_refresh_terrain_lookups()
 	var cell := ScaleProfile.LOGICAL_CELL_METRES
 	var seen: Dictionary = {}
-	for y in range(map_size.y):
-		for x in range(map_size.x):
-			var tile := Vector2i(x, y)
-			if not _is_road_tile(tile) and _visual_path_weight(tile) < 0.70:
+	var tiles: Array[Vector2i] = []
+	if simulation != null and simulation.connected_roads != null:
+		for key_value in simulation.connected_roads.keys():
+			tiles.append(simulation._tile_from_key(String(key_value)))
+	if tiles.is_empty() and map_size.x <= 80:
+		for y in range(map_size.y):
+			for x in range(map_size.x):
+				tiles.append(Vector2i(x, y))
+	for tile in tiles:
+		if not _is_road_tile(tile) and _visual_path_weight(tile) < 0.70:
+			continue
+		var a := Vector2(tile_to_world(Vector2(tile)).x, tile_to_world(Vector2(tile)).z)
+		var dirs: Array[Vector2i] = [Vector2i(1, 0), Vector2i(0, 1)]
+		for dir in dirs:
+			var other: Vector2i = tile + dir
+			if not simulation.is_inside_map(other):
 				continue
-			var a := Vector2(tile_to_world(Vector2(tile)).x, tile_to_world(Vector2(tile)).z)
-			var dirs: Array[Vector2i] = [Vector2i(1, 0), Vector2i(0, 1)]
-			for dir in dirs:
-				var other: Vector2i = tile + dir
-				if not simulation.is_inside_map(other):
-					continue
-				var other_road := _is_road_tile(other) or _visual_path_weight(other) >= 0.55
-				if not other_road:
-					continue
-				var b := Vector2(tile_to_world(Vector2(other)).x, tile_to_world(Vector2(other)).z)
-				if a.distance_to(b) > cell * 1.6:
-					continue
-				var key := "%d,%d-%d,%d" % [tile.x, tile.y, other.x, other.y]
-				if seen.has(key):
-					continue
-				seen[key] = true
-				segs.append(a)
-				segs.append(b)
+			var other_road := _is_road_tile(other) or _visual_path_weight(other) >= 0.55
+			if not other_road:
+				continue
+			var b := Vector2(tile_to_world(Vector2(other)).x, tile_to_world(Vector2(other)).z)
+			if a.distance_to(b) > cell * 1.6:
+				continue
+			var key := "%d,%d-%d,%d" % [tile.x, tile.y, other.x, other.y]
+			if seen.has(key):
+				continue
+			seen[key] = true
+			segs.append(a)
+			segs.append(b)
 	return segs
 
 
@@ -873,21 +1403,23 @@ func _stamp_road_junctions(img: Image, min_xz: Vector2, size_xz: Vector2, visual
 	# Circular worn pads replace square plus-junctions.
 	if simulation == null:
 		return
-	for y in range(map_size.y):
-		for x in range(map_size.x):
-			var tile := Vector2i(x, y)
-			if not _is_road_tile(tile):
-				continue
-			var n := 0
-			for dir in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-				if _is_road_tile(tile + dir):
-					n += 1
-			if n < 2:
-				continue
-			var world := tile_to_world(Vector2(tile))
-			var px := _world_to_control_px(Vector2(world.x, world.z), min_xz, size_xz)
-			var radius := visual_w * (0.32 + float(n) * 0.06 + float((x * 7 + y * 11) % 5) * 0.04)
-			_stamp_soft_disk(img, px.x, px.y, radius, min_xz, size_xz)
+	var tiles: Array[Vector2i] = []
+	if simulation.connected_roads != null:
+		for key_value in simulation.connected_roads.keys():
+			tiles.append(simulation._tile_from_key(String(key_value)))
+	for tile in tiles:
+		if not _is_road_tile(tile):
+			continue
+		var n := 0
+		for dir in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+			if _is_road_tile(tile + dir):
+				n += 1
+		if n < 2:
+			continue
+		var world := tile_to_world(Vector2(tile))
+		var px := _world_to_control_px(Vector2(world.x, world.z), min_xz, size_xz)
+		var radius := visual_w * (0.32 + float(n) * 0.06 + float((tile.x * 7 + tile.y * 11) % 5) * 0.04)
+		_stamp_soft_disk(img, px.x, px.y, radius, min_xz, size_xz)
 
 
 func _stamp_building_aprons(img: Image, min_xz: Vector2, size_xz: Vector2, visual_w: float) -> void:
@@ -1251,10 +1783,12 @@ func _farm_field_tiles() -> Dictionary:
 
 
 func _calculate_height_signature() -> int:
-	var value := 17
-	for y in range(map_size.y):
-		for x in range(map_size.x):
-			value = int((value * 31 + simulation.get_height(Vector2i(x, y))) & 0x7fffffff)
+	# Heights are authored at generate-time. A full 320² scan every frame
+	# is the first-frame hitch. Hash seed + size + hall instead.
+	var value := 17 + visual_seed * 31 + map_size.x * 13 + map_size.y * 17
+	if simulation != null and simulation.is_town_hall_founded():
+		var hall: Vector2i = simulation.town_hall_position
+		value = int((value + hall.x * 7 + hall.y * 11 + int(simulation.crater_pit_radius * 10.0)) & 0x7fffffff)
 	return value
 
 
@@ -1277,6 +1811,10 @@ func _calculate_occupation_signature() -> int:
 
 
 func _sync_nature(force: bool) -> void:
+	if map_size.x > 80:
+		if force:
+			_rebuild_all_built_chunks()
+		return
 	var changed := force
 	var next_layout_signature := _calculate_nature_layout_signature()
 	if next_layout_signature != nature_layout_signature:
@@ -1377,6 +1915,8 @@ func _rebuild_nature_multimeshes() -> void:
 
 func _sync_grass(force: bool) -> void:
 	if simulation == null or grass_root == null:
+		return
+	if map_size.x > 80:
 		return
 	var layout := _calculate_nature_layout_signature()
 	var revealed := int(simulation.revealed_tiles.size())
@@ -1523,6 +2063,8 @@ func _rebuild_ground_patches() -> void:
 	# patches at 720p instead of an even lawn grid. Zones stay
 	# settlement / meadow / forest. MultiMesh only.
 	if ground_patch_root == null or simulation == null:
+		return
+	if map_size.x > 80:
 		return
 	_refresh_terrain_lookups()
 	for child in ground_patch_root.get_children():
@@ -2648,7 +3190,10 @@ func _sync_fog(force: bool) -> void:
 				elif simulation.is_revealed(sample):
 					shroud = FOG_EXPLORED
 			mask_bytes[mask_y * mask_size.x + mask_x] = shroud
-	var display_size := mask_size * FOG_DISPLAY_UPSAMPLE
+	var upsample := FOG_DISPLAY_UPSAMPLE if map_size.x <= 80 else 2
+	# 320² at divisor 1 was ~400 ms of the 2242 ms start. 2×2 cells still
+	# feather inside the 1.25-cell shader.
+	var display_size := mask_size * upsample
 	# Cubic upsample plus shader jitter = irregular 1–2 cell feather.
 	var mask := Image.create_from_data(mask_size.x, mask_size.y, false, Image.FORMAT_L8, mask_bytes)
 	mask.resize(display_size.x, display_size.y, Image.INTERPOLATE_CUBIC)
@@ -2660,6 +3205,7 @@ func _sync_fog(force: bool) -> void:
 			fog_material.set_shader_parameter("visibility_texture", fog_visibility_texture)
 		if fog_screen_material != null:
 			fog_screen_material.set_shader_parameter("visibility_texture", fog_visibility_texture)
+			_sync_fog_screen_camera()
 	else:
 		fog_visibility_texture.update(mask)
 	if fog_material == null:
@@ -2811,6 +3357,16 @@ func _ensure_fog_skirts() -> void:
 		skirt.visible = true
 
 
+func _sync_fog_screen_camera() -> void:
+	if fog_screen_material == null:
+		return
+	var cam := fog_overlay_camera
+	if cam == null or not is_instance_valid(cam):
+		return
+	fog_screen_material.set_shader_parameter("camera_world_position", cam.global_position)
+	fog_screen_material.set_shader_parameter("camera_near", cam.near)
+
+
 func _hide_fog_screen() -> void:
 	if fog_screen != null and is_instance_valid(fog_screen):
 		fog_screen.visible = false
@@ -2840,6 +3396,7 @@ func _ensure_fog_screen() -> void:
 	fog_screen_material.set_shader_parameter("cell_metres", ScaleProfile.LOGICAL_CELL_METRES)
 	fog_screen_material.set_shader_parameter("feather_cells", 1.25)
 	fog_screen_material.set_shader_parameter("noise_strength", 0.12)
+	_sync_fog_screen_camera()
 	if fog_screen == null or not is_instance_valid(fog_screen):
 		fog_screen = MeshInstance3D.new()
 		fog_screen.name = "ScreenFogOverlay"
@@ -3333,6 +3890,12 @@ func _rebuild_edge_forest(force: bool) -> void:
 	var transforms_by_path: Dictionary = {}
 	var floors: Array = []
 	var step := 1 if foliage_density >= 0.75 else 2
+	# The 320 province keeps the rim in fog. Off-map rings around a
+	# 800 m island are VRAM we do not have on Shard.
+	if map_size.x > 80:
+		_append_rim_woodland(transforms_by_path)
+		_spawn_nature_multimeshes(edge_forest_root, transforms_by_path)
+		return
 	# GFX-H: seven irregular rings plus an on-map rim belt so zoom
 	# 42/68 cannot read a diamond map cut or a grey void.
 	for ring in range(1, 8):
@@ -3363,6 +3926,8 @@ func _append_rim_woodland(groups: Dictionary) -> void:
 	# Trees and rocks on the last two revealed map tiles so the playable
 	# AABB does not print as a hard island against the shroud.
 	if simulation == null:
+		return
+	if map_size.x > 80:
 		return
 	for y in range(map_size.y):
 		for x in range(map_size.x):
@@ -3446,8 +4011,26 @@ func _rebuild_opening_dressing() -> void:
 	var inner := 11.0
 	var outer := 16.5
 	var candidates: Array[Vector2i] = []
+	var creek_worlds: Array[Vector2] = []
+	var creek_tiles: Array = simulation.founding_site.get("creek_tiles", []) if simulation.founding_site is Dictionary else []
+	for tile_value in creek_tiles:
+		var p := ScaleProfile.tile_to_flat_world(Vector2(Vector2i(tile_value)), map_size)
+		creek_worlds.append(Vector2(p.x, p.z))
+	var open_dir := Vector2(0.2, 1.0)
+	var crater_dir := Vector2(0.0, -1.0)
+	if simulation.founding_site is Dictionary:
+		open_dir = Vector2(simulation.founding_site.get("open_dir", open_dir))
+		crater_dir = Vector2(simulation.founding_site.get("crater_dir", crater_dir))
+	if open_dir.length_squared() > 0.01:
+		open_dir = open_dir.normalized()
+	if crater_dir.length_squared() > 0.01:
+		crater_dir = crater_dir.normalized()
+	var bank := ScaleProfile.road_width_metres() * 0.85 + 1.6
 	for oy in range(-17, 18):
 		for ox in range(-17, 18):
+			var dist := Vector2(float(ox), float(oy)).length()
+			if dist < inner or dist > outer:
+				continue
 			var tile := hall + Vector2i(ox, oy)
 			if reserved.has(_tile_key(tile)):
 				continue
@@ -3457,19 +4040,23 @@ func _rebuild_opening_dressing() -> void:
 				continue
 			if _terrain_occupied_cache.has(_tile_key(tile)) or _is_road_tile(tile):
 				continue
-			if _creek_cut_at(Vector2(tile_to_world(Vector2(tile)).x, tile_to_world(Vector2(tile)).z)) < -0.02:
+			var world := ScaleProfile.tile_to_flat_world(Vector2(tile), map_size)
+			var creek_hit := false
+			for creek_xz in creek_worlds:
+				if Vector2(world.x - creek_xz.x, world.z - creek_xz.y).length() < bank:
+					creek_hit = true
+					break
+			if creek_hit:
 				continue
-			if _visual_path_weight(tile) > 0.28 or _hamlet_path_weight(tile) > 0.28:
+			if _visual_path_weight(tile) > 0.28:
 				continue
 			if _in_founding_yard(tile):
 				continue
-			if _opening_faces_build_sector(tile, hall):
-				continue
-			if _opening_faces_crater(tile, hall):
-				continue
-			var dist := Vector2(float(ox), float(oy)).length()
-			if dist < inner or dist > outer:
-				continue
+			var dir := Vector2(float(ox), float(oy))
+			if dir.length_squared() > 0.01:
+				var nd := dir.normalized()
+				if nd.dot(open_dir) > 0.28 or nd.dot(crater_dir) > 0.32:
+					continue
 			candidates.append(tile)
 	candidates.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
 		return _opening_forest_score(a, hall) > _opening_forest_score(b, hall)
@@ -3645,18 +4232,66 @@ func opening_camera_yaw() -> float:
 
 func opening_camera_focus() -> Vector3:
 	# Hall in the lower-middle; crater rim in the upper third.
+	# Pull toward the crater, never toward world origin. Origin-pull on a
+	# west / -Z hall used to slide the 32 m boom onto the water pad.
 	if simulation == null or not simulation.is_town_hall_founded():
 		return Vector3.ZERO
 	var hall: Vector2i = simulation.town_hall_position
 	var center := tile_to_world(Vector2(hall) + Vector2(1.5, 1.5))
 	var shard := tile_to_world(Vector2(simulation.shard_position))
-	# Pull toward the map centre / shard so the 32 m boom stays over the
-	# playable slab. Coastal halls otherwise look straight at the ocean pad.
-	var inland := Vector3(-center.x, 0.0, -center.z)
-	if inland.length_squared() < 1.0:
-		inland = Vector3(shard.x - center.x, 0.0, shard.z - center.z)
-	var pull := clampf(Vector2(center.x, center.z).length() * 0.38, 10.0, 22.0)
-	return center + inland.normalized() * pull
+	var toward_crater := Vector3(shard.x - center.x, 0.0, shard.z - center.z)
+	if toward_crater.length_squared() < 0.01:
+		toward_crater = Vector3(0.0, 0.0, -1.0)
+	return center + toward_crater.normalized() * 6.0
+
+
+func opening_view_audit(camera: Camera3D = null) -> Dictionary:
+	var hall_tile := Vector2i.ZERO
+	if simulation != null and simulation.is_town_hall_founded():
+		hall_tile = simulation.town_hall_position
+	var hall_chunk := chunk_of_tile(hall_tile)
+	var hall_world := tile_to_world(Vector2(hall_tile) + Vector2(1.5, 1.5))
+	var near_built := 0
+	var near_visible := 0
+	var missing: Array[String] = []
+	for oy in range(-1, 2):
+		for ox in range(-1, 2):
+			var coord := hall_chunk + Vector2i(ox, oy)
+			if not _chunk_has_tiles(coord):
+				continue
+			var key := _chunk_key(coord)
+			var node: Node = chunk_nodes.get(key, null)
+			if node != null and is_instance_valid(node):
+				near_built += 1
+				if (node as Node3D).visible:
+					near_visible += 1
+			else:
+				missing.append(key)
+	var hall_in_view := false
+	var cam := camera
+	if cam == null:
+		cam = fog_overlay_camera
+	if cam != null and is_instance_valid(cam):
+		hall_in_view = cam.is_position_in_frustum(hall_world)
+		var hall_view: Node3D = null
+		for view_value in building_views.values():
+			var view: Node3D = view_value
+			var kind := String(view.building_type)
+			if kind == Defs.BUILDING_TOWN_HALL or kind == "CASTLE":
+				hall_view = view
+				break
+		if hall_view != null:
+			hall_in_view = hall_in_view or cam.is_position_in_frustum(hall_view.global_position)
+	return {
+		"hall_tile": hall_tile,
+		"hall_chunk": hall_chunk,
+		"hall_world": hall_world,
+		"near_built": near_built,
+		"near_visible": near_visible,
+		"missing": missing,
+		"hall_in_view": hall_in_view,
+		"chunks_built": chunk_nodes.size(),
+	}
 
 
 func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
@@ -3692,7 +4327,9 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 		var slope_alias := Node3D.new()
 		slope_alias.name = "RidgeSlope_%d" % index
 		slope.add_child(slope_alias)
-		if Catalog.ROCKS.size() > 1:
+		# KayKit rock loads were ~1 s of start_new_3d on the 320 map.
+		# Bevelled RidgeRock_ still satisfies the 6–10 rock gate.
+		if map_size.x <= 80 and Catalog.ROCKS.size() > 1:
 			_spawn_kaykit_ridge_rock(ridge, tile, index, 0.55 + float(index % 4) * 0.10)
 		index += 1
 	var crater_dir := Vector2(0.0, -1.0)
@@ -4020,7 +4657,6 @@ func _back_ridge_formation_mesh(width: float, height: float) -> ArrayMesh:
 		_ridge_tri(tool, top[i], top[n], apex)
 		_ridge_tri(tool, bottom[i], top[i], top[n])
 		_ridge_tri(tool, bottom[i], top[n], bottom[n])
-	tool.generate_normals()
 	return tool.commit()
 
 
@@ -4076,7 +4712,6 @@ func _bevelled_ridge_mesh(seed_id: int, width: float, height: float) -> ArrayMes
 		_ridge_tri(tool, top[i], top[n], Vector3(0.0, height * 1.02, 0.0))
 		_ridge_tri(tool, bottom[i], top[i], top[n])
 		_ridge_tri(tool, bottom[i], top[n], bottom[n])
-	tool.generate_normals()
 	return tool.commit()
 
 
