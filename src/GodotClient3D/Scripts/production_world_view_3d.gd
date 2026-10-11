@@ -3637,15 +3637,10 @@ func _opening_ridge_tiles(hall: Vector2i) -> Array[Vector2i]:
 
 
 func opening_camera_yaw() -> float:
-	# Sit the camera on the hall's inland side. Local camera offset is
-	# (0, 32, 32); yaw must be opposite the crater or the pit lands in
-	# the foreground and western seeds look off the island.
-	var crater_dir := Vector2(0.0, -1.0)
-	if simulation != null and simulation.founding_site is Dictionary:
-		crater_dir = Vector2(simulation.founding_site.get("crater_dir", crater_dir))
-	if crater_dir.length_squared() < 0.01:
-		crater_dir = Vector2(0.0, -1.0)
-	return atan2(-crater_dir.x, -crater_dir.y)
+	# Keep the classic isometric boom. Orbiting yaw by the crater heading
+	# swings the 32 m offset over the 2400 m ocean pad, so south/west
+	# seeds render as a teal void. Hall placement still walks 360°.
+	return ProductionIsometricCameraRig3D.PREFERRED_YAW
 
 
 func opening_camera_focus() -> Vector3:
@@ -3654,18 +3649,14 @@ func opening_camera_focus() -> Vector3:
 		return Vector3.ZERO
 	var hall: Vector2i = simulation.town_hall_position
 	var center := tile_to_world(Vector2(hall) + Vector2(1.5, 1.5))
-	var open_dir := Vector2(0.15, 1.0)
-	var crater_dir := Vector2(0.0, -1.0)
-	if simulation.founding_site is Dictionary:
-		open_dir = Vector2(simulation.founding_site.get("open_dir", open_dir))
-		crater_dir = Vector2(simulation.founding_site.get("crater_dir", crater_dir))
-	# OPENING_ZOOM 32 covers ~45 m of ground at 45°. Pull 14 m toward
-	# the pit so the hall stays lower-middle and the rim sits upper-third.
-	return center + Vector3(
-		crater_dir.x * 14.0 + open_dir.x * 1.5,
-		0.0,
-		crater_dir.y * 14.0 + open_dir.y * 1.5
-	)
+	var shard := tile_to_world(Vector2(simulation.shard_position))
+	# Pull toward the map centre / shard so the 32 m boom stays over the
+	# playable slab. Coastal halls otherwise look straight at the ocean pad.
+	var inland := Vector3(-center.x, 0.0, -center.z)
+	if inland.length_squared() < 1.0:
+		inland = Vector3(shard.x - center.x, 0.0, shard.z - center.z)
+	var pull := clampf(Vector2(center.x, center.z).length() * 0.38, 10.0, 22.0)
+	return center + inland.normalized() * pull
 
 
 func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
