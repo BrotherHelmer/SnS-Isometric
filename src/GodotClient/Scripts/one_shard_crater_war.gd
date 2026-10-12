@@ -455,7 +455,9 @@ func _maybe_rival_contest() -> void:
 
 
 func route_secured() -> bool:
-	return _route_outpost_count() >= 1
+	# A living Outpost on the vent or on the hall–fissure corridor
+	# unlocks full harvest. The frontier stake counts.
+	return _route_outpost_count() >= 1 or _binding_outpost_alive()
 
 
 func waypoint_tile() -> Vector2i:
