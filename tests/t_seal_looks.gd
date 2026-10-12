@@ -8,7 +8,7 @@ const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
 const CameraRig = preload("res://src/GodotClient3D/Scripts/production_isometric_camera_rig.gd")
 const CraterWar = preload("res://src/GodotClient/Scripts/one_shard_crater_war.gd")
 
-const DEST := "res://artifacts/demo_playthrough_v8/shots"
+const DEST := "res://artifacts/demo_playthrough_v11/shots"
 
 
 func _init() -> void:

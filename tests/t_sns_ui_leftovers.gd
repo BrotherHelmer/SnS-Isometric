@@ -4,6 +4,7 @@ extends SceneTree
 ## notice + idle-worker button. (UI-scale setting skipped: see PR notes.)
 
 const Scene = preload("res://src/GodotClient3D/Scenes/production_3d.tscn")
+const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
 
 var failures: Array[String] = []
 
@@ -80,8 +81,21 @@ func _run() -> void:
 	_check(not game.idle_workers_tracking, "idle timer pauses at night")
 	sim.is_night = false
 	button.emit_signal("pressed")
-	_check(game.build_panel.visible, "clicking the idle count opens BUILD")
-	game._set_build_palette_visible(false)
+	_check(game.idle_crew_panel != null and game.idle_crew_panel.visible, "clicking the idle count opens the crew overview")
+	_check(game.build_panel == null or not game.build_panel.visible, "overview does not steal the click into BUILD")
+	sim.central_inventory[Defs.RESOURCE_STABILIZED_WYRD] = 6
+	if game.has_method("_sync_presentation"):
+		game._sync_presentation()
+	game._update_ui()
+	_check(game.idle_crew_panel.visible, "overview stays open while Seal progress is shown")
+	_check(game.loop_label != null and "STAB 6/12" in game.loop_label.text, "Seal 6/12 stays visible with the overview open")
+	_check(game.status_plate != null and game.status_plate.visible, "status plate stays up with the overview open")
+	_check(game.idle_jump_button != null and game.idle_jump_button.visible, "overview has a jump shortcut")
+	_check(String(game.idle_crew_body.text).contains("Working") and String(game.idle_crew_body.text).contains("Unable"), "overview lists working vs unable")
+	game.idle_jump_button.emit_signal("pressed")
+	game._update_ui()
+	_check("STAB 6/12" in game.loop_label.text, "STAB 6/12 stays visible after the jump")
+	game._show_idle_crew(false)
 
 	# 3) UI scale was skipped (top bar needs ~1223 px; 115%/130% leave 1113/985 px).
 	#    Guard the reason: the 100% top bar must keep fitting 1280 px.

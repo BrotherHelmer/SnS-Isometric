@@ -1477,6 +1477,12 @@ func _damage_structure(structure_id: int, amount: int, attacker_realm: String) -
 	var structure := _structure_by_id(structure_id)
 	if structure.is_empty() or String(structure.get("realm_id", "")) == attacker_realm:
 		return
+	if simulation != null and simulation.crater_war != null \
+		and String(structure.get("realm_id", "")) == Tuning.PLAYER_REALM:
+		amount = simulation.crater_war.absorb_channel_hit(amount)
+		if amount <= 0:
+			structure["damage_flash"] = 0.2
+			return
 	structure["hp"] = max(0, int(structure.get("hp", 0)) - amount)
 	structure["damage_flash"] = 0.3
 	if String(structure.get("realm_id", "")) == Tuning.AI_REALM:

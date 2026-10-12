@@ -14,7 +14,7 @@ const Intentions = preload("res://src/GodotClient/Scripts/one_shard_intentions.g
 const SEED_DEFAULT := 260821
 const STEP_SECONDS := 8.0
 const MAX_SECONDS_DEFAULT := 3600.0
-const DEST_DEFAULT := "res://artifacts/demo_playthrough_v8"
+const DEST_DEFAULT := "res://artifacts/demo_playthrough_v11"
 
 var failures: Array[String] = []
 var script_errors := 0
@@ -104,6 +104,15 @@ func _run() -> void:
 
 	var player = Player.new()
 	await _capture(game, sim, "t00_start", "Opening yard after founding.")
+	if not headless and game != null:
+		if game.has_method("_on_idle_workers_pressed"):
+			game._on_idle_workers_pressed()
+			await _capture(game, sim, "t00_idle_overview", "Crew overview from the idle status.")
+			if game.idle_jump_button != null:
+				game.idle_jump_button.emit_signal("pressed")
+				await _capture(game, sim, "t00_idle_jump", "Idle shortcut jumps the camera.")
+			if game.has_method("_show_idle_crew"):
+				game._show_idle_crew(false)
 	_log_row(sim, "start")
 	_note_event(sim, "start", "Founded seed %d at hall %s, shard %s, rivals %d." % [
 		seed_value, str(sim.town_hall_position), str(sim.shard_position), sim.rival_seats.size()
@@ -139,6 +148,7 @@ func _run() -> void:
 			])
 
 	if bool(sim.victory):
+		await _capture(game, sim, "t%02d_fissure_calm" % _mm(sim), "Stabilized fissure before the victory overlay.")
 		await _capture(game, sim, "t%02d_victory" % _mm(sim), "Victory.")
 		_note_event(sim, "victory", String(sim.last_message))
 	elif bool(sim.game_finished):
@@ -600,7 +610,7 @@ func _frame_camera(game, sim, name_value: String) -> void:
 		if sim.crater_war != null and sim.crater_war.primary_fissure.x >= 0:
 			focus = game.world_view.tile_to_world(Vector2(sim.crater_war.primary_fissure))
 		zoom = 58.0
-	elif name_value.contains("victory") or name_value.contains("end"):
+	elif name_value.contains("victory") or name_value.contains("end") or name_value.contains("fissure_calm"):
 		if sim.crater_war != null and sim.crater_war.primary_fissure.x >= 0:
 			focus = game.world_view.tile_to_world(Vector2(sim.crater_war.primary_fissure))
 		else:

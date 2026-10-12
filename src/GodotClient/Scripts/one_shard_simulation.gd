@@ -1698,6 +1698,14 @@ func get_wyrdfall_presentation() -> Dictionary:
 		"channel_cooldown": float(crater.get("channel_cooldown", 20.0)),
 		"channel_target_tile": crater.get("channel_target_tile", Vector2i(-1, -1)),
 		"channel_target_kind": String(crater.get("channel_target_kind", "")),
+		"channel_hp_before": int(crater.get("channel_hp_before", 0)),
+		"channel_hp_after": int(crater.get("channel_hp_after", 0)),
+		"channel_hp_gained": int(crater.get("channel_hp_gained", 0)),
+		"channel_prevented": bool(crater.get("channel_prevented", false)),
+		"channel_protection": int(crater.get("channel_protection", 0)),
+		"channel_absorbed": int(crater.get("channel_absorbed", 0)),
+		"channel_event": String(crater.get("channel_event", "")),
+		"channel_feedback": String(crater.get("channel_feedback", "")),
 		"first_build_at": float(crater.get("first_build_at", -1.0)),
 		"seal_look": crater.get("seal_look", {}),
 		"idle_count": idle_settler_count(),
@@ -1727,6 +1735,10 @@ func get_run_statistics() -> Dictionary:
 		summary["first_build_at"] = crater_war.first_build_at
 		summary["fortify_walls"] = crater_war.fortify_walls
 		summary["channel_reserve"] = crater_war.channel_reserve
+		summary["channel_hp_gained"] = crater_war.last_channel_hp_gained
+		summary["channel_prevented"] = crater_war.last_channel_prevented
+		summary["channel_absorbed"] = crater_war.last_channel_absorbed
+		summary["channel_feedback"] = crater_war.channel_feedback_line()
 	summary["idle_settler_seconds"] = idle_settler_seconds
 	summary["idle_settler_seconds_before"] = idle_settler_seconds_before
 	summary["idle_bottleneck"] = last_idle_bottleneck
@@ -3054,6 +3066,285 @@ func idle_status() -> Dictionary:
 		"bottleneck": last_idle_bottleneck,
 		"seconds": idle_settler_seconds,
 		"seconds_before": idle_settler_seconds_before
+	}
+
+
+## The Director: TEST #22 — one click on the idle HUD status names
+## who is working, who cannot, and why, then jumps to the real
+## bottleneck (Sawmill / Lumber Camp / Quarry / transport / the
+## building that is actually blocking), not Town Hall by default.
+func idle_crew_report() -> Dictionary:
+	var bottleneck := idle_bottleneck()
+	last_idle_bottleneck = bottleneck
+	var working: Array = []
+	var unable: Array = []
+	var labor_idx := 0
+	var unable_laborers := 0
+	for worker in workers:
+		if _is_labor_pool(worker):
+			labor_idx += 1
+			var who := "Laborer %d" % labor_idx
+			var state := String(worker.get("state", ""))
+			var task: Dictionary = worker.get("task", {})
+			var purpose := String(task.get("purpose", ""))
+			if state in ["Idle", "Sheltered", "No shelter", "Awaiting order", "Waiting", ""]:
+				unable.append({"who": who, "reason": bottleneck})
+				unable_laborers += 1
+			else:
+				working.append({
+					"who": who,
+					"job": _labor_job_label(worker, purpose, state),
+					"reason": _labor_job_reason(worker, purpose, state)
+				})
+			continue
+		var wtype := String(worker.get("type", ""))
+		if wtype == "carrier":
+			var carried := String(worker.get("carried_resource", ""))
+			working.append({
+				"who": "Carrier",
+				"job": "hauling",
+				"reason": "Carrying %s." % Defs.resource_name(carried) if carried != "" else "Moving goods."
+			})
+			continue
+		if wtype == "clearer":
+			working.append({"who": "Clearer", "job": "clearing", "reason": "Opening ground."})
+			continue
+		if wtype == "founder":
+			continue
+		var building := get_building_by_id(int(worker.get("building_id", 0)))
+		var job := Defs.building_name(String(building.get("type", wtype)))
+		if job == "" or job == wtype:
+			job = wtype.capitalize()
+		var work_state := String(worker.get("state", ""))
+		if work_state in ["Idle", "Sheltered", "No shelter", "Awaiting order", "Waiting", ""]:
+			unable.append({"who": wtype.capitalize(), "reason": bottleneck})
+		else:
+			working.append({
+				"who": wtype.capitalize(),
+				"job": job,
+				"reason": _workplace_reason(building, work_state)
+			})
+	var extra := maxi(0, idle_settler_count() - unable_laborers)
+	for i in range(extra):
+		unable.append({"who": "Settler %d" % (i + 1), "reason": bottleneck})
+	return {
+		"bottleneck": bottleneck,
+		"count": idle_settler_count(),
+		"working": working.slice(0, 8),
+		"unable": unable.slice(0, 8),
+		"working_total": working.size(),
+		"unable_total": unable.size(),
+		"jump": idle_jump_target()
+	}
+
+
+func idle_jump_target() -> Dictionary:
+	var bottleneck := idle_bottleneck()
+	if bottleneck == "no storehouse space":
+		var paused: Dictionary = _paused_producer_jump()
+		if not paused.is_empty():
+			return paused
+		return _storehouse_or_hall_jump()
+	if bottleneck == "waiting for deliveries":
+		var store: Dictionary = _kind_jump(Defs.BUILDING_STOREHOUSE, "Go to Storehouse")
+		if not store.is_empty():
+			return store
+	if "planks" in bottleneck:
+		var mill: Dictionary = _kind_jump(Defs.BUILDING_SAWMILL, "Go to Sawmill")
+		if not mill.is_empty():
+			return mill
+	elif "stone" in bottleneck:
+		var quarry: Dictionary = _kind_jump(Defs.BUILDING_QUARRY, "Go to Quarry")
+		if not quarry.is_empty():
+			return quarry
+	elif "wood" in bottleneck:
+		var camp: Dictionary = _kind_jump(Defs.BUILDING_LUMBER_CAMP, "Go to Lumber Camp")
+		if not camp.is_empty():
+			return camp
+	if bottleneck in ["no jobs", "taking jobs"]:
+		var workplace: Dictionary = _stalled_workplace_jump()
+		if not workplace.is_empty():
+			return workplace
+		var store: Dictionary = _kind_jump(Defs.BUILDING_STOREHOUSE, "Go to Storehouse")
+		if not store.is_empty():
+			return store
+	var site: Dictionary = _blocked_construction_jump(bottleneck)
+	if not site.is_empty():
+		return site
+	return _storehouse_or_hall_jump()
+
+
+func _labor_job_label(worker: Dictionary, purpose: String, state: String) -> String:
+	if purpose == "site_build" or state == "Building":
+		return "raising a site"
+	if purpose == "road_build":
+		return "laying road"
+	if purpose == "repair" or state == "Repairing":
+		return "repairing"
+	if purpose in ["construction", "processor", "output"] or int(worker.get("carried_amount", 0)) > 0:
+		return "hauling"
+	if state in ["Pickup", "Dropoff", "Moving"]:
+		return "hauling"
+	return state.to_lower() if state != "" else "working"
+
+
+func _labor_job_reason(worker: Dictionary, purpose: String, _state: String) -> String:
+	var dest_id := int(Dictionary(worker.get("task", {})).get("destination", 0))
+	var site := get_building_by_id(dest_id)
+	var planned := String(site.get("planned_type", site.get("type", "")))
+	var name := Defs.building_name(planned) if planned != "" else "a site"
+	if purpose == "site_build":
+		return "Raising the %s." % name
+	if purpose == "road_build":
+		return "Opening road access."
+	if purpose == "repair":
+		return "Repairing the %s." % name
+	if purpose == "processor":
+		return "Feeding the %s." % name
+	if int(worker.get("carried_amount", 0)) > 0:
+		var carried := String(worker.get("carried_resource", ""))
+		return "Delivering %s." % Defs.resource_name(carried) if carried != "" else "Delivering goods."
+	if purpose == "construction":
+		return "Hauling materials to the %s." % name
+	return "On a labor job."
+
+
+func _workplace_reason(building: Dictionary, state: String) -> String:
+	var name := Defs.building_name(String(building.get("type", "")))
+	if name == "":
+		name = "workplace"
+	if state.contains("indoor") or state == "Working":
+		return "At the %s." % name
+	if state.contains("Leaving") or state == "Moving":
+		return "Walking to the %s." % name
+	return state if state != "" else "On duty."
+
+
+func _storehouse_or_hall_jump() -> Dictionary:
+	for building in buildings:
+		var kind := String(building.get("planned_type", "")) if bool(building.get("construction", false)) else String(building.get("type", ""))
+		if kind == Defs.BUILDING_STOREHOUSE:
+			return {
+				"id": int(building.get("id", 0)),
+				"tile": Vector2i(building.get("position", town_hall_position)),
+				"label": "Go to Storehouse",
+				"kind": "storehouse"
+			}
+	return _hall_jump()
+
+
+func _hall_jump() -> Dictionary:
+	for building in buildings:
+		if String(building.get("type", "")) == Defs.BUILDING_TOWN_HALL:
+			return {
+				"id": int(building.get("id", 0)),
+				"tile": Vector2i(building.get("position", town_hall_position)),
+				"label": "Go to Town Hall",
+				"kind": "hall"
+			}
+	return {
+		"id": 0,
+		"tile": town_hall_position,
+		"label": "Go to Town Hall",
+		"kind": "hall"
+	}
+
+
+func _kind_jump(kind: String, label: String) -> Dictionary:
+	var planned: Dictionary = {}
+	for building in buildings:
+		var actual := String(building.get("planned_type", "")) if bool(building.get("construction", false)) else String(building.get("type", ""))
+		if actual != kind:
+			continue
+		var hop := _site_jump(building, label)
+		hop["kind"] = _jump_kind_for(kind)
+		if kind == Defs.BUILDING_SAWMILL \
+			and bool(building.get("completed", false)) \
+			and not bool(building.get("construction", false)) \
+			and not bool(building.get("connected", false)):
+			hop["hint"] = "Connect Sawmill to road to produce planks"
+		if bool(building.get("completed", false)) and not bool(building.get("construction", false)):
+			return hop
+		if planned.is_empty():
+			planned = hop
+	return planned
+
+
+func _jump_kind_for(kind: String) -> String:
+	if kind == Defs.BUILDING_SAWMILL:
+		return "sawmill"
+	if kind == Defs.BUILDING_QUARRY:
+		return "quarry"
+	if kind == Defs.BUILDING_LUMBER_CAMP:
+		return "lumber"
+	if kind == Defs.BUILDING_STOREHOUSE:
+		return "storehouse"
+	return "workplace"
+
+
+func _paused_producer_jump() -> Dictionary:
+	for building in buildings:
+		var status := String(building.get("status", "")).to_lower()
+		if not (bool(building.get("storage_paused", false)) or "storage full" in status or "storage paused" in status):
+			continue
+		var kind := String(building.get("type", building.get("planned_type", "")))
+		if kind == Defs.BUILDING_STOREHOUSE:
+			continue
+		var name := Defs.building_name(kind)
+		if name == "":
+			continue
+		var hop := _site_jump(building, "Go to %s" % name)
+		hop["kind"] = "producer"
+		return hop
+	return {}
+
+
+func _stalled_workplace_jump() -> Dictionary:
+	for kind in [Defs.BUILDING_SAWMILL, Defs.BUILDING_LUMBER_CAMP, Defs.BUILDING_QUARRY, Defs.BUILDING_WYRD_REFINER, Defs.BUILDING_WYRD_HARVESTER]:
+		var hop: Dictionary = _kind_jump(kind, "Go to %s" % Defs.building_name(kind))
+		if not hop.is_empty():
+			return hop
+	return {}
+
+
+func _blocked_construction_jump(bottleneck: String) -> Dictionary:
+	var want := ""
+	if "planks" in bottleneck:
+		want = Defs.RESOURCE_PLANKS
+	elif "stone" in bottleneck:
+		want = Defs.RESOURCE_STONE
+	elif "wood" in bottleneck:
+		want = Defs.RESOURCE_WOOD
+	var road_wait := "road" in bottleneck
+	for site in buildings:
+		if not bool(site.get("construction", false)):
+			continue
+		var planned := String(site.get("planned_type", ""))
+		if planned in [Defs.BUILDING_ROAD, ""]:
+			continue
+		if road_wait and not bool(site.get("connected", false)):
+			return _site_jump(site, "Go to %s" % Defs.building_name(planned))
+		if want != "":
+			var needed: Dictionary = site.get("materials_needed", {})
+			var delivered: Dictionary = site.get("materials_delivered", {})
+			var in_transit: Dictionary = site.get("materials_in_transit", Defs.empty_inventory())
+			var outstanding := int(needed.get(want, 0)) - int(delivered.get(want, 0)) - int(in_transit.get(want, 0))
+			if outstanding > 0:
+				return _site_jump(site, "Go to %s" % Defs.building_name(planned))
+		if "deliver" in bottleneck and bool(site.get("connected", false)) and not _construction_materials_ready(site):
+			return _site_jump(site, "Go to %s" % Defs.building_name(planned))
+	for site in buildings:
+		if bool(site.get("construction", false)) and String(site.get("planned_type", "")) not in [Defs.BUILDING_ROAD, ""]:
+			return _site_jump(site, "Go to %s" % Defs.building_name(String(site.get("planned_type", ""))))
+	return {}
+
+
+func _site_jump(site: Dictionary, label: String) -> Dictionary:
+	return {
+		"id": int(site.get("id", 0)),
+		"tile": Vector2i(site.get("position", town_hall_position)),
+		"label": label,
+		"kind": "site"
 	}
 
 
@@ -8909,6 +9200,11 @@ func _damage_worker(worker_id: int, amount: int, attacker_position: Vector2i = V
 
 
 func _damage_building(building: Dictionary, amount: int) -> void:
+	if crater_war != null:
+		amount = crater_war.absorb_channel_hit(amount)
+		if amount <= 0:
+			building["damage_flash"] = 0.25
+			return
 	building["hp"] = int(building["hp"]) - amount
 	building["damage_flash"] = 0.45
 	last_message = "%s is under attack." % _display_building_name(building)
