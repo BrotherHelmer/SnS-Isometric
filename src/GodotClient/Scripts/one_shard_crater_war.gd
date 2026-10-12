@@ -1,9 +1,9 @@
 extends RefCounted
 
-## The Director: TEST #21 — Channel Wyrd reports the HP it restored
-## or the damage it prevented, and the idle HUD jumps to the blockage.
-## Channel still costs 2 Stabilized, repairs one wall/ward, and cools
-## for 20 s. The bot channels at least once per Seal.
+## The Director: TEST #22 — Channel Wyrd copy matches the mechanic:
+## "Ward restored: +40 HP" when a wall/ward segment is repaired,
+## "Ward held: next 40 dmg prevented" when HP is already full.
+## Same string is used in HUD, tooltip, loop copy, and victory stats.
 
 const Defs = preload("one_shard_defs.gd")
 const RivalryTuning = preload("one_shard_rivalry_tuning.gd")
@@ -430,7 +430,7 @@ func request_channel() -> Dictionary:
 	var kind := String(target.get("kind", "wall"))
 	var feedback := channel_feedback_line()
 	var paid := "emergency reserve repairs the %s" % kind if from_reserve else "2 Stabilized repairs the %s" % kind
-	var message := "CHANNEL WYRD — %s (%s)." % [paid, feedback.to_lower()] if feedback != "" else "CHANNEL WYRD — %s." % paid
+	var message := "CHANNEL WYRD — %s (%s)." % [paid, feedback] if feedback != "" else "CHANNEL WYRD — %s." % paid
 	simulation.last_message = message
 	simulation._add_log(message)
 	simulation.push_notice("info", "CHANNEL", message, "warning")
@@ -1384,8 +1384,8 @@ func channel_feedback_line() -> String:
 	if last_channel_at < 0.0:
 		return ""
 	if last_channel_prevented or last_channel_hp_gained <= 0:
-		return "next %d dmg prevented" % CHANNEL_REPAIR_HP
-	return "+%d HP" % last_channel_hp_gained
+		return "Ward held: next %d dmg prevented" % CHANNEL_REPAIR_HP
+	return "Ward restored: +%d HP" % last_channel_hp_gained
 
 
 func _note_channel_hp(before: int, after: int) -> void:

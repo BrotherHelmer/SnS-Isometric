@@ -4139,10 +4139,10 @@ func _channel_feedback_copy(wyrdfall: Dictionary) -> String:
 	if line != "":
 		return line
 	if bool(wyrdfall.get("channel_prevented", false)):
-		return "next 40 dmg prevented"
+		return "Ward held: next 40 dmg prevented"
 	var gained := int(wyrdfall.get("channel_hp_gained", 0))
 	if gained > 0:
-		return "+%d HP" % gained
+		return "Ward restored: +%d HP" % gained
 	return ""
 
 

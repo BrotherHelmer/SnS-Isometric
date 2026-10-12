@@ -2761,10 +2761,10 @@ func _update_seal_ceremony(wyrdfall: Dictionary) -> void:
 		disc.height = 0.14
 		seal_wave.mesh = disc
 		var wave_mat := StandardMaterial3D.new()
-		wave_mat.albedo_color = Color(0.85, 0.95, 1.0, 0.35)
+		wave_mat.albedo_color = Color(0.35, 0.82, 0.88, 0.22)
 		wave_mat.emission_enabled = true
-		wave_mat.emission = Color(0.75, 0.95, 1.0)
-		wave_mat.emission_energy_multiplier = 2.2
+		wave_mat.emission = Color(0.35, 0.82, 0.88)
+		wave_mat.emission_energy_multiplier = 1.2
 		wave_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		seal_wave.material_override = wave_mat
 		seal_wave.position = Vector3(0.0, 0.55, 0.0)
@@ -2800,7 +2800,7 @@ func _update_seal_ceremony(wyrdfall: Dictionary) -> void:
 		seal_beacon_light.light_energy = float(look.get("light", 1.8)) * pulse
 		if celebrating:
 			seal_beacon_light.light_energy = 1.15 * pulse
-			seal_beacon_light.light_color = Color("#9fd4c8")
+			seal_beacon_light.light_color = Color("#7ec9d4")
 	if seal_beacon_column != null:
 		var column_mat := seal_beacon_column.material_override as StandardMaterial3D
 		if column_mat != null:
@@ -2820,8 +2820,11 @@ func _update_seal_ceremony(wyrdfall: Dictionary) -> void:
 			seal_wave.scale = Vector3(swell, 1.4, swell)
 			var wave_mat := seal_wave.material_override as StandardMaterial3D
 			if wave_mat != null:
-				wave_mat.emission_energy_multiplier = 3.4
-				wave_mat.albedo_color = Color(0.92, 0.98, 1.0, 0.55)
+				# The Director: TEST #22 — keep the sealed wave cyan,
+				# not a white wash, so the ward column stays the focus.
+				wave_mat.emission_energy_multiplier = 1.2
+				wave_mat.albedo_color = Color(0.35, 0.82, 0.88, 0.22)
+				wave_mat.emission = Color(0.35, 0.82, 0.88)
 
 
 func _apply_seal_look(look: Dictionary, celebrating: bool) -> void:
@@ -2830,17 +2833,16 @@ func _apply_seal_look(look: Dictionary, celebrating: bool) -> void:
 	var charge := path == "overcharge"
 	var amber := Color(0.92, 0.62, 0.22, 0.7)
 	var cyan := Color(0.35, 0.82, 0.88, 0.55)
-	var white := Color(0.82, 0.95, 1.0, 0.72)
-	var gold := Color(0.95, 0.78, 0.28, 0.8)
-	var calm := Color(0.55, 0.82, 0.74, 0.55)
-	var column_color := calm if celebrating else (amber if wall else (white if charge else cyan))
+	# Overcharge / victory used to bleach white; cyan stays the
+	# sealed-fissure colour so the ward reads as one family.
+	var column_color := amber if wall and not celebrating else cyan
 	if seal_beacon_column != null:
 		var column_mat := seal_beacon_column.material_override as StandardMaterial3D
 		if column_mat != null:
 			column_mat.albedo_color = column_color
-			column_mat.emission = column_color.lightened(0.15)
+			column_mat.emission = column_color.lightened(0.08)
 	if seal_beacon_light != null:
-		seal_beacon_light.light_color = Color("#9fd4c8") if celebrating else (Color("#f0a24a") if wall else Color("#b8f6ff"))
+		seal_beacon_light.light_color = Color("#7ec9d4") if celebrating else (Color("#f0a24a") if wall else Color("#5ec4d4"))
 		seal_beacon_light.omni_range = 14.0 if celebrating else (22.0 if charge else 16.0)
 	if seal_ward_ring != null:
 		var torus := TorusMesh.new()

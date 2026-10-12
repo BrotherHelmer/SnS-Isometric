@@ -3065,9 +3065,10 @@ func idle_status() -> Dictionary:
 	}
 
 
-## The Director: TEST #21 — one click on the idle HUD status names
-## who is working, who cannot, and why, then points at the Storehouse
-## or the blocked building so a new player finds the next action.
+## The Director: TEST #22 — one click on the idle HUD status names
+## who is working, who cannot, and why, then jumps to the real
+## bottleneck (Sawmill / Lumber Camp / Quarry / transport / the
+## building that is actually blocking), not Town Hall by default.
 func idle_crew_report() -> Dictionary:
 	var bottleneck := idle_bottleneck()
 	last_idle_bottleneck = bottleneck
@@ -3135,8 +3136,34 @@ func idle_crew_report() -> Dictionary:
 
 func idle_jump_target() -> Dictionary:
 	var bottleneck := idle_bottleneck()
-	if bottleneck in ["no storehouse space", "no jobs", "taking jobs"]:
+	if bottleneck == "no storehouse space":
+		var paused: Dictionary = _paused_producer_jump()
+		if not paused.is_empty():
+			return paused
 		return _storehouse_or_hall_jump()
+	if bottleneck == "waiting for deliveries":
+		var store: Dictionary = _kind_jump(Defs.BUILDING_STOREHOUSE, "Go to Storehouse")
+		if not store.is_empty():
+			return store
+	if "planks" in bottleneck:
+		var mill: Dictionary = _kind_jump(Defs.BUILDING_SAWMILL, "Go to Sawmill")
+		if not mill.is_empty():
+			return mill
+	elif "stone" in bottleneck:
+		var quarry: Dictionary = _kind_jump(Defs.BUILDING_QUARRY, "Go to Quarry")
+		if not quarry.is_empty():
+			return quarry
+	elif "wood" in bottleneck:
+		var camp: Dictionary = _kind_jump(Defs.BUILDING_LUMBER_CAMP, "Go to Lumber Camp")
+		if not camp.is_empty():
+			return camp
+	if bottleneck in ["no jobs", "taking jobs"]:
+		var workplace: Dictionary = _stalled_workplace_jump()
+		if not workplace.is_empty():
+			return workplace
+		var store: Dictionary = _kind_jump(Defs.BUILDING_STOREHOUSE, "Go to Storehouse")
+		if not store.is_empty():
+			return store
 	var site: Dictionary = _blocked_construction_jump(bottleneck)
 	if not site.is_empty():
 		return site
@@ -3217,6 +3244,58 @@ func _hall_jump() -> Dictionary:
 		"label": "Go to Town Hall",
 		"kind": "hall"
 	}
+
+
+func _kind_jump(kind: String, label: String) -> Dictionary:
+	var planned: Dictionary = {}
+	for building in buildings:
+		var actual := String(building.get("planned_type", "")) if bool(building.get("construction", false)) else String(building.get("type", ""))
+		if actual != kind:
+			continue
+		var hop := _site_jump(building, label)
+		hop["kind"] = _jump_kind_for(kind)
+		if bool(building.get("completed", false)) and not bool(building.get("construction", false)):
+			return hop
+		if planned.is_empty():
+			planned = hop
+	return planned
+
+
+func _jump_kind_for(kind: String) -> String:
+	if kind == Defs.BUILDING_SAWMILL:
+		return "sawmill"
+	if kind == Defs.BUILDING_QUARRY:
+		return "quarry"
+	if kind == Defs.BUILDING_LUMBER_CAMP:
+		return "lumber"
+	if kind == Defs.BUILDING_STOREHOUSE:
+		return "storehouse"
+	return "workplace"
+
+
+func _paused_producer_jump() -> Dictionary:
+	for building in buildings:
+		var status := String(building.get("status", "")).to_lower()
+		if not (bool(building.get("storage_paused", false)) or "storage full" in status or "storage paused" in status):
+			continue
+		var kind := String(building.get("type", building.get("planned_type", "")))
+		if kind == Defs.BUILDING_STOREHOUSE:
+			continue
+		var name := Defs.building_name(kind)
+		if name == "":
+			continue
+		var hop := _site_jump(building, "Go to %s" % name)
+		hop["kind"] = "producer"
+		return hop
+	return {}
+
+
+func _stalled_workplace_jump() -> Dictionary:
+	for kind in [Defs.BUILDING_SAWMILL, Defs.BUILDING_LUMBER_CAMP, Defs.BUILDING_QUARRY, Defs.BUILDING_WYRD_REFINER, Defs.BUILDING_WYRD_HARVESTER]:
+		var hop: Dictionary = _kind_jump(kind, "Go to %s" % Defs.building_name(kind))
+		if not hop.is_empty():
+			return hop
+	return {}
 
 
 func _blocked_construction_jump(bottleneck: String) -> Dictionary:

@@ -1,14 +1,14 @@
 extends SceneTree
 
-## The Director: TEST #21 review shots — idle crew overview, jump
-## shortcut, Channel HP feedback, 2 s fissure hold, victory overlay.
+## The Director: TEST #22 review shots — Channel Ward restored copy,
+## jump to the Sawmill bottleneck, cyan sealed fissure, victory overlay.
 
 const Scene = preload("res://src/GodotClient3D/Scenes/production_3d.tscn")
 const Simulation = preload("res://src/GodotClient/Scripts/one_shard_simulation.gd")
 const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
 const CraterWar = preload("res://src/GodotClient/Scripts/one_shard_crater_war.gd")
 
-const DEST := "res://artifacts/demo_playthrough_v9/shots_for_review"
+const DEST := "res://artifacts/demo_playthrough_v10/shots_for_review"
 
 
 func _init() -> void:
@@ -40,6 +40,10 @@ func _run() -> void:
 	house["materials_delivered"] = Defs.empty_inventory()
 	house["materials_in_transit"] = Defs.empty_inventory()
 	sim.buildings.append(house)
+	var mill: Dictionary = sim._create_building(Defs.BUILDING_SAWMILL, hall + Vector2i(7, 2))
+	mill["construction"] = false
+	mill["completed"] = true
+	sim.buildings.append(mill)
 	game.play_has_begun = true
 	game._update_ui()
 	if game.has_method("_on_idle_workers_pressed"):
@@ -49,7 +53,7 @@ func _run() -> void:
 	if game.idle_jump_button != null:
 		game.idle_jump_button.emit_signal("pressed")
 	game._update_ui()
-	await _shot(game, sim, dest.path_join("idle_jump.png"), Vector2i(house.get("position", hall)), 32.0)
+	await _shot(game, sim, dest.path_join("idle_jump.png"), Vector2i(mill.get("position", hall)), 32.0)
 	if game.has_method("_show_idle_crew"):
 		game._show_idle_crew(false)
 
