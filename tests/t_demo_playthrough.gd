@@ -354,6 +354,12 @@ func _watch_meaningful(sim, thought: Dictionary) -> void:
 		meaningful = true
 	if sim.crater_war != null and bool(sim.crater_war.ritual_active):
 		meaningful = true
+	if sim.crater_war != null and sim.crater_war._rival_outpost_alive():
+		meaningful = true
+	for worker in sim.workers:
+		if int(worker.get("assault_target_id", 0)) > 0:
+			meaningful = true
+			break
 	for building in sim.get_buildings():
 		if not bool(building.get("construction", false)):
 			continue
