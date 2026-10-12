@@ -37,6 +37,7 @@ func think(sim) -> Dictionary:
 	_try_wyrd_choice(sim)
 	_try_midgame_choice(sim)
 	_try_seal_choice(sim)
+	_try_channel(sim)
 	_scout(sim)
 	_expand_toward_shard(sim)
 	_contest_rivals(sim)
@@ -59,11 +60,12 @@ func _pursue_economy(sim) -> void:
 	if _pending_buildings(sim) >= MAX_PENDING_SITES:
 		last_idle_reason = "construction queue full"
 		return
-	if _has_completed(sim, Defs.BUILDING_LUMBER_CAMP) or _pending_buildings(sim) == 0:
-		_extend_roads(sim, _early_road_target(sim), 1)
+	# House first so the opening haul is not stolen by early roads.
 	if _count(sim, Defs.BUILDING_HOUSE) < 1:
 		_try_build(sim, Defs.BUILDING_HOUSE, sim.town_hall_position + Vector2i(5, 4))
 		return
+	if _has_completed(sim, Defs.BUILDING_LUMBER_CAMP):
+		_extend_roads(sim, _early_road_target(sim), 1)
 	if _has_completed(sim, Defs.BUILDING_STOREHOUSE) and _count(sim, Defs.BUILDING_HOUSE) < 2 and _stock(sim, Defs.RESOURCE_WOOD) >= 4:
 		_try_build(sim, Defs.BUILDING_HOUSE, sim.town_hall_position + Vector2i(3, 6))
 		return
@@ -277,6 +279,22 @@ func _try_seal_choice(sim) -> void:
 		_note(sim, "SEALCHOICE", sim.crater_war.primary_fissure, String(result.get("message", "")))
 	else:
 		last_failures.append("seal choice: %s" % String(result.get("message", "")))
+
+
+func _try_channel(sim) -> void:
+	if sim.crater_war == null or not sim.crater_war.ritual_active:
+		return
+	if sim.crater_war.channel_uses >= 1:
+		return
+	if not sim.crater_war.channel_ready():
+		return
+	if sim.crater_war.ritual_started_at >= 0.0 and float(sim.elapsed_seconds) < sim.crater_war.ritual_started_at + 8.0:
+		return
+	var result: Dictionary = sim.request_channel_wyrd()
+	if bool(result.get("success", false)):
+		_note(sim, "CHANNEL", sim.crater_war.last_channel_tile, String(result.get("message", "")))
+	else:
+		last_failures.append("channel: %s" % String(result.get("message", "")))
 
 
 func _try_seal(sim) -> void:

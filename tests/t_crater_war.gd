@@ -1,7 +1,7 @@
 extends SceneTree
 
-## Fast gates for TEST #18: midgame caravan + distinct Seal defence looks.
-## Survival is not a win. Shard Binding is a later-act hook.
+## Fast gates for TEST #19: Channel Wyrd during the Seal, plus a
+## caravan aftermath that stays on the map. Survival is not a win.
 
 const Simulation = preload("res://src/GodotClient/Scripts/one_shard_simulation.gd")
 const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
@@ -38,6 +38,7 @@ func _run() -> void:
 	_check_wyrd_choice()
 	_check_seal_defence_choice()
 	_check_midgame_caravan()
+	_check_channel_wyrd()
 	_check_reactive_rival()
 	_check_visible_escalation()
 	_check_foreshadow()
@@ -168,6 +169,8 @@ func _check_seal_ceremony() -> void:
 	_check(bool(begin.get("success", false)), "request_begin_seal starts the ceremony (%s)" % String(begin.get("message", "")))
 	_check(String(begin.get("message", "")).contains("SEAL"), "ceremony copy names the Seal")
 	_check(sim.crater_war.ritual_active, "ceremony is active")
+	_check(sim.crater_war.stabilized_stock() == CraterWar.CHANNEL_COST, "Seal refunds 2 Stabilized for Channel Wyrd")
+	_check(sim.crater_war.channel_ready(), "Channel Wyrd is ready as the Seal starts")
 	sim._simulate_seconds_for_test(CraterWar.RITUAL_SECONDS + 0.2)
 	_check(sim.victory, "defended ceremony wins the Seal")
 	_check(String(sim.defeat_reason).contains("SEALED"), "victory copy is Seal, not THE REALM HOLDS")
@@ -282,6 +285,20 @@ func _check_midgame_caravan() -> void:
 	_check(int(shelter_sim.population_current) >= pop_before + CraterWar.SHELTER_WORKERS, "shelter adds two workers")
 	_check(int(shelter_sim.housing_capacity) >= house_before + CraterWar.SHELTER_WORKERS, "shelter adds housing")
 	_check(shelter_sim.crater_war.shelter_exposure >= CraterWar.SHELTER_EXPOSURE - 0.001, "shelter raises exposure")
+	var tents := 0
+	var refugees := 0
+	for marker in shelter_sim.map_markers:
+		if String(marker.get("kind", "")) in ["tent", "caravan_camp"]:
+			tents += 1
+		if String(marker.get("kind", "")) == "refugee":
+			refugees += 1
+	_check(tents >= 2, "shelter plants persistent tents near town")
+	var refugee_workers := 0
+	for worker in shelter_sim.workers:
+		if String(worker.get("role_key", "")) == "refugee":
+			refugee_workers += 1
+	_check(refugee_workers >= CraterWar.SHELTER_WORKERS, "shelter adds visible settlers")
+	_check(refugees >= 1, "shelter marks extra settlers on the map")
 	shelter_sim.crater_war._update_exposure(0.0)
 	_check(shelter_sim.crater_war.exposure + 0.001 >= CraterWar.SHELTER_EXPOSURE, "shelter exposure is visible on the meter")
 	_check(not shelter_sim.request_midgame_choice("fortify").get("success", true), "caravan cannot be answered twice")
@@ -307,6 +324,50 @@ func _check_midgame_caravan() -> void:
 		if String(marker.get("kind", "")) in ["caravan", "palisade"]:
 			shown += 1
 	_check(shown >= 1, "caravan / palisade is marked on the map")
+	var palisades := 0
+	for marker in fort_sim.map_markers:
+		if String(marker.get("kind", "")) == "palisade":
+			palisades += 1
+	_check(palisades >= CraterWar.FORTIFY_WALLS, "fortify keeps palisade segments on the map")
+
+
+func _check_channel_wyrd() -> void:
+	var sim: Simulation = Simulation.new()
+	sim.start_new_run(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 260821, true)
+	var rival_structure: Dictionary = _ready_fissure(sim)
+	sim.central_inventory[Defs.RESOURCE_STABILIZED_WYRD] = 12
+	sim.crater_war.capture_outpost(rival_structure)
+	var early: Dictionary = sim.request_channel_wyrd()
+	_check(not bool(early.get("success", false)), "Channel Wyrd stays closed before the Seal")
+	var begin: Dictionary = sim.request_begin_seal()
+	_check(bool(begin.get("success", false)), "channel setup starts the Seal")
+	_check(sim.crater_war.channel_ready(), "Channel Wyrd is offered during the Seal")
+	var wall: Dictionary = sim._create_building(Defs.BUILDING_WALL, sim.town_hall_position + Vector2i(2, 2))
+	wall["construction"] = false
+	wall["completed"] = true
+	wall["hp"] = 40
+	wall["max_hp"] = Defs.building_hp(Defs.BUILDING_WALL)
+	sim.buildings.append(wall)
+	var hp_before := int(wall.get("hp", 0))
+	var pick: Dictionary = sim.request_channel_wyrd()
+	_check(bool(pick.get("success", false)), "Channel Wyrd is accepted (%s)" % String(pick.get("message", "")))
+	_check(sim.crater_war.channel_uses == 1, "Channel Wyrd records a use")
+	_check(int(wall.get("hp", 0)) >= hp_before + 1, "Channel Wyrd repairs a wall segment")
+	_check(sim.crater_war.last_channel_tile.x >= 0, "Channel Wyrd records a repair tile")
+	_check(not sim.crater_war.channel_ready(), "Channel Wyrd cools for 20 s")
+	var again: Dictionary = sim.request_channel_wyrd()
+	_check(not bool(again.get("success", false)), "Channel Wyrd rejects during cooldown")
+	sim.elapsed_seconds += CraterWar.CHANNEL_COOLDOWN + 0.2
+	sim.central_inventory[Defs.RESOURCE_STABILIZED_WYRD] = CraterWar.CHANNEL_COST
+	_check(sim.crater_war.channel_ready(), "Channel Wyrd returns after 20 s")
+	var summary: Dictionary = sim.crater_war.victory_summary()
+	_check(int(summary.get("channel_uses", 0)) == 1, "victory summary lists Channel uses")
+	var house: Dictionary = sim._create_building(Defs.BUILDING_HOUSE, sim.town_hall_position + Vector2i(5, 4))
+	house["construction"] = false
+	house["completed"] = true
+	sim.buildings.append(house)
+	sim.crater_war._note_first_build()
+	_check(sim.crater_war.first_build_at >= 0.0, "first meaningful build is tracked")
 
 
 func _check_visible_escalation() -> void:

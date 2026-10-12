@@ -91,6 +91,9 @@ var seal_ward_ring: MeshInstance3D
 var seal_wave: MeshInstance3D
 var seal_palisade_root: Node3D
 var seal_look_key := ""
+var channel_flash: Node3D
+var channel_flash_ring: MeshInstance3D
+var channel_flash_light: OmniLight3D
 var wyrd_spring_views: Dictionary = {}
 var terrain_body: StaticBody3D
 var terrain_mesh_instance: MeshInstance3D
@@ -323,6 +326,7 @@ func sync_frame(frame_snapshot: Dictionary) -> void:
 	_sync_claim_overlays(frame_snapshot.get("lumen_sources", []), frame_snapshot.get("claims", {}))
 	_update_shard_beacon(frame_snapshot.get("wyrdfall", {}))
 	_update_seal_ceremony(frame_snapshot.get("wyrdfall", {}))
+	_update_channel_flash(frame_snapshot.get("wyrdfall", {}))
 	_sync_wyrd_springs(frame_snapshot.get("wyrd_sites", []))
 	_sync_map_markers()
 	if reveal_changed:
@@ -2878,6 +2882,74 @@ func _apply_seal_look(look: Dictionary, celebrating: bool) -> void:
 				seal_palisade_root.add_child(plank)
 
 
+func _update_channel_flash(wyrdfall: Dictionary) -> void:
+	var look: Dictionary = wyrdfall.get("seal_look", {})
+	var flash := bool(look.get("channel_flash", false)) or bool(wyrdfall.get("channel_ready", false)) and int(wyrdfall.get("channel_uses", 0)) > 0
+	var last_at := float(wyrdfall.get("last_channel_at", -1.0))
+	if simulation != null:
+		flash = last_at >= 0.0 and float(simulation.elapsed_seconds) - last_at < 3.5
+	var tile: Vector2i = wyrdfall.get("last_channel_tile", Vector2i(-1, -1))
+	if look.has("channel_tile"):
+		tile = look.get("channel_tile", tile)
+	if not flash or tile.x < 0:
+		if channel_flash != null:
+			channel_flash.visible = false
+		return
+	if channel_flash == null:
+		channel_flash = Node3D.new()
+		channel_flash.name = "ChannelFlash"
+		if vfx_root != null:
+			vfx_root.add_child(channel_flash)
+		else:
+			add_child(channel_flash)
+		channel_flash_ring = MeshInstance3D.new()
+		var torus := TorusMesh.new()
+		torus.inner_radius = 0.85
+		torus.outer_radius = 1.55
+		channel_flash_ring.mesh = torus
+		var ring_mat := StandardMaterial3D.new()
+		ring_mat.albedo_color = Color(0.45, 0.95, 0.85, 0.7)
+		ring_mat.emission_enabled = true
+		ring_mat.emission = Color(0.55, 1.0, 0.88)
+		ring_mat.emission_energy_multiplier = 3.2
+		ring_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		channel_flash_ring.material_override = ring_mat
+		channel_flash_ring.position = Vector3(0.0, 0.55, 0.0)
+		channel_flash.add_child(channel_flash_ring)
+		channel_flash_light = OmniLight3D.new()
+		channel_flash_light.light_color = Color("#7ee0d4")
+		channel_flash_light.omni_range = 10.0
+		channel_flash_light.light_energy = 4.2
+		channel_flash_light.position = Vector3(0.0, 2.4, 0.0)
+		channel_flash.add_child(channel_flash_light)
+		var column := MeshInstance3D.new()
+		var cyl := CylinderMesh.new()
+		cyl.top_radius = 0.12
+		cyl.bottom_radius = 0.35
+		cyl.height = 4.8
+		column.mesh = cyl
+		var col_mat := StandardMaterial3D.new()
+		col_mat.albedo_color = Color(0.55, 0.95, 0.9, 0.55)
+		col_mat.emission_enabled = true
+		col_mat.emission = Color(0.65, 1.0, 0.92)
+		col_mat.emission_energy_multiplier = 2.8
+		col_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		column.material_override = col_mat
+		column.position = Vector3(0.0, 2.4, 0.0)
+		channel_flash.add_child(column)
+	channel_flash.visible = true
+	channel_flash.global_position = tile_to_world(Vector2(tile))
+	var age := 0.0
+	if simulation != null:
+		age = float(simulation.elapsed_seconds) - last_at
+	var swell := 1.15 + 0.85 * (1.0 - clampf(age / 3.5, 0.0, 1.0)) + 0.18 * sin(float(Time.get_ticks_msec()) / 70.0)
+	if channel_flash_ring != null:
+		channel_flash_ring.scale = Vector3(swell, 1.0, swell)
+		channel_flash_ring.rotation.y += 0.06
+	if channel_flash_light != null:
+		channel_flash_light.light_energy = 4.8 * (1.0 - clampf(age / 3.5, 0.0, 1.0))
+
+
 func _sync_wyrd_springs(sites: Array) -> void:
 	var desired: Dictionary = {}
 	for site_value in sites:
@@ -5394,6 +5466,10 @@ func _sync_map_markers() -> void:
 			label.modulate = Color("#7ec8d4")
 		elif kind in ["caravan", "caravan_camp"]:
 			label.modulate = Color("#efcf8a")
+		elif kind in ["tent", "refugee"]:
+			label.modulate = Color("#efcf8a")
+		elif kind == "channel":
+			label.modulate = Color("#7ee0d4")
 		elif kind == "palisade":
 			label.modulate = Color("#d4782a")
 		elif kind == "victory_banner":
@@ -5413,8 +5489,14 @@ func _sync_map_markers() -> void:
 			root.add_child(_ping_mesh(Color("#f05a4a"), 0.55))
 		elif kind == "seal_choice":
 			root.add_child(_ping_mesh(Color("#7ec8d4"), 0.42))
-		elif kind in ["caravan", "caravan_camp"]:
+		elif kind == "caravan":
 			root.add_child(_caravan_mesh())
+		elif kind in ["tent", "caravan_camp"]:
+			root.add_child(_tent_mesh())
+		elif kind == "refugee":
+			root.add_child(_settler_mesh())
+		elif kind == "channel":
+			root.add_child(_channel_flash_mesh())
 		elif kind == "palisade":
 			root.add_child(_palisade_mesh())
 		elif kind == "victory_banner":
@@ -5527,4 +5609,79 @@ func _palisade_mesh() -> Node3D:
 		mat.emission_energy_multiplier = 0.8
 		post.material_override = mat
 		group.add_child(post)
+	return group
+
+
+func _tent_mesh() -> Node3D:
+	var group := Node3D.new()
+	var canvas := MeshInstance3D.new()
+	var prism := PrismMesh.new()
+	prism.size = Vector3(2.4, 1.6, 2.1)
+	canvas.mesh = prism
+	canvas.position = Vector3(0.0, 0.85, 0.0)
+	var cloth := StandardMaterial3D.new()
+	cloth.albedo_color = Color("#c9a86a")
+	cloth.emission_enabled = true
+	cloth.emission = Color("#efcf8a")
+	cloth.emission_energy_multiplier = 0.55
+	canvas.material_override = cloth
+	group.add_child(canvas)
+	var pole := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.06
+	cyl.bottom_radius = 0.08
+	cyl.height = 1.85
+	pole.mesh = cyl
+	pole.position = Vector3(0.0, 0.92, 0.0)
+	var wood := StandardMaterial3D.new()
+	wood.albedo_color = Color("#5a3a22")
+	pole.material_override = wood
+	group.add_child(pole)
+	return group
+
+
+func _settler_mesh() -> Node3D:
+	var group := Node3D.new()
+	var body := MeshInstance3D.new()
+	var capsule := CapsuleMesh.new()
+	capsule.radius = 0.28
+	capsule.height = 1.35
+	body.mesh = capsule
+	body.position = Vector3(0.0, 0.72, 0.0)
+	var cloth := StandardMaterial3D.new()
+	cloth.albedo_color = Color("#8a6a3a")
+	cloth.emission_enabled = true
+	cloth.emission = Color("#d4a85a")
+	cloth.emission_energy_multiplier = 0.4
+	body.material_override = cloth
+	group.add_child(body)
+	var head := MeshInstance3D.new()
+	var sphere := SphereMesh.new()
+	sphere.radius = 0.22
+	sphere.height = 0.44
+	head.mesh = sphere
+	head.position = Vector3(0.0, 1.55, 0.0)
+	var skin := StandardMaterial3D.new()
+	skin.albedo_color = Color("#d8b48a")
+	head.material_override = skin
+	group.add_child(head)
+	return group
+
+
+func _channel_flash_mesh() -> Node3D:
+	var group := Node3D.new()
+	var ring := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = 0.55
+	torus.outer_radius = 1.15
+	ring.mesh = torus
+	ring.position = Vector3(0.0, 0.45, 0.0)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.45, 0.95, 0.85, 0.65)
+	mat.emission_enabled = true
+	mat.emission = Color(0.55, 1.0, 0.88)
+	mat.emission_energy_multiplier = 2.6
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	ring.material_override = mat
+	group.add_child(ring)
 	return group

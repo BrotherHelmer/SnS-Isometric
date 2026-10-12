@@ -1,10 +1,10 @@
 extends RefCounted
 
-## The Director: TEST #18 — midgame caravan + distinct Seal defence looks.
-## Between 15:00 and 22:00, before the rival's first push, a refugee
-## caravan offers shelter (workers, more exposure) or fortify (palisade,
-## delayed push). Mid-ceremony the wall and overcharge paths must read
-## as different VFX. The bot alternates both choices per seed.
+## The Director: TEST #19 — Channel Wyrd during the Seal, plus a
+## caravan aftermath that stays on the map. Shelter plants tents and
+## extra settlers; Fortify keeps palisade segments. Channel costs 2
+## Stabilized, repairs one wall/ward, and cools for 20 s. The bot
+## channels at least once per Seal.
 
 const Defs = preload("one_shard_defs.gd")
 const RivalryTuning = preload("one_shard_rivalry_tuning.gd")
@@ -73,6 +73,10 @@ const SHELTER_EXPOSURE := 0.22
 const FORTIFY_WOOD := 4
 const FORTIFY_PUSH_DELAY := 18.0
 const FORTIFY_WALLS := 3
+const CHANNEL_COST := 2
+const CHANNEL_COOLDOWN := 20.0
+const CHANNEL_REPAIR_HP := 40
+const SHELTER_TENTS := 3
 
 var simulation
 var fissure_tiles: Array = []
@@ -132,6 +136,11 @@ var midgame_at := -1.0
 var shelter_exposure := 0.0
 var fortify_walls := 0
 var victory_ceremony := false
+var channel_uses := 0
+var channel_ready_at := -1.0
+var last_channel_at := -1.0
+var last_channel_tile := Vector2i(-1, -1)
+var first_build_at := -1.0
 
 
 func setup(owner) -> void:
@@ -198,6 +207,11 @@ func reset() -> void:
 	shelter_exposure = 0.0
 	fortify_walls = 0
 	victory_ceremony = false
+	channel_uses = 0
+	channel_ready_at = -1.0
+	last_channel_at = -1.0
+	last_channel_tile = Vector2i(-1, -1)
+	first_build_at = -1.0
 	if simulation != null:
 		_seed_rival_timing()
 
@@ -206,6 +220,7 @@ func tick(delta: float) -> void:
 	if simulation == null or bool(simulation.game_finished):
 		return
 	_note_storehouse()
+	_note_first_build()
 	_unstick_refiner()
 	_tick_production(delta)
 	_ward_harvester(delta)
@@ -333,6 +348,12 @@ func request_begin() -> Dictionary:
 	var taken := _take_stabilized(STABILIZED_TO_BIND)
 	if taken < STABILIZED_TO_BIND:
 		return _failure("Wyrd", "The ceremony needs %d Stabilized Wyrd in the store." % STABILIZED_TO_BIND)
+	# Refund 2 so the first Channel Wyrd is always available on a 12-stab start.
+	simulation.central_inventory[Defs.RESOURCE_STABILIZED_WYRD] = int(simulation.central_inventory.get(Defs.RESOURCE_STABILIZED_WYRD, 0)) + CHANNEL_COST
+	channel_uses = 0
+	last_channel_at = -1.0
+	last_channel_tile = Vector2i(-1, -1)
+	channel_ready_at = float(simulation.elapsed_seconds)
 	ritual_active = true
 	ritual_progress = 0.0
 	ritual_raid_spawned = false
@@ -349,6 +370,47 @@ func request_begin() -> Dictionary:
 	simulation.push_notice("danger", "SEAL", message, "critical")
 	simulation._record_event("binding_started", message, {"stabilized": STABILIZED_TO_BIND, "climax": "seal"})
 	simulation._mark_onboarding("binding")
+	return _success(message)
+
+
+func channel_ready() -> bool:
+	if simulation == null or not ritual_active or bool(simulation.game_finished):
+		return false
+	if stabilized_stock() < CHANNEL_COST:
+		return false
+	if channel_ready_at >= 0.0 and float(simulation.elapsed_seconds) + 0.001 < channel_ready_at:
+		return false
+	return true
+
+
+func request_channel() -> Dictionary:
+	if simulation == null or not ritual_active:
+		return _failure("Idle", "Channel Wyrd only works during the Seal.")
+	if bool(simulation.game_finished):
+		return _failure("Finished", "The ceremony has already closed.")
+	if channel_ready_at >= 0.0 and float(simulation.elapsed_seconds) + 0.001 < channel_ready_at:
+		return _failure("Cooldown", "Channel Wyrd is cooling for %d s." % int(ceil(channel_ready_at - float(simulation.elapsed_seconds))))
+	if stabilized_stock() < CHANNEL_COST:
+		return _failure("Wyrd", "Channel Wyrd costs %d Stabilized Wyrd." % CHANNEL_COST)
+	_take_stabilized(CHANNEL_COST)
+	var tile := _repair_one_segment()
+	channel_uses += 1
+	last_channel_at = float(simulation.elapsed_seconds)
+	channel_ready_at = last_channel_at + CHANNEL_COOLDOWN
+	last_channel_tile = tile
+	if tile.x >= 0:
+		simulation.add_map_marker("channel", tile, "CHANNEL WYRD", last_channel_at + 4.0)
+	var message := "CHANNEL WYRD — a wall segment is repaired."
+	simulation.last_message = message
+	simulation._add_log(message)
+	simulation.push_notice("info", "CHANNEL", message, "warning")
+	simulation._record_event("channel_wyrd", message, {
+		"uses": channel_uses,
+		"tile": tile,
+		"stabilized": CHANNEL_COST
+	})
+	if simulation.has_method("_emit_audio"):
+		simulation._emit_audio("wyrd")
 	return _success(message)
 
 
@@ -483,6 +545,12 @@ func presentation() -> Dictionary:
 		"fortify_walls": fortify_walls,
 		"shelter_exposure": shelter_exposure,
 		"victory_ceremony": victory_ceremony,
+		"channel_ready": channel_ready(),
+		"channel_uses": channel_uses,
+		"channel_ready_at": channel_ready_at,
+		"last_channel_at": last_channel_at,
+		"last_channel_tile": last_channel_tile,
+		"first_build_at": first_build_at,
 		"seal_look": seal_look()
 	}
 
@@ -1111,7 +1179,7 @@ func _shelter_refugees() -> void:
 		simulation._auto_staff_unstaffed_buildings()
 	if simulation.has_method("_emit_audio"):
 		simulation._emit_audio("settler_spawn_worker")
-	simulation.add_map_marker("caravan_camp", _caravan_tile(), "Refugee camp", 0.0)
+	_plant_shelter_camp()
 
 
 func _fortify_yard() -> void:
@@ -1166,9 +1234,118 @@ func _caravan_tile() -> Vector2i:
 	return _clamp_tile(hall + Vector2i(6, 3))
 
 
+func _plant_shelter_camp() -> void:
+	if simulation == null:
+		return
+	var camp := _caravan_tile()
+	simulation.add_map_marker("caravan_camp", camp, "Refugee camp", 0.0)
+	var tent_offsets: Array[Vector2i] = [Vector2i(-1, 2), Vector2i(2, 1), Vector2i(1, -1)]
+	for index in range(SHELTER_TENTS):
+		var tile := _clamp_tile(camp + tent_offsets[index])
+		simulation.add_map_marker("tent", tile, "Refugee tent", 0.0)
+	_spawn_shelter_settlers(camp)
+
+
+func _spawn_shelter_settlers(camp: Vector2i) -> void:
+	if simulation == null:
+		return
+	var spots: Array[Vector2i] = [Vector2i(0, 1), Vector2i(1, 0)]
+	for index in range(SHELTER_WORKERS):
+		var tile := _clamp_tile(camp + spots[index])
+		simulation.workers.append({
+			"id": simulation.next_worker_id,
+			"type": "settler",
+			"role_key": "refugee",
+			"building_id": 0,
+			"slot": index,
+			"position": tile,
+			"path": [],
+			"state": "Idle",
+			"arrival_state": "Idle",
+			"move_elapsed": 0.0,
+			"activity_timer": 0.0,
+			"capacity": 0,
+			"carried_resource": "",
+			"carried_amount": 0,
+			"task": {},
+			"shelter_position": tile,
+			"hp": simulation.WORKER_MAX_HP,
+			"max_hp": simulation.WORKER_MAX_HP,
+			"hungry": false,
+			"display_name": "Refugee"
+		})
+		simulation.next_worker_id += 1
+		simulation.add_map_marker("refugee", tile, "Settler", 0.0)
+
+
+func _repair_one_segment() -> Vector2i:
+	var best := {}
+	var best_missing := -1
+	if simulation != null:
+		for building in simulation.buildings:
+			if bool(building.get("construction", false)):
+				continue
+			if String(building.get("type", "")) != Defs.BUILDING_WALL:
+				continue
+			var hp := int(building.get("hp", 0))
+			var max_hp := int(building.get("max_hp", Defs.building_hp(Defs.BUILDING_WALL)))
+			var missing: int = max_hp - hp
+			if missing > best_missing:
+				best = building
+				best_missing = missing
+	if not best.is_empty():
+		var max_hp := int(best.get("max_hp", Defs.building_hp(Defs.BUILDING_WALL)))
+		best["hp"] = mini(max_hp, int(best.get("hp", 0)) + CHANNEL_REPAIR_HP)
+		return Vector2i(best.get("position", Vector2i.ZERO))
+	if simulation != null and simulation.rivalry != null:
+		for structure in simulation.rivalry.get_structures(RivalryTuning.PLAYER_REALM):
+			if String(structure.get("type", "")) != RivalryTuning.STRUCTURE_CLAIMANT_OUTPOST:
+				continue
+			if int(structure.get("hp", 0)) <= 0:
+				continue
+			var max_hp := int(structure.get("max_hp", 220))
+			structure["hp"] = mini(max_hp, int(structure.get("hp", 0)) + CHANNEL_REPAIR_HP)
+			return Vector2i(structure.get("position", primary_fissure))
+	if simulation != null:
+		for marker in simulation.map_markers:
+			if String(marker.get("kind", "")) == "palisade":
+				return Vector2i(marker.get("position", primary_fissure))
+	return primary_fissure if primary_fissure.x >= 0 else Vector2i(-1, -1)
+
+
+func _note_first_build() -> void:
+	if first_build_at >= 0.0 or simulation == null:
+		return
+	for building in simulation.buildings:
+		if bool(building.get("construction", false)):
+			continue
+		if not bool(building.get("completed", false)):
+			continue
+		var kind := String(building.get("type", ""))
+		if kind in [Defs.BUILDING_TOWN_HALL, Defs.BUILDING_ROAD, Defs.BUILDING_CONSTRUCTION_SITE, ""]:
+			continue
+		first_build_at = float(simulation.elapsed_seconds)
+		return
+
+
+func victory_summary() -> Dictionary:
+	return {
+		"caravan": midgame_choice,
+		"wyrd": wyrd_choice,
+		"seal": seal_choice,
+		"channel_uses": channel_uses,
+		"elapsed_seconds": float(simulation.elapsed_seconds) if simulation != null else 0.0,
+		"first_build_at": first_build_at,
+		"population": int(simulation.population_current) if simulation != null else 0,
+		"fortify_walls": fortify_walls,
+		"shelter_tents": _marker_count("tent")
+	}
+
+
 func seal_look() -> Dictionary:
 	var wall := seal_choice == PATH_WALL
 	var charge := seal_choice == PATH_OVERCHARGE
+	var flash := last_channel_at >= 0.0 and simulation != null and float(simulation.elapsed_seconds) - last_channel_at < 3.5
 	return {
 		"path": seal_choice,
 		"ward_radius": 6.4 if wall else (2.1 if charge else 3.6),
@@ -1177,7 +1354,10 @@ func seal_look() -> Dictionary:
 		"palisades": 8 if wall else 0,
 		"extra_wave": charge,
 		"color": "amber" if wall else ("white" if charge else "cyan"),
-		"light": 3.8 if charge else (2.1 if wall else 1.8)
+		"light": 3.8 if charge else (2.1 if wall else 1.8),
+		"channel_flash": flash,
+		"channel_tile": last_channel_tile,
+		"channel_uses": channel_uses
 	}
 
 

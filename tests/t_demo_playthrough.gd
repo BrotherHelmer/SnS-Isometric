@@ -14,7 +14,7 @@ const Intentions = preload("res://src/GodotClient/Scripts/one_shard_intentions.g
 const SEED_DEFAULT := 260821
 const STEP_SECONDS := 8.0
 const MAX_SECONDS_DEFAULT := 3600.0
-const DEST_DEFAULT := "res://artifacts/demo_playthrough_v6"
+const DEST_DEFAULT := "res://artifacts/demo_playthrough_v7"
 
 var failures: Array[String] = []
 var script_errors := 0
@@ -173,13 +173,14 @@ func _run() -> void:
 			_check(sim.crater_war.ritual_started_at + 0.05 >= 40.0 * 60.0 - STEP_SECONDS, "Seal starts with the store, not on a clock (t=%.1f)" % sim.crater_war.ritual_started_at)
 		_check(float(sim.elapsed_seconds) + 0.05 >= 42.0 * 60.0 - STEP_SECONDS, "Seal is not earlier than ~42:00 (t=%.1f)" % float(sim.elapsed_seconds))
 		_check(float(sim.elapsed_seconds) <= 55.0 * 60.0 + STEP_SECONDS, "Seal is not later than ~55:00 (t=%.1f)" % float(sim.elapsed_seconds))
-		_check(longest_idle <= 180.0 + STEP_SECONDS, "no idle stretch longer than 3 minutes (longest=%.1fs)" % longest_idle)
+		_check(longest_idle <= 90.0 + STEP_SECONDS, "no idle stretch longer than 90 s (longest=%.1fs)" % longest_idle)
 		if sim.crater_war != null and sim.crater_war.storehouse_completed_at >= 0.0:
 			_check(sim.crater_war.storehouse_completed_at <= 18.0 * 60.0 + 1.0, "Storehouse completed by minute 18 (t=%.1f)" % sim.crater_war.storehouse_completed_at)
 		if sim.crater_war != null:
 			_check(sim.crater_war.wyrd_choice in ["refine", "secure"], "player chose a Wyrd pact at 6 Stabilized")
 			_check(sim.crater_war.seal_choice in ["wall", "overcharge"], "player chose during the Seal defence")
 			_check(sim.crater_war.midgame_choice in ["shelter", "fortify"], "player answered the 15–22 caravan")
+			_check(sim.crater_war.channel_uses >= 1, "bot Channels Wyrd at least once per Seal")
 			_check(sim.crater_war.midgame_offered_at + 0.05 >= 15.0 * 60.0 - STEP_SECONDS, "caravan is not before 15:00 (t=%.1f)" % sim.crater_war.midgame_offered_at)
 			_check(sim.crater_war.midgame_offered_at <= 22.0 * 60.0 + STEP_SECONDS, "caravan is not after 22:00 (t=%.1f)" % sim.crater_war.midgame_offered_at)
 			if sim.crater_war.second_push_at >= 0.0:
@@ -273,6 +274,10 @@ func _watch_journal(sim) -> void:
 			captured["did_midgame"] = true
 			_note_event(sim, kind, message)
 			captured["pending_midgame"] = true
+		if kind == "channel_wyrd" and not captured.has("did_channel"):
+			captured["did_channel"] = true
+			_note_event(sim, kind, message)
+			captured["pending_channel"] = true
 		if kind == "rival_foreshadow" and not captured.has("did_foreshadow"):
 			captured["did_foreshadow"] = true
 			_note_event(sim, kind, message)
@@ -281,7 +286,7 @@ func _watch_journal(sim) -> void:
 			captured["did_escalation"] = true
 			_note_event(sim, kind, message)
 			captured["pending_escalation"] = true
-		if kind in ["rival_second_push", "rival_contest", "harvester_raid", "harvester_raid_spawn", "exposure_choice", "exposure_burn", "wyrd_choice", "wyrd_choice_offered", "first_harvest", "first_stabilized", "seal_choice", "seal_choice_offered", "rival_foreshadow", "rival_escalation", "midgame_choice", "midgame_choice_offered"]:
+		if kind in ["rival_second_push", "rival_contest", "harvester_raid", "harvester_raid_spawn", "exposure_choice", "exposure_burn", "wyrd_choice", "wyrd_choice_offered", "first_harvest", "first_stabilized", "seal_choice", "seal_choice_offered", "rival_foreshadow", "rival_escalation", "midgame_choice", "midgame_choice_offered", "channel_wyrd"]:
 			_note_event(sim, kind, message)
 			_touch_play(float(event.get("elapsed_seconds", sim.elapsed_seconds)))
 			if kind in ["rival_second_push", "harvester_raid", "harvester_raid_spawn"] and not captured.has("pending_%s" % kind):
@@ -333,6 +338,13 @@ func _watch_phase(game, sim) -> void:
 	if captured.get("pending_midgame", false):
 		captured["pending_midgame"] = false
 		await _capture(game, sim, "t%02d_caravan" % _mm(sim), "Refugee caravan: shelter workers or raise palisades.")
+	if captured.get("pending_channel", false):
+		captured["pending_channel"] = false
+		await _capture(game, sim, "t%02d_channel" % _mm(sim), "Channel Wyrd repairs a wall segment.")
+	if captured.get("pending_camp", false):
+		captured["pending_camp"] = false
+		var camp_path := String(sim.crater_war.midgame_choice) if sim.crater_war != null else "camp"
+		await _capture(game, sim, "t%02d_camp_%s" % [_mm(sim), camp_path], "Caravan aftermath still on the map.")
 	if captured.get("pending_seal_choice", false):
 		captured["pending_seal_choice"] = false
 		var seal_path := String(sim.crater_war.seal_choice) if sim.crater_war != null else ""
@@ -404,6 +416,13 @@ func _watch_crater_state(sim) -> void:
 		captured["did_midgame"] = true
 		_note_event(sim, "midgame_choice_offered", "REFUGEE CARAVAN — shelter two workers or raise palisades.")
 		captured["pending_midgame"] = true
+	if sim.crater_war.channel_uses >= 1 and not captured.has("did_channel"):
+		captured["did_channel"] = true
+		_note_event(sim, "channel_wyrd", String(sim.last_message))
+		captured["pending_channel"] = true
+	if sim.crater_war.midgame_choice != "" and float(sim.elapsed_seconds) >= 24.0 * 60.0 and not captured.has("did_camp"):
+		captured["did_camp"] = true
+		captured["pending_camp"] = true
 
 
 func _maybe_rival(sim) -> void:
@@ -443,6 +462,8 @@ func _watch_meaningful(sim, thought: Dictionary) -> void:
 	if sim.crater_war != null and sim.crater_war.midgame_choice_ready():
 		meaningful = true
 	if sim.crater_war != null and sim.crater_war.can_begin():
+		meaningful = true
+	if sim.crater_war != null and sim.crater_war.channel_ready():
 		meaningful = true
 	if not bool(sim.is_night):
 		var dusk_left := float(Simulation.DAY_LENGTH_SECONDS) - float(sim.phase_time)
@@ -519,6 +540,8 @@ func _capture(game, sim, name_value: String, caption: String) -> void:
 		return
 	_frame_camera(game, sim, name_value)
 	game._sync_presentation()
+	if name_value.contains("victory") and game.has_method("_show_result_screen"):
+		game._show_result_screen()
 	if game.has_method("_update_ui"):
 		game._update_ui()
 	for _i in 16:
@@ -555,11 +578,18 @@ func _frame_camera(game, sim, name_value: String) -> void:
 		if name_value.contains("foreshadow"):
 			focus = _smoke_focus(game, sim)
 		zoom = 62.0
-	elif name_value.contains("caravan") or name_value.contains("midgame"):
+	elif name_value.contains("caravan") or name_value.contains("midgame") or name_value.contains("camp"):
 		focus = game.world_view.tile_to_world(Vector2(sim.town_hall_position + Vector2i(6, 3)))
 		if sim.crater_war != null:
 			focus = game.world_view.tile_to_world(Vector2(sim.crater_war._caravan_tile()))
 		zoom = 36.0
+	elif name_value.contains("channel"):
+		var channel_tile: Vector2i = sim.crater_war.last_channel_tile if sim.crater_war != null else Vector2i(-1, -1)
+		if channel_tile.x < 0 and sim.crater_war != null:
+			channel_tile = sim.crater_war.primary_fissure
+		if channel_tile.x >= 0:
+			focus = game.world_view.tile_to_world(Vector2(channel_tile))
+		zoom = 48.0
 	elif name_value.contains("seal") or name_value.contains("choice") or name_value.contains("ritual"):
 		if sim.crater_war != null and sim.crater_war.primary_fissure.x >= 0:
 			focus = game.world_view.tile_to_world(Vector2(sim.crater_war.primary_fissure))
@@ -693,17 +723,21 @@ func _write_notes(sim, player) -> void:
 			"midgame_taken_at": sim.crater_war.midgame_taken_at,
 			"midgame_at": sim.crater_war.midgame_at,
 			"fortify_walls": sim.crater_war.fortify_walls,
-			"victory_ceremony": sim.crater_war.victory_ceremony
+			"victory_ceremony": sim.crater_war.victory_ceremony,
+			"channel_uses": sim.crater_war.channel_uses,
+			"first_build_at": sim.crater_war.first_build_at
 		}
 	notes["longest_idle"] = longest_idle
 	notes["idle_gaps"] = idle_gaps
-	print("DEMO_IDLE seed=%d longest=%.1fs gaps=%d first_12=%.1f seal=%.1f win=%.1f choice=%s seal_choice=%s midgame=%s mid_at=%.1f reveal=%.1f smoke=%.1f" % [
+	print("DEMO_IDLE seed=%d longest=%.1fs gaps=%d first_12=%.1f first_build=%.1f seal=%.1f win=%.1f choice=%s seal_choice=%s midgame=%s channel=%d mid_at=%.1f reveal=%.1f smoke=%.1f" % [
 		seed_value, longest_idle, idle_gaps.size(), first_12_at,
+		sim.crater_war.first_build_at if sim.crater_war != null else -1.0,
 		sim.crater_war.ritual_started_at if sim.crater_war != null else -1.0,
 		float(sim.elapsed_seconds),
 		sim.crater_war.wyrd_choice if sim.crater_war != null else "",
 		sim.crater_war.seal_choice if sim.crater_war != null else "",
 		sim.crater_war.midgame_choice if sim.crater_war != null else "",
+		sim.crater_war.channel_uses if sim.crater_war != null else 0,
 		sim.crater_war.midgame_taken_at if sim.crater_war != null else -1.0,
 		sim.crater_war.rival_reveal_at if sim.crater_war != null else -1.0,
 		sim.crater_war.rival_foreshadow_at if sim.crater_war != null else -1.0
