@@ -188,6 +188,12 @@ var population_current := STARTING_POPULATION
 var housing_capacity := STARTING_HOUSING_CAPACITY
 var workers_assigned := 0
 var soldiers_total := 0
+## TEST #20: integral of idle settlers. "Before" is the old pool
+## (population minus workplaces). "After" subtracts laborers who
+## actually took haul / repair / construction jobs.
+var idle_settler_seconds := 0.0
+var idle_settler_seconds_before := 0.0
+var last_idle_bottleneck := "no jobs"
 var hidden_threat_level := 0
 var day_count := 1
 var is_night := false
@@ -370,6 +376,9 @@ func start_new_run(width: int = MAP_WIDTH, height: int = MAP_HEIGHT, seed_value:
 	housing_capacity = STARTING_HOUSING_CAPACITY
 	workers_assigned = 0
 	soldiers_total = 0
+	idle_settler_seconds = 0.0
+	idle_settler_seconds_before = 0.0
+	last_idle_bottleneck = "no jobs"
 	hidden_threat_level = 0
 	day_count = 1
 	is_night = false
@@ -745,6 +754,10 @@ func advance_tick() -> void:
 	stamp = _profile_stamp()
 	_process_carriers(TICK_SECONDS)
 	_profile_finish("carrier_updates", stamp)
+	stamp = _profile_stamp()
+	_process_laborers(TICK_SECONDS)
+	_account_idle_settlers(TICK_SECONDS)
+	_profile_finish("laborer_updates", stamp)
 	stamp = _profile_stamp()
 	_update_unit_vision()
 	_profile_finish("unit_vision", stamp)
@@ -1679,8 +1692,16 @@ func get_wyrdfall_presentation() -> Dictionary:
 		"channel_ready_at": float(crater.get("channel_ready_at", -1.0)),
 		"last_channel_at": float(crater.get("last_channel_at", -1.0)),
 		"last_channel_tile": crater.get("last_channel_tile", Vector2i(-1, -1)),
+		"channel_reserve": int(crater.get("channel_reserve", 0)),
+		"channel_from_reserve": bool(crater.get("channel_from_reserve", false)),
+		"channel_cost": int(crater.get("channel_cost", 2)),
+		"channel_cooldown": float(crater.get("channel_cooldown", 20.0)),
+		"channel_target_tile": crater.get("channel_target_tile", Vector2i(-1, -1)),
+		"channel_target_kind": String(crater.get("channel_target_kind", "")),
 		"first_build_at": float(crater.get("first_build_at", -1.0)),
-		"seal_look": crater.get("seal_look", {})
+		"seal_look": crater.get("seal_look", {}),
+		"idle_count": idle_settler_count(),
+		"idle_bottleneck": last_idle_bottleneck
 	}
 
 
@@ -1705,6 +1726,10 @@ func get_run_statistics() -> Dictionary:
 		summary["channel_uses"] = crater_war.channel_uses
 		summary["first_build_at"] = crater_war.first_build_at
 		summary["fortify_walls"] = crater_war.fortify_walls
+		summary["channel_reserve"] = crater_war.channel_reserve
+	summary["idle_settler_seconds"] = idle_settler_seconds
+	summary["idle_settler_seconds_before"] = idle_settler_seconds_before
+	summary["idle_bottleneck"] = last_idle_bottleneck
 	return summary
 
 
@@ -2136,6 +2161,13 @@ func request_clear_area(tiles: Array) -> Dictionary:
 
 
 func push_notice(category: String, title: String, body: String, severity: String = "info") -> Dictionary:
+	# The Director: TEST #20 — collapse duplicate warnings that re-fire
+	# on the same title+body within a few seconds (raid pings, exposure).
+	for notice in notice_log:
+		if String(notice.get("title", "")) == title \
+			and String(notice.get("body", "")) == body \
+			and elapsed_seconds - float(notice.get("time", -999.0)) < 10.0:
+			return notice
 	var notice := {
 		"id": next_notice_id,
 		"category": category,
@@ -3003,6 +3035,26 @@ func get_available_population() -> int:
 
 func workers_free() -> int:
 	return max(0, population_current - workers_assigned - soldiers_total - _active_road_builder_count())
+
+
+## Old idle pool: free population that workplaces never consumed.
+func idle_pool_count() -> int:
+	return max(0, workers_free() - _clearer_count())
+
+
+## Settlers still standing around after laborers took haul / repair / build jobs.
+func idle_settler_count() -> int:
+	return max(0, idle_pool_count() - _laborers_on_duty())
+
+
+func idle_status() -> Dictionary:
+	return {
+		"count": idle_settler_count(),
+		"pool": idle_pool_count(),
+		"bottleneck": last_idle_bottleneck,
+		"seconds": idle_settler_seconds,
+		"seconds_before": idle_settler_seconds_before
+	}
 
 
 func _active_road_builder_count() -> int:
@@ -5718,6 +5770,340 @@ func _carrier_count() -> int:
 	return count
 
 
+func _is_labor_pool(worker: Dictionary) -> bool:
+	if String(worker.get("type", "")) == "laborer":
+		return true
+	if String(worker.get("role_key", "")) == "refugee":
+		return true
+	return String(worker.get("type", "")) == "settler" and int(worker.get("building_id", 0)) == 0
+
+
+func _laborer_count() -> int:
+	var count := 0
+	for worker in workers:
+		if _is_labor_pool(worker):
+			count += 1
+	return count
+
+
+func _laborers_on_duty() -> int:
+	var count := 0
+	for worker in workers:
+		if not _is_labor_pool(worker):
+			continue
+		var state := String(worker.get("state", ""))
+		if state in ["Idle", "Sheltered", "No shelter", "Awaiting order", "Waiting", ""]:
+			continue
+		count += 1
+	return count
+
+
+func _ensure_laborers() -> void:
+	if presentation_opening_active:
+		return
+	if connected_roads.is_empty():
+		return
+	# Cap the crew so extra peasants haul and repair without paving
+	# every optional road and starving the Wyrd loop.
+	var want := mini(idle_pool_count(), 4)
+	while _laborer_count() < want:
+		var spawn_tile := _first_connected_road_tile()
+		if not is_inside_map(spawn_tile):
+			return
+		workers.append({
+			"id": next_worker_id,
+			"type": "laborer",
+			"role_key": "laborer:%d" % next_worker_id,
+			"position": spawn_tile,
+			"path": [],
+			"state": "Idle",
+			"arrival_state": "Idle",
+			"move_elapsed": 0.0,
+			"capacity": 5,
+			"carried_resource": "",
+			"carried_amount": 0,
+			"task": {},
+			"shelter_position": Vector2i(-1, -1),
+			"hp": WORKER_MAX_HP,
+			"max_hp": WORKER_MAX_HP,
+			"hungry": false
+		})
+		next_worker_id += 1
+	_refresh_worker_hunger_flags()
+
+
+func _process_laborers(delta: float) -> void:
+	if is_gate_closed():
+		for worker in workers:
+			if not _is_labor_pool(worker) or String(worker.get("state", "")) == "Sheltered":
+				continue
+			if worker["path"].is_empty():
+				if not Dictionary(worker.get("task", {})).is_empty() or int(worker.get("carried_amount", 0)) > 0:
+					_clear_worker(worker)
+				_send_worker_to_shelter(worker)
+			else:
+				_advance_carrier(worker, delta)
+		return
+	_ensure_laborers()
+	_rebuild_task_indexes()
+	for worker in workers:
+		if not _is_labor_pool(worker):
+			continue
+		if int(worker.get("capacity", 0)) <= 0:
+			worker["capacity"] = 5
+		_advance_carrier(worker, delta)
+		if String(worker.get("state", "")) == "Moving" and Array(worker.get("path", [])).is_empty():
+			worker["state"] = String(worker.get("arrival_state", "Idle"))
+	for worker in workers:
+		if not _is_labor_pool(worker):
+			continue
+		var labor_state := String(worker.get("state", ""))
+		if labor_state == "Idle" or (labor_state == "No shelter" and not is_night):
+			_assign_laborer_task(worker)
+		elif labor_state == "Building":
+			_process_laborer_build(worker, delta)
+		elif labor_state == "Repairing":
+			_process_laborer_repair(worker, delta)
+		elif labor_state == "Pickup":
+			_carrier_pickup(worker)
+		elif labor_state == "Dropoff":
+			_carrier_dropoff(worker)
+		elif labor_state == "Blocked":
+			_retry_blocked_carrier(worker)
+
+
+func _assign_laborer_task(worker: Dictionary) -> bool:
+	if int(worker.get("carried_amount", 0)) > 0:
+		return _assign_dropoff_for_carried(worker)
+	# The Director: until 12 Stabilized sits in the store, keep the
+	# Wyrd loop moving. Site-build is cosmetic — the construction
+	# timer still ticks — and a full crew on tents / optional halls
+	# left raw Wyrd sitting at the vent (seed 260821 stalled at 9).
+	if int(central_inventory.get(Defs.RESOURCE_STABILIZED_WYRD, 0)) < 12:
+		if _assign_processor_supply(worker):
+			return true
+		if _assign_output_fetch(worker):
+			return true
+	# Haul construction materials so sites are not starved.
+	if _assign_construction_supply(worker):
+		return true
+	# One peasant raising a site is enough; the timer does the rest.
+	if _site_builder_count() < 1 and _assign_site_build(worker):
+		return true
+	# Laborers only lay a road when a building is waiting on its spur.
+	if _construction_waiting_for_road() and _assign_road_build(worker):
+		return true
+	if _assign_repair(worker):
+		return true
+	if _assign_processor_supply(worker):
+		return true
+	return _assign_output_fetch(worker)
+
+
+func _site_builder_count() -> int:
+	var count := 0
+	for other in workers:
+		var task: Dictionary = other.get("task", {})
+		if String(task.get("purpose", "")) == "site_build":
+			count += 1
+	return count
+
+
+func _assign_site_build(worker: Dictionary) -> bool:
+	for site in buildings:
+		if not bool(site.get("construction", false)):
+			continue
+		if String(site.get("planned_type", "")) in [Defs.BUILDING_ROAD, ""]:
+			continue
+		if not bool(site.get("connected", false)):
+			continue
+		if not _construction_materials_ready(site):
+			continue
+		if int(site.get("builder_worker_id", 0)) > 0 and _site_builder_claim_exists(site):
+			continue
+		var access := _building_access_tiles(site)
+		if access.is_empty():
+			continue
+		var path := _path_to_access(worker["position"], access)
+		if path.is_empty() and not access.has(worker["position"]):
+			continue
+		site["builder_worker_id"] = int(worker["id"])
+		site["status"] = "Peasant raising the site."
+		worker["task"] = {
+			"purpose": "site_build",
+			"destination": int(site["id"])
+		}
+		worker["path"] = path
+		worker["arrival_state"] = "Building"
+		worker["state"] = "Building" if path.is_empty() else "Moving"
+		worker["move_elapsed"] = 0.0
+		return true
+	return false
+
+
+func _site_builder_claim_exists(site: Dictionary) -> bool:
+	var builder_id := int(site.get("builder_worker_id", 0))
+	for worker in workers:
+		if int(worker.get("id", 0)) != builder_id:
+			continue
+		var task: Dictionary = worker.get("task", {})
+		return String(task.get("purpose", "")) in ["site_build", "road_build"] \
+			and int(task.get("destination", 0)) == int(site.get("id", 0))
+	return false
+
+
+func _assign_repair(worker: Dictionary) -> bool:
+	var best := {}
+	var best_missing := 0
+	var claimed: Dictionary = {}
+	for other in workers:
+		var task: Dictionary = other.get("task", {})
+		if String(task.get("purpose", "")) == "repair":
+			claimed[int(task.get("destination", 0))] = true
+	for building in buildings:
+		if bool(building.get("construction", false)):
+			continue
+		if claimed.has(int(building.get("id", 0))):
+			continue
+		var hp := int(building.get("hp", 0))
+		var max_hp := int(building.get("max_hp", Defs.building_hp(String(building.get("type", "")))))
+		var missing: int = max_hp - hp
+		if missing > best_missing:
+			best = building
+			best_missing = missing
+	if best.is_empty() or best_missing <= 0:
+		return false
+	var access := _building_access_tiles(best)
+	if access.is_empty():
+		access = [Vector2i(best.get("position", Vector2i.ZERO))]
+	var path := _path_to_access(worker["position"], access)
+	if path.is_empty() and not access.has(worker["position"]):
+		return false
+	worker["task"] = {
+		"purpose": "repair",
+		"destination": int(best["id"])
+	}
+	worker["path"] = path
+	worker["arrival_state"] = "Repairing"
+	worker["state"] = "Repairing" if path.is_empty() else "Moving"
+	worker["move_elapsed"] = 0.0
+	best["status"] = "Under repair."
+	return true
+
+
+func _process_laborer_build(worker: Dictionary, _delta: float) -> void:
+	var task: Dictionary = worker.get("task", {})
+	var purpose := String(task.get("purpose", ""))
+	var site := _find_building_by_id(int(task.get("destination", 0)))
+	if site.is_empty() or not bool(site.get("construction", false)):
+		_clear_worker(worker)
+		return
+	if purpose == "road_build":
+		site["status"] = "Building road."
+	else:
+		site["status"] = "Building."
+
+
+func _process_laborer_repair(worker: Dictionary, delta: float) -> void:
+	var task: Dictionary = worker.get("task", {})
+	var building := _find_building_by_id(int(task.get("destination", 0)))
+	if building.is_empty() or bool(building.get("construction", false)):
+		_clear_worker(worker)
+		return
+	var max_hp := int(building.get("max_hp", Defs.building_hp(String(building.get("type", "")))))
+	var hp := int(building.get("hp", 0))
+	if hp >= max_hp:
+		building["status"] = "Repaired."
+		_clear_worker(worker, false)
+		return
+	building["hp"] = mini(max_hp, hp + int(ceil(10.0 * delta)))
+	building["status"] = "Under repair."
+
+
+func _account_idle_settlers(delta: float) -> void:
+	if is_night or game_finished:
+		last_idle_bottleneck = idle_bottleneck()
+		return
+	var before := idle_pool_count()
+	var after := idle_settler_count()
+	idle_settler_seconds_before += float(before) * delta
+	idle_settler_seconds += float(after) * delta
+	last_idle_bottleneck = idle_bottleneck()
+
+
+func idle_bottleneck() -> String:
+	if _has_storage_full():
+		return "no storehouse space"
+	var missing := _construction_missing_resource()
+	if missing == Defs.RESOURCE_PLANKS:
+		return "waiting for planks"
+	if missing == Defs.RESOURCE_STONE:
+		return "waiting for stone"
+	if missing == Defs.RESOURCE_WOOD:
+		return "waiting for wood"
+	if missing != "":
+		return "waiting for %s" % Defs.resource_name(missing)
+	if _construction_waiting_for_materials():
+		return "waiting for deliveries"
+	if _construction_waiting_for_road():
+		return "waiting for road access"
+	if _has_open_labor_jobs():
+		return "taking jobs"
+	return "no jobs"
+
+
+func _has_storage_full() -> bool:
+	for building in buildings:
+		var status := String(building.get("status", "")).to_lower()
+		if "storage full" in status or "storage paused" in status:
+			return true
+		if bool(building.get("storage_paused", false)):
+			return true
+	return false
+
+
+func _construction_missing_resource() -> String:
+	for site in buildings:
+		if not bool(site.get("construction", false)) or not bool(site.get("connected", false)):
+			continue
+		if String(site.get("planned_type", "")) in [Defs.BUILDING_ROAD, ""]:
+			continue
+		if _construction_materials_ready(site):
+			continue
+		var needed: Dictionary = site.get("materials_needed", {})
+		var delivered: Dictionary = site.get("materials_delivered", {})
+		var in_transit: Dictionary = site.get("materials_in_transit", Defs.empty_inventory())
+		for resource_type in needed.keys():
+			var outstanding := int(needed.get(resource_type, 0)) - int(delivered.get(resource_type, 0)) - int(in_transit.get(resource_type, 0))
+			if outstanding > 0 and int(central_inventory.get(resource_type, 0)) <= 0:
+				return String(resource_type)
+	return ""
+
+
+func _has_open_labor_jobs() -> bool:
+	if _construction_waiting_for_materials() or _construction_waiting_for_road():
+		return true
+	for site in buildings:
+		if not bool(site.get("construction", false)):
+			continue
+		if String(site.get("planned_type", "")) == Defs.BUILDING_ROAD and bool(site.get("connected", false)):
+			return true
+		if _construction_materials_ready(site):
+			return true
+		var hp := int(site.get("hp", 0))
+		var max_hp := int(site.get("max_hp", 0))
+		if max_hp > 0 and hp < max_hp:
+			return true
+	for building in buildings:
+		if bool(building.get("construction", false)):
+			continue
+		var hp := int(building.get("hp", 0))
+		var max_hp := int(building.get("max_hp", 0))
+		if max_hp > 0 and hp < max_hp:
+			return true
+	return false
+
+
 func _sync_production_workers() -> void:
 	var desired: Dictionary = {}
 	for building in buildings:
@@ -5743,7 +6129,7 @@ func _sync_production_workers() -> void:
 
 	for index in range(workers.size() - 1, -1, -1):
 		var worker: Dictionary = workers[index]
-		if String(worker.get("type", "")) in ["carrier", "clearer"]:
+		if String(worker.get("type", "")) in ["carrier", "clearer", "laborer"]:
 			continue
 		if String(worker.get("role_key", "")) == "refugee":
 			continue
@@ -5844,7 +6230,7 @@ func _worker_type_for_building(building_type: String) -> String:
 
 func _update_production_workers(delta: float) -> void:
 	for worker in workers:
-		if String(worker.get("type", "")) in ["carrier", "clearer"]:
+		if String(worker.get("type", "")) in ["carrier", "clearer", "laborer"]:
 			continue
 		var building := _find_building_by_id(int(worker.get("building_id", 0)))
 		if String(worker.get("type", "")) == "guard":

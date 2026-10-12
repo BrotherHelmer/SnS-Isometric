@@ -1151,10 +1151,10 @@ func _create_ui() -> void:
 	status_row.add_child(bind_button)
 	channel_button = Button.new()
 	channel_button.name = "ChannelWyrd"
-	channel_button.text = "CHANNEL WYRD [C]"
+	channel_button.text = "CHANNEL [C] · reserve 2 · wall"
 	channel_button.visible = false
-	channel_button.custom_minimum_size.x = 176.0
-	channel_button.tooltip_text = "Spend 2 Stabilized to repair one wall or ward segment. 20 s cooldown.  [C]"
+	channel_button.custom_minimum_size.x = 268.0
+	channel_button.tooltip_text = "Channel Wyrd spends 2 Stabilized to repair one wall or ward segment.\nFirst use draws the ceremony's emergency reserve.\nCooldown 20 s. Hotkey [C]."
 	Identity.apply_button(channel_button, true)
 	channel_button.pressed.connect(_confirm_channel)
 	status_row.add_child(channel_button)
@@ -2536,7 +2536,7 @@ func _update_loop_hud() -> void:
 		if midgame_open:
 			parts.append("CARAVAN — shelter refugees or raise palisades")
 		if channel_open:
-			parts.append("CHANNEL WYRD [C]" if bool(wyrdfall.get("channel_ready", false)) else "CHANNEL cooling")
+			parts.append(_channel_loop_copy(wyrdfall))
 		var rival_line := String(wyrdfall.get("rival_line", ""))
 		if rival_line != "" and _rival_banner_should_show():
 			parts.append(rival_line)
@@ -2573,7 +2573,8 @@ func _update_loop_hud() -> void:
 		var channel_ready := bool(wyrdfall.get("channel_ready", false))
 		var remain := maxf(0.0, float(wyrdfall.get("channel_ready_at", 0.0)) - float(simulation_host.simulation.elapsed_seconds))
 		channel_button.disabled = not channel_ready
-		channel_button.text = "CHANNEL WYRD [C]" if channel_ready else "CHANNEL WYRD %ds" % int(ceil(remain))
+		channel_button.text = _channel_button_copy(wyrdfall, remain)
+		channel_button.tooltip_text = _channel_tooltip(wyrdfall, remain)
 	if status_plate != null and (seal_open or midgame_open or channel_open):
 		status_plate.visible = true
 	if nightfall_panel != null:
@@ -4032,6 +4033,49 @@ func _confirm_channel() -> void:
 	_show_command_result(result)
 
 
+func _channel_target_label(wyrdfall: Dictionary) -> String:
+	var kind := String(wyrdfall.get("channel_target_kind", ""))
+	var tile: Vector2i = wyrdfall.get("channel_target_tile", Vector2i(-1, -1))
+	if kind == "":
+		kind = "wall"
+	if tile.x >= 0:
+		return "%s (%d,%d)" % [kind, tile.x, tile.y]
+	return kind
+
+
+func _channel_cost_label(wyrdfall: Dictionary) -> String:
+	if int(wyrdfall.get("channel_reserve", 0)) >= 2 or bool(wyrdfall.get("channel_from_reserve", false)) and int(wyrdfall.get("channel_uses", 0)) <= 0:
+		return "reserve 2"
+	return "2 Stab"
+
+
+func _channel_button_copy(wyrdfall: Dictionary, remain: float) -> String:
+	var target := _channel_target_label(wyrdfall)
+	var cost := _channel_cost_label(wyrdfall)
+	if bool(wyrdfall.get("channel_ready", false)):
+		return "CHANNEL [C] · %s · %s" % [cost, target]
+	return "CHANNEL [C] · %s · %ds" % [target, int(ceil(remain))]
+
+
+func _channel_loop_copy(wyrdfall: Dictionary) -> String:
+	if bool(wyrdfall.get("channel_ready", false)):
+		return "CHANNEL [C] · %s · %s" % [_channel_cost_label(wyrdfall), _channel_target_label(wyrdfall)]
+	var remain := maxf(0.0, float(wyrdfall.get("channel_ready_at", 0.0)) - float(simulation_host.simulation.elapsed_seconds))
+	return "CHANNEL cooling %ds · %s" % [int(ceil(remain)), _channel_target_label(wyrdfall)]
+
+
+func _channel_tooltip(wyrdfall: Dictionary, remain: float) -> String:
+	var lines: Array[String] = [
+		"Channel Wyrd spends 2 Stabilized to repair one wall or ward segment.",
+		"First use draws the ceremony's emergency reserve — the store stays at 0 until you refine more.",
+		"Target: %s" % _channel_target_label(wyrdfall),
+		"Cost: %s" % ("emergency reserve (2 Stabilized)" if int(wyrdfall.get("channel_reserve", 0)) >= 2 else "2 Stabilized from the store"),
+		"Cooldown: 20 s%s." % (" — ready" if bool(wyrdfall.get("channel_ready", false)) else " — %ds left" % int(ceil(remain))),
+		"Hotkey [C]."
+	]
+	return "\n".join(lines)
+
+
 func _show_result_screen() -> void:
 	if result_overlay == null or simulation_host.simulation == null:
 		return
@@ -4602,6 +4646,8 @@ func idle_worker_count() -> int:
 	var sim = simulation_host.simulation
 	if sim == null:
 		return 0
+	if sim.has_method("idle_settler_count"):
+		return int(sim.idle_settler_count())
 	return maxi(0, int(sim.workers_free()) - int(sim._clearer_count()))
 
 
@@ -4633,13 +4679,14 @@ func _on_idle_workers_pressed() -> void:
 
 func _update_idle_workers() -> void:
 	var idle := idle_worker_count()
+	var bottleneck := _idle_bottleneck_copy()
 	if idle_workers_button != null:
-		idle_workers_button.text = "%d idle" % idle
+		idle_workers_button.text = ("%d idle · %s" % [idle, bottleneck]) if idle > 0 else "0 idle"
 		# Hidden at night: settlers shelter then, so "idle" would be noise mid-raid.
 		idle_workers_button.visible = idle > 0 and play_has_begun and not bool(simulation_host.simulation.is_night) and (startup_overlay == null or not startup_overlay.visible)
 		if population_label != null:
-			population_label.get_parent().get_parent().tooltip_text = "Population / housing" + ("\n%d idle: click to open Build" % idle if idle_workers_button.visible else "")
-		idle_workers_button.tooltip_text = "%d free worker%s without a job. Click to open BUILD: each workplace (Lumber Camp, Quarry, Farm, Sawmill, Bakery) employs settlers." % [idle, "" if idle == 1 else "s"]
+			population_label.get_parent().get_parent().tooltip_text = "Population / housing" + ("\n%d idle: %s" % [idle, bottleneck] if idle_workers_button.visible else "")
+		idle_workers_button.tooltip_text = "%d settler%s idle — %s." % [idle, "" if idle == 1 else "s", bottleneck]
 	_tick_idle_workers(idle)
 
 
@@ -4665,17 +4712,18 @@ func _tick_idle_workers(idle: int) -> void:
 	_push_notice_feed("Idle workers", _idle_workers_copy(sim, idle, int(now - idle_workers_since)), "warning")
 
 
+func _idle_bottleneck_copy() -> String:
+	var sim = simulation_host.simulation
+	if sim != null and sim.has_method("idle_bottleneck"):
+		var reason := String(sim.idle_bottleneck())
+		if reason != "":
+			return reason
+	return "no jobs"
+
+
 func _idle_workers_copy(sim, idle: int, idle_for: int) -> String:
 	var who := "%d settler%s been idle for %ds. " % [idle, " has" if idle == 1 else "s have", idle_for]
-	if not _sim_has_building(sim, Defs.BUILDING_LUMBER_CAMP):
-		return who + "Build a Lumber Camp to put them to work."
-	if not _sim_has_building(sim, Defs.BUILDING_QUARRY):
-		return who + "Build a Quarry so stone reaches the yard."
-	if not _sim_has_building(sim, Defs.BUILDING_STOREHOUSE):
-		return who + "Storehouse needs %s." % _storehouse_need_copy(sim)
-	if not _sim_has_building(sim, Defs.BUILDING_SAWMILL):
-		return who + "A Sawmill turns wood into the planks a Storehouse needs."
-	return who + "Open BUILD and place another workplace."
+	return who + "Idle: %s." % _idle_bottleneck_copy()
 
 
 func _sim_has_building(sim, building_type: String) -> bool:

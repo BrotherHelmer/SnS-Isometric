@@ -1,0 +1,34 @@
+You are re-reviewing Shard & Sovereign after TEST #20 — idle settlers take jobs, and Channel Wyrd's cost is honest (PR #87, stacked on #86). No new events. The climax is still Sealing the frontier fissure when the store holds 12 Stabilized Wyrd. During the 120 s defence the player can press CHANNEL [C]: first use draws from an emergency reserve of 2 (store stays 0), later uses spend 2 Stabilized, repair one wall/ward segment, 20 s cooldown. Button and tooltip name cost, target segment, and cooldown. Idle settlers become a capped laborer crew (haul, repair, build). The HUD shows the real bottleneck (`Idle: waiting for planks / no storehouse space / no jobs`). The victory frame is the real 260821 result overlay.
+
+Read PLAYTHROUGH.md first. Then look at the screenshots in this folder in this order. These are the ONLY attached images:
+
+- t00_start.png — founding yard, first quest; idle button `2 idle · no jobs`
+- t05_storehouse.png — Sawmill / Storehouse plank loop; idle button names `no storehouse space`
+- t07_first_raid.png — night 1, 2 raiders, 60 s warning
+- t12_frontier.png — crater west, geologist marks the fissure
+- t20_caravan.png — 15–22 refugee caravan: shelter workers vs raise palisades
+- t24_camp_shelter.png — later-game tents (flaps, poles, campfire) and extra settlers still by the town
+- t25_camp_fortify.png — later-game palisade segments after Fortify
+- t36_choice.png — 6 Stabilized pact: faster refining (A) vs secure harvest (B); idle names `no storehouse space`
+- t44_channel.png — live Channel Wyrd: `emergency reserve repairs the wall`, cooldown, Seal ward
+- t46_victory.png — genuine 260821 victory overlay: Shelter / Faster refine / Reinforce wall / Channel 1 / 50:35
+
+PLAYTHROUGH numbers (4 seeds, victory 42–55, idle < 90 s + one 8 s step):
+
+| Seed   | Victory | Longest idle | ISS before | ISS after | Channel |
+| ------ | ------- | ------------ | ---------- | --------- | ------- |
+| 260821 | 50:36   | 80 s         | 16093      | 11151     | 1       |
+| 261306 | 52:44   | 8 s          | 16491      | 12960     | 1       |
+| 261597 | 46:04   | 64 s         | 17502      | 14587     | 1       |
+| 260918 | 52:12   | 96 s         | 6138       | 2355      | 1       |
+
+Idle-settler-seconds (ISS): daytime integral of idle count. Before = old free-population pool. After = remaining idle once laborers took haul / repair / build jobs.
+
+Exact review files (10): t00_start.png, t05_storehouse.png, t07_first_raid.png, t12_frontier.png, t20_caravan.png, t24_camp_shelter.png, t25_camp_fortify.png, t36_choice.png, t44_channel.png, t46_victory.png
+
+Rate the fun of this idle-settler / honest-Channel hour 1–10. Judge pacing against the previous Channel Wyrd hour (PR #86). ChatGPT scored #19 8.3/10 with no P0 and recommended no new events.
+
+Return:
+1. Fun score (1–10) and one-sentence reason
+2. Pacing notes (what now works, where it is still dead)
+3. Remaining P0/P1/P2 only if needed — smallest changes, no redesign
