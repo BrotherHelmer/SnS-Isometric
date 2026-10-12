@@ -1,6 +1,6 @@
 extends SceneTree
 
-## Fast gates for TEST #17: Seal defence choice + visible rival escalation.
+## Fast gates for TEST #18: midgame caravan + distinct Seal defence looks.
 ## Survival is not a win. Shard Binding is a later-act hook.
 
 const Simulation = preload("res://src/GodotClient/Scripts/one_shard_simulation.gd")
@@ -37,6 +37,7 @@ func _run() -> void:
 	_check_seal_ceremony()
 	_check_wyrd_choice()
 	_check_seal_defence_choice()
+	_check_midgame_caravan()
 	_check_reactive_rival()
 	_check_visible_escalation()
 	_check_foreshadow()
@@ -87,6 +88,12 @@ func _check_seed_slice(seed_value: int) -> void:
 	var seal_path: String = sim.crater_war.bot_seal_path_for_seed(seed_value)
 	var expected_seal := CraterWar.PATH_WALL if SEEDS.find(seed_value) % 2 == 0 else CraterWar.PATH_OVERCHARGE
 	_check(seal_path == expected_seal, "seed %d seal defence path is %s" % [seed_value, expected_seal])
+	var mid_path: String = sim.crater_war.bot_midgame_path_for_seed(seed_value)
+	var expected_mid := CraterWar.PATH_SHELTER if SEEDS.find(seed_value) % 2 == 0 else CraterWar.PATH_FORTIFY
+	_check(mid_path == expected_mid, "seed %d midgame path is %s" % [seed_value, expected_mid])
+	var mid_at: float = sim.crater_war.midgame_seconds()
+	_check(mid_at + 0.001 >= CraterWar.MIDGAME_MIN, "seed %d caravan is after 15:00 (t=%.1f)" % [seed_value, mid_at])
+	_check(mid_at <= CraterWar.MIDGAME_LATEST + 0.001, "seed %d caravan is before 22:00 (t=%.1f)" % [seed_value, mid_at])
 	var smoke_at: float = sim.crater_war.rival_foreshadow_seconds()
 	_check(smoke_at + 0.001 >= CraterWar.FORESHADOW_MIN, "seed %d foreshadow is after 10:00 (t=%.1f)" % [seed_value, smoke_at])
 	_check(smoke_at < CraterWar.FORESHADOW_MIN + CraterWar.FORESHADOW_SPAN + 0.001, "seed %d foreshadow is before 15:00 (t=%.1f)" % [seed_value, smoke_at])
@@ -224,6 +231,16 @@ func _check_seal_defence_choice() -> void:
 			wall_hp_after = int(structure.get("hp", 0))
 			break
 	_check(wall_hp_after >= wall_hp_before + CraterWar.WALL_HP_BOOST, "wall boosts the ceremony Outpost HP")
+	var wall_look: Dictionary = wall_sim.crater_war.seal_look()
+	_check(float(wall_look.get("ward_radius", 0.0)) >= 5.0, "wall look has a thick ward ring")
+	_check(int(wall_look.get("palisades", 0)) >= 6, "wall look plants palisade segments")
+	_check(not bool(wall_look.get("extra_wave", true)), "wall look has no extra wave")
+	_check(String(wall_look.get("color", "")) == "amber", "wall look is amber")
+	var wall_markers := 0
+	for marker in wall_sim.map_markers:
+		if String(marker.get("kind", "")) == "palisade":
+			wall_markers += 1
+	_check(wall_markers >= 3, "wall choice plants visible palisade markers")
 
 	var charge_sim: Simulation = Simulation.new()
 	charge_sim.start_new_run(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 261306, true)
@@ -239,7 +256,57 @@ func _check_seal_defence_choice() -> void:
 	_check(charge_sim.crater_war.ritual_needed <= CraterWar.RITUAL_SECONDS - CraterWar.OVERCHARGE_RITUAL_CUT + 0.001, "overcharge shortens the remaining rite")
 	_check(charge_sim.crater_war._ritual_ward_amount() == CraterWar.OVERCHARGE_WARD, "overcharge thins the ceremony ward")
 	_check(charge_sim.enemies.size() > enemies_before, "overcharge calls another ritual wave")
+	var charge_look: Dictionary = charge_sim.crater_war.seal_look()
+	_check(float(charge_look.get("ward_radius", 9.0)) <= 2.5, "overcharge look has a thinner ward ring")
+	_check(int(charge_look.get("palisades", 9)) == 0, "overcharge look plants no palisade segments")
+	_check(bool(charge_look.get("extra_wave", false)), "overcharge look shows an extra wave")
+	_check(float(charge_look.get("pulse_hz", 0.0)) > float(wall_look.get("pulse_hz", 0.0)), "overcharge pulses faster than the wall")
 	_check(not charge_sim.request_seal_choice("wall").get("success", true), "seal choice cannot be taken twice")
+
+
+func _check_midgame_caravan() -> void:
+	var shelter_sim: Simulation = Simulation.new()
+	shelter_sim.start_new_run(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 260821, true)
+	_ready_fissure(shelter_sim)
+	shelter_sim.elapsed_seconds = shelter_sim.crater_war.midgame_seconds()
+	shelter_sim.crater_war._maybe_offer_midgame()
+	_check(shelter_sim.crater_war.midgame_choice_ready(), "caravan opens in the 15–22 window")
+	_check(shelter_sim.crater_war.midgame_offered_at + 0.001 >= CraterWar.MIDGAME_MIN, "caravan is not before 15:00")
+	_check(shelter_sim.crater_war.midgame_offered_at <= CraterWar.MIDGAME_LATEST + 0.001, "caravan is not after 22:00")
+	_check(not shelter_sim.crater_war.second_push_done, "caravan is offered before the first push")
+	var pop_before := int(shelter_sim.population_current)
+	var house_before := int(shelter_sim.housing_capacity)
+	var shelter_pick: Dictionary = shelter_sim.request_midgame_choice("shelter")
+	_check(bool(shelter_pick.get("success", false)), "shelter is accepted")
+	_check(shelter_sim.crater_war.midgame_choice == CraterWar.PATH_SHELTER, "shelter path is stored")
+	_check(int(shelter_sim.population_current) >= pop_before + CraterWar.SHELTER_WORKERS, "shelter adds two workers")
+	_check(int(shelter_sim.housing_capacity) >= house_before + CraterWar.SHELTER_WORKERS, "shelter adds housing")
+	_check(shelter_sim.crater_war.shelter_exposure >= CraterWar.SHELTER_EXPOSURE - 0.001, "shelter raises exposure")
+	shelter_sim.crater_war._update_exposure(0.0)
+	_check(shelter_sim.crater_war.exposure + 0.001 >= CraterWar.SHELTER_EXPOSURE, "shelter exposure is visible on the meter")
+	_check(not shelter_sim.request_midgame_choice("fortify").get("success", true), "caravan cannot be answered twice")
+
+	var fort_sim: Simulation = Simulation.new()
+	fort_sim.start_new_run(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 261306, true)
+	_ready_fissure(fort_sim)
+	fort_sim.central_inventory[Defs.RESOURCE_WOOD] = 12
+	fort_sim.elapsed_seconds = fort_sim.crater_war.midgame_seconds()
+	fort_sim.crater_war._maybe_offer_midgame()
+	var reaction_before := float(fort_sim.crater_war.push_reaction)
+	var wood_before := int(fort_sim.central_inventory.get(Defs.RESOURCE_WOOD, 0))
+	var fort_pick: Dictionary = fort_sim.request_midgame_choice("fortify")
+	_check(bool(fort_pick.get("success", false)), "fortify is accepted")
+	_check(fort_sim.crater_war.midgame_choice == CraterWar.PATH_FORTIFY, "fortify path is stored")
+	_check(int(fort_sim.central_inventory.get(Defs.RESOURCE_WOOD, 0)) <= wood_before - 1, "fortify spends wood")
+	_check(fort_sim.crater_war.fortify_walls >= CraterWar.FORTIFY_WALLS, "fortify plants palisade segments")
+	_check(fort_sim.crater_war.push_reaction >= reaction_before + CraterWar.FORTIFY_PUSH_DELAY - 0.001, "fortify delays the first push")
+	_check(fort_sim.crater_war.bot_midgame_path_for_seed(260821) == CraterWar.PATH_SHELTER, "260821 caravan path is shelter")
+	_check(fort_sim.crater_war.bot_midgame_path_for_seed(261306) == CraterWar.PATH_FORTIFY, "261306 caravan path is fortify")
+	var shown := 0
+	for marker in fort_sim.map_markers:
+		if String(marker.get("kind", "")) in ["caravan", "palisade"]:
+			shown += 1
+	_check(shown >= 1, "caravan / palisade is marked on the map")
 
 
 func _check_visible_escalation() -> void:

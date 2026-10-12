@@ -1,12 +1,10 @@
 extends RefCounted
 
-## The Director: TEST #17 — Seal defence choice + visible rival escalation.
-## This hour's climax is Sealing the frontier fissure: 12 Stabilized Wyrd
-## plus a 120 s ceremony the player starts when the store is ready.
-## Mid-ceremony (~60 s) the player reinforces the wall or overcharges
-## the Seal. The rival's escalation is painted on the map: growing
-## banners, a marked army route, and a threat tier before each push
-## or raid. A cheap foreshadow beat lands at 10–15 min.
+## The Director: TEST #18 — midgame caravan + distinct Seal defence looks.
+## Between 15:00 and 22:00, before the rival's first push, a refugee
+## caravan offers shelter (workers, more exposure) or fortify (palisade,
+## delayed push). Mid-ceremony the wall and overcharge paths must read
+## as different VFX. The bot alternates both choices per seed.
 
 const Defs = preload("one_shard_defs.gd")
 const RivalryTuning = preload("one_shard_rivalry_tuning.gd")
@@ -65,6 +63,16 @@ const TIER_NAMES := ["QUIET", "SMOKE", "SIGHTED", "PUSH", "RAID"]
 const FORESHADOW_MIN := 10.0 * 60.0
 const FORESHADOW_SPAN := 5.0 * 60.0
 const FORESHADOW_LEAD := 45.0
+const PATH_SHELTER := "shelter"
+const PATH_FORTIFY := "fortify"
+const MIDGAME_MIN := 15.0 * 60.0
+const MIDGAME_SPAN := 5.0 * 60.0
+const MIDGAME_LATEST := 22.0 * 60.0
+const SHELTER_WORKERS := 2
+const SHELTER_EXPOSURE := 0.22
+const FORTIFY_WOOD := 4
+const FORTIFY_PUSH_DELAY := 18.0
+const FORTIFY_WALLS := 3
 
 var simulation
 var fissure_tiles: Array = []
@@ -117,6 +125,13 @@ var rival_foreshadowed := false
 var push_telegraphed := false
 var raid_telegraphed := false
 var banner_count := 0
+var midgame_choice := ""
+var midgame_offered_at := -1.0
+var midgame_taken_at := -1.0
+var midgame_at := -1.0
+var shelter_exposure := 0.0
+var fortify_walls := 0
+var victory_ceremony := false
 
 
 func setup(owner) -> void:
@@ -176,6 +191,13 @@ func reset() -> void:
 	push_telegraphed = false
 	raid_telegraphed = false
 	banner_count = 0
+	midgame_choice = ""
+	midgame_offered_at = -1.0
+	midgame_taken_at = -1.0
+	midgame_at = -1.0
+	shelter_exposure = 0.0
+	fortify_walls = 0
+	victory_ceremony = false
 	if simulation != null:
 		_seed_rival_timing()
 
@@ -191,6 +213,7 @@ func tick(delta: float) -> void:
 	_maybe_force_capture()
 	_maybe_offer_choice()
 	_maybe_foreshadow()
+	_maybe_offer_midgame()
 	_maybe_escalate_map()
 	_maybe_rival_contest()
 	_note_twelve()
@@ -452,7 +475,15 @@ func presentation() -> Dictionary:
 		"threat_name": threat_name(),
 		"foreshadow_at": rival_foreshadow_at,
 		"foreshadowed": rival_foreshadowed,
-		"banner_count": banner_count
+		"banner_count": banner_count,
+		"midgame_choice_ready": midgame_choice_ready(),
+		"midgame_choice": midgame_choice,
+		"midgame_offered_at": midgame_offered_at,
+		"midgame_at": midgame_at,
+		"fortify_walls": fortify_walls,
+		"shelter_exposure": shelter_exposure,
+		"victory_ceremony": victory_ceremony,
+		"seal_look": seal_look()
 	}
 
 
@@ -515,7 +546,7 @@ func _tick_production(delta: float) -> void:
 
 func _update_exposure(delta: float) -> void:
 	var unlumened := 1 if harvester_unlumened() else 0
-	exposure = clampf(float(maxi(0, raw_stock() - RAW_RESERVE)) / 8.0 + 0.45 * float(unlumened), 0.0, 1.0)
+	exposure = clampf(float(maxi(0, raw_stock() - RAW_RESERVE)) / 8.0 + 0.45 * float(unlumened) + shelter_exposure, 0.0, 1.0)
 	var band := "STABLE"
 	if exposure >= 0.75:
 		band = "CRITICAL"
@@ -798,6 +829,7 @@ func _tick_ritual(delta: float) -> void:
 func _complete_ritual() -> void:
 	ritual_active = false
 	simulation.reckoning_active = false
+	_begin_victory_ceremony()
 	simulation._update_objective_flag("claim")
 	simulation._finish_run(true, "THE FISSURE IS SEALED — the ceremony held.")
 
@@ -856,6 +888,7 @@ func _seed_rival_timing() -> void:
 	var latest_smoke := minf(FORESHADOW_MIN + FORESHADOW_SPAN, rival_reveal_at - FORESHADOW_LEAD)
 	var smoke_span := maxf(1.0, latest_smoke - FORESHADOW_MIN)
 	rival_foreshadow_at = FORESHADOW_MIN + rng.randf() * smoke_span
+	_seed_midgame_timing()
 
 
 func rival_reveal_seconds() -> float:
@@ -984,7 +1017,179 @@ func _maybe_offer_seal_choice() -> void:
 	simulation._record_event("seal_choice_offered", message, {"progress": ritual_progress})
 
 
+func midgame_choice_ready() -> bool:
+	if midgame_choice != "" or ritual_active or bool(simulation.game_finished):
+		return false
+	return midgame_offered_at >= 0.0
+
+
+func midgame_seconds() -> float:
+	if midgame_at < 0.0:
+		_seed_midgame_timing()
+	return midgame_at
+
+
+func bot_midgame_path_for_seed(seed_value: int) -> String:
+	var index := BOT_PATH_SEEDS.find(seed_value)
+	if index < 0:
+		index = posmod(seed_value, 2)
+	return PATH_SHELTER if index % 2 == 0 else PATH_FORTIFY
+
+
+func request_midgame_choice(path: String) -> Dictionary:
+	if not midgame_choice_ready():
+		if midgame_choice != "":
+			return _failure("Chosen", "The caravan has already been answered: %s." % midgame_choice)
+		return _failure("NotReady", "No refugee caravan is at the gate.")
+	var picked := path.strip_edges().to_lower()
+	if picked == "a" or picked == "accept" or picked == "workers" or picked == "refugees":
+		picked = PATH_SHELTER
+	if picked == "b" or picked == "walls" or picked == "palisade" or picked == "delay":
+		picked = PATH_FORTIFY
+	if picked != PATH_SHELTER and picked != PATH_FORTIFY:
+		return _failure("Path", "Choose shelter the refugees or fortify the yard.")
+	midgame_choice = picked
+	midgame_taken_at = float(simulation.elapsed_seconds)
+	var message := ""
+	if picked == PATH_SHELTER:
+		_shelter_refugees()
+		message = "REFUGEES SHELTERED — two workers take the hall. The extra mouths raise Wyrd exposure."
+	else:
+		_fortify_yard()
+		message = "YARD FORTIFIED — palisades go up. The rival's first push is delayed."
+	simulation.last_message = message
+	simulation._add_log(message)
+	simulation.push_notice("info", "CARAVAN", message, "warning")
+	simulation._record_event("midgame_choice", message, {"path": picked, "seconds": midgame_taken_at})
+	return _success(message)
+
+
+func _maybe_offer_midgame() -> void:
+	if midgame_offered_at >= 0.0 or midgame_choice != "" or bool(simulation.game_finished):
+		return
+	if second_push_done:
+		return
+	if midgame_at < 0.0:
+		_seed_midgame_timing()
+	var now := float(simulation.elapsed_seconds)
+	if now + 0.001 < MIDGAME_MIN:
+		return
+	var push_imminent := first_harvest_at >= 0.0 and bool(simulation.demo_rival_revealed) and now + 0.001 >= first_harvest_at + push_reaction - 2.0
+	if now + 0.001 < midgame_at and not push_imminent:
+		return
+	if now > MIDGAME_LATEST + 0.001 and not push_imminent:
+		return
+	midgame_offered_at = now
+	var tile := _caravan_tile()
+	simulation._reveal_radius(tile, 4)
+	simulation.add_map_marker("caravan", tile, "Refugee caravan", 0.0)
+	var message := "REFUGEE CARAVAN — shelter two workers and raise exposure, or spend wood to raise palisades and delay the first push."
+	simulation.last_message = message
+	simulation._add_log(message)
+	simulation.push_notice("info", "CARAVAN", message, "warning")
+	simulation._record_event("midgame_choice_offered", message, {"seconds": now, "tile": tile})
+
+
+func _seed_midgame_timing() -> void:
+	if simulation == null:
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(simulation.rng_seed) * 31 + 418
+	midgame_at = minf(MIDGAME_LATEST, MIDGAME_MIN + rng.randf() * MIDGAME_SPAN)
+
+
+func _shelter_refugees() -> void:
+	if simulation == null:
+		return
+	simulation.housing_capacity += SHELTER_WORKERS
+	simulation.population_current = mini(simulation.housing_capacity, int(simulation.population_current) + SHELTER_WORKERS)
+	simulation.stats["peak_population"] = maxi(int(simulation.stats.get("peak_population", 0)), int(simulation.population_current))
+	shelter_exposure = SHELTER_EXPOSURE
+	if simulation.has_method("_ensure_carriers"):
+		simulation._ensure_carriers()
+	if simulation.has_method("_auto_staff_unstaffed_buildings"):
+		simulation._auto_staff_unstaffed_buildings()
+	if simulation.has_method("_emit_audio"):
+		simulation._emit_audio("settler_spawn_worker")
+	simulation.add_map_marker("caravan_camp", _caravan_tile(), "Refugee camp", 0.0)
+
+
+func _fortify_yard() -> void:
+	if simulation == null:
+		return
+	var wood := int(simulation.central_inventory.get(Defs.RESOURCE_WOOD, 0))
+	var spent: int = mini(wood, FORTIFY_WOOD)
+	simulation.central_inventory[Defs.RESOURCE_WOOD] = wood - spent
+	push_reaction += FORTIFY_PUSH_DELAY
+	_plant_yard_palisades()
+	simulation.add_map_marker("palisade", simulation.town_hall_position + Vector2i(2, 1), "Yard palisade", 0.0)
+
+
+func _plant_yard_palisades() -> void:
+	if simulation == null:
+		return
+	var hall: Vector2i = simulation.town_hall_position
+	var aims: Array[Vector2i] = [
+		_clamp_tile(hall + Vector2i(3, 1)),
+		_clamp_tile(hall + Vector2i(2, 3)),
+		_clamp_tile(hall + Vector2i(4, 2)),
+		_clamp_tile(hall + Vector2i(1, 4)),
+		_clamp_tile(hall + Vector2i(5, 0))
+	]
+	for tile in aims:
+		if fortify_walls >= FORTIFY_WALLS:
+			break
+		if not simulation.is_inside_map(tile):
+			continue
+		if not simulation.get_building_at_tile(tile).is_empty():
+			continue
+		if simulation.rivalry != null:
+			var existing: Dictionary = simulation.rivalry.get_structure_at_tile(tile)
+			if not existing.is_empty():
+				continue
+		var wall: Dictionary = simulation._create_building(Defs.BUILDING_WALL, tile)
+		wall["construction"] = false
+		wall["completed"] = true
+		simulation.buildings.append(wall)
+		simulation.add_map_marker("palisade", tile, "Palisade", 0.0)
+		fortify_walls += 1
+
+
+func _caravan_tile() -> Vector2i:
+	if simulation == null:
+		return Vector2i(-1, -1)
+	var hall: Vector2i = simulation._footprint_center(simulation.town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
+	return _clamp_tile(hall + Vector2i(6, 3))
+
+
+func seal_look() -> Dictionary:
+	var wall := seal_choice == PATH_WALL
+	var charge := seal_choice == PATH_OVERCHARGE
+	return {
+		"path": seal_choice,
+		"ward_radius": 6.4 if wall else (2.1 if charge else 3.6),
+		"ward_thickness": 1.15 if wall else (0.28 if charge else 0.55),
+		"pulse_hz": 1.35 if charge else (0.48 if wall else 0.7),
+		"palisades": 8 if wall else 0,
+		"extra_wave": charge,
+		"color": "amber" if wall else ("white" if charge else "cyan"),
+		"light": 3.8 if charge else (2.1 if wall else 1.8)
+	}
+
+
+func _begin_victory_ceremony() -> void:
+	victory_ceremony = true
+	if simulation == null:
+		return
+	if primary_fissure.x >= 0:
+		simulation._reveal_radius(primary_fissure, 7)
+		simulation.add_map_marker("victory_banner", primary_fissure, "SEALED", 0.0)
+		simulation.add_map_marker("victory_banner", _clamp_tile(primary_fissure + Vector2i(3, 1)), "THE CEREMONY HELD", 0.0)
+		simulation.add_map_marker("victory_banner", _clamp_tile(primary_fissure + Vector2i(-2, 3)), "THE FISSURE IS SEALED", 0.0)
+
+
 func _reinforce_ceremony_wall() -> void:
+	_plant_seal_palisades()
 	if simulation.rivalry == null:
 		return
 	for structure in simulation.rivalry.get_structures(RivalryTuning.PLAYER_REALM):
@@ -995,6 +1200,30 @@ func _reinforce_ceremony_wall() -> void:
 		structure["hp"] = int(structure.get("hp", 0)) + WALL_HP_BOOST
 		structure["max_hp"] = int(structure.get("max_hp", RivalryTuning.structure_definition(RivalryTuning.STRUCTURE_CLAIMANT_OUTPOST).get("max_hp", 220))) + WALL_HP_BOOST
 		return
+
+
+func _plant_seal_palisades() -> void:
+	if simulation == null or primary_fissure.x < 0:
+		return
+	var ring: Array[Vector2i] = [
+		Vector2i(3, 0), Vector2i(-3, 1), Vector2i(2, 3), Vector2i(-2, -3),
+		Vector2i(0, 3), Vector2i(3, -2), Vector2i(-4, 0), Vector2i(1, -3)
+	]
+	var planted := 0
+	for offset in ring:
+		if planted >= 6:
+			break
+		var tile := _clamp_tile(primary_fissure + offset)
+		if not simulation.is_inside_map(tile):
+			continue
+		if not simulation.get_building_at_tile(tile).is_empty():
+			continue
+		var wall: Dictionary = simulation._create_building(Defs.BUILDING_WALL, tile)
+		wall["construction"] = false
+		wall["completed"] = true
+		simulation.buildings.append(wall)
+		simulation.add_map_marker("palisade", tile, "Seal wall", 0.0)
+		planted += 1
 
 
 func _overcharge_seal() -> void:

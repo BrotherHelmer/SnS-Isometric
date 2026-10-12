@@ -35,6 +35,7 @@ func think(sim) -> Dictionary:
 	_pursue_economy(sim)
 	_pursue_crater_war(sim)
 	_try_wyrd_choice(sim)
+	_try_midgame_choice(sim)
 	_try_seal_choice(sim)
 	_scout(sim)
 	_expand_toward_shard(sim)
@@ -62,6 +63,9 @@ func _pursue_economy(sim) -> void:
 		_extend_roads(sim, _early_road_target(sim), 1)
 	if _count(sim, Defs.BUILDING_HOUSE) < 1:
 		_try_build(sim, Defs.BUILDING_HOUSE, sim.town_hall_position + Vector2i(5, 4))
+		return
+	if _has_completed(sim, Defs.BUILDING_STOREHOUSE) and _count(sim, Defs.BUILDING_HOUSE) < 2 and _stock(sim, Defs.RESOURCE_WOOD) >= 4:
+		_try_build(sim, Defs.BUILDING_HOUSE, sim.town_hall_position + Vector2i(3, 6))
 		return
 	if _count(sim, Defs.BUILDING_LUMBER_CAMP) < 1:
 		_try_build(sim, Defs.BUILDING_LUMBER_CAMP, _aim_resource(sim, Defs.TILE_TREE, Vector2i(9, 6)))
@@ -201,13 +205,15 @@ func _pursue_crater_war(sim) -> void:
 	if _unlocked(sim, Defs.BUILDING_WATCHTOWER) and _count(sim, Defs.BUILDING_WATCHTOWER) < 2:
 		if _try_build(sim, Defs.BUILDING_WATCHTOWER, _harvester_tile(sim)):
 			return
-	if _unlocked(sim, Defs.BUILDING_WALL) and _count(sim, Defs.BUILDING_WALL) < 3:
+	var wall_target := 5 if String(sim.crater_war.midgame_choice) == "fortify" else 4
+	if _unlocked(sim, Defs.BUILDING_WALL) and _count(sim, Defs.BUILDING_WALL) < wall_target:
 		if _try_build(sim, Defs.BUILDING_WALL, _harvester_tile(sim)):
 			return
-	if _count(sim, Defs.BUILDING_HOUSE) < 3 and _stock(sim, Defs.RESOURCE_WOOD) >= 4:
+	var house_target := 4 if String(sim.crater_war.midgame_choice) == "shelter" else 3
+	if _count(sim, Defs.BUILDING_HOUSE) < house_target and _stock(sim, Defs.RESOURCE_WOOD) >= 4:
 		_try_build(sim, Defs.BUILDING_HOUSE, sim.town_hall_position + Vector2i(2, 8))
 		return
-	if _count(sim, Defs.BUILDING_FARM) < 2 and _stock(sim, Defs.RESOURCE_WOOD) >= 4:
+	if _count(sim, Defs.BUILDING_FARM) < 3 and _stock(sim, Defs.RESOURCE_WOOD) >= 4:
 		_try_build(sim, Defs.BUILDING_FARM, sim.town_hall_position + Vector2i(1, 10))
 
 
@@ -249,6 +255,17 @@ func _try_wyrd_choice(sim) -> void:
 		_note(sim, "CHOICE", sim.crater_war.primary_fissure, String(result.get("message", "")))
 	else:
 		last_failures.append("choice: %s" % String(result.get("message", "")))
+
+
+func _try_midgame_choice(sim) -> void:
+	if sim.crater_war == null or not sim.crater_war.midgame_choice_ready():
+		return
+	var path: String = sim.crater_war.bot_midgame_path_for_seed(int(sim.rng_seed))
+	var result: Dictionary = sim.request_midgame_choice(path)
+	if bool(result.get("success", false)):
+		_note(sim, "CARAVAN", sim.crater_war.primary_fissure, String(result.get("message", "")))
+	else:
+		last_failures.append("caravan: %s" % String(result.get("message", "")))
 
 
 func _try_seal_choice(sim) -> void:
