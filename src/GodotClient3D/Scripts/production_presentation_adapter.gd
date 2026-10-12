@@ -147,6 +147,7 @@ func capture_frame(simulation, render_lead_seconds := 0.0) -> Dictionary:
 		"lumen_sources": lumen_sources,
 		"claims": claim_snapshot,
 		"wyrdfall": simulation.get_wyrdfall_presentation() if simulation.has_method("get_wyrdfall_presentation") else {},
+		"map_markers": simulation.get_map_markers() if simulation.has_method("get_map_markers") else [],
 		"wyrd_sites": _wyrd_site_snapshots(simulation),
 		"revealed_count": simulation.revealed_tiles.size(),
 		"settlement": settlement_descriptor(simulation),

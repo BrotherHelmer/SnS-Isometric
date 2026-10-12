@@ -1,6 +1,6 @@
 extends SceneTree
 
-## Fast gates for TEST #16: Seal the Fissure, 6-stab choice, reactive rival.
+## Fast gates for TEST #17: Seal defence choice + visible rival escalation.
 ## Survival is not a win. Shard Binding is a later-act hook.
 
 const Simulation = preload("res://src/GodotClient/Scripts/one_shard_simulation.gd")
@@ -36,7 +36,10 @@ func _run() -> void:
 	_check_hold_is_milestone()
 	_check_seal_ceremony()
 	_check_wyrd_choice()
+	_check_seal_defence_choice()
 	_check_reactive_rival()
+	_check_visible_escalation()
+	_check_foreshadow()
 	_check_exposure_reserve()
 
 
@@ -81,6 +84,13 @@ func _check_seed_slice(seed_value: int) -> void:
 	var path: String = sim.crater_war.bot_path_for_seed(seed_value)
 	var expected := CraterWar.PATH_REFINE if SEEDS.find(seed_value) % 2 == 0 else CraterWar.PATH_SECURE
 	_check(path == expected, "seed %d bot path is %s" % [seed_value, expected])
+	var seal_path: String = sim.crater_war.bot_seal_path_for_seed(seed_value)
+	var expected_seal := CraterWar.PATH_WALL if SEEDS.find(seed_value) % 2 == 0 else CraterWar.PATH_OVERCHARGE
+	_check(seal_path == expected_seal, "seed %d seal defence path is %s" % [seed_value, expected_seal])
+	var smoke_at: float = sim.crater_war.rival_foreshadow_seconds()
+	_check(smoke_at + 0.001 >= CraterWar.FORESHADOW_MIN, "seed %d foreshadow is after 10:00 (t=%.1f)" % [seed_value, smoke_at])
+	_check(smoke_at < CraterWar.FORESHADOW_MIN + CraterWar.FORESHADOW_SPAN + 0.001, "seed %d foreshadow is before 15:00 (t=%.1f)" % [seed_value, smoke_at])
+	_check(smoke_at + 0.001 < reveal_at, "seed %d foreshadow is before the reveal (%.1f < %.1f)" % [seed_value, smoke_at, reveal_at])
 	var hook: Dictionary = sim.crater_war.shard_binding_hook()
 	_check(not bool(hook.get("available", true)), "seed %d leaves Shard Binding as a later act" % seed_value)
 
@@ -182,6 +192,98 @@ func _check_wyrd_choice() -> void:
 	_check(secure_sim.crater_war._harvester_raid_size() == 0, "path B lowers harvester raid pressure")
 	_check(secure_sim.crater_war.bot_path_for_seed(260821) == CraterWar.PATH_REFINE, "260821 alternates to A")
 	_check(secure_sim.crater_war.bot_path_for_seed(261306) == CraterWar.PATH_SECURE, "261306 alternates to B")
+	_check(secure_sim.crater_war.bot_seal_path_for_seed(260821) == CraterWar.PATH_WALL, "260821 seal path is wall")
+	_check(secure_sim.crater_war.bot_seal_path_for_seed(261306) == CraterWar.PATH_OVERCHARGE, "261306 seal path is overcharge")
+
+
+func _check_seal_defence_choice() -> void:
+	var wall_sim: Simulation = Simulation.new()
+	wall_sim.start_new_run(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 260821, true)
+	var wall_rival: Dictionary = _ready_fissure(wall_sim)
+	wall_sim.central_inventory[Defs.RESOURCE_STABILIZED_WYRD] = 12
+	wall_sim.crater_war.capture_outpost(wall_rival)
+	var wall_begin: Dictionary = wall_sim.request_begin_seal()
+	_check(bool(wall_begin.get("success", false)), "wall setup starts the Seal")
+	_check(not wall_sim.crater_war.seal_choice_ready(), "seal choice stays closed before 60 s")
+	wall_sim.crater_war.ritual_progress = CraterWar.SEAL_CHOICE_AT + 0.5
+	wall_sim.crater_war._maybe_offer_seal_choice()
+	_check(wall_sim.crater_war.seal_choice_ready(), "seal choice opens at 60 s")
+	var wall_hp_before := 0
+	for structure in wall_sim.rivalry.get_structures("player"):
+		if String(structure.get("type", "")) == Defs.BUILDING_OUTPOST:
+			wall_hp_before = int(structure.get("hp", 0))
+			break
+	var wall_pick: Dictionary = wall_sim.request_seal_choice("wall")
+	_check(bool(wall_pick.get("success", false)), "reinforce wall is accepted")
+	_check(wall_sim.crater_war.seal_choice == CraterWar.PATH_WALL, "wall path is stored")
+	_check(wall_sim.crater_war.ritual_needed == CraterWar.RITUAL_SECONDS + CraterWar.WALL_RITUAL_EXTRA, "wall makes the ceremony last 20 s longer")
+	_check(wall_sim.crater_war._ritual_ward_amount() == CraterWar.WALL_WARD, "wall raises the ceremony ward")
+	var wall_hp_after := wall_hp_before
+	for structure in wall_sim.rivalry.get_structures("player"):
+		if String(structure.get("type", "")) == Defs.BUILDING_OUTPOST:
+			wall_hp_after = int(structure.get("hp", 0))
+			break
+	_check(wall_hp_after >= wall_hp_before + CraterWar.WALL_HP_BOOST, "wall boosts the ceremony Outpost HP")
+
+	var charge_sim: Simulation = Simulation.new()
+	charge_sim.start_new_run(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 261306, true)
+	var charge_rival: Dictionary = _ready_fissure(charge_sim)
+	charge_sim.central_inventory[Defs.RESOURCE_STABILIZED_WYRD] = 12
+	charge_sim.crater_war.capture_outpost(charge_rival)
+	charge_sim.request_begin_seal()
+	charge_sim.crater_war.ritual_progress = CraterWar.SEAL_CHOICE_AT + 0.5
+	var enemies_before := charge_sim.enemies.size()
+	var charge_pick: Dictionary = charge_sim.request_seal_choice("overcharge")
+	_check(bool(charge_pick.get("success", false)), "overcharge is accepted")
+	_check(charge_sim.crater_war.seal_choice == CraterWar.PATH_OVERCHARGE, "overcharge path is stored")
+	_check(charge_sim.crater_war.ritual_needed <= CraterWar.RITUAL_SECONDS - CraterWar.OVERCHARGE_RITUAL_CUT + 0.001, "overcharge shortens the remaining rite")
+	_check(charge_sim.crater_war._ritual_ward_amount() == CraterWar.OVERCHARGE_WARD, "overcharge thins the ceremony ward")
+	_check(charge_sim.enemies.size() > enemies_before, "overcharge calls another ritual wave")
+	_check(not charge_sim.request_seal_choice("wall").get("success", true), "seal choice cannot be taken twice")
+
+
+func _check_visible_escalation() -> void:
+	var sim: Simulation = Simulation.new()
+	sim.start_new_run(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 260821, true)
+	var rival_structure: Dictionary = _ready_fissure(sim)
+	sim.crater_war.note_rival_revealed()
+	var sighted: Dictionary = sim.crater_war.visible_escalation()
+	_check(int(sighted.get("tier", 0)) >= CraterWar.TIER_SIGHTED, "reveal raises the threat tier")
+	_check(int(sighted.get("banners", 0)) >= 3, "reveal plants growing rival banners")
+	_check(int(sighted.get("threat", 0)) >= 1, "reveal plants a threat marker")
+	sim.crater_war.capture_outpost(rival_structure)
+	sim.crater_war.first_harvest_at = float(sim.elapsed_seconds)
+	sim.crater_war._maybe_escalate_map()
+	var before_push: Dictionary = sim.crater_war.visible_escalation()
+	_check(bool(before_push.get("push_telegraphed", false)), "push is telegraphed before it lands")
+	_check(int(before_push.get("tier", 0)) >= CraterWar.TIER_PUSH, "push telegraph is TIER PUSH")
+	_check(int(before_push.get("route", 0)) >= 3, "push paints a marked army route")
+	_check(int(before_push.get("banners", 0)) >= 5, "push grows the banner ring")
+	_check(not sim.crater_war.second_push_done, "the army route is visible before the Outpost lands")
+	sim.elapsed_seconds = sim.crater_war.first_harvest_at + sim.crater_war.push_reaction + 1.0
+	sim.crater_war._maybe_rival_contest()
+	_check(sim.crater_war.second_push_done, "the harvest push still lands after the telegraph")
+	sim.crater_war.first_stabilized_at = float(sim.elapsed_seconds)
+	sim.crater_war._maybe_escalate_map()
+	var before_raid: Dictionary = sim.crater_war.visible_escalation()
+	_check(bool(before_raid.get("raid_telegraphed", false)), "raid is telegraphed before it lands")
+	_check(int(before_raid.get("tier", 0)) >= CraterWar.TIER_RAID, "raid telegraph is TIER RAID")
+	_check(int(before_raid.get("route", 0)) >= 3, "raid paints a marked army route")
+	_check(int(before_raid.get("banners", 0)) >= 7, "raid grows banners again")
+
+
+func _check_foreshadow() -> void:
+	var sim: Simulation = Simulation.new()
+	sim.start_new_run(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 260821, true)
+	var smoke_at: float = sim.crater_war.rival_foreshadow_seconds()
+	sim.elapsed_seconds = smoke_at
+	sim.crater_war._maybe_foreshadow()
+	_check(sim.crater_war.rival_foreshadowed, "foreshadow fires at the seeded 10–15 beat")
+	_check(not sim.demo_rival_revealed, "foreshadow is not the reveal")
+	var seen: Dictionary = sim.crater_war.visible_escalation()
+	_check(int(seen.get("smoke", 0)) >= 1, "foreshadow plants distant rival smoke on the map")
+	_check(int(seen.get("tier", 0)) >= CraterWar.TIER_SMOKE, "foreshadow is TIER SMOKE")
+	_check(String(sim.last_message).contains("smoke") or String(sim.last_message).contains("SCOUT"), "foreshadow copy is a scout or smoke beat")
 
 
 func _check_reactive_rival() -> void:

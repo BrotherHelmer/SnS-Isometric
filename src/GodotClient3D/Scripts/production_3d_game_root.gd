@@ -234,6 +234,8 @@ var loop_label: Label
 var bind_button: Button
 var choice_refine_button: Button
 var choice_secure_button: Button
+var seal_wall_button: Button
+var seal_overcharge_button: Button
 var result_overlay: Control
 var result_title: Label
 var result_body: RichTextLabel
@@ -1149,6 +1151,22 @@ func _create_ui() -> void:
 	Identity.apply_button(choice_secure_button, true)
 	choice_secure_button.pressed.connect(func() -> void: _confirm_wyrd_choice("secure"))
 	status_row.add_child(choice_secure_button)
+	seal_wall_button = Button.new()
+	seal_wall_button.name = "SealWall"
+	seal_wall_button.text = "REINFORCE WALL"
+	seal_wall_button.visible = false
+	seal_wall_button.custom_minimum_size.x = 148.0
+	Identity.apply_button(seal_wall_button, true)
+	seal_wall_button.pressed.connect(func() -> void: _confirm_seal_choice("wall"))
+	status_row.add_child(seal_wall_button)
+	seal_overcharge_button = Button.new()
+	seal_overcharge_button.name = "SealOvercharge"
+	seal_overcharge_button.text = "OVERCHARGE SEAL"
+	seal_overcharge_button.visible = false
+	seal_overcharge_button.custom_minimum_size.x = 156.0
+	Identity.apply_button(seal_overcharge_button, true)
+	seal_overcharge_button.pressed.connect(func() -> void: _confirm_seal_choice("overcharge"))
+	status_row.add_child(seal_overcharge_button)
 	binding_percent_label = Label.new()
 	binding_percent_label.name = "BindingProgress"
 	binding_percent_label.visible = false
@@ -2459,6 +2477,8 @@ func _update_loop_hud() -> void:
 		if rival_line != "" and _rival_banner_should_show():
 			parts.append(rival_line)
 			_log_first_screen_hint("rival", rival_line)
+		elif int(wyrdfall.get("threat_tier", 0)) > 0:
+			parts.append("RIVAL TIER %d %s" % [int(wyrdfall.get("threat_tier", 0)), String(wyrdfall.get("threat_name", ""))])
 		loop_label.text = "  ·  ".join(parts)
 		if status_plate != null:
 			var raid_or_night: bool = bool(simulation_host.simulation.is_night) or binding_active
@@ -2475,6 +2495,13 @@ func _update_loop_hud() -> void:
 		choice_refine_button.visible = choice_open
 	if choice_secure_button != null:
 		choice_secure_button.visible = choice_open
+	var seal_open: bool = bool(wyrdfall.get("seal_choice_ready", false)) and not bool(simulation_host.simulation.game_finished)
+	if seal_wall_button != null:
+		seal_wall_button.visible = seal_open
+	if seal_overcharge_button != null:
+		seal_overcharge_button.visible = seal_open
+	if status_plate != null and seal_open:
+		status_plate.visible = true
 	if nightfall_panel != null:
 		nightfall_panel.visible = Time.get_ticks_msec() / 1000.0 < nightfall_event_until and (startup_overlay == null or not startup_overlay.visible)
 	var dawn: Dictionary = wyrdfall.get("dawn_summary", {})
@@ -3894,6 +3921,13 @@ func _confirm_wyrd_choice(path: String) -> void:
 	if simulation_host.simulation == null:
 		return
 	var result: Dictionary = simulation_host.simulation.request_wyrd_choice(path)
+	_show_command_result(result)
+
+
+func _confirm_seal_choice(path: String) -> void:
+	if simulation_host.simulation == null:
+		return
+	var result: Dictionary = simulation_host.simulation.request_seal_choice(path)
 	_show_command_result(result)
 
 

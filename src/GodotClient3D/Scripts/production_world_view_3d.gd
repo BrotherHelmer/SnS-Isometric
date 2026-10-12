@@ -5230,19 +5230,104 @@ func _sync_map_markers() -> void:
 	for marker_value in simulation.get_map_markers():
 		var marker: Dictionary = marker_value
 		var tile: Vector2i = marker.get("position", Vector2i.ZERO)
-		var label := Label3D.new()
-		label.text = String(marker.get("title", "?"))
-		label.font_size = 28
 		var kind := String(marker.get("kind", ""))
+		var title := String(marker.get("title", "?"))
+		var world := tile_to_world(Vector2(tile))
+		var root := Node3D.new()
+		root.position = world
+		host.add_child(root)
+		var label := Label3D.new()
+		label.text = title
+		label.font_size = 54 if kind in ["rival_threat", "seal_choice"] else 42
+		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		label.no_depth_test = true
+		label.outline_size = 10
+		label.outline_modulate = Color(0.05, 0.03, 0.02, 1.0)
+		label.position = Vector3.UP * (5.4 if kind == "rival_banner" else 3.6)
 		if kind == "raid":
 			label.modulate = Color("#f05a4a")
-		elif kind == "rival":
+		elif kind in ["rival", "rival_banner", "rival_threat"]:
 			label.modulate = Color("#d46a3a")
+		elif kind == "rival_route":
+			label.modulate = Color("#f0a06e")
+		elif kind == "rival_smoke":
+			label.modulate = Color("#9a8a7a")
+		elif kind == "seal_choice":
+			label.modulate = Color("#7ec8d4")
 		elif kind == "skull":
 			label.modulate = Color("#f0a06e")
 		else:
 			label.modulate = Color("#efcf8a")
-		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		label.no_depth_test = true
-		label.position = tile_to_world(Vector2(tile)) + Vector3.UP * 2.4
-		host.add_child(label)
+		root.add_child(label)
+		if kind == "rival_banner":
+			root.add_child(_banner_mesh(Color("#c84a4a")))
+		elif kind == "rival_route":
+			root.add_child(_ping_mesh(Color("#f0a06e")))
+		elif kind == "rival_smoke":
+			root.add_child(_smoke_mesh())
+		elif kind == "rival_threat":
+			root.add_child(_ping_mesh(Color("#f05a4a"), 0.55))
+		elif kind == "seal_choice":
+			root.add_child(_ping_mesh(Color("#7ec8d4"), 0.42))
+
+
+func _banner_mesh(color: Color) -> Node3D:
+	var group := Node3D.new()
+	var pole := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.09
+	cyl.bottom_radius = 0.12
+	cyl.height = 6.4
+	pole.mesh = cyl
+	pole.position = Vector3.UP * 3.2
+	var pole_mat := StandardMaterial3D.new()
+	pole_mat.albedo_color = Color("#3a2a22")
+	pole.material_override = pole_mat
+	group.add_child(pole)
+	var flag := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = Vector3(2.4, 1.35, 0.08)
+	flag.mesh = box
+	flag.position = Vector3(1.15, 5.4, 0.0)
+	var flag_mat := StandardMaterial3D.new()
+	flag_mat.albedo_color = color
+	flag_mat.emission_enabled = true
+	flag_mat.emission = color
+	flag_mat.emission_energy_multiplier = 1.1
+	flag.material_override = flag_mat
+	group.add_child(flag)
+	return group
+
+
+func _ping_mesh(color: Color, radius: float = 0.85) -> MeshInstance3D:
+	var ping := MeshInstance3D.new()
+	var sphere := SphereMesh.new()
+	sphere.radius = radius
+	sphere.height = radius * 2.0
+	ping.mesh = sphere
+	ping.position = Vector3.UP * 0.9
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(color, 0.78)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.emission_enabled = true
+	mat.emission = color
+	mat.emission_energy_multiplier = 1.4
+	ping.material_override = mat
+	return ping
+
+
+func _smoke_mesh() -> MeshInstance3D:
+	var puff := MeshInstance3D.new()
+	var sphere := SphereMesh.new()
+	sphere.radius = 2.1
+	sphere.height = 4.4
+	puff.mesh = sphere
+	puff.position = Vector3.UP * 2.4
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.35, 0.32, 0.3, 0.55)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.emission_enabled = true
+	mat.emission = Color("#6a5a4a")
+	mat.emission_energy_multiplier = 0.45
+	puff.material_override = mat
+	return puff
