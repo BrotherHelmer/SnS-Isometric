@@ -2745,10 +2745,10 @@ func _update_seal_ceremony(wyrdfall: Dictionary) -> void:
 		torus.outer_radius = 3.75
 		seal_ward_ring.mesh = torus
 		var ring_mat := StandardMaterial3D.new()
-		ring_mat.albedo_color = Color(0.4, 0.85, 0.95, 0.42)
+		ring_mat.albedo_color = Color(0.4, 0.85, 0.95, 0.16)
 		ring_mat.emission_enabled = true
-		ring_mat.emission = Color(0.45, 0.95, 1.0)
-		ring_mat.emission_energy_multiplier = 1.1
+		ring_mat.emission = Color(0.35, 0.82, 0.88)
+		ring_mat.emission_energy_multiplier = 0.32
 		ring_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		seal_ward_ring.material_override = ring_mat
 		seal_ward_ring.position = Vector3(0.0, 0.35, 0.0)
@@ -2811,7 +2811,9 @@ func _update_seal_ceremony(wyrdfall: Dictionary) -> void:
 	if seal_ward_ring != null:
 		var ring_mat := seal_ward_ring.material_override as StandardMaterial3D
 		if ring_mat != null:
-			ring_mat.emission_energy_multiplier = 0.9 * pulse
+			# The Director: TEST #22 — keep the ring a quiet cyan accent,
+			# not a bright halo that outshines the sealed column.
+			ring_mat.emission_energy_multiplier = 0.22 * pulse
 		seal_ward_ring.rotation.y += 0.008 if path != "overcharge" else 0.03
 	if seal_wave != null:
 		seal_wave.visible = path == "overcharge" or celebrating
@@ -2856,8 +2858,9 @@ func _apply_seal_look(look: Dictionary, celebrating: bool) -> void:
 		seal_ward_ring.mesh = torus
 		var ring_mat := seal_ward_ring.material_override as StandardMaterial3D
 		if ring_mat != null:
-			ring_mat.albedo_color = Color(column_color, 0.45 if charge else 0.62)
+			ring_mat.albedo_color = Color(column_color, 0.12 if celebrating else (0.16 if charge else 0.18))
 			ring_mat.emission = column_color
+			ring_mat.emission_energy_multiplier = 0.28
 	if seal_palisade_root != null:
 		for child in seal_palisade_root.get_children():
 			child.queue_free()

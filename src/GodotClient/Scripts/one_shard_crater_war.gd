@@ -1,9 +1,9 @@
 extends RefCounted
 
 ## The Director: TEST #22 — Channel Wyrd copy matches the mechanic:
-## "Ward restored: +40 HP" when a wall/ward segment is repaired,
-## "Ward held: next 40 dmg prevented" when HP is already full.
-## Same string is used in HUD, tooltip, loop copy, and victory stats.
+## Grant: "Ward reinforced: +40 protection". Absorb is event-driven —
+## "N damage prevented" only after the ward actually eats a hit, with
+## the real absorbed amount. Same string in HUD, tooltip, feed, victory.
 
 const Defs = preload("one_shard_defs.gd")
 const RivalryTuning = preload("one_shard_rivalry_tuning.gd")
@@ -145,6 +145,10 @@ var last_channel_hp_before := 0
 var last_channel_hp_after := 0
 var last_channel_hp_gained := 0
 var last_channel_prevented := false
+var channel_protection := 0
+var last_channel_protection := 0
+var last_channel_absorbed := 0
+var last_channel_event := ""
 var first_build_at := -1.0
 
 
@@ -222,6 +226,10 @@ func reset() -> void:
 	last_channel_hp_after = 0
 	last_channel_hp_gained = 0
 	last_channel_prevented = false
+	channel_protection = 0
+	last_channel_protection = 0
+	last_channel_absorbed = 0
+	last_channel_event = ""
 	first_build_at = -1.0
 	if simulation != null:
 		_seed_rival_timing()
@@ -370,6 +378,10 @@ func request_begin() -> Dictionary:
 	last_channel_hp_after = 0
 	last_channel_hp_gained = 0
 	last_channel_prevented = false
+	channel_protection = 0
+	last_channel_protection = 0
+	last_channel_absorbed = 0
+	last_channel_event = ""
 	channel_ready_at = float(simulation.elapsed_seconds)
 	ritual_active = true
 	ritual_progress = 0.0
@@ -420,6 +432,7 @@ func request_channel() -> Dictionary:
 		_take_stabilized(CHANNEL_COST)
 	last_channel_from_reserve = from_reserve
 	var target: Dictionary = preview_channel_target()
+	_grant_channel_ward()
 	var tile := _repair_one_segment()
 	channel_uses += 1
 	last_channel_at = float(simulation.elapsed_seconds)
@@ -443,7 +456,9 @@ func request_channel() -> Dictionary:
 		"hp_before": last_channel_hp_before,
 		"hp_after": last_channel_hp_after,
 		"hp_gained": last_channel_hp_gained,
-		"prevented": last_channel_prevented
+		"prevented": last_channel_prevented,
+		"protection": last_channel_protection,
+		"event": last_channel_event
 	})
 	if simulation.has_method("_emit_audio"):
 		simulation._emit_audio("wyrd")
@@ -606,6 +621,9 @@ func presentation() -> Dictionary:
 		"channel_hp_after": last_channel_hp_after,
 		"channel_hp_gained": last_channel_hp_gained,
 		"channel_prevented": last_channel_prevented,
+		"channel_protection": channel_protection,
+		"channel_absorbed": last_channel_absorbed,
+		"channel_event": last_channel_event,
 		"channel_feedback": channel_feedback_line(),
 		"first_build_at": first_build_at,
 		"seal_look": seal_look()
@@ -1381,18 +1399,50 @@ func _find_channel_target() -> Dictionary:
 
 
 func channel_feedback_line() -> String:
-	if last_channel_at < 0.0:
+	if last_channel_event == "absorb" and last_channel_absorbed > 0:
+		return "%d damage prevented" % last_channel_absorbed
+	if last_channel_at < 0.0 and last_channel_event != "grant":
 		return ""
-	if last_channel_prevented or last_channel_hp_gained <= 0:
-		return "Ward held: next %d dmg prevented" % CHANNEL_REPAIR_HP
-	return "Ward restored: +%d HP" % last_channel_hp_gained
+	if last_channel_event == "grant" or last_channel_at >= 0.0:
+		var granted := last_channel_protection if last_channel_protection > 0 else CHANNEL_REPAIR_HP
+		return "Ward reinforced: +%d protection" % granted
+	return ""
+
+
+func _grant_channel_ward() -> void:
+	# The Director: Channel always grants a 40-point ward. Copy names
+	# the grant; "damage prevented" waits for a real absorb.
+	channel_protection += CHANNEL_REPAIR_HP
+	last_channel_protection = CHANNEL_REPAIR_HP
+	last_channel_absorbed = 0
+	last_channel_event = "grant"
+	last_channel_prevented = false
+
+
+func absorb_channel_hit(amount: int) -> int:
+	if amount <= 0 or channel_protection <= 0:
+		return amount
+	var absorbed := mini(amount, channel_protection)
+	channel_protection -= absorbed
+	last_channel_absorbed = absorbed
+	last_channel_event = "absorb"
+	last_channel_prevented = true
+	var message := "%d damage prevented" % absorbed
+	if simulation != null:
+		simulation.last_message = message
+		simulation._add_log("WARD — %s." % message)
+		simulation.push_notice("info", "WARD", message, "warning")
+		simulation._record_event("channel_absorb", message, {
+			"absorbed": absorbed,
+			"remaining_protection": channel_protection
+		})
+	return amount - absorbed
 
 
 func _note_channel_hp(before: int, after: int) -> void:
 	last_channel_hp_before = before
 	last_channel_hp_after = after
 	last_channel_hp_gained = maxi(0, after - before)
-	last_channel_prevented = last_channel_hp_gained <= 0
 
 
 func _repair_one_segment() -> Vector2i:
@@ -1442,6 +1492,7 @@ func victory_summary() -> Dictionary:
 		"channel_reserve_used": 1 if last_channel_from_reserve or channel_uses >= 1 else 0,
 		"channel_hp_gained": last_channel_hp_gained,
 		"channel_prevented": last_channel_prevented,
+		"channel_absorbed": last_channel_absorbed,
 		"channel_feedback": channel_feedback_line(),
 		"elapsed_seconds": float(simulation.elapsed_seconds) if simulation != null else 0.0,
 		"first_build_at": first_build_at,

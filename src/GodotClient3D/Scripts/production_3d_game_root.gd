@@ -4138,11 +4138,11 @@ func _channel_feedback_copy(wyrdfall: Dictionary) -> String:
 	var line := String(wyrdfall.get("channel_feedback", ""))
 	if line != "":
 		return line
-	if bool(wyrdfall.get("channel_prevented", false)):
-		return "Ward held: next 40 dmg prevented"
-	var gained := int(wyrdfall.get("channel_hp_gained", 0))
-	if gained > 0:
-		return "Ward restored: +%d HP" % gained
+	var absorbed := int(wyrdfall.get("channel_absorbed", 0))
+	if String(wyrdfall.get("channel_event", "")) == "absorb" or (bool(wyrdfall.get("channel_prevented", false)) and absorbed > 0):
+		return "%d damage prevented" % (absorbed if absorbed > 0 else 40)
+	if int(wyrdfall.get("channel_uses", 0)) > 0:
+		return "Ward reinforced: +40 protection"
 	return ""
 
 
@@ -4184,8 +4184,8 @@ func _channel_tooltip(wyrdfall: Dictionary, remain: float) -> String:
 	if feedback != "" and int(wyrdfall.get("channel_uses", 0)) > 0:
 		var before := int(wyrdfall.get("channel_hp_before", 0))
 		var after := int(wyrdfall.get("channel_hp_after", 0))
-		if bool(wyrdfall.get("channel_prevented", false)):
-			lines.append("Last: %s on %s (HP already full)." % [feedback, _channel_target_label(wyrdfall)])
+		if String(wyrdfall.get("channel_event", "")) == "absorb" or bool(wyrdfall.get("channel_prevented", false)):
+			lines.append("Last: %s." % feedback)
 		else:
 			lines.append("Last: %s on %s (%d → %d)." % [feedback, _channel_target_label(wyrdfall), before, after])
 	return "\n".join(lines)
@@ -4894,7 +4894,11 @@ func _jump_idle_target() -> void:
 	if camera_rig != null and world_view != null and tile.x >= 0:
 		camera_rig.focus_world(world_view.tile_to_world(Vector2(tile) + Vector2(1.0, 1.0)))
 	var label := String(jump.get("label", "the blockage")).replace("Go to ", "")
-	_show_status("Jumped to the %s." % label, 4.0)
+	var hint := String(jump.get("hint", ""))
+	if hint != "":
+		_show_status(hint, 4.0)
+	else:
+		_show_status("Jumped to the %s." % label, 4.0)
 
 
 func _open_build_from_idle() -> void:

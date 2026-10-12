@@ -14,7 +14,7 @@ const Intentions = preload("res://src/GodotClient/Scripts/one_shard_intentions.g
 const SEED_DEFAULT := 260821
 const STEP_SECONDS := 8.0
 const MAX_SECONDS_DEFAULT := 3600.0
-const DEST_DEFAULT := "res://artifacts/demo_playthrough_v10"
+const DEST_DEFAULT := "res://artifacts/demo_playthrough_v11"
 
 var failures: Array[String] = []
 var script_errors := 0

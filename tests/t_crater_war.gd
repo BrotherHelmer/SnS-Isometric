@@ -1,7 +1,8 @@
 extends SceneTree
 
-## Fast gates for TEST #22: Channel "Ward restored: +40 HP" copy,
-## jump to the real bottleneck (Sawmill / transport), and cyan fissure.
+## Fast gates for TEST #22: Channel "Ward reinforced: +40 protection"
+## grant copy and event-driven "N damage prevented", jump to the real
+## bottleneck (Sawmill / transport), and cyan fissure.
 
 const Simulation = preload("res://src/GodotClient/Scripts/one_shard_simulation.gd")
 const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
@@ -360,8 +361,11 @@ func _check_channel_wyrd() -> void:
 	_check(int(wall.get("hp", 0)) >= hp_before + 1, "Channel Wyrd repairs a wall segment")
 	_check(sim.crater_war.last_channel_hp_gained >= 1, "Channel records HP gained")
 	_check(int(sim.get_run_statistics().get("channel_hp_gained", 0)) >= 1, "run stats include Channel HP")
-	_check(sim.crater_war.channel_feedback_line() == "Ward restored: +%d HP" % sim.crater_war.last_channel_hp_gained, "Channel feedback names Ward restored")
-	_check(String(sim.crater_war.presentation().get("channel_feedback", "")).begins_with("Ward restored:"), "Channel presentation names Ward restored")
+	_check(not sim.crater_war.last_channel_prevented, "grant does not claim damage prevented")
+	_check(sim.crater_war.channel_protection == CraterWar.CHANNEL_REPAIR_HP, "Channel grants a 40-point ward")
+	_check(sim.crater_war.channel_feedback_line() == "Ward reinforced: +%d protection" % CraterWar.CHANNEL_REPAIR_HP, "Channel feedback names Ward reinforced")
+	_check(String(sim.crater_war.presentation().get("channel_feedback", "")).begins_with("Ward reinforced:"), "Channel presentation names Ward reinforced")
+	_check(String(pick.get("message", "")).contains("Ward reinforced:"), "Channel feed names Ward reinforced")
 	_check(sim.crater_war.last_channel_tile.x >= 0, "Channel Wyrd records a repair tile")
 	_check(not sim.crater_war.channel_ready(), "Channel Wyrd cools for 20 s")
 	var again: Dictionary = sim.request_channel_wyrd()
@@ -371,13 +375,22 @@ func _check_channel_wyrd() -> void:
 	_check(sim.crater_war.channel_ready(), "Channel Wyrd returns after 20 s")
 	var summary: Dictionary = sim.crater_war.victory_summary()
 	_check(int(summary.get("channel_uses", 0)) == 1, "victory summary lists Channel uses")
+	_check(String(summary.get("channel_feedback", "")).begins_with("Ward reinforced:"), "victory stats name Ward reinforced before a hit")
 	wall["hp"] = int(wall.get("max_hp", 0))
 	sim.elapsed_seconds += CraterWar.CHANNEL_COOLDOWN + 0.2
 	sim.central_inventory[Defs.RESOURCE_STABILIZED_WYRD] = CraterWar.CHANNEL_COST
 	var hold: Dictionary = sim.request_channel_wyrd()
 	_check(bool(hold.get("success", false)), "full-HP Channel is still accepted")
-	_check(sim.crater_war.last_channel_prevented, "full-HP Channel records damage prevented")
-	_check(sim.crater_war.channel_feedback_line() == "Ward held: next %d dmg prevented" % CraterWar.CHANNEL_REPAIR_HP, "Channel feedback names Ward held")
+	_check(not sim.crater_war.last_channel_prevented, "full-HP Channel still only grants the ward")
+	_check(sim.crater_war.channel_feedback_line() == "Ward reinforced: +%d protection" % CraterWar.CHANNEL_REPAIR_HP, "full-HP Channel still names Ward reinforced")
+	var hp_after_grant := int(wall.get("hp", 0))
+	sim._damage_building(wall, CraterWar.CHANNEL_REPAIR_HP)
+	_check(int(wall.get("hp", 0)) == hp_after_grant, "ward absorbs the hit before HP drops")
+	_check(sim.crater_war.last_channel_prevented, "absorb records damage prevented")
+	_check(sim.crater_war.last_channel_absorbed == CraterWar.CHANNEL_REPAIR_HP, "absorb records the real amount")
+	_check(sim.crater_war.channel_feedback_line() == "%d damage prevented" % CraterWar.CHANNEL_REPAIR_HP, "absorb copy names damage prevented")
+	_check(String(sim.get_run_statistics().get("channel_feedback", "")) == "%d damage prevented" % CraterWar.CHANNEL_REPAIR_HP, "victory stats name the absorb event")
+	_check(sim.last_message == "%d damage prevented" % CraterWar.CHANNEL_REPAIR_HP, "absorb writes the feed line")
 	var house: Dictionary = sim._create_building(Defs.BUILDING_HOUSE, sim.town_hall_position + Vector2i(5, 4))
 	house["construction"] = false
 	house["completed"] = true
@@ -526,6 +539,11 @@ func _check_idle_jobs() -> void:
 	_check(int(report.get("unable_total", 0)) + int(report.get("working_total", 0)) >= 1, "crew report lists at least one settler")
 	var jump: Dictionary = report.get("jump", {})
 	_check(String(jump.get("kind", "")) == "sawmill" or String(jump.get("label", "")).contains("Sawmill"), "waiting for planks jumps to the Sawmill")
+	_check(String(jump.get("hint", "")) == "Connect Sawmill to road to produce planks", "unconnected Sawmill jump names the road")
+	mill["connected"] = true
+	var connected_jump: Dictionary = sim.idle_jump_target()
+	_check(String(connected_jump.get("hint", "")) == "", "connected Sawmill has no road hint")
+	mill["connected"] = false
 
 
 func _check(ok: bool, message: String) -> void:

@@ -1702,6 +1702,9 @@ func get_wyrdfall_presentation() -> Dictionary:
 		"channel_hp_after": int(crater.get("channel_hp_after", 0)),
 		"channel_hp_gained": int(crater.get("channel_hp_gained", 0)),
 		"channel_prevented": bool(crater.get("channel_prevented", false)),
+		"channel_protection": int(crater.get("channel_protection", 0)),
+		"channel_absorbed": int(crater.get("channel_absorbed", 0)),
+		"channel_event": String(crater.get("channel_event", "")),
 		"channel_feedback": String(crater.get("channel_feedback", "")),
 		"first_build_at": float(crater.get("first_build_at", -1.0)),
 		"seal_look": crater.get("seal_look", {}),
@@ -1734,6 +1737,7 @@ func get_run_statistics() -> Dictionary:
 		summary["channel_reserve"] = crater_war.channel_reserve
 		summary["channel_hp_gained"] = crater_war.last_channel_hp_gained
 		summary["channel_prevented"] = crater_war.last_channel_prevented
+		summary["channel_absorbed"] = crater_war.last_channel_absorbed
 		summary["channel_feedback"] = crater_war.channel_feedback_line()
 	summary["idle_settler_seconds"] = idle_settler_seconds
 	summary["idle_settler_seconds_before"] = idle_settler_seconds_before
@@ -3254,6 +3258,11 @@ func _kind_jump(kind: String, label: String) -> Dictionary:
 			continue
 		var hop := _site_jump(building, label)
 		hop["kind"] = _jump_kind_for(kind)
+		if kind == Defs.BUILDING_SAWMILL \
+			and bool(building.get("completed", false)) \
+			and not bool(building.get("construction", false)) \
+			and not bool(building.get("connected", false)):
+			hop["hint"] = "Connect Sawmill to road to produce planks"
 		if bool(building.get("completed", false)) and not bool(building.get("construction", false)):
 			return hop
 		if planned.is_empty():
@@ -9191,6 +9200,11 @@ func _damage_worker(worker_id: int, amount: int, attacker_position: Vector2i = V
 
 
 func _damage_building(building: Dictionary, amount: int) -> void:
+	if crater_war != null:
+		amount = crater_war.absorb_channel_hit(amount)
+		if amount <= 0:
+			building["damage_flash"] = 0.25
+			return
 	building["hp"] = int(building["hp"]) - amount
 	building["damage_flash"] = 0.45
 	last_message = "%s is under attack." % _display_building_name(building)

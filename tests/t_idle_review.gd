@@ -1,14 +1,14 @@
 extends SceneTree
 
-## The Director: TEST #22 review shots — Channel Ward restored copy,
-## jump to the Sawmill bottleneck, cyan sealed fissure, victory overlay.
+## The Director: TEST #22 review shots — Channel Ward reinforced grant,
+## event-driven damage prevented, Sawmill road hint, cyan fissure, victory.
 
 const Scene = preload("res://src/GodotClient3D/Scenes/production_3d.tscn")
 const Simulation = preload("res://src/GodotClient/Scripts/one_shard_simulation.gd")
 const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
 const CraterWar = preload("res://src/GodotClient/Scripts/one_shard_crater_war.gd")
 
-const DEST := "res://artifacts/demo_playthrough_v10/shots_for_review"
+const DEST := "res://artifacts/demo_playthrough_v11/shots_for_review"
 
 
 func _init() -> void:
@@ -43,6 +43,7 @@ func _run() -> void:
 	var mill: Dictionary = sim._create_building(Defs.BUILDING_SAWMILL, hall + Vector2i(7, 2))
 	mill["construction"] = false
 	mill["completed"] = true
+	mill["connected"] = false
 	sim.buildings.append(mill)
 	game.play_has_begun = true
 	game._update_ui()
@@ -73,6 +74,15 @@ func _run() -> void:
 	sim.is_night = false
 	game._update_ui()
 	await _shot(game, sim, dest.path_join("channel_feedback.png"), sim.crater_war.last_channel_tile, 48.0)
+
+	var absorb_hp := int(wall.get("hp", 0))
+	sim._damage_building(wall, CraterWar.CHANNEL_REPAIR_HP)
+	if int(wall.get("hp", 0)) != absorb_hp:
+		print("T_IDLE_REVIEW absorb left HP %d (want %d)" % [int(wall.get("hp", 0)), absorb_hp])
+	if game.has_method("_show_status"):
+		game._show_status(sim.crater_war.channel_feedback_line(), 4.0)
+	game._update_ui()
+	await _shot(game, sim, dest.path_join("damage_prevented.png"), sim.crater_war.last_channel_tile, 48.0)
 
 	sim.crater_war.ritual_progress = CraterWar.RITUAL_SECONDS
 	sim.victory = true
