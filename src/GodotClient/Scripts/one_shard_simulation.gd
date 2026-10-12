@@ -5803,7 +5803,9 @@ func _ensure_laborers() -> void:
 		return
 	if connected_roads.is_empty():
 		return
-	var want := idle_pool_count()
+	# Cap the crew so extra peasants haul and repair without paving
+	# every optional road and starving the Wyrd loop.
+	var want := mini(idle_pool_count(), 4)
 	while _laborer_count() < want:
 		var spawn_tile := _first_connected_road_tile()
 		if not is_inside_map(spawn_tile):
@@ -5878,7 +5880,8 @@ func _assign_laborer_task(worker: Dictionary) -> bool:
 		return true
 	if _assign_site_build(worker):
 		return true
-	if _assign_road_build(worker):
+	# Laborers only lay a road when a building is waiting on its spur.
+	if _construction_waiting_for_road() and _assign_road_build(worker):
 		return true
 	if _assign_repair(worker):
 		return true
