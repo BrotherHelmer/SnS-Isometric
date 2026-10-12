@@ -1,0 +1,32 @@
+You are re-reviewing Shard & Sovereign after TEST #19 — Channel Wyrd during the Seal, plus a caravan aftermath that stays on the map (PR #86, stacked on #85). The climax is still Sealing the frontier fissure when the store holds 12 Stabilized Wyrd. During the 120 s defence the player can press CHANNEL WYRD [C]: spend 2 Stabilized, repair one wall/ward segment, 20 s cooldown, visible repair VFX. The bot does this at least once. Shelter leaves tents and extra settlers near town; Fortify leaves palisade segments. The opening house is 30–45 s faster (first meaningful build 0:08). The victory screen lists the hour's choices.
+
+Read PLAYTHROUGH.md first. Then look at the screenshots in this folder in this order. These are the ONLY attached images:
+
+- t00_start.png — founding yard, first quest
+- t05_storehouse.png — Sawmill / Storehouse plank loop complete (minute 5)
+- t07_first_raid.png — night 1, 2 raiders, 60 s warning
+- t12_frontier.png — crater west, geologist marks the fissure
+- t20_caravan.png — 15–22 refugee caravan: shelter workers vs raise palisades
+- t24_camp_shelter.png — later-game tents and extra settlers still by the town
+- t25_camp_fortify.png — later-game palisade segments after Fortify
+- t36_choice.png — 6 Stabilized pact: faster refining (A) vs secure harvest (B)
+- t44_channel.png — Channel Wyrd in action: repair notice, cooldown, Seal ward
+- t46_victory.png — victory summary: caravan, 6-wyrd, Seal, Channel uses, time
+
+PLAYTHROUGH numbers (4 seeds, same accept windows as v6: victory 42–55, idle < 90 s):
+
+| Seed   | Caravan         | 6-wyrd    | Seal       | Channel | Victory | Longest idle | First build |
+| ------ | --------------- | --------- | ---------- | ------- | ------- | ------------ | ----------- |
+| 260821 | 20:00 shelter   | A refine  | wall       | 1       | 50:36   | 72 s         | 0:08        |
+| 261306 | 18:08 fortify   | B secure  | overcharge | 1       | 49:16   | 80 s         | 0:08        |
+| 261597 | 19:12 shelter   | A refine  | wall       | 1       | 46:52   | 64 s         | 0:08        |
+| 260918 | 19:44 fortify   | B secure  | overcharge | 1       | 47:56   | 88 s         | 0:08        |
+
+Exact review files (10): t00_start.png, t05_storehouse.png, t07_first_raid.png, t12_frontier.png, t20_caravan.png, t24_camp_shelter.png, t25_camp_fortify.png, t36_choice.png, t44_channel.png, t46_victory.png
+
+Rate the fun of this Channel Wyrd hour 1–10. Judge pacing against the previous midgame-caravan hour (PR #85).
+
+Return:
+1. Fun score (1–10) and one-sentence reason
+2. Pacing notes (what now works, where it is still dead)
+3. Remaining P0/P1/P2 only if needed — smallest changes, no redesign

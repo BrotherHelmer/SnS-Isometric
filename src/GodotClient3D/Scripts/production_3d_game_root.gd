@@ -238,9 +238,11 @@ var seal_wall_button: Button
 var seal_overcharge_button: Button
 var midgame_shelter_button: Button
 var midgame_fortify_button: Button
+var channel_button: Button
 var last_seal_choice_seen := ""
 var last_midgame_offered := false
 var last_midgame_choice_seen := ""
+var last_channel_uses_seen := 0
 var result_overlay: Control
 var result_title: Label
 var result_body: RichTextLabel
@@ -540,6 +542,9 @@ func _handle_hud_hotkey(event: InputEventKey) -> bool:
 		KEY_Y:
 			if _begin_scout_aim():
 				return true
+		KEY_C:
+			_confirm_channel()
+			return true
 	return false
 
 
@@ -583,6 +588,10 @@ func _select_town_hall() -> void:
 
 func start_new_3d(seed_value := DEFAULT_SEED) -> void:
 	last_run_seed = seed_value
+	last_channel_uses_seen = 0
+	last_seal_choice_seen = ""
+	last_midgame_offered = false
+	last_midgame_choice_seen = ""
 	if result_overlay != null:
 		result_overlay.visible = false
 	if confirm_overlay != null:
@@ -1140,6 +1149,15 @@ func _create_ui() -> void:
 	Identity.apply_button(bind_button, true)
 	bind_button.pressed.connect(_prompt_binding)
 	status_row.add_child(bind_button)
+	channel_button = Button.new()
+	channel_button.name = "ChannelWyrd"
+	channel_button.text = "CHANNEL WYRD [C]"
+	channel_button.visible = false
+	channel_button.custom_minimum_size.x = 176.0
+	channel_button.tooltip_text = "Spend 2 Stabilized to repair one wall or ward segment. 20 s cooldown.  [C]"
+	Identity.apply_button(channel_button, true)
+	channel_button.pressed.connect(_confirm_channel)
+	status_row.add_child(channel_button)
 	choice_refine_button = Button.new()
 	choice_refine_button.name = "ChoiceRefine"
 	choice_refine_button.text = "FASTER REFINE"
@@ -2438,6 +2456,12 @@ func _update_loop_hud() -> void:
 	if seen_mid != "" and seen_mid != last_midgame_choice_seen and audio_director != null:
 		audio_director.play_cue("settler_spawn_worker" if seen_mid == "shelter" else "build_complete")
 	last_midgame_choice_seen = seen_mid
+	var seen_channel := int(wyrdfall.get("channel_uses", 0))
+	if seen_channel > last_channel_uses_seen:
+		if audio_director != null:
+			audio_director.play_cue("wyrd")
+		_glance_at_seal()
+	last_channel_uses_seen = seen_channel
 	var steps: Array = objective.get("steps", [])
 	if objective_button != null:
 		var intention: Dictionary = simulation_host.simulation.get_current_intention()
@@ -2490,6 +2514,7 @@ func _update_loop_hud() -> void:
 	if binding_percent_label != null:
 		binding_percent_label.visible = binding_active
 		binding_percent_label.text = "%d%%" % int(wyrdfall.get("binding_percent", 0))
+	var channel_open: bool = binding_active and not bool(simulation_host.simulation.game_finished)
 	if loop_label != null:
 		var parts: Array[String] = []
 		if binding_active:
@@ -2510,6 +2535,8 @@ func _update_loop_hud() -> void:
 			parts.append("STAB %d/12" % stab)
 		if midgame_open:
 			parts.append("CARAVAN — shelter refugees or raise palisades")
+		if channel_open:
+			parts.append("CHANNEL WYRD [C]" if bool(wyrdfall.get("channel_ready", false)) else "CHANNEL cooling")
 		var rival_line := String(wyrdfall.get("rival_line", ""))
 		if rival_line != "" and _rival_banner_should_show():
 			parts.append(rival_line)
@@ -2541,7 +2568,13 @@ func _update_loop_hud() -> void:
 		midgame_shelter_button.visible = midgame_open
 	if midgame_fortify_button != null:
 		midgame_fortify_button.visible = midgame_open
-	if status_plate != null and (seal_open or midgame_open):
+	if channel_button != null:
+		channel_button.visible = channel_open
+		var channel_ready := bool(wyrdfall.get("channel_ready", false))
+		var remain := maxf(0.0, float(wyrdfall.get("channel_ready_at", 0.0)) - float(simulation_host.simulation.elapsed_seconds))
+		channel_button.disabled = not channel_ready
+		channel_button.text = "CHANNEL WYRD [C]" if channel_ready else "CHANNEL WYRD %ds" % int(ceil(remain))
+	if status_plate != null and (seal_open or midgame_open or channel_open):
 		status_plate.visible = true
 	if nightfall_panel != null:
 		nightfall_panel.visible = Time.get_ticks_msec() / 1000.0 < nightfall_event_until and (startup_overlay == null or not startup_overlay.visible)
@@ -3990,6 +4023,15 @@ func _confirm_midgame_choice(path: String) -> void:
 	_show_command_result(result)
 
 
+func _confirm_channel() -> void:
+	if simulation_host.simulation == null:
+		return
+	var result: Dictionary = simulation_host.simulation.request_channel_wyrd()
+	if bool(result.get("success", false)) and audio_director != null:
+		audio_director.play_cue("wyrd")
+	_show_command_result(result)
+
+
 func _show_result_screen() -> void:
 	if result_overlay == null or simulation_host.simulation == null:
 		return
@@ -4032,15 +4074,33 @@ func _refresh_result_body() -> void:
 		result_title.text = "THE REALM HAS FALLEN"
 	var minutes := int(float(stats.get("elapsed_seconds", 0.0)) / 60.0)
 	var seconds := int(float(stats.get("elapsed_seconds", 0.0))) % 60
-	var lines: Array[String] = [
-		"" if won else "[color=#e37b6a]%s[/color]" % String(stats.get("defeat_reason", "")),
-		"Days survived  %d" % int(stats.get("days_survived", 0)),
-		"Population  %d" % int(stats.get("population", 0)),
-		"Wyrd extracted  %d" % int(stats.get("wyrd_extracted", 0)),
-		"Enemies defeated  %d" % int(stats.get("enemies_defeated", 0)),
-		"Settlers lost  %d" % int(stats.get("workers_lost", 0)),
-		"Completion time  %d:%02d" % [minutes, seconds],
-	]
+	var lines: Array[String] = []
+	if won:
+		lines = [
+			"Caravan  %s" % _choice_label(String(stats.get("midgame_choice", ""))),
+			"Six-Wyrd  %s" % _choice_label(String(stats.get("wyrd_choice", ""))),
+			"Seal  %s" % _choice_label(String(stats.get("seal_choice", ""))),
+			"Channel Wyrd  %d" % int(stats.get("channel_uses", 0)),
+			"Completion time  %d:%02d" % [minutes, seconds],
+			"Days survived  %d" % int(stats.get("days_survived", 0)),
+			"Population  %d" % int(stats.get("population", 0)),
+			"Wyrd extracted  %d" % int(stats.get("wyrd_extracted", 0)),
+			"Enemies defeated  %d" % int(stats.get("enemies_defeated", 0)),
+			"Settlers lost  %d" % int(stats.get("workers_lost", 0)),
+		]
+		var first_build := float(stats.get("first_build_at", -1.0))
+		if first_build >= 0.0:
+			lines.append("First building  %d:%02d" % [int(first_build / 60.0), int(first_build) % 60])
+	else:
+		lines = [
+			"[color=#e37b6a]%s[/color]" % String(stats.get("defeat_reason", "")),
+			"Days survived  %d" % int(stats.get("days_survived", 0)),
+			"Population  %d" % int(stats.get("population", 0)),
+			"Wyrd extracted  %d" % int(stats.get("wyrd_extracted", 0)),
+			"Enemies defeated  %d" % int(stats.get("enemies_defeated", 0)),
+			"Settlers lost  %d" % int(stats.get("workers_lost", 0)),
+			"Completion time  %d:%02d" % [minutes, seconds],
+		]
 	if result_more_stats:
 		lines.append_array([
 			"",
@@ -4052,6 +4112,24 @@ func _refresh_result_body() -> void:
 	result_body.text = "\n".join(lines)
 	if result_more_button != null:
 		result_more_button.text = "FEWER STATS" if result_more_stats else "MORE STATS"
+
+
+func _choice_label(path: String) -> String:
+	match path:
+		"shelter":
+			return "Shelter"
+		"fortify":
+			return "Fortify"
+		"refine":
+			return "Faster refine"
+		"secure":
+			return "Secure harvest"
+		"wall":
+			return "Reinforce wall"
+		"overcharge":
+			return "Overcharge"
+		_:
+			return path if path != "" else "—"
 
 
 func _try_again() -> void:

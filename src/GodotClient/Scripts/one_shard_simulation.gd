@@ -1473,6 +1473,12 @@ func request_midgame_choice(path: String) -> Dictionary:
 	return crater_war.request_midgame_choice(path)
 
 
+func request_channel_wyrd() -> Dictionary:
+	if crater_war == null:
+		return _failure("Unavailable", "Channel Wyrd is only offered during the Seal.")
+	return crater_war.request_channel()
+
+
 func request_begin_binding() -> Dictionary:
 	if crater_war != null:
 		if crater_war.ritual_active:
@@ -1668,6 +1674,12 @@ func get_wyrdfall_presentation() -> Dictionary:
 		"midgame_at": float(crater.get("midgame_at", -1.0)),
 		"fortify_walls": int(crater.get("fortify_walls", 0)),
 		"victory_ceremony": bool(crater.get("victory_ceremony", false)),
+		"channel_ready": bool(crater.get("channel_ready", false)),
+		"channel_uses": int(crater.get("channel_uses", 0)),
+		"channel_ready_at": float(crater.get("channel_ready_at", -1.0)),
+		"last_channel_at": float(crater.get("last_channel_at", -1.0)),
+		"last_channel_tile": crater.get("last_channel_tile", Vector2i(-1, -1)),
+		"first_build_at": float(crater.get("first_build_at", -1.0)),
 		"seal_look": crater.get("seal_look", {})
 	}
 
@@ -1686,6 +1698,13 @@ func get_run_statistics() -> Dictionary:
 	summary["peak_wyrd_pressure"] = float(stats.get("peak_wyrd_pressure", peak_wyrd_pressure))
 	summary["territory_revealed"] = int(stats.get("territory_revealed", revealed_tiles.size()))
 	summary["pressure_band"] = Wyrdfall.band_for_pressure(float(summary["peak_wyrd_pressure"]))
+	if crater_war != null:
+		summary["midgame_choice"] = crater_war.midgame_choice
+		summary["wyrd_choice"] = crater_war.wyrd_choice
+		summary["seal_choice"] = crater_war.seal_choice
+		summary["channel_uses"] = crater_war.channel_uses
+		summary["first_build_at"] = crater_war.first_build_at
+		summary["fortify_walls"] = crater_war.fortify_walls
 	return summary
 
 
@@ -5725,6 +5744,8 @@ func _sync_production_workers() -> void:
 	for index in range(workers.size() - 1, -1, -1):
 		var worker: Dictionary = workers[index]
 		if String(worker.get("type", "")) in ["carrier", "clearer"]:
+			continue
+		if String(worker.get("role_key", "")) == "refugee":
 			continue
 		if not desired.has(String(worker.get("role_key", ""))):
 			workers.remove_at(index)
