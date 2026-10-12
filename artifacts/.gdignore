@@ -1,0 +1,3 @@
+# Playthrough / playtest CSVs are data logs, not Godot translations.
+# Without this file the importer treats playthrough_*.csv as locales
+# and a clean editor --import can die with signal 11.
