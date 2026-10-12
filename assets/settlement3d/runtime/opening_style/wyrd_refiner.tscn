@@ -1,0 +1,54 @@
+[gd_scene load_steps=7 format=3]
+
+[sub_resource type="BoxMesh" id="BoxMesh_kiln"]
+size = Vector3(1.55, 1.35, 1.25)
+
+[sub_resource type="StandardMaterial3D" id="Mat_kiln"]
+albedo_color = Color(0.28, 0.18, 0.14, 1)
+metallic = 0.18
+roughness = 0.55
+emission_enabled = true
+emission = Color(0.72, 0.32, 0.1, 1)
+emission_energy_multiplier = 0.45
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_stack"]
+top_radius = 0.14
+bottom_radius = 0.2
+height = 1.35
+radial_segments = 8
+
+[sub_resource type="StandardMaterial3D" id="Mat_stack"]
+albedo_color = Color(0.2, 0.2, 0.22, 1)
+metallic = 0.4
+roughness = 0.45
+
+[sub_resource type="TorusMesh" id="TorusMesh_coil"]
+inner_radius = 0.22
+outer_radius = 0.42
+rings = 10
+ring_segments = 8
+
+[sub_resource type="StandardMaterial3D" id="Mat_coil"]
+albedo_color = Color(0.85, 0.55, 0.18, 1)
+metallic = 0.55
+roughness = 0.28
+emission_enabled = true
+emission = Color(1, 0.55, 0.15, 1)
+emission_energy_multiplier = 1.15
+
+[node name="WyrdRefiner" type="Node3D"]
+
+[node name="Model" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.68, 0)
+mesh = SubResource("BoxMesh_kiln")
+surface_material_override/0 = SubResource("Mat_kiln")
+
+[node name="Stack" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.42, 1.72, 0.1)
+mesh = SubResource("CylinderMesh_stack")
+surface_material_override/0 = SubResource("Mat_stack")
+
+[node name="Coil" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.2, -0.979796, 0, 0.979796, 0.2, 0, 1.15, 0.55)
+mesh = SubResource("TorusMesh_coil")
+surface_material_override/0 = SubResource("Mat_coil")

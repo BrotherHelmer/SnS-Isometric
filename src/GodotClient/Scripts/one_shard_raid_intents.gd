@@ -89,7 +89,7 @@ static func label_for(intent: String) -> String:
 		INTENT_CENTER:
 			return "a push on the settlement centre"
 		INTENT_RITUAL:
-			return "a strike on the Binding"
+			return "a strike on the Seal"
 		INTENT_HARVESTER:
 			return "a raid on the Wyrd Harvester"
 		_:

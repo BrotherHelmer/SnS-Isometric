@@ -353,7 +353,7 @@ func start_new_run(width: int = MAP_WIDTH, height: int = MAP_HEIGHT, seed_value:
 		{"id": "wyrd", "text": "Harvest a Wyrd node with an Outpost", "complete": false},
 		{"id": "lumen", "text": "Extend connected Lumen toward the Shard", "complete": false},
 		{"id": "outpost", "text": "Build an Outpost toward the Shard", "complete": false},
-		{"id": "claim", "text": "Bind the fissure with 12 Stabilized Wyrd and hold the ritual", "complete": false}
+		{"id": "claim", "text": "Seal the Fissure with 12 Stabilized Wyrd and hold the ceremony", "complete": false}
 	]
 
 	next_building_id = 1
@@ -1339,7 +1339,10 @@ func _update_demo_beats() -> void:
 		return
 	if not demo_frontier_revealed and elapsed_seconds + 0.001 >= DEMO_FRONTIER_SECONDS:
 		_reveal_demo_frontier()
-	if not demo_rival_revealed and elapsed_seconds + 0.001 >= DEMO_RIVAL_SECONDS:
+	var rival_at := DEMO_RIVAL_SECONDS
+	if crater_war != null:
+		rival_at = crater_war.rival_reveal_seconds()
+	if not demo_rival_revealed and elapsed_seconds + 0.001 >= rival_at:
 		_reveal_demo_rival()
 	if elapsed_seconds + 0.001 >= DEMO_VICTORY_SECONDS:
 		_maybe_demo_hold_victory()
@@ -1443,16 +1446,31 @@ func _maybe_demo_hold_victory() -> void:
 	if crater_war != null:
 		crater_war.show_hold_milestone()
 		return
-	_finish_run(true, "THE REALM HOLDS — five days on the frontier. Binding the Shard remains the longer war.")
+	_finish_run(true, "THE REALM HOLDS — five days on the frontier. Shard Binding is a later act.")
+
+
+func request_begin_seal() -> Dictionary:
+	return request_begin_binding()
+
+
+func request_wyrd_choice(path: String) -> Dictionary:
+	if crater_war == null:
+		return _failure("Unavailable", "No Wyrd pact is offered this hour.")
+	return crater_war.request_choice(path)
 
 
 func request_begin_binding() -> Dictionary:
-	if crater_war != null and crater_war.can_begin():
-		var crater_result: Dictionary = crater_war.request_begin()
-		last_message = String(crater_result.get("message", ""))
-		return crater_result
+	if crater_war != null:
+		if crater_war.ritual_active:
+			return _failure("Busy", "The Seal is already underway.")
+		# This hour Seals the Fissure once the geologist has marked it.
+		# The real Shard Binding stays as a later-act hook below.
+		if crater_war.can_begin() or crater_war.geologist_surveyed:
+			var crater_result: Dictionary = crater_war.request_begin()
+			last_message = String(crater_result.get("message", ""))
+			return crater_result
 	if rivalry == null:
-		return _failure("Unavailable", "Binding is not ready.")
+		return _failure("LaterAct", "Shard Binding is a later act. This hour Seals the Fissure.")
 	var result: Dictionary = rivalry.request_begin_claim(RivalryTuning.PLAYER_REALM)
 	last_message = String(result.get("message", ""))
 	if bool(result.get("success", false)):
@@ -1563,7 +1581,7 @@ func get_macro_objective() -> Dictionary:
 		var claim: Dictionary = rivalry.get_claim_status(RivalryTuning.PLAYER_REALM)
 		binding_active = bool(claim.get("active", false))
 		binding_ready = bool(Dictionary(claim.get("requirements", {})).get("ready", false))
-	return Wyrdfall.macro_objective({
+	var objective: Dictionary = Wyrdfall.macro_objective({
 		"binding_active": binding_active,
 		"binding_ready": binding_ready,
 		"shard_control": float(get_pressure_inputs().get("shard_control", 0.0)),
@@ -1578,6 +1596,17 @@ func get_macro_objective() -> Dictionary:
 		"wyrd_total": int(central_inventory.get(Defs.RESOURCE_WYRD, 0)),
 		"connected_roads": connected_roads.size()
 	})
+	if crater_war != null:
+		if crater_war.ritual_active:
+			objective["title"] = "HOLD THE SEAL"
+			objective["detail"] = "Defend the fissure ceremony. Shard Binding is a later act."
+		elif crater_war.can_begin():
+			objective["title"] = "SEAL THE FISSURE"
+			objective["detail"] = "Begin the ceremony when the realm can hold. Shard Binding is a later act."
+		elif String(objective.get("id", "")) == Wyrdfall.OBJECTIVE_BIND:
+			objective["title"] = "SEAL THE FISSURE"
+			objective["detail"] = "Gather 12 Stabilized Wyrd and hold the ceremony."
+	return objective
 
 
 func get_wyrdfall_presentation() -> Dictionary:
@@ -1610,7 +1639,10 @@ func get_wyrdfall_presentation() -> Dictionary:
 		"dawn_summary": dawn_summary.duplicate(true),
 		"onboarding": _pending_onboarding_hint(),
 		"exposure": float(crater.get("exposure", 0.0)),
-		"stabilized": int(crater.get("stabilized", 0))
+		"stabilized": int(crater.get("stabilized", 0)),
+		"choice_ready": bool(crater.get("choice_ready", false)),
+		"choice": String(crater.get("choice", "")),
+		"rival_reveal_at": float(crater.get("rival_reveal_at", DEMO_RIVAL_SECONDS))
 	}
 
 
@@ -2788,9 +2820,9 @@ func get_claim_label() -> String:
 	if rivalry != null:
 		var presentation := get_wyrdfall_presentation()
 		if bool(presentation.get("binding_active", false)):
-			return "SHARD BINDING — %d%%" % int(presentation.get("binding_percent", 0))
+			return "SEAL THE FISSURE — %d%%" % int(presentation.get("binding_percent", 0))
 		if bool(presentation.get("binding_ready", false)):
-			return "Ready to Bind the Shard"
+			return "Ready to Seal the Fissure"
 		return String(get_macro_objective().get("title", "SURVIVE"))
 	if not claim_active:
 		return "No Shard claim"
@@ -7900,7 +7932,7 @@ func spawn_ritual_raid(wave_size: int = 4) -> void:
 	for i in range(maxi(1, wave_size)):
 		_spawn_enemy(origin, RaidTuning.NIGHT1_HP, RaidTuning.NIGHT1_DAMAGE, -0.08 * float(i), 0, ENEMY_RAIDER, RaidTuning.NIGHT1_ARMOR)
 	_begin_raid(0)
-	last_message = "RITUAL RAID — hostiles from %s mean the Binding." % String(raid_plan.get("bearing", "the wilds"))
+	last_message = "RITUAL RAID — hostiles from %s mean the Seal." % String(raid_plan.get("bearing", "the wilds"))
 	_add_log(last_message)
 	push_notice("danger", "RITUAL", last_message, "critical")
 	_record_event("ritual_raid", last_message, {"size": wave_size, "origin": origin})

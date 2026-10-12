@@ -34,10 +34,11 @@ func think(sim) -> Dictionary:
 	_defend_night(sim)
 	_pursue_economy(sim)
 	_pursue_crater_war(sim)
+	_try_wyrd_choice(sim)
 	_scout(sim)
 	_expand_toward_shard(sim)
 	_contest_rivals(sim)
-	_try_bind(sim)
+	_try_seal(sim)
 	if last_actions.is_empty() and last_idle_reason == "":
 		last_idle_reason = "waiting on workers, stock, or construction"
 	return _result()
@@ -238,23 +239,26 @@ func _contest_rivals(sim) -> void:
 				_note(sim, "PASSAGE", sim.crater_war.primary_fissure, String(fallback.get("message", "")))
 
 
-func _try_bind(sim) -> void:
+func _try_wyrd_choice(sim) -> void:
+	if sim.crater_war == null or not sim.crater_war.choice_ready():
+		return
+	var path: String = sim.crater_war.bot_path_for_seed(int(sim.rng_seed))
+	var result: Dictionary = sim.request_wyrd_choice(path)
+	if bool(result.get("success", false)):
+		_note(sim, "CHOICE", sim.crater_war.primary_fissure, String(result.get("message", "")))
+	else:
+		last_failures.append("choice: %s" % String(result.get("message", "")))
+
+
+func _try_seal(sim) -> void:
 	if sim.crater_war != null and sim.crater_war.can_begin():
-		var crater_bind: Dictionary = sim.request_begin_binding()
-		if bool(crater_bind.get("success", false)):
-			_note(sim, "BIND", sim.crater_war.primary_fissure, String(crater_bind.get("message", "")))
+		var crater_seal: Dictionary = sim.request_begin_seal()
+		if bool(crater_seal.get("success", false)):
+			_note(sim, "SEAL", sim.crater_war.primary_fissure, String(crater_seal.get("message", "")))
 		else:
-			last_failures.append("bind: %s" % String(crater_bind.get("message", "")))
+			last_failures.append("seal: %s" % String(crater_seal.get("message", "")))
 		return
-	if sim.rivalry == null:
-		return
-	var ready: Dictionary = sim.rivalry.claim_requirements("player")
-	if bool(ready.get("ready", false)):
-		var result: Dictionary = sim.request_begin_binding()
-		if bool(result.get("success", false)):
-			_note(sim, "BIND", sim.shard_position, String(result.get("message", "")))
-		else:
-			last_failures.append("bind: %s" % String(result.get("message", "")))
+	# Later-act hook: do not start Shard Binding this hour.
 
 
 func _try_waypoint_outpost(sim) -> bool:

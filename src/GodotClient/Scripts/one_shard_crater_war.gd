@@ -1,16 +1,20 @@
 extends RefCounted
 
-## The Director: The Crater War vertical slice.
-## Binding is at the frontier fissure — 12 Stabilized Wyrd plus a 120 s
-## ritual that must be defended. The player starts it when the store is
-## ready; there is no clock unlock. Survival (THE REALM HOLDS) is a
-## milestone, not a win. One rival keeps contesting the same fissure.
-## Economy pacing (not a timer) lands 12 Stabilized around minute 40–52.
+## The Director: TEST #16 — Seal the Fissure.
+## This hour's climax is Sealing the frontier fissure: 12 Stabilized Wyrd
+## plus a 120 s ceremony the player starts when the store is ready.
+## The real Shard Binding is a later act (see shard_binding_hook).
+## Survival (THE REALM HOLDS) is a milestone, not a win.
+## At 6 Stabilized the player chooses faster refining or a 3-stab
+## investment in secure harvesting. The rival reacts to the player:
+## seeded reveal 14:00–20:00, a push after the first harvest, a raid
+## after the first Stabilized. No +180/+360 clocks.
 
 const Defs = preload("one_shard_defs.gd")
 const RivalryTuning = preload("one_shard_rivalry_tuning.gd")
 
 const STABILIZED_TO_BIND := 12
+const STABILIZED_TO_CHOOSE := 6
 const RITUAL_SECONDS := 120.0
 const HARVEST_INTERVAL := 32.0
 const HARVEST_AMOUNT := 1
@@ -18,6 +22,12 @@ const REFINE_INTERVAL := 22.0
 const REFINE_INPUT := 3
 const REFINE_OUTPUT := 1
 const RAW_RESERVE := 3
+const PATH_REFINE := "refine"
+const PATH_SECURE := "secure"
+const SECURE_INVESTMENT := 3
+const REFINE_PATH_INTERVAL := 12.0
+const REFINE_PATH_INPUT := 3
+const SECURE_HARVEST_INTERVAL := 18.0
 const PASSAGE_WOOD := 8
 const CAPTURE_WOOD := 8
 const CAPTURE_STONE := 4
@@ -27,13 +37,17 @@ const ASSAULT_FORCE_SECONDS := 75.0
 const LATER_ASSAULT_FORCE_SECONDS := 150.0
 const RITUAL_RAID_SIZE := 2
 const HARVESTER_RAID_SIZE := 1
-const SECOND_PUSH_DELAY := 180.0
-const HARVESTER_RAID_DELAY := 360.0
+const SECURE_RAID_SIZE := 0
+const RIVAL_REVEAL_MIN := 14.0 * 60.0
+const RIVAL_REVEAL_SPAN := 6.0 * 60.0
+const REACTION_MIN := 8.0
+const REACTION_SPAN := 16.0
 const CONTEST_REPEAT_DELAY := 150.0
 const SECONDARY_OFFSET := Vector2i(8, -5)
 const ROUTE_OUTPOST_MIN_T := 0.22
 const ROUTE_OUTPOST_MAX_T := 0.82
 const ROUTE_OUTPOST_SLACK := 6.5
+const BOT_PATH_SEEDS := [260821, 261306, 261597, 260918]
 
 var simulation
 var fissure_tiles: Array = []
@@ -67,11 +81,20 @@ var contest_count := 0
 var last_exposure_raid_band := ""
 var first_12_at := -1.0
 var refiner_pending_since := -1.0
+var first_harvest_at := -1.0
+var first_stabilized_at := -1.0
+var rival_reveal_at := -1.0
+var push_reaction := 12.0
+var raid_reaction := 16.0
+var wyrd_choice := ""
+var choice_offered_at := -1.0
+var choice_taken_at := -1.0
 
 
 func setup(owner) -> void:
 	simulation = owner
 	reset()
+	_seed_rival_timing()
 
 
 func reset() -> void:
@@ -106,6 +129,16 @@ func reset() -> void:
 	last_exposure_raid_band = ""
 	first_12_at = -1.0
 	refiner_pending_since = -1.0
+	first_harvest_at = -1.0
+	first_stabilized_at = -1.0
+	rival_reveal_at = -1.0
+	push_reaction = 12.0
+	raid_reaction = 16.0
+	wyrd_choice = ""
+	choice_offered_at = -1.0
+	choice_taken_at = -1.0
+	if simulation != null:
+		_seed_rival_timing()
 
 
 func tick(delta: float) -> void:
@@ -117,6 +150,7 @@ func tick(delta: float) -> void:
 	_ward_harvester(delta)
 	_update_exposure(delta)
 	_maybe_force_capture()
+	_maybe_offer_choice()
 	_maybe_rival_contest()
 	_note_twelve()
 	_tick_ritual(delta)
@@ -224,27 +258,27 @@ func begin_requirements() -> Dictionary:
 	return {
 		"ready": missing.is_empty(),
 		"missing": missing,
-		"summary": "Ready to Bind the fissure." if missing.is_empty() else "Needs: %s." % ", ".join(missing)
+		"summary": "Ready to Seal the Fissure." if missing.is_empty() else "Needs: %s." % ", ".join(missing)
 	}
 
 
 func request_begin() -> Dictionary:
 	var requirements := begin_requirements()
 	if not bool(requirements.get("ready", false)):
-		return _failure("ClaimRequirements", String(requirements.get("summary", "Binding requirements are not met.")))
+		return _failure("ClaimRequirements", String(requirements.get("summary", "Seal requirements are not met.")))
 	var taken := _take_stabilized(STABILIZED_TO_BIND)
 	if taken < STABILIZED_TO_BIND:
-		return _failure("Wyrd", "The ritual needs %d Stabilized Wyrd in the store." % STABILIZED_TO_BIND)
+		return _failure("Wyrd", "The ceremony needs %d Stabilized Wyrd in the store." % STABILIZED_TO_BIND)
 	ritual_active = true
 	ritual_progress = 0.0
 	ritual_raid_spawned = false
 	ritual_started_at = float(simulation.elapsed_seconds)
 	simulation.reckoning_active = true
-	var message := "BINDING BEGUN — defend the fissure ritual for 120 seconds."
+	var message := "SEAL BEGUN — defend the fissure ceremony for 120 seconds."
 	simulation.last_message = message
 	simulation._add_log(message)
-	simulation.push_notice("danger", "BINDING", message, "critical")
-	simulation._record_event("binding_started", message, {"stabilized": STABILIZED_TO_BIND})
+	simulation.push_notice("danger", "SEAL", message, "critical")
+	simulation._record_event("binding_started", message, {"stabilized": STABILIZED_TO_BIND, "climax": "seal"})
 	simulation._mark_onboarding("binding")
 	return _success(message)
 
@@ -316,7 +350,7 @@ func show_hold_milestone() -> void:
 	if hold_milestone_shown:
 		return
 	hold_milestone_shown = true
-	var message := "THE REALM HOLDS — five days on the frontier. Binding the fissure is the war that remains."
+	var message := "THE REALM HOLDS — five days on the frontier. Seal the Fissure is the war that remains. Shard Binding is a later act."
 	simulation.last_message = message
 	simulation._add_log(message)
 	simulation.push_notice("info", "MILESTONE", message, "warning")
@@ -348,12 +382,18 @@ func presentation() -> Dictionary:
 		"binding_active": ritual_active,
 		"binding_ready": can_begin(),
 		"binding_percent": percent,
-		"binding_summary": "SHARD BINDING — %d%%" % percent if ritual_active else begin_requirements().get("summary", ""),
+		"binding_summary": "SEAL THE FISSURE — %d%%" % percent if ritual_active else begin_requirements().get("summary", ""),
 		"rival_line": rival_line,
 		"exposure": exposure,
 		"stabilized": stabilized_stock(),
 		"surveyed": geologist_surveyed,
-		"resolution": rival_resolution
+		"resolution": rival_resolution,
+		"choice_ready": choice_ready(),
+		"choice": wyrd_choice,
+		"choice_offered_at": choice_offered_at,
+		"rival_reveal_at": rival_reveal_at,
+		"seal_ready": can_begin(),
+		"seal_active": ritual_active
 	}
 
 
@@ -391,20 +431,27 @@ func _unstick_refiner() -> void:
 func _tick_production(delta: float) -> void:
 	if _has_completed(Defs.BUILDING_WYRD_HARVESTER):
 		harvest_timer += delta
-		var interval := HARVEST_INTERVAL if route_secured() else HARVEST_INTERVAL * 2.0
+		var interval := _harvest_interval()
 		if harvest_timer >= interval:
 			harvest_timer = 0.0
 			simulation.central_inventory[Defs.RESOURCE_WYRD] = int(simulation.central_inventory.get(Defs.RESOURCE_WYRD, 0)) + HARVEST_AMOUNT
 			simulation.stats["wyrd_extracted"] = int(simulation.stats.get("wyrd_extracted", 0)) + HARVEST_AMOUNT
 			simulation.cumulative_wyrd_extracted = int(simulation.cumulative_wyrd_extracted) + HARVEST_AMOUNT
+			if first_harvest_at < 0.0:
+				first_harvest_at = float(simulation.elapsed_seconds)
+				simulation._record_event("first_harvest", "The harvester drinks the first raw Wyrd.", {"seconds": first_harvest_at})
 	if _has_completed(Defs.BUILDING_WYRD_REFINER):
 		refine_timer += delta
-		if refine_timer >= REFINE_INTERVAL:
+		if refine_timer >= _refine_interval():
 			refine_timer = 0.0
 			var raw := raw_stock()
-			if raw >= REFINE_INPUT:
-				simulation.central_inventory[Defs.RESOURCE_WYRD] = raw - REFINE_INPUT
+			var need := _refine_input()
+			if raw >= need:
+				simulation.central_inventory[Defs.RESOURCE_WYRD] = raw - need
 				simulation.central_inventory[Defs.RESOURCE_STABILIZED_WYRD] = stabilized_stock() + REFINE_OUTPUT
+				if first_stabilized_at < 0.0:
+					first_stabilized_at = float(simulation.elapsed_seconds)
+					simulation._record_event("first_stabilized", "The refiner yields the first Stabilized Wyrd.", {"seconds": first_stabilized_at})
 
 
 func _update_exposure(delta: float) -> void:
@@ -453,30 +500,35 @@ func _maybe_force_capture() -> void:
 func _maybe_rival_contest() -> void:
 	if ritual_active or bool(simulation.game_finished):
 		return
-	if capture_at < 0.0 and rival_resolution == "":
-		return
 	var now := float(simulation.elapsed_seconds)
-	var origin := capture_at if capture_at >= 0.0 else now
-	if not second_push_done and now >= origin + SECOND_PUSH_DELAY:
-		if _plant_rival_contest("second_push"):
-			second_push_done = true
-			second_push_at = now
-			last_contest_at = now
-	if not harvester_raid_done and now >= origin + HARVESTER_RAID_DELAY:
-		if _call_harvester_raid("rival"):
-			harvester_raid_done = true
-			harvester_raid_at = now
+	# Push after the player's first harvest, once the rival is on the map.
+	if not second_push_done and first_harvest_at >= 0.0 and bool(simulation.demo_rival_revealed):
+		if now + 0.001 >= first_harvest_at + push_reaction and now + 0.001 >= rival_reveal_at:
+			if _plant_rival_contest("second_push"):
+				second_push_done = true
+				second_push_at = now
+				last_contest_at = now
+	# Raid after the player's first Stabilized. Path B lowers the pressure.
+	if not harvester_raid_done and first_stabilized_at >= 0.0:
+		if now + 0.001 >= first_stabilized_at + raid_reaction:
+			if _harvester_raid_size() <= 0:
+				harvester_raid_done = true
+				harvester_raid_at = now
+				simulation._record_event("harvester_raid", "SECURE HARVEST — the invested ward turns the rival raid aside.", {"reason": "secure", "size": 0})
+			elif _call_harvester_raid("rival"):
+				harvester_raid_done = true
+				harvester_raid_at = now
 	if second_push_done and last_contest_at >= 0.0 and now >= last_contest_at + CONTEST_REPEAT_DELAY:
 		if not _rival_outpost_alive():
 			if _plant_rival_contest("contest"):
 				last_contest_at = now
-	# One harvester raid is the contest beat. A second exposure raid
-	# wiped the vent on the slow seed and starved Stabilized.
 
 
 func route_secured() -> bool:
-	# A living Outpost on the vent or on the hall–fissure corridor
-	# unlocks full harvest. The frontier stake counts.
+	# Path B buys a secured vent. Otherwise a living Outpost on the
+	# vent or the hall–fissure corridor unlocks full harvest.
+	if wyrd_choice == PATH_SECURE:
+		return true
 	return _route_outpost_count() >= 1 or _binding_outpost_alive()
 
 
@@ -618,7 +670,7 @@ func _call_harvester_raid(reason: String) -> bool:
 		return false
 	if not simulation.has_method("spawn_harvester_raid"):
 		return false
-	simulation.spawn_harvester_raid(HARVESTER_RAID_SIZE)
+	simulation.spawn_harvester_raid(_harvester_raid_size())
 	var message := "HARVESTER RAID — the rival strikes the Wyrd vent." if reason == "rival" else "EXPOSURE RAID — raw Wyrd draws hostiles to the harvester."
 	simulation.last_message = message
 	simulation._add_log(message)
@@ -671,7 +723,7 @@ func _tick_ritual(delta: float) -> void:
 	if not ritual_active or bool(simulation.game_finished):
 		return
 	if not _binding_outpost_alive():
-		_fail_ritual("The ritual Outpost fell. Binding is broken.")
+		_fail_ritual("The ceremony Outpost fell. The Seal is broken.")
 		return
 	if not ritual_raid_spawned:
 		ritual_raid_spawned = true
@@ -687,7 +739,7 @@ func _complete_ritual() -> void:
 	ritual_active = false
 	simulation.reckoning_active = false
 	simulation._update_objective_flag("claim")
-	simulation._finish_run(true, "THE FISSURE IS BOUND — the ritual held.")
+	simulation._finish_run(true, "THE FISSURE IS SEALED — the ceremony held.")
 
 
 func _fail_ritual(reason: String) -> void:
@@ -697,8 +749,8 @@ func _fail_ritual(reason: String) -> void:
 	simulation.central_inventory[Defs.RESOURCE_STABILIZED_WYRD] = stabilized_stock() + STABILIZED_TO_BIND
 	simulation.last_message = reason
 	simulation._add_log(reason)
-	simulation.push_notice("danger", "BINDING BROKEN", reason, "critical")
-	simulation._record_event("binding_failed", reason, {})
+	simulation.push_notice("danger", "SEAL BROKEN", reason, "critical")
+	simulation._record_event("binding_failed", reason, {"climax": "seal"})
 
 
 func _ward_binding_outpost(delta: float) -> void:
@@ -728,6 +780,102 @@ func _binding_outpost_alive() -> bool:
 
 func _has_completed(building_type: String) -> bool:
 	return simulation._player_has_completed_building(building_type)
+
+
+func _seed_rival_timing() -> void:
+	if simulation == null:
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(simulation.rng_seed) * 17 + 916
+	rival_reveal_at = RIVAL_REVEAL_MIN + rng.randf() * RIVAL_REVEAL_SPAN
+	push_reaction = REACTION_MIN + rng.randf() * REACTION_SPAN
+	raid_reaction = REACTION_MIN + rng.randf() * REACTION_SPAN
+
+
+func rival_reveal_seconds() -> float:
+	if rival_reveal_at < 0.0:
+		_seed_rival_timing()
+	return rival_reveal_at
+
+
+func choice_ready() -> bool:
+	if wyrd_choice != "" or ritual_active or bool(simulation.game_finished):
+		return false
+	return stabilized_stock() >= STABILIZED_TO_CHOOSE
+
+
+func bot_path_for_seed(seed_value: int) -> String:
+	var index := BOT_PATH_SEEDS.find(seed_value)
+	if index < 0:
+		index = posmod(seed_value, 2)
+	return PATH_REFINE if index % 2 == 0 else PATH_SECURE
+
+
+func request_choice(path: String) -> Dictionary:
+	if not choice_ready():
+		if wyrd_choice != "":
+			return _failure("Chosen", "The Wyrd pact is already sealed: %s." % wyrd_choice)
+		return _failure("NotReady", "The store needs %d Stabilized Wyrd before a pact." % STABILIZED_TO_CHOOSE)
+	var picked := path.strip_edges().to_lower()
+	if picked == "a" or picked == "focus" or picked == "faster":
+		picked = PATH_REFINE
+	if picked == "b" or picked == "invest" or picked == "ward":
+		picked = PATH_SECURE
+	if picked != PATH_REFINE and picked != PATH_SECURE:
+		return _failure("Path", "Choose faster refining or secure harvesting.")
+	if picked == PATH_SECURE:
+		var taken := _take_stabilized(SECURE_INVESTMENT)
+		if taken < SECURE_INVESTMENT:
+			return _failure("Wyrd", "Secure harvesting invests %d Stabilized Wyrd." % SECURE_INVESTMENT)
+	wyrd_choice = picked
+	choice_taken_at = float(simulation.elapsed_seconds)
+	var message := ""
+	if picked == PATH_REFINE:
+		message = "FASTER REFINING — the kiln runs hotter. Raw converts before exposure can burn it."
+	else:
+		message = "SECURE HARVEST — 3 Stabilized ward the vent. Raids lose their teeth."
+	simulation.last_message = message
+	simulation._add_log(message)
+	simulation.push_notice("info", "PACT", message, "warning")
+	simulation._record_event("wyrd_choice", message, {"path": picked, "seconds": choice_taken_at})
+	return _success(message)
+
+
+func shard_binding_hook() -> Dictionary:
+	# Later act: the real Shard Binding is not implemented this hour.
+	return {
+		"available": false,
+		"act": "later",
+		"summary": "Shard Binding is a later act. This hour Seals the Fissure."
+	}
+
+
+func _maybe_offer_choice() -> void:
+	if choice_offered_at >= 0.0 or not choice_ready():
+		return
+	choice_offered_at = float(simulation.elapsed_seconds)
+	var message := "6 STABILIZED — choose faster refining, or invest 3 to secure the harvester."
+	simulation.last_message = message
+	simulation._add_log(message)
+	simulation.push_notice("info", "CHOICE", message, "warning")
+	simulation._record_event("wyrd_choice_offered", message, {"stabilized": stabilized_stock()})
+
+
+func _harvest_interval() -> float:
+	var base := SECURE_HARVEST_INTERVAL if wyrd_choice == PATH_SECURE else HARVEST_INTERVAL
+	return base if route_secured() else HARVEST_INTERVAL * 2.0
+
+
+func _refine_interval() -> float:
+	return REFINE_PATH_INTERVAL if wyrd_choice == PATH_REFINE else REFINE_INTERVAL
+
+
+func _refine_input() -> int:
+	return REFINE_PATH_INPUT if wyrd_choice == PATH_REFINE else REFINE_INPUT
+
+
+func _harvester_raid_size() -> int:
+	return SECURE_RAID_SIZE if wyrd_choice == PATH_SECURE else HARVESTER_RAID_SIZE
 
 
 func _note_storehouse() -> void:

@@ -65,7 +65,7 @@ const BUILD_PURPOSES := {
 	"LUMEN_PILLAR": "Extends Lumen so settlement can exist in the Wyrd-corrupted wilds.",
 	"CLAIMANT_OUTPOST": "Pushes your realm toward the Shard. Harvests Wyrd and raises night pressure.",
 	"WYRD_HARVESTER": "Sits on a marked fissure and drinks raw Wyrd. Unlumened harvesters raise Exposure.",
-	"WYRD_REFINER": "Turns 2 raw Wyrd into 1 Stabilized Wyrd for the Binding ritual.",
+	"WYRD_REFINER": "Turns raw Wyrd into Stabilized Wyrd for Sealing the Fissure.",
 	"CLEAR_AREA": "Mark trees for high-priority clearing. Not required for normal building.",
 }
 const AUDIO_PATHS := {
@@ -232,6 +232,8 @@ var objective_label: Label
 var pressure_label: Label
 var loop_label: Label
 var bind_button: Button
+var choice_refine_button: Button
+var choice_secure_button: Button
 var result_overlay: Control
 var result_title: Label
 var result_body: RichTextLabel
@@ -249,6 +251,7 @@ var minimap_expanded := false
 var first_screen_hint_log: Array[Dictionary] = []
 var reach_guidance_shown := false
 var last_objective_id := ""
+var last_seal_active := false
 var last_run_seed := DEFAULT_SEED
 var hud_root: Control
 var play_has_begun := false
@@ -1124,12 +1127,28 @@ func _create_ui() -> void:
 	status_row.add_child(loop_label)
 	bind_button = Button.new()
 	bind_button.name = "BeginBinding"
-	bind_button.text = "BIND THE SHARD"
+	bind_button.text = "SEAL THE FISSURE"
 	bind_button.visible = false
 	bind_button.custom_minimum_size.x = 132.0
 	Identity.apply_button(bind_button, true)
 	bind_button.pressed.connect(_prompt_binding)
 	status_row.add_child(bind_button)
+	choice_refine_button = Button.new()
+	choice_refine_button.name = "ChoiceRefine"
+	choice_refine_button.text = "FASTER REFINE"
+	choice_refine_button.visible = false
+	choice_refine_button.custom_minimum_size.x = 128.0
+	Identity.apply_button(choice_refine_button, true)
+	choice_refine_button.pressed.connect(func() -> void: _confirm_wyrd_choice("refine"))
+	status_row.add_child(choice_refine_button)
+	choice_secure_button = Button.new()
+	choice_secure_button.name = "ChoiceSecure"
+	choice_secure_button.text = "SECURE HARVEST"
+	choice_secure_button.visible = false
+	choice_secure_button.custom_minimum_size.x = 140.0
+	Identity.apply_button(choice_secure_button, true)
+	choice_secure_button.pressed.connect(func() -> void: _confirm_wyrd_choice("secure"))
+	status_row.add_child(choice_secure_button)
 	binding_percent_label = Label.new()
 	binding_percent_label.name = "BindingProgress"
 	binding_percent_label.visible = false
@@ -2363,6 +2382,9 @@ func _update_loop_hud() -> void:
 		wyrdfall = simulation_host.simulation.get_wyrdfall_presentation()
 	var objective: Dictionary = wyrdfall.get("objective", {})
 	var binding_active := bool(wyrdfall.get("binding_active", false))
+	if binding_active and not last_seal_active:
+		_glance_at_seal()
+	last_seal_active = binding_active
 	var steps: Array = objective.get("steps", [])
 	if objective_button != null:
 		var intention: Dictionary = simulation_host.simulation.get_current_intention()
@@ -2373,7 +2395,7 @@ func _update_loop_hud() -> void:
 				active_sim_obj = String(obj.get("text", ""))
 				break
 		if binding_active:
-			objective_button.text = "HOLD THE BINDING"
+			objective_button.text = "HOLD THE SEAL"
 		elif not intention.is_empty():
 			var next_step := String(intention.get("title", ""))
 			for row in intention.get("criteria", []):
@@ -2448,6 +2470,11 @@ func _update_loop_hud() -> void:
 			loop_label.add_theme_color_override("font_color", Color("#ff9d8f") if raid_now else (Color("#b9c8ff") if simulation_host.simulation.is_night else Color("#e6dcc0")))
 	if bind_button != null:
 		bind_button.visible = bool(wyrdfall.get("binding_ready", false)) and not simulation_host.simulation.game_finished and not binding_active
+	var choice_open: bool = bool(wyrdfall.get("choice_ready", false)) and not bool(simulation_host.simulation.game_finished)
+	if choice_refine_button != null:
+		choice_refine_button.visible = choice_open
+	if choice_secure_button != null:
+		choice_secure_button.visible = choice_open
 	if nightfall_panel != null:
 		nightfall_panel.visible = Time.get_ticks_msec() / 1000.0 < nightfall_event_until and (startup_overlay == null or not startup_overlay.visible)
 	var dawn: Dictionary = wyrdfall.get("dawn_summary", {})
@@ -3208,6 +3235,15 @@ func _show_objective_detail(value: bool) -> void:
 	objective_detail_body.text = "\n".join(lines)
 
 
+func _glance_at_seal() -> void:
+	if camera_rig == null or world_view == null or simulation_host.simulation == null:
+		return
+	if simulation_host.simulation.crater_war == null or simulation_host.simulation.crater_war.primary_fissure.x < 0:
+		return
+	var fissure_world := world_view.tile_to_world(Vector2(simulation_host.simulation.crater_war.primary_fissure))
+	camera_rig.compose_view(fissure_world, 40.0)
+
+
 func _glance_at_shard() -> void:
 	if camera_rig == null or world_view == null or simulation_host.simulation == null:
 		return
@@ -3704,7 +3740,7 @@ func _menu_action(host: VBoxContainer, node_name: String, text: String, height: 
 	button.name = node_name
 	button.text = text
 	button.custom_minimum_size.y = height
-	Identity.apply_button(button, text in ["BEGIN", "NEW REALM", "BEGIN BINDING", "RESUME"])
+	Identity.apply_button(button, text in ["BEGIN", "NEW REALM", "BEGIN BINDING", "BEGIN THE SEAL", "RESUME"])
 	button.pressed.connect(func() -> void:
 		if audio_director != null:
 			audio_director.play_ui_click()
@@ -3813,13 +3849,13 @@ func _create_binding_confirm(root: Control) -> void:
 	confirm_overlay.add_child(panel)
 	var box := _menu_box(panel)
 	var title := Label.new()
-	title.text = "BEGIN SHARD BINDING"
+	title.text = "SEAL THE FISSURE"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	Identity.apply_label(title, "wyrd")
 	title.add_theme_font_size_override("font_size", 22)
 	box.add_child(title)
 	var warning := Label.new()
-	warning.text = "The Wyrd will react violently.\nRequires an operational Shard Outpost and 12 Wyrd."
+	warning.text = "The ceremony will draw the Wyrd.\nRequires 12 Stabilized Wyrd and an Outpost on the fissure.\nShard Binding is a later act."
 	warning.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	warning.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	Identity.apply_label(warning, "caption")
@@ -3829,7 +3865,7 @@ func _create_binding_confirm(root: Control) -> void:
 	row.add_theme_constant_override("separation", 12)
 	box.add_child(row)
 	var confirm := Button.new()
-	confirm.text = "BEGIN BINDING"
+	confirm.text = "BEGIN THE SEAL"
 	Identity.apply_button(confirm, true)
 	confirm.pressed.connect(_confirm_binding)
 	row.add_child(confirm)
@@ -3850,7 +3886,14 @@ func _confirm_binding() -> void:
 		confirm_overlay.visible = false
 	if simulation_host.simulation == null:
 		return
-	var result: Dictionary = simulation_host.simulation.request_begin_binding()
+	var result: Dictionary = simulation_host.simulation.request_begin_seal()
+	_show_command_result(result)
+
+
+func _confirm_wyrd_choice(path: String) -> void:
+	if simulation_host.simulation == null:
+		return
+	var result: Dictionary = simulation_host.simulation.request_wyrd_choice(path)
 	_show_command_result(result)
 
 
@@ -3867,10 +3910,13 @@ func _show_result_screen() -> void:
 	result_overlay.visible = true
 	_set_play_chrome_visible(false)
 	if simulation_host.simulation != null and world_view != null and camera_rig != null:
-		simulation_host.simulation._reveal_radius(simulation_host.simulation.shard_position, 7)
+		var focus_tile: Vector2i = simulation_host.simulation.shard_position
+		if simulation_host.simulation.crater_war != null and simulation_host.simulation.crater_war.primary_fissure.x >= 0:
+			focus_tile = simulation_host.simulation.crater_war.primary_fissure
+		simulation_host.simulation._reveal_radius(focus_tile, 7)
 		world_view.last_revealed_count = -1
 		_sync_presentation()
-		camera_rig.compose_view(world_view.tile_to_world(Vector2(simulation_host.simulation.shard_position)), 42.0)
+		camera_rig.compose_view(world_view.tile_to_world(Vector2(focus_tile)), 38.0)
 	_update_day_night_lighting()
 
 
@@ -3885,8 +3931,8 @@ func _refresh_result_body() -> void:
 	var reason := String(stats.get("defeat_reason", ""))
 	if won and reason.contains("HOLDS"):
 		result_title.text = "THE REALM HOLDS\nFIVE DAYS"
-	elif won and (reason.contains("FISSURE") or reason.contains("BOUND")):
-		result_title.text = "THE FISSURE IS BOUND\nTHE RITUAL HELD"
+	elif won and (reason.contains("FISSURE") or reason.contains("SEALED") or reason.contains("BOUND")):
+		result_title.text = "THE FISSURE IS SEALED\nTHE CEREMONY HELD"
 	elif won:
 		result_title.text = "SHARD BOUND\nREALM SECURED"
 	else:
