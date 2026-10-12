@@ -4192,6 +4192,10 @@ func _channel_tooltip(wyrdfall: Dictionary, remain: float) -> String:
 
 
 func _tick_victory_hold() -> void:
+	# Playthrough / review captures keep the host paused and frame the
+	# fissure themselves. Live play is unpaused, so the 2 s hold still runs.
+	if simulation_host.paused:
+		return
 	if not victory_hold_started:
 		victory_hold_started = true
 		victory_hold_until = Time.get_ticks_msec() / 1000.0 + VICTORY_HOLD_SECONDS

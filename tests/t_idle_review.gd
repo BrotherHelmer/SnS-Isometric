@@ -31,7 +31,7 @@ func _run() -> void:
 	sim.central_inventory[Defs.RESOURCE_PLANKS] = 0
 	sim.housing_capacity = 16
 	sim.population_current = 16
-	var hall := sim.town_hall_position
+	var hall: Vector2i = sim.town_hall_position
 	var house: Dictionary = sim._create_building(Defs.BUILDING_CONSTRUCTION_SITE, hall + Vector2i(3, 2))
 	house["planned_type"] = Defs.BUILDING_HOUSE
 	house["construction"] = true
@@ -66,24 +66,27 @@ func _run() -> void:
 	wall["max_hp"] = Defs.building_hp(Defs.BUILDING_WALL)
 	sim.buildings.append(wall)
 	sim.request_channel_wyrd()
+	sim.is_night = false
 	game._update_ui()
 	await _shot(game, sim, dest.path_join("channel_feedback.png"), sim.crater_war.last_channel_tile, 48.0)
 
 	sim.crater_war.ritual_progress = CraterWar.RITUAL_SECONDS
 	sim.victory = true
 	sim.game_finished = true
+	sim.is_night = false
 	sim.defeat_reason = "THE FISSURE IS SEALED — the ceremony held."
 	sim.crater_war.channel_uses = maxi(1, sim.crater_war.channel_uses)
+	sim.crater_war.victory_ceremony = true
 	sim.crater_war.wyrd_choice = CraterWar.PATH_REFINE
 	sim.crater_war.seal_choice = CraterWar.PATH_WALL
 	sim.crater_war.midgame_choice = CraterWar.PATH_SHELTER
 	sim.elapsed_seconds = 50.0 * 60.0 + 35.0
-	if game.has_method("_frame_victory_fissure"):
-		game._frame_victory_fissure()
 	if game.result_overlay != null:
 		game.result_overlay.visible = false
 	if game.has_method("_set_play_chrome_visible"):
 		game._set_play_chrome_visible(true)
+	if game.has_method("_frame_victory_fissure"):
+		game._frame_victory_fissure()
 	await _shot(game, sim, dest.path_join("fissure_calm.png"), sim.crater_war.primary_fissure, 42.0)
 	if game.has_method("_show_result_screen"):
 		game._show_result_screen()
