@@ -1,0 +1,23 @@
+You are re-reviewing Shard & Sovereign after TEST #17 — Seal defence choice and visible rival escalation (PR #84). The climax is still Sealing the frontier fissure when the store holds 12 Stabilized Wyrd. At ~60 s of the 120 s defence the player reinforces the wall or overcharges the Seal. The rival foreshadows at 10–15 min, then growing banners, a marked army route / ping, and a TIER / threat indicator land on the map before each push or raid.
+
+Read PLAYTHROUGH.md first. Then look at the screenshots in this folder in this order. These are the ONLY attached images:
+
+- t00_start.png — founding yard, first quest
+- t05_storehouse.png — Sawmill / Storehouse plank loop complete (minute 5)
+- t07_first_raid.png — night 1, 2 raiders, 60 s warning
+- t12_frontier.png — crater west, geologist marks the fissure
+- t14_foreshadow.png — distant rival smoke / scout sighting before the reveal
+- t22_escalation.png — rival banners grow, army route marked, TIER 3 PUSH before the Outpost lands
+- t24_harvester_raid.png — raid ping on the map, TIER 4 RAID onto the Wyrd vent
+- t31_choice.png — 6 Stabilized pact: faster refining (A) vs secure harvest (B)
+- t44_seal_choice.png — 60 s Seal defence: reinforce the wall vs overcharge the Seal
+- t45_victory.png — THE FISSURE IS SEALED / THE CEREMONY HELD at 45:31
+
+The bot chose path A + wall on this seed, B + overcharge on 261306 / 260918, and A + wall on 261597. Other seeds seal at 44:59 / 44:43 / 53:07. Longest idle stretches: 1:04 / 1:42 / 1:48 / 1:28.
+
+Rate the fun of this Seal defence hour 1–10. Judge pacing against the previous 45:12 Seal hour (PR #83).
+
+Return:
+1. Fun score (1–10) and one-sentence reason
+2. Pacing notes (what now works, where it is still dead)
+3. Remaining P0/P1/P2 only if needed — smallest changes, no redesign
