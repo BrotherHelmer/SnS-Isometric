@@ -471,10 +471,12 @@ func _capture(game, sim, name_value: String, caption: String) -> void:
 	game._sync_presentation()
 	if game.has_method("_update_ui"):
 		game._update_ui()
-	for _i in 8:
+	for _i in 16:
 		await process_frame
 		if game.world_view != null:
-			game.world_view.stream_chunks(12000)
+			game.world_view.stream_chunks(16000)
+			if game.world_view.has_method("_sync_map_markers"):
+				game.world_view._sync_map_markers()
 	await RenderingServer.frame_post_draw
 	var image: Image = root.get_viewport().get_texture().get_image()
 	if image == null or image.is_empty():
@@ -502,11 +504,11 @@ func _frame_camera(game, sim, name_value: String) -> void:
 		focus = _rival_focus(game, sim)
 		if name_value.contains("foreshadow"):
 			focus = _smoke_focus(game, sim)
-		zoom = 48.0
+		zoom = 62.0
 	elif name_value.contains("seal") or name_value.contains("choice") or name_value.contains("ritual"):
 		if sim.crater_war != null and sim.crater_war.primary_fissure.x >= 0:
 			focus = game.world_view.tile_to_world(Vector2(sim.crater_war.primary_fissure))
-		zoom = 44.0
+		zoom = 58.0
 	elif name_value.contains("victory") or name_value.contains("end"):
 		if sim.crater_war != null and sim.crater_war.primary_fissure.x >= 0:
 			focus = game.world_view.tile_to_world(Vector2(sim.crater_war.primary_fissure))

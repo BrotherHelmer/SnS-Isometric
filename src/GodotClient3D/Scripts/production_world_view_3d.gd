@@ -5238,10 +5238,12 @@ func _sync_map_markers() -> void:
 		host.add_child(root)
 		var label := Label3D.new()
 		label.text = title
-		label.font_size = 26 if kind in ["rival_banner", "rival_route", "rival_smoke"] else 28
+		label.font_size = 54 if kind in ["rival_threat", "seal_choice"] else 42
 		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		label.no_depth_test = true
-		label.position = Vector3.UP * 2.6
+		label.outline_size = 10
+		label.outline_modulate = Color(0.05, 0.03, 0.02, 1.0)
+		label.position = Vector3.UP * (5.4 if kind == "rival_banner" else 3.6)
 		if kind == "raid":
 			label.modulate = Color("#f05a4a")
 		elif kind in ["rival", "rival_banner", "rival_threat"]:
@@ -5273,43 +5275,43 @@ func _banner_mesh(color: Color) -> Node3D:
 	var group := Node3D.new()
 	var pole := MeshInstance3D.new()
 	var cyl := CylinderMesh.new()
-	cyl.top_radius = 0.045
-	cyl.bottom_radius = 0.055
-	cyl.height = 2.2
+	cyl.top_radius = 0.09
+	cyl.bottom_radius = 0.12
+	cyl.height = 6.4
 	pole.mesh = cyl
-	pole.position = Vector3.UP * 1.1
+	pole.position = Vector3.UP * 3.2
 	var pole_mat := StandardMaterial3D.new()
 	pole_mat.albedo_color = Color("#3a2a22")
 	pole.material_override = pole_mat
 	group.add_child(pole)
 	var flag := MeshInstance3D.new()
 	var box := BoxMesh.new()
-	box.size = Vector3(0.85, 0.48, 0.04)
+	box.size = Vector3(2.4, 1.35, 0.08)
 	flag.mesh = box
-	flag.position = Vector3(0.42, 1.85, 0.0)
+	flag.position = Vector3(1.15, 5.4, 0.0)
 	var flag_mat := StandardMaterial3D.new()
 	flag_mat.albedo_color = color
 	flag_mat.emission_enabled = true
 	flag_mat.emission = color
-	flag_mat.emission_energy_multiplier = 0.35
+	flag_mat.emission_energy_multiplier = 1.1
 	flag.material_override = flag_mat
 	group.add_child(flag)
 	return group
 
 
-func _ping_mesh(color: Color, radius: float = 0.32) -> MeshInstance3D:
+func _ping_mesh(color: Color, radius: float = 0.85) -> MeshInstance3D:
 	var ping := MeshInstance3D.new()
 	var sphere := SphereMesh.new()
 	sphere.radius = radius
 	sphere.height = radius * 2.0
 	ping.mesh = sphere
-	ping.position = Vector3.UP * 0.4
+	ping.position = Vector3.UP * 0.9
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(color, 0.7)
+	mat.albedo_color = Color(color, 0.78)
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.emission_enabled = true
 	mat.emission = color
-	mat.emission_energy_multiplier = 0.55
+	mat.emission_energy_multiplier = 1.4
 	ping.material_override = mat
 	return ping
 
@@ -5317,15 +5319,15 @@ func _ping_mesh(color: Color, radius: float = 0.32) -> MeshInstance3D:
 func _smoke_mesh() -> MeshInstance3D:
 	var puff := MeshInstance3D.new()
 	var sphere := SphereMesh.new()
-	sphere.radius = 0.7
-	sphere.height = 1.6
+	sphere.radius = 2.1
+	sphere.height = 4.4
 	puff.mesh = sphere
-	puff.position = Vector3.UP * 1.1
+	puff.position = Vector3.UP * 2.4
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.35, 0.32, 0.3, 0.45)
+	mat.albedo_color = Color(0.35, 0.32, 0.3, 0.55)
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.emission_enabled = true
 	mat.emission = Color("#6a5a4a")
-	mat.emission_energy_multiplier = 0.2
+	mat.emission_energy_multiplier = 0.45
 	puff.material_override = mat
 	return puff
