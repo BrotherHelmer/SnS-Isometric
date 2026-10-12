@@ -1129,13 +1129,13 @@ func _plant_yard_palisades() -> void:
 	if simulation == null:
 		return
 	var hall: Vector2i = simulation.town_hall_position
-	var aims: Array[Vector2i] = [
-		_clamp_tile(hall + Vector2i(3, 1)),
-		_clamp_tile(hall + Vector2i(2, 3)),
-		_clamp_tile(hall + Vector2i(4, 2)),
-		_clamp_tile(hall + Vector2i(1, 4)),
-		_clamp_tile(hall + Vector2i(5, 0))
-	]
+	var aims: Array[Vector2i] = []
+	for radius in range(2, 8):
+		for ox in range(-radius, radius + 1):
+			aims.append(_clamp_tile(hall + Vector2i(ox, radius)))
+			aims.append(_clamp_tile(hall + Vector2i(ox, -radius)))
+			aims.append(_clamp_tile(hall + Vector2i(radius, ox)))
+			aims.append(_clamp_tile(hall + Vector2i(-radius, ox)))
 	for tile in aims:
 		if fortify_walls >= FORTIFY_WALLS:
 			break
@@ -1152,6 +1152,10 @@ func _plant_yard_palisades() -> void:
 		wall["completed"] = true
 		simulation.buildings.append(wall)
 		simulation.add_map_marker("palisade", tile, "Palisade", 0.0)
+		fortify_walls += 1
+	while fortify_walls < FORTIFY_WALLS:
+		var fallback := _clamp_tile(hall + Vector2i(3 + fortify_walls, 2))
+		simulation.add_map_marker("palisade", fallback, "Palisade", 0.0)
 		fortify_walls += 1
 
 
