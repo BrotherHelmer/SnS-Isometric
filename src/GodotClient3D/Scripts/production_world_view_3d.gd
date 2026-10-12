@@ -183,6 +183,10 @@ var stream_enabled := true
 
 
 func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {}) -> void:
+	# The screen fog quad is parented to the camera, not to this node, so the
+	# child wipe below never freed it. A new realm with another seed kept the
+	# old quad and its stale fog mask, which covered the whole new map.
+	_free_camera_fog_screens()
 	if get_child_count() > 0:
 		for child in get_children():
 			remove_child(child)
@@ -3633,6 +3637,19 @@ func _sync_fog_screen_camera() -> void:
 		return
 	fog_screen_material.set_shader_parameter("camera_world_position", cam.global_position)
 	fog_screen_material.set_shader_parameter("camera_near", cam.near)
+
+
+func _free_camera_fog_screens() -> void:
+	if fog_screen != null and is_instance_valid(fog_screen):
+		if fog_screen.get_parent() != null:
+			fog_screen.get_parent().remove_child(fog_screen)
+		fog_screen.free()
+	fog_screen = null
+	if fog_overlay_camera != null and is_instance_valid(fog_overlay_camera):
+		for child in fog_overlay_camera.get_children():
+			if String(child.name).begins_with("ScreenFogOverlay"):
+				fog_overlay_camera.remove_child(child)
+				child.free()
 
 
 func _hide_fog_screen() -> void:
