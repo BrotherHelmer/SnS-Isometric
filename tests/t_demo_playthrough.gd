@@ -14,7 +14,7 @@ const Intentions = preload("res://src/GodotClient/Scripts/one_shard_intentions.g
 const SEED_DEFAULT := 260821
 const STEP_SECONDS := 8.0
 const MAX_SECONDS_DEFAULT := 3600.0
-const DEST_DEFAULT := "res://artifacts/demo_playthrough_v7"
+const DEST_DEFAULT := "res://artifacts/demo_playthrough_v8"
 
 var failures: Array[String] = []
 var script_errors := 0
@@ -287,7 +287,8 @@ func _watch_journal(sim) -> void:
 			_note_event(sim, kind, message)
 			captured["pending_escalation"] = true
 		if kind in ["rival_second_push", "rival_contest", "harvester_raid", "harvester_raid_spawn", "exposure_choice", "exposure_burn", "wyrd_choice", "wyrd_choice_offered", "first_harvest", "first_stabilized", "seal_choice", "seal_choice_offered", "rival_foreshadow", "rival_escalation", "midgame_choice", "midgame_choice_offered", "channel_wyrd"]:
-			_note_event(sim, kind, message)
+			if not captured.has("did_%s" % kind):
+				_note_event(sim, kind, message)
 			_touch_play(float(event.get("elapsed_seconds", sim.elapsed_seconds)))
 			if kind in ["rival_second_push", "harvester_raid", "harvester_raid_spawn"] and not captured.has("pending_%s" % kind):
 				captured["pending_%s" % kind] = true
@@ -729,6 +730,12 @@ func _write_notes(sim, player) -> void:
 		}
 	notes["longest_idle"] = longest_idle
 	notes["idle_gaps"] = idle_gaps
+	notes["idle_settler_seconds"] = float(sim.idle_settler_seconds)
+	notes["idle_settler_seconds_before"] = float(sim.idle_settler_seconds_before)
+	notes["idle_bottleneck"] = String(sim.last_idle_bottleneck)
+	print("DEMO_IDLE_SETTLERS seed=%d before=%.0f after=%.0f bottleneck=%s" % [
+		seed_value, float(sim.idle_settler_seconds_before), float(sim.idle_settler_seconds), String(sim.last_idle_bottleneck)
+	])
 	print("DEMO_IDLE seed=%d longest=%.1fs gaps=%d first_12=%.1f first_build=%.1f seal=%.1f win=%.1f choice=%s seal_choice=%s midgame=%s channel=%d mid_at=%.1f reveal=%.1f smoke=%.1f" % [
 		seed_value, longest_idle, idle_gaps.size(), first_12_at,
 		sim.crater_war.first_build_at if sim.crater_war != null else -1.0,

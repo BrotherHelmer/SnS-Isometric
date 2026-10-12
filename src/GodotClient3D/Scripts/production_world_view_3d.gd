@@ -2794,17 +2794,20 @@ func _update_seal_ceremony(wyrdfall: Dictionary) -> void:
 	elif path == "wall":
 		pulse = 1.05 + 0.35 * progress + 0.16 * sin(float(Time.get_ticks_msec()) * 0.001 * TAU * hz)
 	elif celebrating:
-		pulse = 1.45 + 0.35 * sin(float(Time.get_ticks_msec()) / 140.0)
+		# The Director: TEST #20 — the fissure calms: a slow sink, cool light.
+		pulse = 0.72 + 0.12 * sin(float(Time.get_ticks_msec()) / 420.0)
 	if seal_beacon_light != null:
 		seal_beacon_light.light_energy = float(look.get("light", 1.8)) * pulse
 		if celebrating:
-			seal_beacon_light.light_energy = 3.2 * pulse
+			seal_beacon_light.light_energy = 1.15 * pulse
+			seal_beacon_light.light_color = Color("#9fd4c8")
 	if seal_beacon_column != null:
 		var column_mat := seal_beacon_column.material_override as StandardMaterial3D
 		if column_mat != null:
-			column_mat.emission_energy_multiplier = (2.4 if path == "overcharge" else 1.2) * pulse
+			column_mat.emission_energy_multiplier = (0.55 if celebrating else (2.4 if path == "overcharge" else 1.2)) * pulse
 		var fat := 1.22 if path == "overcharge" else 1.0
-		seal_beacon_column.scale = Vector3((1.0 + 0.18 * progress) * fat, 1.0 + 0.35 * progress, (1.0 + 0.18 * progress) * fat)
+		var calm := 0.55 if celebrating else 1.0
+		seal_beacon_column.scale = Vector3((1.0 + 0.18 * progress) * fat * calm, (1.0 + 0.35 * progress) * (0.42 if celebrating else 1.0), (1.0 + 0.18 * progress) * fat * calm)
 	if seal_ward_ring != null:
 		var ring_mat := seal_ward_ring.material_override as StandardMaterial3D
 		if ring_mat != null:
@@ -2829,15 +2832,16 @@ func _apply_seal_look(look: Dictionary, celebrating: bool) -> void:
 	var cyan := Color(0.35, 0.82, 0.88, 0.55)
 	var white := Color(0.82, 0.95, 1.0, 0.72)
 	var gold := Color(0.95, 0.78, 0.28, 0.8)
-	var column_color := gold if celebrating else (amber if wall else (white if charge else cyan))
+	var calm := Color(0.55, 0.82, 0.74, 0.55)
+	var column_color := calm if celebrating else (amber if wall else (white if charge else cyan))
 	if seal_beacon_column != null:
 		var column_mat := seal_beacon_column.material_override as StandardMaterial3D
 		if column_mat != null:
 			column_mat.albedo_color = column_color
 			column_mat.emission = column_color.lightened(0.15)
 	if seal_beacon_light != null:
-		seal_beacon_light.light_color = Color("#f0c44a") if celebrating else (Color("#f0a24a") if wall else Color("#b8f6ff"))
-		seal_beacon_light.omni_range = 22.0 if charge or celebrating else 16.0
+		seal_beacon_light.light_color = Color("#9fd4c8") if celebrating else (Color("#f0a24a") if wall else Color("#b8f6ff"))
+		seal_beacon_light.omni_range = 14.0 if celebrating else (22.0 if charge else 16.0)
 	if seal_ward_ring != null:
 		var torus := TorusMesh.new()
 		var radius := 6.4 if wall else (2.1 if charge else 3.6)
@@ -5614,30 +5618,78 @@ func _palisade_mesh() -> Node3D:
 
 func _tent_mesh() -> Node3D:
 	var group := Node3D.new()
-	var canvas := MeshInstance3D.new()
-	var prism := PrismMesh.new()
-	prism.size = Vector3(2.4, 1.6, 2.1)
-	canvas.mesh = prism
-	canvas.position = Vector3(0.0, 0.85, 0.0)
 	var cloth := StandardMaterial3D.new()
 	cloth.albedo_color = Color("#c9a86a")
 	cloth.emission_enabled = true
 	cloth.emission = Color("#efcf8a")
 	cloth.emission_energy_multiplier = 0.55
+	var canvas := MeshInstance3D.new()
+	var prism := PrismMesh.new()
+	prism.size = Vector3(2.4, 1.6, 2.1)
+	canvas.mesh = prism
+	canvas.position = Vector3(0.0, 0.85, 0.0)
 	canvas.material_override = cloth
 	group.add_child(canvas)
-	var pole := MeshInstance3D.new()
-	var cyl := CylinderMesh.new()
-	cyl.top_radius = 0.06
-	cyl.bottom_radius = 0.08
-	cyl.height = 1.85
-	pole.mesh = cyl
-	pole.position = Vector3(0.0, 0.92, 0.0)
 	var wood := StandardMaterial3D.new()
 	wood.albedo_color = Color("#5a3a22")
-	pole.material_override = wood
-	group.add_child(pole)
+	for pole_off in [Vector3(-0.85, 0.7, -0.7), Vector3(0.85, 0.7, -0.7), Vector3(0.0, 0.95, 0.15)]:
+		var pole := MeshInstance3D.new()
+		var cyl := CylinderMesh.new()
+		cyl.top_radius = 0.05
+		cyl.bottom_radius = 0.07
+		cyl.height = 1.55 if pole_off.y < 0.9 else 1.9
+		pole.mesh = cyl
+		pole.position = pole_off
+		pole.material_override = wood
+		group.add_child(pole)
+	for flap_x in [-1.15, 1.15]:
+		var flap := MeshInstance3D.new()
+		var flap_mesh := BoxMesh.new()
+		flap_mesh.size = Vector3(0.08, 1.05, 1.15)
+		flap.mesh = flap_mesh
+		flap.position = Vector3(flap_x, 0.62, 0.15)
+		flap.rotation.z = 0.22 if flap_x < 0.0 else -0.22
+		flap.material_override = cloth
+		group.add_child(flap)
+	group.add_child(_campfire_mesh(Vector3(1.55, 0.0, 1.15)))
 	return group
+
+
+func _campfire_mesh(offset: Vector3) -> Node3D:
+	var fire := Node3D.new()
+	fire.position = offset
+	var ring := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = 0.18
+	torus.outer_radius = 0.42
+	ring.mesh = torus
+	ring.position = Vector3(0.0, 0.08, 0.0)
+	var stone := StandardMaterial3D.new()
+	stone.albedo_color = Color("#4a4036")
+	ring.material_override = stone
+	fire.add_child(ring)
+	var flame := MeshInstance3D.new()
+	var cone := CylinderMesh.new()
+	cone.top_radius = 0.02
+	cone.bottom_radius = 0.16
+	cone.height = 0.55
+	flame.mesh = cone
+	flame.position = Vector3(0.0, 0.32, 0.0)
+	var glow := StandardMaterial3D.new()
+	glow.albedo_color = Color(1.0, 0.45, 0.12, 0.9)
+	glow.emission_enabled = true
+	glow.emission = Color(1.0, 0.55, 0.15)
+	glow.emission_energy_multiplier = 3.2
+	glow.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	flame.material_override = glow
+	fire.add_child(flame)
+	var light := OmniLight3D.new()
+	light.light_color = Color("#ff8a3a")
+	light.light_energy = 1.4
+	light.omni_range = 4.5
+	light.position = Vector3(0.0, 0.55, 0.0)
+	fire.add_child(light)
+	return fire
 
 
 func _settler_mesh() -> Node3D:

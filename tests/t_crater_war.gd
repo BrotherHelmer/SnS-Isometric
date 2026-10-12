@@ -1,7 +1,7 @@
 extends SceneTree
 
-## Fast gates for TEST #19: Channel Wyrd during the Seal, plus a
-## caravan aftermath that stays on the map. Survival is not a win.
+## Fast gates for TEST #20: idle settlers take jobs, Channel Wyrd
+## costs are honest, and the caravan aftermath stays on the map.
 
 const Simulation = preload("res://src/GodotClient/Scripts/one_shard_simulation.gd")
 const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
@@ -39,6 +39,7 @@ func _run() -> void:
 	_check_seal_defence_choice()
 	_check_midgame_caravan()
 	_check_channel_wyrd()
+	_check_idle_jobs()
 	_check_reactive_rival()
 	_check_visible_escalation()
 	_check_foreshadow()
@@ -169,7 +170,8 @@ func _check_seal_ceremony() -> void:
 	_check(bool(begin.get("success", false)), "request_begin_seal starts the ceremony (%s)" % String(begin.get("message", "")))
 	_check(String(begin.get("message", "")).contains("SEAL"), "ceremony copy names the Seal")
 	_check(sim.crater_war.ritual_active, "ceremony is active")
-	_check(sim.crater_war.stabilized_stock() == CraterWar.CHANNEL_COST, "Seal refunds 2 Stabilized for Channel Wyrd")
+	_check(sim.crater_war.stabilized_stock() == 0, "Seal spends the full 12 Stabilized")
+	_check(sim.crater_war.channel_reserve == CraterWar.CHANNEL_COST, "first Channel is held as an emergency reserve")
 	_check(sim.crater_war.channel_ready(), "Channel Wyrd is ready as the Seal starts")
 	sim._simulate_seconds_for_test(CraterWar.RITUAL_SECONDS + 0.2)
 	_check(sim.victory, "defended ceremony wins the Seal")
@@ -352,6 +354,9 @@ func _check_channel_wyrd() -> void:
 	var pick: Dictionary = sim.request_channel_wyrd()
 	_check(bool(pick.get("success", false)), "Channel Wyrd is accepted (%s)" % String(pick.get("message", "")))
 	_check(sim.crater_war.channel_uses == 1, "Channel Wyrd records a use")
+	_check(sim.crater_war.last_channel_from_reserve, "first Channel draws the emergency reserve")
+	_check(sim.crater_war.channel_reserve == 0, "the reserve is spent on the first Channel")
+	_check(String(pick.get("message", "")).contains("reserve"), "Channel copy names the emergency reserve")
 	_check(int(wall.get("hp", 0)) >= hp_before + 1, "Channel Wyrd repairs a wall segment")
 	_check(sim.crater_war.last_channel_tile.x >= 0, "Channel Wyrd records a repair tile")
 	_check(not sim.crater_war.channel_ready(), "Channel Wyrd cools for 20 s")
@@ -453,6 +458,53 @@ func _check_exposure_reserve() -> void:
 	sim.crater_war._update_exposure(1.0)
 	_check(int(sim.central_inventory.get(Defs.RESOURCE_WYRD, 0)) < before, "exposure burns raw above the reserve")
 	_check(int(sim.central_inventory.get(Defs.RESOURCE_WYRD, 0)) >= CraterWar.RAW_RESERVE + CraterWar.REFINE_INPUT, "exposure keeps the refine reserve")
+
+
+func _check_idle_jobs() -> void:
+	var sim: Simulation = Simulation.new()
+	sim.start_new_run(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 260821, true)
+	sim.housing_capacity = 16
+	sim.population_current = 16
+	sim.workers_assigned = 0
+	sim.central_inventory[Defs.RESOURCE_PLANKS] = 0
+	sim.central_inventory[Defs.RESOURCE_WOOD] = 8
+	var hall := sim.town_hall_position
+	var road_tile := hall + Vector2i(0, 4)
+	sim._prepare_test_tile(road_tile, Defs.TILE_GRASS)
+	var road: Dictionary = sim._create_player_road_plan(road_tile)
+	_check(bool(road.get("success", false)) or not sim.get_building_at_tile(road_tile).is_empty(), "idle-jobs road site can be planned")
+	var wall: Dictionary = sim._create_building(Defs.BUILDING_WALL, hall + Vector2i(3, 1))
+	wall["construction"] = false
+	wall["completed"] = true
+	wall["hp"] = 20
+	wall["max_hp"] = Defs.building_hp(Defs.BUILDING_WALL)
+	sim.buildings.append(wall)
+	var house: Dictionary = sim._create_building(Defs.BUILDING_CONSTRUCTION_SITE, hall + Vector2i(2, 4))
+	house["planned_type"] = Defs.BUILDING_HOUSE
+	house["construction"] = true
+	house["connected"] = true
+	house["materials_needed"] = {Defs.RESOURCE_PLANKS: 6, Defs.RESOURCE_WOOD: 4}
+	house["materials_delivered"] = Defs.empty_inventory()
+	house["materials_in_transit"] = Defs.empty_inventory()
+	sim.buildings.append(house)
+	var before_pool := sim.idle_pool_count()
+	_check(before_pool >= 8, "unassigned population is the idle pool (%d)" % before_pool)
+	_check(sim.idle_bottleneck() == "waiting for planks", "bottleneck names missing planks")
+	sim._ensure_laborers()
+	_check(sim._laborer_count() >= 4, "idle population becomes laborers")
+	sim._simulate_seconds_for_test(2.5)
+	_check(sim._laborers_on_duty() >= 1, "laborers take haul, repair, or construction jobs")
+	_check(sim.idle_settler_count() < before_pool, "job assignment lowers the idle count")
+	_check(int(wall.get("hp", 0)) >= 20, "repair jobs touch the damaged wall")
+	var on_jobs := 0
+	for worker in sim.workers:
+		var purpose := String(Dictionary(worker.get("task", {})).get("purpose", ""))
+		if purpose in ["road_build", "site_build", "repair", "construction", "processor"]:
+			on_jobs += 1
+		elif int(worker.get("carried_amount", 0)) > 0:
+			on_jobs += 1
+	_check(on_jobs >= 1, "at least one laborer is on a real job")
+	_check(sim.idle_settler_seconds_before + 0.01 >= sim.idle_settler_seconds, "before idle-seconds is the old pool")
 
 
 func _check(ok: bool, message: String) -> void:

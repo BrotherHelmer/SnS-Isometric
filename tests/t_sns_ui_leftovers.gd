@@ -44,7 +44,8 @@ func _run() -> void:
 	print("TSNSUI idle=%d free=%d" % [idle, int(sim.workers_free())])
 	_check(idle > 0, "opening settlement has idle free workers")
 	var button: Button = game.idle_workers_button
-	_check(button != null and button.text == "%d idle" % idle, "idle button shows the idle count")
+	_check(button != null and String(button.text).begins_with("%d idle" % idle), "idle button shows the idle count")
+	_check(button != null and ("waiting" in String(button.text) or "jobs" in String(button.text) or "storehouse" in String(button.text)), "idle button names the bottleneck")
 	_check(button.visible, "idle button is shown while settlers are idle")
 	var idle_rect: Rect2 = button.get_global_rect()
 	var console_rect: Rect2 = game.hud_console.get_global_rect()
