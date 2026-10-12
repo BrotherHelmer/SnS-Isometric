@@ -4874,8 +4874,12 @@ func _refresh_idle_crew() -> void:
 			lines.append("  %s — %s" % [String(row.get("who", "Settler")), String(row.get("reason", bottleneck))])
 		if unable_total > unable.size():
 			lines.append("  +%d more waiting." % (unable_total - unable.size()))
-	idle_crew_body.text = "\n".join(lines)
 	var jump: Dictionary = report.get("jump", {})
+	var jump_hint := String(jump.get("hint", ""))
+	if jump_hint != "":
+		lines.append("")
+		lines.append(jump_hint)
+	idle_crew_body.text = "\n".join(lines)
 	if idle_jump_button != null:
 		var label := String(jump.get("label", "Go to Storehouse"))
 		idle_jump_button.text = label if label != "" else "Go to Storehouse"
@@ -4897,6 +4901,7 @@ func _jump_idle_target() -> void:
 	var hint := String(jump.get("hint", ""))
 	if hint != "":
 		_show_status(hint, 4.0)
+		_push_notice_feed("Sawmill", hint, "warning")
 	else:
 		_show_status("Jumped to the %s." % label, 4.0)
 
