@@ -1,0 +1,80 @@
+TEST #21 PLAYTHROUGH — idle crew overview + Channel HP + 2 s fissure hold
+
+| Seed | Victory | Idle | ISS before | ISS after | Ch | path |
+| --- | --- | --- | --- | --- | --- | --- |
+| 260821 | 50:36 (3036) | 8 s | 16093 | 11151 | 1 | shelter/refine/wall |
+| 261306 | 52:44 (3164) | 8 s | 16491 | 12960 | 1 | fortify/secure/overcharge |
+| 261597 | 46:04 (2764) | 8 s | 17502 | 14587 | 1 | shelter/refine/wall |
+| 260918 | 52:12 (3132) | 8 s | 6138 | 2355 | 1 | fortify/secure/overcharge |
+
+Idle gate 90 s (slack 98). #20 260918 was 96 s; this rerun is 8 s (step).
+All four DEMO_PLAYTHROUGH PASS. Official 3D 260821 also PASS (win 50:36, Channel 1).
+first_12 48:16 / 51:04 / 43:44 / 50:32. first_build 0:08 every seed.
+
+Exact file list
+---------------
+artifacts/.gdignore
+artifacts/demo_playthrough_v9/PROMPT.txt
+artifacts/demo_playthrough_v9/PLAYTHROUGH.md
+artifacts/demo_playthrough_v9/notes.json
+artifacts/demo_playthrough_v9/notes_261306.json
+artifacts/demo_playthrough_v9/notes_261597.json
+artifacts/demo_playthrough_v9/notes_260918.json
+artifacts/demo_playthrough_v9/playthrough.csv
+artifacts/demo_playthrough_v9/playthrough_261306.csv
+artifacts/demo_playthrough_v9/playthrough_261597.csv
+artifacts/demo_playthrough_v9/playthrough_260918.csv
+artifacts/demo_playthrough_v9/dpm_260821.csv
+artifacts/demo_playthrough_v9/dpm_261306.csv
+artifacts/demo_playthrough_v9/dpm_261597.csv
+artifacts/demo_playthrough_v9/dpm_260918.csv
+artifacts/demo_playthrough_v9/shots_for_review/idle_overview.png
+artifacts/demo_playthrough_v9/shots_for_review/idle_jump.png
+artifacts/demo_playthrough_v9/shots_for_review/channel_feedback.png
+artifacts/demo_playthrough_v9/shots_for_review/fissure_calm.png
+artifacts/demo_playthrough_v9/shots_for_review/victory_overlay.png
+artifacts/demo_playthrough_v9/shots_for_review/t00_idle_overview.png
+artifacts/demo_playthrough_v9/shots_for_review/t00_idle_jump.png
+artifacts/demo_playthrough_v9/shots/t00_start.png
+artifacts/demo_playthrough_v9/shots/t00_idle_overview.png
+artifacts/demo_playthrough_v9/shots/t00_idle_jump.png
+artifacts/demo_playthrough_v9/shots/t03_first_quest.png
+artifacts/demo_playthrough_v9/shots/t05_play.png
+artifacts/demo_playthrough_v9/shots/t05_storehouse.png
+artifacts/demo_playthrough_v9/shots/t07_first_night.png
+artifacts/demo_playthrough_v9/shots/t07_first_raid.png
+artifacts/demo_playthrough_v9/shots/t10_play.png
+artifacts/demo_playthrough_v9/shots/t12_frontier.png
+artifacts/demo_playthrough_v9/shots/t14_foreshadow.png
+artifacts/demo_playthrough_v9/shots/t14_rival.png
+artifacts/demo_playthrough_v9/shots/t15_play.png
+artifacts/demo_playthrough_v9/shots/t20_capture.png
+artifacts/demo_playthrough_v9/shots/t20_caravan.png
+artifacts/demo_playthrough_v9/shots/t20_play.png
+artifacts/demo_playthrough_v9/shots/t23_escalation.png
+artifacts/demo_playthrough_v9/shots/t23_second_push.png
+artifacts/demo_playthrough_v9/shots/t24_camp_shelter.png
+artifacts/demo_playthrough_v9/shots/t25_play.png
+artifacts/demo_playthrough_v9/shots/t26_harvester_raid.png
+artifacts/demo_playthrough_v9/shots/t30_play.png
+artifacts/demo_playthrough_v9/shots/t35_choice.png
+artifacts/demo_playthrough_v9/shots/t35_play.png
+artifacts/demo_playthrough_v9/shots/t40_play.png
+artifacts/demo_playthrough_v9/shots/t45_play.png
+artifacts/demo_playthrough_v9/shots/t48_channel.png
+artifacts/demo_playthrough_v9/shots/t48_seal.png
+artifacts/demo_playthrough_v9/shots/t49_seal_overcharge.png
+artifacts/demo_playthrough_v9/shots/t49_seal_wall.png
+artifacts/demo_playthrough_v9/shots/t50_play.png
+artifacts/demo_playthrough_v9/shots/t50_fissure_calm.png
+artifacts/demo_playthrough_v9/shots/t50_victory.png
+
+shots_for_review
+----------------
+idle_overview.png     — staged: 16 idle · waiting for planks; Working vs Unable; Go to House; STAB 6/12 up
+idle_jump.png         — staged: House selected; STAB 6/12 still visible
+channel_feedback.png  — official 3D 260821 t48: CHANNEL next 40 dmg prevented in HUD + feed
+fissure_calm.png      — official 3D 260821 t50: sealed fissure, no overlay
+victory_overlay.png   — official 3D 260821 t50: THE FISSURE IS SEALED; Channel 1 · last next 40 dmg prevented
+t00_idle_overview.png — official opening: 2 idle · no jobs; Go to Town Hall
+t00_idle_jump.png     — official opening jump
