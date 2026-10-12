@@ -175,9 +175,14 @@ func _pursue_crater_war(sim) -> void:
 		if _pending_buildings(sim) <= MAX_PENDING_SITES:
 			if _try_waypoint_outpost(sim):
 				return
+	var need_refiner := _unlocked(sim, Defs.BUILDING_WYRD_REFINER) and _count(sim, Defs.BUILDING_WYRD_REFINER) < 1
+	var late_refiner := need_refiner and float(sim.elapsed_seconds) >= 25.0 * 60.0 and _count(sim, Defs.BUILDING_WYRD_HARVESTER) >= 1
+	if late_refiner:
+		if _try_build(sim, Defs.BUILDING_WYRD_REFINER, sim.town_hall_position + Vector2i(9, 4)):
+			return
 	if _pending_buildings(sim) >= MAX_PENDING_SITES:
 		return
-	if _has_completed(sim, Defs.BUILDING_WYRD_HARVESTER) and _unlocked(sim, Defs.BUILDING_WYRD_REFINER) and _count(sim, Defs.BUILDING_WYRD_REFINER) < 1:
+	if need_refiner and _has_completed(sim, Defs.BUILDING_WYRD_HARVESTER):
 		if _try_build(sim, Defs.BUILDING_WYRD_REFINER, sim.town_hall_position + Vector2i(9, 4)):
 			return
 	if not _has_completed(sim, Defs.BUILDING_WYRD_HARVESTER):
