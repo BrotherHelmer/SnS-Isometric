@@ -1428,6 +1428,8 @@ func _reveal_demo_rival() -> void:
 	_add_log(last_message)
 	push_notice("danger", "RIVAL", last_message, "warning")
 	_record_event("rival_encounter", last_message, {"tile": presence})
+	if crater_war != null:
+		crater_war.note_rival_revealed()
 
 
 func _maybe_demo_hold_victory() -> void:
@@ -1457,6 +1459,12 @@ func request_wyrd_choice(path: String) -> Dictionary:
 	if crater_war == null:
 		return _failure("Unavailable", "No Wyrd pact is offered this hour.")
 	return crater_war.request_choice(path)
+
+
+func request_seal_choice(path: String) -> Dictionary:
+	if crater_war == null:
+		return _failure("Unavailable", "No Seal defence is offered this hour.")
+	return crater_war.request_seal_choice(path)
 
 
 func request_begin_binding() -> Dictionary:
@@ -1642,7 +1650,13 @@ func get_wyrdfall_presentation() -> Dictionary:
 		"stabilized": int(crater.get("stabilized", 0)),
 		"choice_ready": bool(crater.get("choice_ready", false)),
 		"choice": String(crater.get("choice", "")),
-		"rival_reveal_at": float(crater.get("rival_reveal_at", DEMO_RIVAL_SECONDS))
+		"rival_reveal_at": float(crater.get("rival_reveal_at", DEMO_RIVAL_SECONDS)),
+		"seal_choice_ready": bool(crater.get("seal_choice_ready", false)),
+		"seal_choice": String(crater.get("seal_choice", "")),
+		"threat_tier": int(crater.get("threat_tier", 0)),
+		"threat_name": String(crater.get("threat_name", "QUIET")),
+		"foreshadow_at": float(crater.get("foreshadow_at", -1.0)),
+		"foreshadowed": bool(crater.get("foreshadowed", false))
 	}
 
 

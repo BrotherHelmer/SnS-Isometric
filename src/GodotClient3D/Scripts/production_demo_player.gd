@@ -35,6 +35,7 @@ func think(sim) -> Dictionary:
 	_pursue_economy(sim)
 	_pursue_crater_war(sim)
 	_try_wyrd_choice(sim)
+	_try_seal_choice(sim)
 	_scout(sim)
 	_expand_toward_shard(sim)
 	_contest_rivals(sim)
@@ -248,6 +249,17 @@ func _try_wyrd_choice(sim) -> void:
 		_note(sim, "CHOICE", sim.crater_war.primary_fissure, String(result.get("message", "")))
 	else:
 		last_failures.append("choice: %s" % String(result.get("message", "")))
+
+
+func _try_seal_choice(sim) -> void:
+	if sim.crater_war == null or not sim.crater_war.seal_choice_ready():
+		return
+	var path: String = sim.crater_war.bot_seal_path_for_seed(int(sim.rng_seed))
+	var result: Dictionary = sim.request_seal_choice(path)
+	if bool(result.get("success", false)):
+		_note(sim, "SEALCHOICE", sim.crater_war.primary_fissure, String(result.get("message", "")))
+	else:
+		last_failures.append("seal choice: %s" % String(result.get("message", "")))
 
 
 func _try_seal(sim) -> void:

@@ -1,14 +1,12 @@
 extends RefCounted
 
-## The Director: TEST #16 — Seal the Fissure.
+## The Director: TEST #17 — Seal defence choice + visible rival escalation.
 ## This hour's climax is Sealing the frontier fissure: 12 Stabilized Wyrd
 ## plus a 120 s ceremony the player starts when the store is ready.
-## The real Shard Binding is a later act (see shard_binding_hook).
-## Survival (THE REALM HOLDS) is a milestone, not a win.
-## At 6 Stabilized the player chooses faster refining or a 3-stab
-## investment in secure harvesting. The rival reacts to the player:
-## seeded reveal 14:00–20:00, a push after the first harvest, a raid
-## after the first Stabilized. No +180/+360 clocks.
+## Mid-ceremony (~60 s) the player reinforces the wall or overcharges
+## the Seal. The rival's escalation is painted on the map: growing
+## banners, a marked army route, and a threat tier before each push
+## or raid. A cheap foreshadow beat lands at 10–15 min.
 
 const Defs = preload("one_shard_defs.gd")
 const RivalryTuning = preload("one_shard_rivalry_tuning.gd")
@@ -48,6 +46,25 @@ const ROUTE_OUTPOST_MIN_T := 0.22
 const ROUTE_OUTPOST_MAX_T := 0.82
 const ROUTE_OUTPOST_SLACK := 6.5
 const BOT_PATH_SEEDS := [260821, 261306, 261597, 260918]
+const PATH_WALL := "wall"
+const PATH_OVERCHARGE := "overcharge"
+const SEAL_CHOICE_AT := 60.0
+const WALL_RITUAL_EXTRA := 20.0
+const OVERCHARGE_RITUAL_CUT := 20.0
+const WALL_HP_BOOST := 80
+const WALL_WARD := 6
+const OVERCHARGE_WARD := 1
+const DEFAULT_WARD := 3
+const OVERCHARGE_RAID_SIZE := 1
+const TIER_QUIET := 0
+const TIER_SMOKE := 1
+const TIER_SIGHTED := 2
+const TIER_PUSH := 3
+const TIER_RAID := 4
+const TIER_NAMES := ["QUIET", "SMOKE", "SIGHTED", "PUSH", "RAID"]
+const FORESHADOW_MIN := 10.0 * 60.0
+const FORESHADOW_SPAN := 5.0 * 60.0
+const FORESHADOW_LEAD := 45.0
 
 var simulation
 var fissure_tiles: Array = []
@@ -89,6 +106,17 @@ var raid_reaction := 16.0
 var wyrd_choice := ""
 var choice_offered_at := -1.0
 var choice_taken_at := -1.0
+var seal_choice := ""
+var seal_choice_offered_at := -1.0
+var seal_choice_taken_at := -1.0
+var ritual_needed := RITUAL_SECONDS
+var seal_overcharge_raid_spawned := false
+var rival_threat_tier := TIER_QUIET
+var rival_foreshadow_at := -1.0
+var rival_foreshadowed := false
+var push_telegraphed := false
+var raid_telegraphed := false
+var banner_count := 0
 
 
 func setup(owner) -> void:
@@ -137,6 +165,17 @@ func reset() -> void:
 	wyrd_choice = ""
 	choice_offered_at = -1.0
 	choice_taken_at = -1.0
+	seal_choice = ""
+	seal_choice_offered_at = -1.0
+	seal_choice_taken_at = -1.0
+	ritual_needed = RITUAL_SECONDS
+	seal_overcharge_raid_spawned = false
+	rival_threat_tier = TIER_QUIET
+	rival_foreshadow_at = -1.0
+	rival_foreshadowed = false
+	push_telegraphed = false
+	raid_telegraphed = false
+	banner_count = 0
 	if simulation != null:
 		_seed_rival_timing()
 
@@ -151,6 +190,8 @@ func tick(delta: float) -> void:
 	_update_exposure(delta)
 	_maybe_force_capture()
 	_maybe_offer_choice()
+	_maybe_foreshadow()
+	_maybe_escalate_map()
 	_maybe_rival_contest()
 	_note_twelve()
 	_tick_ritual(delta)
@@ -272,6 +313,11 @@ func request_begin() -> Dictionary:
 	ritual_active = true
 	ritual_progress = 0.0
 	ritual_raid_spawned = false
+	ritual_needed = RITUAL_SECONDS
+	seal_choice = ""
+	seal_choice_offered_at = -1.0
+	seal_choice_taken_at = -1.0
+	seal_overcharge_raid_spawned = false
 	ritual_started_at = float(simulation.elapsed_seconds)
 	simulation.reckoning_active = true
 	var message := "SEAL BEGUN — defend the fissure ceremony for 120 seconds."
@@ -378,6 +424,11 @@ func presentation() -> Dictionary:
 		rival_line = "Rival second push — they still want this fissure"
 	elif simulation.demo_rival_revealed:
 		rival_line = "Rival contests this fissure"
+	elif rival_foreshadowed:
+		rival_line = "Distant rival smoke — a scout names the next vent"
+	if rival_threat_tier > TIER_QUIET:
+		var threat_bit := "TIER %d %s" % [rival_threat_tier, threat_name()]
+		rival_line = threat_bit if rival_line == "" else "%s — %s" % [threat_bit, rival_line]
 	return {
 		"binding_active": ritual_active,
 		"binding_ready": can_begin(),
@@ -393,7 +444,15 @@ func presentation() -> Dictionary:
 		"choice_offered_at": choice_offered_at,
 		"rival_reveal_at": rival_reveal_at,
 		"seal_ready": can_begin(),
-		"seal_active": ritual_active
+		"seal_active": ritual_active,
+		"seal_choice_ready": seal_choice_ready(),
+		"seal_choice": seal_choice,
+		"seal_choice_offered_at": seal_choice_offered_at,
+		"threat_tier": rival_threat_tier,
+		"threat_name": threat_name(),
+		"foreshadow_at": rival_foreshadow_at,
+		"foreshadowed": rival_foreshadowed,
+		"banner_count": banner_count
 	}
 
 
@@ -731,7 +790,8 @@ func _tick_ritual(delta: float) -> void:
 			simulation.spawn_ritual_raid(RITUAL_RAID_SIZE)
 	_ward_binding_outpost(delta)
 	ritual_progress += delta
-	if ritual_progress + 0.001 >= RITUAL_SECONDS:
+	_maybe_offer_seal_choice()
+	if ritual_progress + 0.001 >= ritual_needed:
 		_complete_ritual()
 
 
@@ -745,6 +805,8 @@ func _complete_ritual() -> void:
 func _fail_ritual(reason: String) -> void:
 	ritual_active = false
 	ritual_progress = 0.0
+	ritual_needed = RITUAL_SECONDS
+	seal_choice = ""
 	simulation.reckoning_active = false
 	simulation.central_inventory[Defs.RESOURCE_STABILIZED_WYRD] = stabilized_stock() + STABILIZED_TO_BIND
 	simulation.last_message = reason
@@ -763,7 +825,8 @@ func _ward_binding_outpost(delta: float) -> void:
 			continue
 		var max_hp := int(RivalryTuning.structure_definition(RivalryTuning.STRUCTURE_CLAIMANT_OUTPOST).get("max_hp", 220))
 		if int(floor(ritual_progress)) != int(floor(ritual_progress - delta)):
-			structure["hp"] = mini(int(structure.get("hp", 0)) + 3, max_hp)
+			var boosted := max_hp + (WALL_HP_BOOST if seal_choice == PATH_WALL else 0)
+			structure["hp"] = mini(int(structure.get("hp", 0)) + _ritual_ward_amount(), boosted)
 
 
 func _binding_outpost_alive() -> bool:
@@ -790,6 +853,9 @@ func _seed_rival_timing() -> void:
 	rival_reveal_at = RIVAL_REVEAL_MIN + rng.randf() * RIVAL_REVEAL_SPAN
 	push_reaction = REACTION_MIN + rng.randf() * REACTION_SPAN
 	raid_reaction = REACTION_MIN + rng.randf() * REACTION_SPAN
+	var latest_smoke := minf(FORESHADOW_MIN + FORESHADOW_SPAN, rival_reveal_at - FORESHADOW_LEAD)
+	var smoke_span := maxf(1.0, latest_smoke - FORESHADOW_MIN)
+	rival_foreshadow_at = FORESHADOW_MIN + rng.randf() * smoke_span
 
 
 func rival_reveal_seconds() -> float:
@@ -859,6 +925,286 @@ func _maybe_offer_choice() -> void:
 	simulation._add_log(message)
 	simulation.push_notice("info", "CHOICE", message, "warning")
 	simulation._record_event("wyrd_choice_offered", message, {"stabilized": stabilized_stock()})
+
+
+func seal_choice_ready() -> bool:
+	if not ritual_active or seal_choice != "" or bool(simulation.game_finished):
+		return false
+	return ritual_progress + 0.001 >= SEAL_CHOICE_AT
+
+
+func bot_seal_path_for_seed(seed_value: int) -> String:
+	var index := BOT_PATH_SEEDS.find(seed_value)
+	if index < 0:
+		index = posmod(seed_value, 2)
+	return PATH_WALL if index % 2 == 0 else PATH_OVERCHARGE
+
+
+func request_seal_choice(path: String) -> Dictionary:
+	if not seal_choice_ready():
+		if seal_choice != "":
+			return _failure("Chosen", "The Seal defence is already committed: %s." % seal_choice)
+		if not ritual_active:
+			return _failure("NotReady", "The Seal ceremony has not begun.")
+		return _failure("NotReady", "The Seal defence choice opens at 60 seconds.")
+	var picked := path.strip_edges().to_lower()
+	if picked == "a" or picked == "reinforce" or picked == "wall" or picked == "defend":
+		picked = PATH_WALL
+	if picked == "b" or picked == "overcharge" or picked == "charge" or picked == "surge":
+		picked = PATH_OVERCHARGE
+	if picked != PATH_WALL and picked != PATH_OVERCHARGE:
+		return _failure("Path", "Choose reinforce the wall or overcharge the Seal.")
+	seal_choice = picked
+	seal_choice_taken_at = float(simulation.elapsed_seconds)
+	var message := ""
+	if picked == PATH_WALL:
+		ritual_needed = RITUAL_SECONDS + WALL_RITUAL_EXTRA
+		_reinforce_ceremony_wall()
+		message = "WALL REINFORCED — the palisade holds. The ceremony needs 20 more seconds."
+	else:
+		ritual_needed = maxf(ritual_progress + 1.0, RITUAL_SECONDS - OVERCHARGE_RITUAL_CUT)
+		_overcharge_seal()
+		message = "SEAL OVERCHARGED — the rite finishes faster. The wall is thinner and another wave comes."
+	simulation.last_message = message
+	simulation._add_log(message)
+	simulation.push_notice("danger", "SEAL CHOICE", message, "warning")
+	simulation._record_event("seal_choice", message, {"path": picked, "seconds": seal_choice_taken_at, "needed": ritual_needed})
+	simulation.add_map_marker("seal_choice", primary_fissure, "Seal: %s" % picked, 0.0)
+	return _success(message)
+
+
+func _maybe_offer_seal_choice() -> void:
+	if seal_choice_offered_at >= 0.0 or not seal_choice_ready():
+		return
+	seal_choice_offered_at = float(simulation.elapsed_seconds)
+	var message := "60s SEAL DEFENCE — reinforce the wall, or overcharge the Seal."
+	simulation.last_message = message
+	simulation._add_log(message)
+	simulation.push_notice("info", "SEAL CHOICE", message, "warning")
+	simulation._record_event("seal_choice_offered", message, {"progress": ritual_progress})
+
+
+func _reinforce_ceremony_wall() -> void:
+	if simulation.rivalry == null:
+		return
+	for structure in simulation.rivalry.get_structures(RivalryTuning.PLAYER_REALM):
+		if String(structure.get("type", "")) != RivalryTuning.STRUCTURE_CLAIMANT_OUTPOST:
+			continue
+		if int(structure.get("hp", 0)) <= 0:
+			continue
+		structure["hp"] = int(structure.get("hp", 0)) + WALL_HP_BOOST
+		structure["max_hp"] = int(structure.get("max_hp", RivalryTuning.structure_definition(RivalryTuning.STRUCTURE_CLAIMANT_OUTPOST).get("max_hp", 220))) + WALL_HP_BOOST
+		return
+
+
+func _overcharge_seal() -> void:
+	if seal_overcharge_raid_spawned:
+		return
+	seal_overcharge_raid_spawned = true
+	if simulation.has_method("spawn_ritual_raid"):
+		simulation.spawn_ritual_raid(OVERCHARGE_RAID_SIZE)
+
+
+func _ritual_ward_amount() -> int:
+	if seal_choice == PATH_WALL:
+		return WALL_WARD
+	if seal_choice == PATH_OVERCHARGE:
+		return OVERCHARGE_WARD
+	return DEFAULT_WARD
+
+
+func threat_name() -> String:
+	var index := clampi(rival_threat_tier, 0, TIER_NAMES.size() - 1)
+	return String(TIER_NAMES[index])
+
+
+func rival_foreshadow_seconds() -> float:
+	if rival_foreshadow_at < 0.0:
+		_seed_rival_timing()
+	return rival_foreshadow_at
+
+
+func note_rival_revealed() -> void:
+	_set_threat_tier(TIER_SIGHTED, "Rival Outpost sighted on the fissure.")
+	_paint_rival_banners(3)
+	_paint_threat_marker("TIER 2 SIGHTED")
+
+
+func visible_escalation() -> Dictionary:
+	return {
+		"tier": rival_threat_tier,
+		"tier_name": threat_name(),
+		"banners": _marker_count("rival_banner"),
+		"route": _marker_count("rival_route"),
+		"threat": _marker_count("rival_threat"),
+		"smoke": _marker_count("rival_smoke"),
+		"push_telegraphed": push_telegraphed,
+		"raid_telegraphed": raid_telegraphed,
+		"foreshadowed": rival_foreshadowed
+	}
+
+
+func _maybe_foreshadow() -> void:
+	if rival_foreshadowed or bool(simulation.demo_rival_revealed) or bool(simulation.game_finished):
+		return
+	if rival_foreshadow_at < 0.0:
+		_seed_rival_timing()
+	if float(simulation.elapsed_seconds) + 0.001 < rival_foreshadow_at:
+		return
+	rival_foreshadowed = true
+	var tile := _foreshadow_tile()
+	simulation._reveal_radius(tile, 4)
+	simulation.add_map_marker("rival_smoke", tile, "Rival smoke", 0.0)
+	_set_threat_tier(TIER_SMOKE, "Distant rival smoke.")
+	_paint_rival_banners(1)
+	_paint_threat_marker("TIER 1 SMOKE")
+	var message := "SCOUT SIGHTING — distant rival smoke on the crater road. They will show themselves."
+	simulation.last_message = message
+	simulation._add_log(message)
+	simulation.push_notice("info", "FORESHADOW", message, "warning")
+	simulation._record_event("rival_foreshadow", message, {"tile": tile, "seconds": rival_foreshadow_at})
+
+
+func _maybe_escalate_map() -> void:
+	if simulation == null or bool(simulation.game_finished):
+		return
+	if bool(simulation.demo_rival_revealed) and rival_threat_tier < TIER_SIGHTED:
+		note_rival_revealed()
+	if not push_telegraphed and first_harvest_at >= 0.0 and bool(simulation.demo_rival_revealed):
+		push_telegraphed = true
+		_set_threat_tier(TIER_PUSH, "Rival army on the road.")
+		_paint_rival_banners(5)
+		_paint_army_route(_rival_origin_tile(), primary_fissure, "Push")
+		_paint_threat_marker("TIER 3 PUSH")
+		var push_line := "RIVAL ARMY MARKED — banners grow. A push is coming down this road."
+		simulation.last_message = push_line
+		simulation._add_log(push_line)
+		simulation.push_notice("danger", "THREAT", push_line, "warning")
+		simulation._record_event("rival_escalation", push_line, {"kind": "push", "tier": TIER_PUSH})
+	if not raid_telegraphed and first_stabilized_at >= 0.0:
+		raid_telegraphed = true
+		_set_threat_tier(TIER_RAID, "Rival raid on the vent.")
+		_paint_rival_banners(7)
+		_paint_army_route(_rival_origin_tile(), _harvester_or_fissure(), "Raid")
+		_paint_threat_marker("TIER 4 RAID")
+		var raid_line := "RAID PING — the rival marks a route onto the Wyrd vent."
+		simulation.last_message = raid_line
+		simulation._add_log(raid_line)
+		simulation.push_notice("danger", "THREAT", raid_line, "warning")
+		simulation._record_event("rival_escalation", raid_line, {"kind": "raid", "tier": TIER_RAID})
+
+
+func _set_threat_tier(tier: int, _reason: String) -> void:
+	if tier > rival_threat_tier:
+		rival_threat_tier = tier
+
+
+func _paint_rival_banners(count: int) -> void:
+	if simulation == null:
+		return
+	_clear_markers(["rival_banner"])
+	banner_count = maxi(count, 1)
+	var origin := _rival_origin_tile()
+	if origin.x < 0:
+		origin = primary_fissure if primary_fissure.x >= 0 else Vector2i(2, 2)
+	var ring := [Vector2i(2, 0), Vector2i(-2, 1), Vector2i(1, 3), Vector2i(-3, -1), Vector2i(3, 2), Vector2i(0, -3), Vector2i(-1, 4)]
+	for index in range(banner_count):
+		var offset: Vector2i = ring[index % ring.size()]
+		if index >= ring.size():
+			offset *= 2
+		var tile := _clamp_tile(origin + offset)
+		simulation._reveal_radius(tile, 2)
+		simulation.add_map_marker("rival_banner", tile, "Banner %d" % (index + 1), 0.0)
+
+
+func _paint_army_route(from_tile: Vector2i, to_tile: Vector2i, title: String) -> void:
+	if simulation == null or from_tile.x < 0 or to_tile.x < 0:
+		return
+	_clear_markers(["rival_route"])
+	var steps := maxi(4, maxi(absi(to_tile.x - from_tile.x), absi(to_tile.y - from_tile.y)))
+	var painted := 0
+	for index in range(steps + 1):
+		if index % maxi(1, int(ceil(float(steps) / 6.0))) != 0 and index != steps:
+			continue
+		var fraction := 0.0 if steps <= 0 else float(index) / float(steps)
+		var tile := _clamp_tile(Vector2i(
+			roundi(lerpf(float(from_tile.x), float(to_tile.x), fraction)),
+			roundi(lerpf(float(from_tile.y), float(to_tile.y), fraction))
+		))
+		simulation._reveal_radius(tile, 2)
+		simulation.add_map_marker("rival_route", tile, "%s %d" % [title, painted + 1], 0.0)
+		painted += 1
+
+
+func _paint_threat_marker(title: String) -> void:
+	if simulation == null:
+		return
+	_clear_markers(["rival_threat"])
+	var tile := _rival_origin_tile()
+	if tile.x < 0:
+		tile = primary_fissure
+	if tile.x < 0:
+		return
+	simulation.add_map_marker("rival_threat", tile, title, 0.0)
+
+
+func _foreshadow_tile() -> Vector2i:
+	var hall: Vector2i = simulation._footprint_center(simulation.town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
+	var toward := Vector2(1.0, 0.0)
+	if primary_fissure.x >= 0:
+		toward = Vector2(primary_fissure - hall)
+	elif not simulation.rival_seats.is_empty():
+		toward = Vector2(Vector2i(simulation.rival_seats[0]) - hall)
+	if toward.length_squared() < 0.01:
+		toward = Vector2(1.0, 0.0)
+	toward = toward.normalized()
+	return _clamp_tile(hall + Vector2i(roundi(toward.x * 18.0), roundi(toward.y * 18.0)))
+
+
+func _rival_origin_tile() -> Vector2i:
+	if simulation != null and simulation.rivalry != null:
+		for structure in simulation.rivalry.get_structures(RivalryTuning.AI_REALM):
+			if int(structure.get("hp", 0)) <= 0:
+				continue
+			return Vector2i(structure.get("position", Vector2i.ZERO))
+	if simulation != null:
+		var presence: Variant = simulation.founding_site.get("rival_presence", Vector2i(-1, -1))
+		if typeof(presence) == TYPE_VECTOR2I and Vector2i(presence).x >= 0:
+			return Vector2i(presence)
+	if primary_fissure.x >= 0:
+		return rival_presence_tile()
+	return Vector2i(-1, -1)
+
+
+func _harvester_or_fissure() -> Vector2i:
+	if simulation != null:
+		for building in simulation.buildings:
+			if bool(building.get("construction", false)):
+				continue
+			if String(building.get("type", "")) == Defs.BUILDING_WYRD_HARVESTER:
+				return Vector2i(building.get("position", primary_fissure))
+	return primary_fissure
+
+
+func _clear_markers(kinds: Array) -> void:
+	if simulation == null:
+		return
+	var kept: Array = []
+	for marker in simulation.map_markers:
+		if String(marker.get("kind", "")) in kinds:
+			continue
+		kept.append(marker)
+	simulation.map_markers = kept
+
+
+func _marker_count(kind: String) -> int:
+	if simulation == null:
+		return 0
+	var total := 0
+	for marker in simulation.map_markers:
+		if String(marker.get("kind", "")) == kind:
+			total += 1
+	return total
 
 
 func _harvest_interval() -> float:

@@ -157,6 +157,23 @@ func _render_map(map_size: Vector2i, frame_snapshot: Dictionary) -> Image:
 		_stamp_landmark(image, map_size, Vector2i(simulation.rival_town_hall_position), Color("#c45c3a"), 4)
 	if simulation.is_town_hall_founded():
 		_stamp_landmark(image, map_size, Vector2i(simulation.town_hall_position), Color("#efcf8a"), 4)
+	var markers: Array = frame_snapshot.get("map_markers", [])
+	if markers.is_empty() and simulation.has_method("get_map_markers"):
+		markers = simulation.get_map_markers()
+	for marker_value in markers:
+		var marker: Dictionary = marker_value
+		var kind := String(marker.get("kind", ""))
+		var tile := Vector2i(marker.get("position", Vector2i.ZERO))
+		if kind == "rival_banner":
+			_stamp_landmark(image, map_size, tile, Color("#c84a4a"), 2)
+		elif kind == "rival_route":
+			_dot(image, map_size, tile, Color("#f0a06e"), overview_mode)
+		elif kind == "rival_threat":
+			_stamp_landmark(image, map_size, tile, Color("#f05a4a"), 3)
+		elif kind == "rival_smoke":
+			_stamp_landmark(image, map_size, tile, Color("#8a7a6a"), 3)
+		elif kind == "seal_choice":
+			_stamp_landmark(image, map_size, tile, Color("#7ec8d4"), 2)
 	_paint_camera(image, map_size)
 	return image
 
