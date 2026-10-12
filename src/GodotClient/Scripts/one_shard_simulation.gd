@@ -5875,10 +5875,20 @@ func _process_laborers(delta: float) -> void:
 func _assign_laborer_task(worker: Dictionary) -> bool:
 	if int(worker.get("carried_amount", 0)) > 0:
 		return _assign_dropoff_for_carried(worker)
-	# Haul construction materials first so sites are not starved.
+	# The Director: until 12 Stabilized sits in the store, keep the
+	# Wyrd loop moving. Site-build is cosmetic — the construction
+	# timer still ticks — and a full crew on tents / optional halls
+	# left raw Wyrd sitting at the vent (seed 260821 stalled at 9).
+	if int(central_inventory.get(Defs.RESOURCE_STABILIZED_WYRD, 0)) < 12:
+		if _assign_processor_supply(worker):
+			return true
+		if _assign_output_fetch(worker):
+			return true
+	# Haul construction materials so sites are not starved.
 	if _assign_construction_supply(worker):
 		return true
-	if _assign_site_build(worker):
+	# One peasant raising a site is enough; the timer does the rest.
+	if _site_builder_count() < 1 and _assign_site_build(worker):
 		return true
 	# Laborers only lay a road when a building is waiting on its spur.
 	if _construction_waiting_for_road() and _assign_road_build(worker):
@@ -5888,6 +5898,15 @@ func _assign_laborer_task(worker: Dictionary) -> bool:
 	if _assign_processor_supply(worker):
 		return true
 	return _assign_output_fetch(worker)
+
+
+func _site_builder_count() -> int:
+	var count := 0
+	for other in workers:
+		var task: Dictionary = other.get("task", {})
+		if String(task.get("purpose", "")) == "site_build":
+			count += 1
+	return count
 
 
 func _assign_site_build(worker: Dictionary) -> bool:
