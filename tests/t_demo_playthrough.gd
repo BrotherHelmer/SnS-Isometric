@@ -336,6 +336,9 @@ func _watch_phase(game, sim) -> void:
 	if captured.get("pending_seal_choice", false):
 		captured["pending_seal_choice"] = false
 		var seal_path := String(sim.crater_war.seal_choice) if sim.crater_war != null else ""
+		if seal_path == "" and sim.crater_war != null and sim.crater_war.seal_choice_ready():
+			sim.request_seal_choice(sim.crater_war.bot_seal_path_for_seed(seed_value))
+			seal_path = String(sim.crater_war.seal_choice)
 		if seal_path == "":
 			seal_path = "choice"
 		await _capture(game, sim, "t%02d_seal_%s" % [_mm(sim), seal_path], "Seal defence: %s." % seal_path)
@@ -438,6 +441,8 @@ func _watch_meaningful(sim, thought: Dictionary) -> void:
 	if sim.crater_war != null and sim.crater_war.seal_choice_ready():
 		meaningful = true
 	if sim.crater_war != null and sim.crater_war.midgame_choice_ready():
+		meaningful = true
+	if sim.crater_war != null and sim.crater_war.can_begin():
 		meaningful = true
 	if not bool(sim.is_night):
 		var dusk_left := float(Simulation.DAY_LENGTH_SECONDS) - float(sim.phase_time)

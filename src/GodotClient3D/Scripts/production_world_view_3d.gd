@@ -2809,8 +2809,12 @@ func _update_seal_ceremony(wyrdfall: Dictionary) -> void:
 	if seal_wave != null:
 		seal_wave.visible = path == "overcharge" or celebrating
 		if seal_wave.visible:
-			var swell := 2.4 + 2.8 * (0.5 + 0.5 * sin(float(Time.get_ticks_msec()) / 90.0))
-			seal_wave.scale = Vector3(swell, 1.0, swell)
+			var swell := 3.6 + 4.2 * (0.5 + 0.5 * sin(float(Time.get_ticks_msec()) / 70.0))
+			seal_wave.scale = Vector3(swell, 1.4, swell)
+			var wave_mat := seal_wave.material_override as StandardMaterial3D
+			if wave_mat != null:
+				wave_mat.emission_energy_multiplier = 3.4
+				wave_mat.albedo_color = Color(0.92, 0.98, 1.0, 0.55)
 
 
 func _apply_seal_look(look: Dictionary, celebrating: bool) -> void:
@@ -2853,17 +2857,25 @@ func _apply_seal_look(look: Dictionary, celebrating: bool) -> void:
 				var angle := float(index) * TAU / float(posts)
 				var post := MeshInstance3D.new()
 				var box := BoxMesh.new()
-				box.size = Vector3(0.42, 2.4, 0.28)
+				box.size = Vector3(0.85, 3.6, 0.55)
 				post.mesh = box
-				post.position = Vector3(cos(angle) * 5.5, 1.2, sin(angle) * 5.5)
+				post.position = Vector3(cos(angle) * 5.8, 1.8, sin(angle) * 5.8)
 				post.rotation.y = -angle
 				var post_mat := StandardMaterial3D.new()
-				post_mat.albedo_color = Color("#6a3e22") if wall else Color("#c9a24a")
+				post_mat.albedo_color = Color("#8a4a18") if wall else Color("#c9a24a")
 				post_mat.emission_enabled = true
-				post_mat.emission = Color("#d4782a") if wall else Color("#f0c44a")
-				post_mat.emission_energy_multiplier = 0.85
+				post_mat.emission = Color("#ff8a2a") if wall else Color("#f0c44a")
+				post_mat.emission_energy_multiplier = 1.8
 				post.material_override = post_mat
 				seal_palisade_root.add_child(post)
+				var plank := MeshInstance3D.new()
+				var plank_mesh := BoxMesh.new()
+				plank_mesh.size = Vector3(2.4, 0.35, 0.22)
+				plank.mesh = plank_mesh
+				plank.position = Vector3(cos(angle) * 5.8, 2.4, sin(angle) * 5.8)
+				plank.rotation.y = -angle + PI * 0.5
+				plank.material_override = post_mat
+				seal_palisade_root.add_child(plank)
 
 
 func _sync_wyrd_springs(sites: Array) -> void:

@@ -281,6 +281,10 @@ func _try_seal_choice(sim) -> void:
 
 func _try_seal(sim) -> void:
 	if sim.crater_war != null and sim.crater_war.can_begin():
+		# Hold so the fastest path (overcharge, ~100 s) still closes at 42:00.
+		if float(sim.elapsed_seconds) + 100.0 < 42.0 * 60.0:
+			last_idle_reason = "holding the Seal until the hour can close"
+			return
 		var crater_seal: Dictionary = sim.request_begin_seal()
 		if bool(crater_seal.get("success", false)):
 			_note(sim, "SEAL", sim.crater_war.primary_fissure, String(crater_seal.get("message", "")))
