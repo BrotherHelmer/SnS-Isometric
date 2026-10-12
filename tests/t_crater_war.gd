@@ -172,6 +172,10 @@ func _check_exposure_and_contest() -> void:
 	sim.elapsed_seconds = sim.crater_war.capture_at + CraterWar.HARVESTER_RAID_DELAY + 1.0
 	sim.crater_war._maybe_rival_contest()
 	_check(sim.crater_war.harvester_raid_done, "rival raids the harvester after the second push")
+	var raids_before := 1 if sim.crater_war.harvester_raid_done else 0
+	sim.crater_war.last_exposure_band = "CRITICAL"
+	sim.crater_war._maybe_rival_contest()
+	_check(sim.crater_war.harvester_raid_done == bool(raids_before), "exposure does not stack a second harvester raid")
 
 
 func _check(ok: bool, message: String) -> void:

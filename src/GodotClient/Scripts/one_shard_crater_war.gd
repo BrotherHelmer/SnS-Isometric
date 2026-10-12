@@ -449,9 +449,8 @@ func _maybe_rival_contest() -> void:
 		if not _rival_outpost_alive():
 			if _plant_rival_contest("contest"):
 				last_contest_at = now
-	if last_exposure_band == "CRITICAL" and capture_at >= 0.0 and last_exposure_raid_band != "CRITICAL":
-		last_exposure_raid_band = "CRITICAL"
-		_call_harvester_raid("exposure")
+	# One harvester raid is the contest beat. A second exposure raid
+	# wiped the vent on the slow seed and starved Stabilized.
 
 
 func route_secured() -> bool:
