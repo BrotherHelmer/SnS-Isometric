@@ -1,0 +1,23 @@
+You are re-reviewing Shard & Sovereign after TEST #18 — midgame caravan and distinct Seal defence looks (PR #85). The climax is still Sealing the frontier fissure when the store holds 12 Stabilized Wyrd. Between 15:00 and 22:00, before the rival's first push, a refugee caravan offers shelter (workers, more exposure) or fortify (palisades, delayed push). At ~60 s of the 120 s defence the player reinforces the wall or overcharges the Seal. Those two Seal choices now look different on screen: wall = amber ward + palisade segments; overcharge = brighter/faster pulse, thinner ring, extra wave.
+
+Read PLAYTHROUGH.md first. Then look at the screenshots in this folder in this order. These are the ONLY attached images:
+
+- t00_start.png — founding yard, first quest
+- t05_storehouse.png — Sawmill / Storehouse plank loop complete (minute 5)
+- t07_first_raid.png — night 1, 2 raiders, 60 s warning
+- t12_frontier.png — crater west, geologist marks the fissure
+- t20_caravan.png — 15–22 refugee caravan: shelter workers vs raise palisades
+- t23_escalation.png — rival banners grow, army route marked, TIER 3 PUSH before the Outpost lands
+- t33_choice.png — 6 Stabilized pact: faster refining (A) vs secure harvest (B)
+- t44_seal_wall.png — Seal wall reinforce: amber ward ring and palisade segments
+- t44_seal_overcharge.png — Seal overcharge: brighter/faster pulse, thinner ring, extra wave
+- t46_victory.png — THE FISSURE IS SEALED / THE CEREMONY HELD at 46:04
+
+The bot chose shelter + A + wall on this seed, fortify + B + overcharge on 261306 / 260918, and shelter + A + wall on 261597. Other seeds seal at 42:04 / 44:44 / 53:48. Longest idle stretches: 1:04 / 1:12 / 1:01 / 1:28.
+
+Rate the fun of this Seal defence hour 1–10. Judge pacing against the previous Seal defence hour (PR #84).
+
+Return:
+1. Fun score (1–10) and one-sentence reason
+2. Pacing notes (what now works, where it is still dead)
+3. Remaining P0/P1/P2 only if needed — smallest changes, no redesign

@@ -1,0 +1,2247 @@
+{
+	"balance": [],
+	"blockers": [],
+	"bugs": [
+		"Placement failed: CLAIMANT_OUTPOST: no site near (202, 173)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (201, 172)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (201, 174)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (203, 172)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (202, 172)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (202, 174)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (201, 173)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (203, 173)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (203, 174)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (200, 171)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (200, 175)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (204, 171)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (201, 171)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (201, 175)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (200, 172)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (204, 172)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (202, 171)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (202, 175)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (200, 173)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (204, 173)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (203, 171)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (203, 175)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (200, 174)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (204, 174)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (204, 175)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (199, 170)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (199, 176)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (205, 170)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (200, 170)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (200, 176)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (199, 171)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (205, 171)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (201, 170)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (201, 176)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (199, 172)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (205, 172)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (202, 170)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (202, 176)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (199, 173)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (205, 173)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (203, 170)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (203, 176)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (199, 174)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (205, 174)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (204, 170)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (204, 176)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (199, 175)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (205, 175)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (205, 176)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (198, 169)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (198, 177)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (206, 169)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (199, 169)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (199, 177)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (198, 170)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (206, 170)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (200, 169)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (200, 177)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (198, 171)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (206, 171)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (201, 169)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (201, 177)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (198, 172)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (206, 172)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (202, 169)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (202, 177)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (198, 173)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (206, 173)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (203, 169)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (203, 177)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (198, 174)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (206, 174)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (204, 169)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (204, 177)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (198, 175)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (206, 175)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (205, 169)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (205, 177)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (198, 176)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (206, 176)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (206, 177)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (197, 168)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (197, 178)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (207, 168)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (198, 168)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (198, 178)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (197, 169)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (207, 169)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (199, 168)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (199, 178)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (197, 170)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (207, 170)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (200, 168)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (200, 178)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (197, 171)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (207, 171)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (201, 168)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (201, 178)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (197, 172)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (207, 172)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (202, 168)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (202, 178)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (197, 173)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (207, 173)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (203, 168)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (203, 178)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (197, 174)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (207, 174)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (204, 168)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (204, 178)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (197, 175)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (207, 175)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (205, 168)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (205, 178)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (197, 176)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (207, 176)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (206, 168)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (206, 178)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (197, 177)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (207, 177)",
+		"Placement failed: CLAIMANT_OUTPOST: no site near (207, 178)"
+	],
+	"claim": {
+		"contested": false,
+		"lumen": false,
+		"outpost": false,
+		"ready": false,
+		"road": false,
+		"sovereign": true,
+		"summary": "Needs: operational Outpost beside the Shard, connected owned road, connected active Lumen, 12 accumulated Wyrd.",
+		"wyrd": false
+	},
+	"crater_war": {
+		"banner_count": 7,
+		"capture_at": 1224.29999999998,
+		"choice": "refine",
+		"choice_offered_at": 2022.19999999926,
+		"choice_taken_at": 2023.99999999925,
+		"contest_count": 9,
+		"exposure": 0.22,
+		"first_12_at": 2543.99999999878,
+		"first_harvest_at": 1314.5999999999,
+		"first_stabilized_at": 1560.19999999968,
+		"fissure": "(220, 178)",
+		"foreshadow_at": 658.944922685623,
+		"foreshadowed": true,
+		"fortify_walls": 0,
+		"harvester_raid_at": 1575.79999999966,
+		"interacted": true,
+		"midgame_at": 1151.32666826248,
+		"midgame_choice": "shelter",
+		"midgame_offered_at": 1151.40000000005,
+		"midgame_taken_at": 1152.00000000005,
+		"push_telegraphed": true,
+		"resolution": "capture",
+		"ritual_at": 2543.99999999878,
+		"rival_reveal_at": 1174.52989339828,
+		"seal_choice": "wall",
+		"seal_choice_offered_at": 2603.99999999873,
+		"seal_choice_taken_at": 2607.99999999872,
+		"second_push_at": 1322.99999999989,
+		"secondary": "(228, 173)",
+		"stabilized": 1,
+		"storehouse_at": 218.199999999992,
+		"surveyed": true,
+		"threat_tier": 4,
+		"victory_ceremony": true
+	},
+	"defeat_reason": "THE FISSURE IS SEALED — the ceremony held.",
+	"dull": [
+		"Dull stretch near t=488s (96s without a new order).",
+		"Dull stretch near t=584s (96s without a new order).",
+		"Dull stretch near t=1072s (96s without a new order).",
+		"Dull stretch near t=1720s (96s without a new order)."
+	],
+	"elapsed": 2683.99999999865,
+	"events": [
+		{
+			"detail": "Founded seed 261597 at hall (241, 182), shard (162, 163), rivals 4.",
+			"kind": "start",
+			"t": 0.0
+		},
+		{
+			"detail": "A Settlement Begins",
+			"kind": "first_quest",
+			"t": 87.9999999999993
+		},
+		{
+			"detail": "Storehouse completed.",
+			"kind": "storehouse",
+			"t": 223.999999999992
+		},
+		{
+			"detail": "First night began on day 1.",
+			"kind": "first_night",
+			"t": 424.000000000028
+		},
+		{
+			"detail": "Raid active with 2 enemies.",
+			"kind": "first_raid",
+			"t": 424.000000000028
+		},
+		{
+			"detail": "SCOUT SIGHTING — distant rival smoke on the crater road. They will show themselves.",
+			"kind": "rival_foreshadow",
+			"t": 664.000000000082
+		},
+		{
+			"detail": "SCOUT SIGHTING — distant rival smoke on the crater road. They will show themselves.",
+			"kind": "rival_foreshadow",
+			"t": 664.000000000082
+		},
+		{
+			"detail": "Revealed rival LUMEN_PILLAR at (216, 107).",
+			"kind": "rival",
+			"t": 664.000000000082
+		},
+		{
+			"detail": "THE SHARD LIES W — a frontier marker is within reach.",
+			"kind": "frontier",
+			"t": 720.000000000095
+		},
+		{
+			"detail": "REFUGEE CARAVAN — shelter two workers and raise exposure, or spend wood to raise palisades and delay the first push.",
+			"kind": "midgame_choice_offered",
+			"t": 1152.00000000005
+		},
+		{
+			"detail": "REFUGEE CARAVAN — shelter two workers and raise exposure, or spend wood to raise palisades and delay the first push.",
+			"kind": "midgame_choice_offered",
+			"t": 1152.00000000005
+		},
+		{
+			"detail": "REFUGEES SHELTERED — two workers take the hall. The extra mouths raise Wyrd exposure.",
+			"kind": "midgame_choice",
+			"t": 1152.00000000005
+		},
+		{
+			"detail": "CLAIMANT OUTPOST CAPTURED — their stores are yours. +8 Wood, +4 Stone, +2 Wyrd. Hold the corridor; the rival will return.",
+			"kind": "capture",
+			"t": 1231.99999999997
+		},
+		{
+			"detail": "Raw Wyrd exposure is rising. Raise a Lumen on the harvester or refine the surplus.",
+			"kind": "exposure_choice",
+			"t": 1287.99999999992
+		},
+		{
+			"detail": "The harvester drinks the first raw Wyrd.",
+			"kind": "first_harvest",
+			"t": 1319.99999999989
+		},
+		{
+			"detail": "RIVAL ARMY MARKED — banners grow. A push is coming down this road.",
+			"kind": "rival_escalation",
+			"t": 1319.99999999989
+		},
+		{
+			"detail": "RIVAL ARMY MARKED — banners grow. A push is coming down this road.",
+			"kind": "rival_escalation",
+			"t": 1319.99999999989
+		},
+		{
+			"detail": "RIVAL PUSH — they raise another Outpost on the fissure.",
+			"kind": "rival_second_push",
+			"t": 1327.99999999989
+		},
+		{
+			"detail": "The rival contests the fissure again.",
+			"kind": "rival_contest",
+			"t": 1479.99999999975
+		},
+		{
+			"detail": "The refiner yields the first Stabilized Wyrd.",
+			"kind": "first_stabilized",
+			"t": 1567.99999999967
+		},
+		{
+			"detail": "RAID PING — the rival marks a route onto the Wyrd vent.",
+			"kind": "rival_escalation",
+			"t": 1567.99999999967
+		},
+		{
+			"detail": "HARVESTER RAID — hostiles from the south mean the Wyrd vent.",
+			"kind": "harvester_raid_spawn",
+			"t": 1575.99999999966
+		},
+		{
+			"detail": "HARVESTER RAID — the rival strikes the Wyrd vent.",
+			"kind": "harvester_raid",
+			"t": 1575.99999999966
+		},
+		{
+			"detail": "The rival contests the fissure again.",
+			"kind": "rival_contest",
+			"t": 1623.99999999962
+		},
+		{
+			"detail": "The rival contests the fissure again.",
+			"kind": "rival_contest",
+			"t": 1775.99999999948
+		},
+		{
+			"detail": "The rival contests the fissure again.",
+			"kind": "rival_contest",
+			"t": 1927.99999999934
+		},
+		{
+			"detail": "6 STABILIZED — choose faster refining, or invest 3 to secure the harvester.",
+			"kind": "wyrd_choice_offered",
+			"t": 2023.99999999925
+		},
+		{
+			"detail": "6 STABILIZED — choose faster refining, or invest 3 to secure the harvester.",
+			"kind": "wyrd_choice_offered",
+			"t": 2023.99999999925
+		},
+		{
+			"detail": "FASTER REFINING — the kiln runs hotter. Raw converts before exposure can burn it.",
+			"kind": "wyrd_choice",
+			"t": 2023.99999999925
+		},
+		{
+			"detail": "The rival contests the fissure again.",
+			"kind": "rival_contest",
+			"t": 2079.9999999992
+		},
+		{
+			"detail": "The rival contests the fissure again.",
+			"kind": "rival_contest",
+			"t": 2223.99999999907
+		},
+		{
+			"detail": "The rival contests the fissure again.",
+			"kind": "rival_contest",
+			"t": 2375.99999999893
+		},
+		{
+			"detail": "The rival contests the fissure again.",
+			"kind": "rival_contest",
+			"t": 2527.9999999988
+		},
+		{
+			"detail": "Store reached 12 Stabilized Wyrd.",
+			"kind": "stabilized_12",
+			"t": 2543.99999999878
+		},
+		{
+			"detail": "SEAL BEGUN — defend the fissure ceremony for 120 seconds.",
+			"kind": "ritual",
+			"t": 2543.99999999878
+		},
+		{
+			"detail": "60s SEAL DEFENCE — reinforce the wall, or overcharge the Seal.",
+			"kind": "seal_choice_offered",
+			"t": 2607.99999999872
+		},
+		{
+			"detail": "60s SEAL DEFENCE — reinforce the wall, or overcharge the Seal.",
+			"kind": "seal_choice_offered",
+			"t": 2607.99999999872
+		},
+		{
+			"detail": "WALL REINFORCED — the palisade holds. The ceremony needs 20 more seconds.",
+			"kind": "seal_choice",
+			"t": 2607.99999999872
+		},
+		{
+			"detail": "THE FISSURE IS SEALED — the ceremony held.",
+			"kind": "victory",
+			"t": 2683.99999999865
+		}
+	],
+	"finished": true,
+	"hall": "(241, 182)",
+	"idle_gaps": [],
+	"longest_idle": 61.0000000000952,
+	"orders": [
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 0.0,
+			"tile": "241,186",
+			"type": "ROAD"
+		},
+		{
+			"message": "Construction started: House.",
+			"seconds": 0.0,
+			"tile": "245,186",
+			"type": "HOUSE"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 16.0,
+			"tile": "240,186",
+			"type": "ROAD"
+		},
+		{
+			"message": "Construction started: Lumber Camp.",
+			"seconds": 16.0,
+			"tile": "235,184",
+			"type": "LUMBER_CAMP"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 32.0000000000002,
+			"tile": "244,187",
+			"type": "ROAD"
+		},
+		{
+			"message": "Construction started: Farm.",
+			"seconds": 32.0000000000002,
+			"tile": "246,188",
+			"type": "FARM"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 56.0000000000005,
+			"tile": "238,185",
+			"type": "ROAD"
+		},
+		{
+			"message": "Construction started: Quarry.",
+			"seconds": 56.0000000000005,
+			"tile": "235,181",
+			"type": "QUARRY"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 87.9999999999993,
+			"tile": "238,182",
+			"type": "ROAD"
+		},
+		{
+			"message": "Construction started: Sawmill.",
+			"seconds": 87.9999999999993,
+			"tile": "245,191",
+			"type": "SAWMILL"
+		},
+		{
+			"message": "Construction started: Watchtower.",
+			"seconds": 119.999999999997,
+			"tile": "240,182",
+			"type": "WATCHTOWER"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 167.999999999995,
+			"tile": "238,181",
+			"type": "ROAD"
+		},
+		{
+			"message": "Construction started: Storehouse.",
+			"seconds": 167.999999999995,
+			"tile": "241,192",
+			"type": "STOREHOUSE"
+		},
+		{
+			"message": "Construction started: Barracks.",
+			"seconds": 175.999999999994,
+			"tile": "241,179",
+			"type": "BARRACKS"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 271.999999999993,
+			"tile": "238,180",
+			"type": "ROAD"
+		},
+		{
+			"message": "Construction started: House.",
+			"seconds": 271.999999999993,
+			"tile": "242,188",
+			"type": "HOUSE"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 271.999999999993,
+			"tile": "238,179",
+			"type": "ROAD"
+		},
+		{
+			"message": "Lumen Pillar built.",
+			"seconds": 271.999999999993,
+			"tile": "239,180",
+			"type": "LUMEN_PILLAR"
+		},
+		{
+			"message": "Construction started: Bakery.",
+			"seconds": 279.999999999995,
+			"tile": "236,187",
+			"type": "BAKERY"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 287.999999999997,
+			"tile": "237,179",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 295.999999999999,
+			"tile": "236,179",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 304.000000000001,
+			"tile": "236,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Astrid scouts toward the fog.",
+			"seconds": 304.000000000001,
+			"tile": "229,170",
+			"type": "SCOUT"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 304.000000000001,
+			"tile": "236,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 320.000000000004,
+			"tile": "235,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 320.000000000004,
+			"tile": "234,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 336.000000000008,
+			"tile": "234,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 336.000000000008,
+			"tile": "234,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 352.000000000012,
+			"tile": "234,174",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 360.000000000013,
+			"tile": "234,173",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 360.000000000013,
+			"tile": "234,172",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 376.000000000017,
+			"tile": "234,171",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 384.000000000019,
+			"tile": "234,170",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 392.000000000021,
+			"tile": "234,169",
+			"type": "ROAD"
+		},
+		{
+			"message": "Astrid scouts toward the fog.",
+			"seconds": 608.00000000007,
+			"tile": "229,170",
+			"type": "SCOUT"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 624.000000000073,
+			"tile": "234,168",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 624.000000000073,
+			"tile": "234,167",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 656.000000000081,
+			"tile": "234,166",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 656.000000000081,
+			"tile": "234,165",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 688.000000000088,
+			"tile": "234,164",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 688.000000000088,
+			"tile": "234,163",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 712.000000000093,
+			"tile": "233,163",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 720.000000000095,
+			"tile": "234,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Construction started: House.",
+			"seconds": 720.000000000095,
+			"tile": "242,190",
+			"type": "HOUSE"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 720.000000000095,
+			"tile": "233,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Construction started: Wyrd Harvester.",
+			"seconds": 720.000000000095,
+			"tile": "218,178",
+			"type": "WYRD_HARVESTER"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 744.000000000101,
+			"tile": "232,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 744.000000000101,
+			"tile": "231,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 760.000000000104,
+			"tile": "230,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 768.000000000106,
+			"tile": "229,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 768.000000000106,
+			"tile": "228,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 792.000000000112,
+			"tile": "227,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 792.000000000112,
+			"tile": "226,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 816.000000000117,
+			"tile": "225,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 816.000000000117,
+			"tile": "224,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 840.000000000122,
+			"tile": "223,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 840.000000000122,
+			"tile": "222,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 864.000000000128,
+			"tile": "223,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 872.00000000013,
+			"tile": "224,179",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 888.000000000133,
+			"tile": "223,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 896.000000000135,
+			"tile": "222,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 920.000000000141,
+			"tile": "221,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 920.000000000141,
+			"tile": "221,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 952.000000000148,
+			"tile": "220,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 976.000000000153,
+			"tile": "220,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 976.000000000153,
+			"tile": "219,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "REFUGEES SHELTERED — two workers take the hall. The extra mouths raise Wyrd exposure.",
+			"seconds": 1152.00000000005,
+			"tile": "220,178",
+			"type": "CARAVAN"
+		},
+		{
+			"message": "3 patrol soldiers ordered to assault the rival Outpost. They remain vulnerable while away.",
+			"seconds": 1176.00000000003,
+			"tile": "221,174",
+			"type": "ASSAULT"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1231.99999999997,
+			"tile": "220,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1231.99999999997,
+			"tile": "219,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Lumen Pillar built.",
+			"seconds": 1255.99999999995,
+			"tile": "236,180",
+			"type": "LUMEN_PILLAR"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1263.99999999995,
+			"tile": "218,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1263.99999999995,
+			"tile": "220,174",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1287.99999999992,
+			"tile": "219,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Construction started: House.",
+			"seconds": 1287.99999999992,
+			"tile": "240,189",
+			"type": "HOUSE"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1295.99999999992,
+			"tile": "218,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Construction started: Wyrd Refiner.",
+			"seconds": 1303.99999999991,
+			"tile": "237,172",
+			"type": "WYRD_REFINER"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1327.99999999989,
+			"tile": "217,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1327.99999999989,
+			"tile": "217,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "3 patrol soldiers ordered to assault the rival Outpost. They remain vulnerable while away.",
+			"seconds": 1327.99999999989,
+			"tile": "220,181",
+			"type": "ASSAULT"
+		},
+		{
+			"message": "Lumen Pillar built.",
+			"seconds": 1351.99999999987,
+			"tile": "227,179",
+			"type": "LUMEN_PILLAR"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1367.99999999985,
+			"tile": "217,179",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1367.99999999985,
+			"tile": "216,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Construction started: Watchtower.",
+			"seconds": 1367.99999999985,
+			"tile": "218,180",
+			"type": "WATCHTOWER"
+		},
+		{
+			"message": "Astrid scouts toward the fog.",
+			"seconds": 1383.99999999984,
+			"tile": "229,170",
+			"type": "SCOUT"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1399.99999999982,
+			"tile": "220,173",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1407.99999999981,
+			"tile": "219,174",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1431.99999999979,
+			"tile": "218,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1447.99999999978,
+			"tile": "217,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1447.99999999978,
+			"tile": "216,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Lumen Pillar built.",
+			"seconds": 1447.99999999978,
+			"tile": "219,173",
+			"type": "LUMEN_PILLAR"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1463.99999999976,
+			"tile": "216,179",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1463.99999999976,
+			"tile": "215,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Construction started: Wall.",
+			"seconds": 1471.99999999976,
+			"tile": "219,180",
+			"type": "WALL"
+		},
+		{
+			"message": "2 patrol soldiers ordered to assault the rival Outpost. They remain vulnerable while away.",
+			"seconds": 1479.99999999975,
+			"tile": "219,181",
+			"type": "ASSAULT"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1495.99999999973,
+			"tile": "225,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1503.99999999973,
+			"tile": "225,179",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1519.99999999971,
+			"tile": "224,180",
+			"type": "ROAD"
+		},
+		{
+			"message": "Construction started: Wall.",
+			"seconds": 1519.99999999971,
+			"tile": "220,180",
+			"type": "WALL"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1543.99999999969,
+			"tile": "223,180",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1543.99999999969,
+			"tile": "222,180",
+			"type": "ROAD"
+		},
+		{
+			"message": "Construction started: Wall.",
+			"seconds": 1567.99999999967,
+			"tile": "218,181",
+			"type": "WALL"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1575.99999999966,
+			"tile": "243,187",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1575.99999999966,
+			"tile": "221,180",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1583.99999999965,
+			"tile": "242,187",
+			"type": "ROAD"
+		},
+		{
+			"message": "2 patrol soldiers ordered to assault the rival Outpost. They remain vulnerable while away.",
+			"seconds": 1623.99999999962,
+			"tile": "220,181",
+			"type": "ASSAULT"
+		},
+		{
+			"message": "2 patrol soldiers ordered to assault the rival Outpost. They remain vulnerable while away.",
+			"seconds": 1775.99999999948,
+			"tile": "219,181",
+			"type": "ASSAULT"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1807.99999999945,
+			"tile": "222,181",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1831.99999999943,
+			"tile": "223,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1839.99999999942,
+			"tile": "224,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Construction started: Wall.",
+			"seconds": 1839.99999999942,
+			"tile": "217,181",
+			"type": "WALL"
+		},
+		{
+			"message": "Astrid scouts toward the fog.",
+			"seconds": 1839.99999999942,
+			"tile": "229,170",
+			"type": "SCOUT"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1847.99999999941,
+			"tile": "216,180",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1871.99999999939,
+			"tile": "220,172",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1887.99999999938,
+			"tile": "221,173",
+			"type": "ROAD"
+		},
+		{
+			"message": "Construction started: Farm.",
+			"seconds": 1895.99999999937,
+			"tile": "231,181",
+			"type": "FARM"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1919.99999999935,
+			"tile": "218,174",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1919.99999999935,
+			"tile": "217,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "2 patrol soldiers ordered to assault the rival Outpost. They remain vulnerable while away.",
+			"seconds": 1927.99999999934,
+			"tile": "220,183",
+			"type": "ASSAULT"
+		},
+		{
+			"message": "Construction started: Farm.",
+			"seconds": 1951.99999999932,
+			"tile": "227,180",
+			"type": "FARM"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1959.99999999931,
+			"tile": "216,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1975.9999999993,
+			"tile": "215,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 1999.99999999928,
+			"tile": "215,179",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2007.99999999927,
+			"tile": "214,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2023.99999999925,
+			"tile": "223,181",
+			"type": "ROAD"
+		},
+		{
+			"message": "FASTER REFINING — the kiln runs hotter. Raw converts before exposure can burn it.",
+			"seconds": 2023.99999999925,
+			"tile": "220,178",
+			"type": "CHOICE"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2039.99999999924,
+			"tile": "226,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2055.99999999923,
+			"tile": "226,179",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2055.99999999923,
+			"tile": "225,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2079.9999999992,
+			"tile": "225,180",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2079.9999999992,
+			"tile": "224,181",
+			"type": "ROAD"
+		},
+		{
+			"message": "2 patrol soldiers ordered to assault the rival Outpost. They remain vulnerable while away.",
+			"seconds": 2079.9999999992,
+			"tile": "219,181",
+			"type": "ASSAULT"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2103.99999999918,
+			"tile": "223,174",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2103.99999999918,
+			"tile": "216,181",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2135.99999999915,
+			"tile": "215,180",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2135.99999999915,
+			"tile": "220,171",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2167.99999999912,
+			"tile": "221,172",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2167.99999999912,
+			"tile": "219,172",
+			"type": "ROAD"
+		},
+		{
+			"message": "2 patrol soldiers ordered to assault the rival Outpost. They remain vulnerable while away.",
+			"seconds": 2223.99999999907,
+			"tile": "220,183",
+			"type": "ASSAULT"
+		},
+		{
+			"message": "Construction started: Sawmill.",
+			"seconds": 2287.99999999901,
+			"tile": "247,191",
+			"type": "SAWMILL"
+		},
+		{
+			"message": "2 patrol soldiers ordered to assault the rival Outpost. They remain vulnerable while away.",
+			"seconds": 2375.99999999893,
+			"tile": "219,181",
+			"type": "ASSAULT"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2431.99999999888,
+			"tile": "222,173",
+			"type": "ROAD"
+		},
+		{
+			"message": "Construction started: Storehouse.",
+			"seconds": 2431.99999999888,
+			"tile": "243,192",
+			"type": "STOREHOUSE"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2431.99999999888,
+			"tile": "218,173",
+			"type": "ROAD"
+		},
+		{
+			"message": "Astrid scouts toward the fog.",
+			"seconds": 2447.99999999887,
+			"tile": "229,170",
+			"type": "SCOUT"
+		},
+		{
+			"message": "Construction started: Farm.",
+			"seconds": 2463.99999999885,
+			"tile": "227,180",
+			"type": "FARM"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2487.99999999883,
+			"tile": "217,174",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2487.99999999883,
+			"tile": "216,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2503.99999999882,
+			"tile": "215,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "2 patrol soldiers ordered to assault the rival Outpost. They remain vulnerable while away.",
+			"seconds": 2527.9999999988,
+			"tile": "222,172",
+			"type": "ASSAULT"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2535.99999999879,
+			"tile": "214,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2535.99999999879,
+			"tile": "214,179",
+			"type": "ROAD"
+		},
+		{
+			"message": "SEAL BEGUN — defend the fissure ceremony for 120 seconds.",
+			"seconds": 2543.99999999878,
+			"tile": "220,178",
+			"type": "SEAL"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2567.99999999876,
+			"tile": "240,185",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2575.99999999875,
+			"tile": "240,184",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2575.99999999875,
+			"tile": "213,178",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2583.99999999875,
+			"tile": "239,184",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2591.99999999874,
+			"tile": "240,183",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2599.99999999873,
+			"tile": "239,185",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2607.99999999872,
+			"tile": "239,183",
+			"type": "ROAD"
+		},
+		{
+			"message": "WALL REINFORCED — the palisade holds. The ceremony needs 20 more seconds.",
+			"seconds": 2607.99999999872,
+			"tile": "220,178",
+			"type": "SEALCHOICE"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2615.99999999872,
+			"tile": "223,182",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2615.99999999872,
+			"tile": "227,177",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2639.99999999869,
+			"tile": "226,176",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2647.99999999869,
+			"tile": "226,180",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2647.99999999869,
+			"tile": "225,175",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2671.99999999867,
+			"tile": "225,181",
+			"type": "ROAD"
+		},
+		{
+			"message": "Road planned. Resume time so a free peasant can build it.",
+			"seconds": 2679.99999999866,
+			"tile": "224,182",
+			"type": "ROAD"
+		}
+	],
+	"rival_line": "Rival roads pushing toward the Shard",
+	"seed": 261597,
+	"shard": "(162, 163)",
+	"shots": [
+		"t00_start",
+		"pending_first_quest",
+		"t01_first_quest",
+		"pending_storehouse",
+		"t03_storehouse",
+		"t05_play",
+		"did_first_night",
+		"pending_first_night",
+		"did_first_raid",
+		"pending_first_raid",
+		"t07_first_night",
+		"t07_first_raid",
+		"t10_play",
+		"did_foreshadow",
+		"pending_foreshadow",
+		"pending_rival",
+		"t11_rival",
+		"t11_foreshadow",
+		"did_frontier",
+		"pending_frontier",
+		"t12_frontier",
+		"t15_play",
+		"did_midgame",
+		"pending_midgame",
+		"t19_caravan",
+		"t20_play",
+		"pending_capture",
+		"t20_capture",
+		"did_escalation",
+		"pending_escalation",
+		"t21_escalation",
+		"pending_rival_second_push",
+		"t22_second_push",
+		"t25_play",
+		"pending_harvester_raid_spawn",
+		"pending_harvester_raid",
+		"t26_harvester_raid",
+		"t30_play",
+		"did_choice",
+		"pending_choice",
+		"t33_choice",
+		"t35_play",
+		"t40_play",
+		"pending_ritual",
+		"t42_seal",
+		"did_seal_choice",
+		"pending_seal_choice",
+		"t43_seal_choice",
+		"t44_victory"
+	],
+	"timeline": [
+		{
+			"caption": "Opening yard after founding.",
+			"shot": "t00_start",
+			"t": 0.0
+		},
+		{
+			"action": "ROAD @(241, 186) t=0",
+			"t": 0.0
+		},
+		{
+			"action": "HOUSE @(245, 186) t=0",
+			"t": 0.0
+		},
+		{
+			"action": "ROAD @(240, 186) t=16",
+			"t": 16.0
+		},
+		{
+			"action": "LUMBER_CAMP @(235, 184) t=16",
+			"t": 16.0
+		},
+		{
+			"action": "ROAD @(244, 187) t=32",
+			"t": 32.0000000000002
+		},
+		{
+			"action": "FARM @(246, 188) t=32",
+			"t": 32.0000000000002
+		},
+		{
+			"action": "ROAD @(238, 185) t=56",
+			"t": 56.0000000000005
+		},
+		{
+			"action": "QUARRY @(235, 181) t=56",
+			"t": 56.0000000000005
+		},
+		{
+			"caption": "First intention complete.",
+			"shot": "t01_first_quest",
+			"t": 87.9999999999993
+		},
+		{
+			"action": "ROAD @(238, 182) t=88",
+			"t": 87.9999999999993
+		},
+		{
+			"action": "SAWMILL @(245, 191) t=88",
+			"t": 87.9999999999993
+		},
+		{
+			"action": "WATCHTOWER @(240, 182) t=120",
+			"t": 119.999999999997
+		},
+		{
+			"action": "ROAD @(238, 181) t=168",
+			"t": 167.999999999995
+		},
+		{
+			"action": "STOREHOUSE @(241, 192) t=168",
+			"t": 167.999999999995
+		},
+		{
+			"action": "BARRACKS @(241, 179) t=176",
+			"t": 175.999999999994
+		},
+		{
+			"caption": "Storehouse completed.",
+			"shot": "t03_storehouse",
+			"t": 223.999999999992
+		},
+		{
+			"action": "ROAD @(238, 180) t=272",
+			"t": 271.999999999993
+		},
+		{
+			"action": "HOUSE @(242, 188) t=272",
+			"t": 271.999999999993
+		},
+		{
+			"action": "ROAD @(238, 179) t=272",
+			"t": 271.999999999993
+		},
+		{
+			"action": "LUMEN_PILLAR @(239, 180) t=272",
+			"t": 271.999999999993
+		},
+		{
+			"action": "BAKERY @(236, 187) t=280",
+			"t": 279.999999999995
+		},
+		{
+			"action": "ROAD @(237, 179) t=288",
+			"t": 287.999999999997
+		},
+		{
+			"action": "ROAD @(236, 179) t=296",
+			"t": 295.999999999999
+		},
+		{
+			"caption": "Minute 5 yard.",
+			"shot": "t05_play",
+			"t": 304.000000000001
+		},
+		{
+			"action": "ROAD @(236, 178) t=304",
+			"t": 304.000000000001
+		},
+		{
+			"action": "SCOUT @(229, 170) t=304",
+			"t": 304.000000000001
+		},
+		{
+			"action": "ROAD @(236, 177) t=304",
+			"t": 304.000000000001
+		},
+		{
+			"action": "ROAD @(235, 177) t=320",
+			"t": 320.000000000004
+		},
+		{
+			"action": "ROAD @(234, 177) t=320",
+			"t": 320.000000000004
+		},
+		{
+			"action": "ROAD @(234, 176) t=336",
+			"t": 336.000000000008
+		},
+		{
+			"action": "ROAD @(234, 175) t=336",
+			"t": 336.000000000008
+		},
+		{
+			"action": "ROAD @(234, 174) t=352",
+			"t": 352.000000000012
+		},
+		{
+			"action": "ROAD @(234, 173) t=360",
+			"t": 360.000000000013
+		},
+		{
+			"action": "ROAD @(234, 172) t=360",
+			"t": 360.000000000013
+		},
+		{
+			"action": "ROAD @(234, 171) t=376",
+			"t": 376.000000000017
+		},
+		{
+			"action": "ROAD @(234, 170) t=384",
+			"t": 384.000000000019
+		},
+		{
+			"action": "ROAD @(234, 169) t=392",
+			"t": 392.000000000021
+		},
+		{
+			"caption": "First night.",
+			"shot": "t07_first_night",
+			"t": 424.000000000028
+		},
+		{
+			"caption": "First raid or battle.",
+			"shot": "t07_first_raid",
+			"t": 424.000000000028
+		},
+		{
+			"caption": "Minute 10 yard.",
+			"shot": "t10_play",
+			"t": 600.000000000068
+		},
+		{
+			"action": "SCOUT @(229, 170) t=608",
+			"t": 608.00000000007
+		},
+		{
+			"action": "ROAD @(234, 168) t=624",
+			"t": 624.000000000073
+		},
+		{
+			"action": "ROAD @(234, 167) t=624",
+			"t": 624.000000000073
+		},
+		{
+			"action": "ROAD @(234, 166) t=656",
+			"t": 656.000000000081
+		},
+		{
+			"action": "ROAD @(234, 165) t=656",
+			"t": 656.000000000081
+		},
+		{
+			"caption": "Rival encounter.",
+			"shot": "t11_rival",
+			"t": 664.000000000082
+		},
+		{
+			"caption": "Distant rival smoke before the reveal.",
+			"shot": "t11_foreshadow",
+			"t": 664.000000000082
+		},
+		{
+			"action": "ROAD @(234, 164) t=688",
+			"t": 688.000000000088
+		},
+		{
+			"action": "ROAD @(234, 163) t=688",
+			"t": 688.000000000088
+		},
+		{
+			"action": "ROAD @(233, 163) t=712",
+			"t": 712.000000000093
+		},
+		{
+			"caption": "Frontier marker and Shard direction.",
+			"shot": "t12_frontier",
+			"t": 720.000000000095
+		},
+		{
+			"action": "ROAD @(234, 178) t=720",
+			"t": 720.000000000095
+		},
+		{
+			"action": "HOUSE @(242, 190) t=720",
+			"t": 720.000000000095
+		},
+		{
+			"action": "ROAD @(233, 178) t=720",
+			"t": 720.000000000095
+		},
+		{
+			"action": "WYRD_HARVESTER @(218, 178) t=720",
+			"t": 720.000000000095
+		},
+		{
+			"action": "ROAD @(232, 178) t=744",
+			"t": 744.000000000101
+		},
+		{
+			"action": "ROAD @(231, 178) t=744",
+			"t": 744.000000000101
+		},
+		{
+			"action": "ROAD @(230, 178) t=760",
+			"t": 760.000000000104
+		},
+		{
+			"action": "ROAD @(229, 178) t=768",
+			"t": 768.000000000106
+		},
+		{
+			"action": "ROAD @(228, 178) t=768",
+			"t": 768.000000000106
+		},
+		{
+			"action": "ROAD @(227, 178) t=792",
+			"t": 792.000000000112
+		},
+		{
+			"action": "ROAD @(226, 178) t=792",
+			"t": 792.000000000112
+		},
+		{
+			"action": "ROAD @(225, 178) t=816",
+			"t": 816.000000000117
+		},
+		{
+			"action": "ROAD @(224, 178) t=816",
+			"t": 816.000000000117
+		},
+		{
+			"action": "ROAD @(223, 178) t=840",
+			"t": 840.000000000122
+		},
+		{
+			"action": "ROAD @(222, 178) t=840",
+			"t": 840.000000000122
+		},
+		{
+			"action": "ROAD @(223, 177) t=864",
+			"t": 864.000000000128
+		},
+		{
+			"action": "ROAD @(224, 179) t=872",
+			"t": 872.00000000013
+		},
+		{
+			"action": "ROAD @(223, 176) t=888",
+			"t": 888.000000000133
+		},
+		{
+			"action": "ROAD @(222, 176) t=896",
+			"t": 896.000000000135
+		},
+		{
+			"caption": "Minute 15 yard.",
+			"shot": "t15_play",
+			"t": 904.000000000137
+		},
+		{
+			"action": "ROAD @(221, 176) t=920",
+			"t": 920.000000000141
+		},
+		{
+			"action": "ROAD @(221, 177) t=920",
+			"t": 920.000000000141
+		},
+		{
+			"action": "ROAD @(220, 177) t=952",
+			"t": 952.000000000148
+		},
+		{
+			"action": "ROAD @(220, 176) t=976",
+			"t": 976.000000000153
+		},
+		{
+			"action": "ROAD @(219, 177) t=976",
+			"t": 976.000000000153
+		},
+		{
+			"caption": "Refugee caravan: shelter workers or raise palisades.",
+			"shot": "t19_caravan",
+			"t": 1152.00000000005
+		},
+		{
+			"action": "CARAVAN @(220, 178) t=1152",
+			"t": 1152.00000000005
+		},
+		{
+			"action": "ASSAULT @(221, 174) t=1176",
+			"t": 1176.00000000003
+		},
+		{
+			"caption": "Minute 20 yard.",
+			"shot": "t20_play",
+			"t": 1200.0
+		},
+		{
+			"caption": "Claimant Outpost captured.",
+			"shot": "t20_capture",
+			"t": 1231.99999999997
+		},
+		{
+			"action": "ROAD @(220, 175) t=1232",
+			"t": 1231.99999999997
+		},
+		{
+			"action": "ROAD @(219, 176) t=1232",
+			"t": 1231.99999999997
+		},
+		{
+			"action": "LUMEN_PILLAR @(236, 180) t=1256",
+			"t": 1255.99999999995
+		},
+		{
+			"action": "ROAD @(218, 177) t=1264",
+			"t": 1263.99999999995
+		},
+		{
+			"action": "ROAD @(220, 174) t=1264",
+			"t": 1263.99999999995
+		},
+		{
+			"action": "ROAD @(219, 175) t=1288",
+			"t": 1287.99999999992
+		},
+		{
+			"action": "HOUSE @(240, 189) t=1288",
+			"t": 1287.99999999992
+		},
+		{
+			"action": "ROAD @(218, 176) t=1296",
+			"t": 1295.99999999992
+		},
+		{
+			"action": "WYRD_REFINER @(237, 172) t=1304",
+			"t": 1303.99999999991
+		},
+		{
+			"caption": "Rival banners, army route, and threat tier on the map.",
+			"shot": "t21_escalation",
+			"t": 1319.99999999989
+		},
+		{
+			"caption": "Rival second push on the fissure.",
+			"shot": "t22_second_push",
+			"t": 1327.99999999989
+		},
+		{
+			"action": "ROAD @(217, 177) t=1328",
+			"t": 1327.99999999989
+		},
+		{
+			"action": "ROAD @(217, 178) t=1328",
+			"t": 1327.99999999989
+		},
+		{
+			"action": "ASSAULT @(220, 181) t=1328",
+			"t": 1327.99999999989
+		},
+		{
+			"action": "LUMEN_PILLAR @(227, 179) t=1352",
+			"t": 1351.99999999987
+		},
+		{
+			"action": "ROAD @(217, 179) t=1368",
+			"t": 1367.99999999985
+		},
+		{
+			"action": "ROAD @(216, 178) t=1368",
+			"t": 1367.99999999985
+		},
+		{
+			"action": "WATCHTOWER @(218, 180) t=1368",
+			"t": 1367.99999999985
+		},
+		{
+			"action": "SCOUT @(229, 170) t=1384",
+			"t": 1383.99999999984
+		},
+		{
+			"action": "ROAD @(220, 173) t=1400",
+			"t": 1399.99999999982
+		},
+		{
+			"action": "ROAD @(219, 174) t=1408",
+			"t": 1407.99999999981
+		},
+		{
+			"action": "ROAD @(218, 175) t=1432",
+			"t": 1431.99999999979
+		},
+		{
+			"action": "ROAD @(217, 176) t=1448",
+			"t": 1447.99999999978
+		},
+		{
+			"action": "ROAD @(216, 177) t=1448",
+			"t": 1447.99999999978
+		},
+		{
+			"action": "LUMEN_PILLAR @(219, 173) t=1448",
+			"t": 1447.99999999978
+		},
+		{
+			"action": "ROAD @(216, 179) t=1464",
+			"t": 1463.99999999976
+		},
+		{
+			"action": "ROAD @(215, 178) t=1464",
+			"t": 1463.99999999976
+		},
+		{
+			"action": "WALL @(219, 180) t=1472",
+			"t": 1471.99999999976
+		},
+		{
+			"action": "ASSAULT @(219, 181) t=1480",
+			"t": 1479.99999999975
+		},
+		{
+			"action": "ROAD @(225, 177) t=1496",
+			"t": 1495.99999999973
+		},
+		{
+			"caption": "Minute 25 yard.",
+			"shot": "t25_play",
+			"t": 1503.99999999973
+		},
+		{
+			"action": "ROAD @(225, 179) t=1504",
+			"t": 1503.99999999973
+		},
+		{
+			"action": "ROAD @(224, 180) t=1520",
+			"t": 1519.99999999971
+		},
+		{
+			"action": "WALL @(220, 180) t=1520",
+			"t": 1519.99999999971
+		},
+		{
+			"action": "ROAD @(223, 180) t=1544",
+			"t": 1543.99999999969
+		},
+		{
+			"action": "ROAD @(222, 180) t=1544",
+			"t": 1543.99999999969
+		},
+		{
+			"action": "WALL @(218, 181) t=1568",
+			"t": 1567.99999999967
+		},
+		{
+			"caption": "Raid on the Wyrd Harvester.",
+			"shot": "t26_harvester_raid",
+			"t": 1575.99999999966
+		},
+		{
+			"action": "ROAD @(243, 187) t=1576",
+			"t": 1575.99999999966
+		},
+		{
+			"action": "ROAD @(221, 180) t=1576",
+			"t": 1575.99999999966
+		},
+		{
+			"action": "ROAD @(242, 187) t=1584",
+			"t": 1583.99999999965
+		},
+		{
+			"action": "ASSAULT @(220, 181) t=1624",
+			"t": 1623.99999999962
+		},
+		{
+			"action": "ASSAULT @(219, 181) t=1776",
+			"t": 1775.99999999948
+		},
+		{
+			"caption": "Minute 30 yard.",
+			"shot": "t30_play",
+			"t": 1807.99999999945
+		},
+		{
+			"action": "ROAD @(222, 181) t=1808",
+			"t": 1807.99999999945
+		},
+		{
+			"action": "ROAD @(223, 175) t=1832",
+			"t": 1831.99999999943
+		},
+		{
+			"action": "ROAD @(224, 176) t=1840",
+			"t": 1839.99999999942
+		},
+		{
+			"action": "WALL @(217, 181) t=1840",
+			"t": 1839.99999999942
+		},
+		{
+			"action": "SCOUT @(229, 170) t=1840",
+			"t": 1839.99999999942
+		},
+		{
+			"action": "ROAD @(216, 180) t=1848",
+			"t": 1847.99999999941
+		},
+		{
+			"action": "ROAD @(220, 172) t=1872",
+			"t": 1871.99999999939
+		},
+		{
+			"action": "ROAD @(221, 173) t=1888",
+			"t": 1887.99999999938
+		},
+		{
+			"action": "FARM @(231, 181) t=1896",
+			"t": 1895.99999999937
+		},
+		{
+			"action": "ROAD @(218, 174) t=1920",
+			"t": 1919.99999999935
+		},
+		{
+			"action": "ROAD @(217, 175) t=1920",
+			"t": 1919.99999999935
+		},
+		{
+			"action": "ASSAULT @(220, 183) t=1928",
+			"t": 1927.99999999934
+		},
+		{
+			"action": "FARM @(227, 180) t=1952",
+			"t": 1951.99999999932
+		},
+		{
+			"action": "ROAD @(216, 176) t=1960",
+			"t": 1959.99999999931
+		},
+		{
+			"action": "ROAD @(215, 177) t=1976",
+			"t": 1975.9999999993
+		},
+		{
+			"action": "ROAD @(215, 179) t=2000",
+			"t": 1999.99999999928
+		},
+		{
+			"action": "ROAD @(214, 178) t=2008",
+			"t": 2007.99999999927
+		},
+		{
+			"caption": "Wyrd pact at 6 Stabilized.",
+			"shot": "t33_choice",
+			"t": 2023.99999999925
+		},
+		{
+			"action": "ROAD @(223, 181) t=2024",
+			"t": 2023.99999999925
+		},
+		{
+			"action": "CHOICE @(220, 178) t=2024",
+			"t": 2023.99999999925
+		},
+		{
+			"action": "ROAD @(226, 177) t=2040",
+			"t": 2039.99999999924
+		},
+		{
+			"action": "ROAD @(226, 179) t=2056",
+			"t": 2055.99999999923
+		},
+		{
+			"action": "ROAD @(225, 176) t=2056",
+			"t": 2055.99999999923
+		},
+		{
+			"action": "ROAD @(225, 180) t=2080",
+			"t": 2079.9999999992
+		},
+		{
+			"action": "ROAD @(224, 181) t=2080",
+			"t": 2079.9999999992
+		},
+		{
+			"action": "ASSAULT @(219, 181) t=2080",
+			"t": 2079.9999999992
+		},
+		{
+			"caption": "Minute 35 yard.",
+			"shot": "t35_play",
+			"t": 2103.99999999918
+		},
+		{
+			"action": "ROAD @(223, 174) t=2104",
+			"t": 2103.99999999918
+		},
+		{
+			"action": "ROAD @(216, 181) t=2104",
+			"t": 2103.99999999918
+		},
+		{
+			"action": "ROAD @(215, 180) t=2136",
+			"t": 2135.99999999915
+		},
+		{
+			"action": "ROAD @(220, 171) t=2136",
+			"t": 2135.99999999915
+		},
+		{
+			"action": "ROAD @(221, 172) t=2168",
+			"t": 2167.99999999912
+		},
+		{
+			"action": "ROAD @(219, 172) t=2168",
+			"t": 2167.99999999912
+		},
+		{
+			"action": "ASSAULT @(220, 183) t=2224",
+			"t": 2223.99999999907
+		},
+		{
+			"action": "SAWMILL @(247, 191) t=2288",
+			"t": 2287.99999999901
+		},
+		{
+			"action": "ASSAULT @(219, 181) t=2376",
+			"t": 2375.99999999893
+		},
+		{
+			"caption": "Minute 40 yard.",
+			"shot": "t40_play",
+			"t": 2407.99999999891
+		},
+		{
+			"action": "ROAD @(222, 173) t=2432",
+			"t": 2431.99999999888
+		},
+		{
+			"action": "STOREHOUSE @(243, 192) t=2432",
+			"t": 2431.99999999888
+		},
+		{
+			"action": "ROAD @(218, 173) t=2432",
+			"t": 2431.99999999888
+		},
+		{
+			"action": "SCOUT @(229, 170) t=2448",
+			"t": 2447.99999999887
+		},
+		{
+			"action": "FARM @(227, 180) t=2464",
+			"t": 2463.99999999885
+		},
+		{
+			"action": "ROAD @(217, 174) t=2488",
+			"t": 2487.99999999883
+		},
+		{
+			"action": "ROAD @(216, 175) t=2488",
+			"t": 2487.99999999883
+		},
+		{
+			"action": "ROAD @(215, 176) t=2504",
+			"t": 2503.99999999882
+		},
+		{
+			"action": "ASSAULT @(222, 172) t=2528",
+			"t": 2527.9999999988
+		},
+		{
+			"action": "ROAD @(214, 177) t=2536",
+			"t": 2535.99999999879
+		},
+		{
+			"action": "ROAD @(214, 179) t=2536",
+			"t": 2535.99999999879
+		},
+		{
+			"action": "SEAL @(220, 178) t=2544",
+			"t": 2543.99999999878
+		},
+		{
+			"caption": "Seal the Fissure begun.",
+			"shot": "t42_seal",
+			"t": 2543.99999999878
+		},
+		{
+			"action": "ROAD @(240, 185) t=2568",
+			"t": 2567.99999999876
+		},
+		{
+			"action": "ROAD @(240, 184) t=2576",
+			"t": 2575.99999999875
+		},
+		{
+			"action": "ROAD @(213, 178) t=2576",
+			"t": 2575.99999999875
+		},
+		{
+			"action": "ROAD @(239, 184) t=2584",
+			"t": 2583.99999999875
+		},
+		{
+			"action": "ROAD @(240, 183) t=2592",
+			"t": 2591.99999999874
+		},
+		{
+			"action": "ROAD @(239, 185) t=2600",
+			"t": 2599.99999999873
+		},
+		{
+			"caption": "Seal defence: choice.",
+			"shot": "t43_seal_choice",
+			"t": 2607.99999999872
+		},
+		{
+			"action": "ROAD @(239, 183) t=2608",
+			"t": 2607.99999999872
+		},
+		{
+			"action": "SEALCHOICE @(220, 178) t=2608",
+			"t": 2607.99999999872
+		},
+		{
+			"action": "ROAD @(223, 182) t=2616",
+			"t": 2615.99999999872
+		},
+		{
+			"action": "ROAD @(227, 177) t=2616",
+			"t": 2615.99999999872
+		},
+		{
+			"action": "ROAD @(226, 176) t=2640",
+			"t": 2639.99999999869
+		},
+		{
+			"action": "ROAD @(226, 180) t=2648",
+			"t": 2647.99999999869
+		},
+		{
+			"action": "ROAD @(225, 175) t=2648",
+			"t": 2647.99999999869
+		},
+		{
+			"action": "ROAD @(225, 181) t=2672",
+			"t": 2671.99999999867
+		},
+		{
+			"action": "ROAD @(224, 182) t=2680",
+			"t": 2679.99999999866
+		},
+		{
+			"caption": "Victory.",
+			"shot": "t44_victory",
+			"t": 2683.99999999865
+		}
+	],
+	"unclear": [],
+	"victory": true
+}

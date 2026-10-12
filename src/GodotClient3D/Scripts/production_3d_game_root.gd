@@ -236,6 +236,11 @@ var choice_refine_button: Button
 var choice_secure_button: Button
 var seal_wall_button: Button
 var seal_overcharge_button: Button
+var midgame_shelter_button: Button
+var midgame_fortify_button: Button
+var last_seal_choice_seen := ""
+var last_midgame_offered := false
+var last_midgame_choice_seen := ""
 var result_overlay: Control
 var result_title: Label
 var result_body: RichTextLabel
@@ -1167,6 +1172,22 @@ func _create_ui() -> void:
 	Identity.apply_button(seal_overcharge_button, true)
 	seal_overcharge_button.pressed.connect(func() -> void: _confirm_seal_choice("overcharge"))
 	status_row.add_child(seal_overcharge_button)
+	midgame_shelter_button = Button.new()
+	midgame_shelter_button.name = "CaravanShelter"
+	midgame_shelter_button.text = "SHELTER REFUGEES"
+	midgame_shelter_button.visible = false
+	midgame_shelter_button.custom_minimum_size.x = 168.0
+	Identity.apply_button(midgame_shelter_button, true)
+	midgame_shelter_button.pressed.connect(func() -> void: _confirm_midgame_choice("shelter"))
+	status_row.add_child(midgame_shelter_button)
+	midgame_fortify_button = Button.new()
+	midgame_fortify_button.name = "CaravanFortify"
+	midgame_fortify_button.text = "RAISE PALISADES"
+	midgame_fortify_button.visible = false
+	midgame_fortify_button.custom_minimum_size.x = 156.0
+	Identity.apply_button(midgame_fortify_button, true)
+	midgame_fortify_button.pressed.connect(func() -> void: _confirm_midgame_choice("fortify"))
+	status_row.add_child(midgame_fortify_button)
 	binding_percent_label = Label.new()
 	binding_percent_label.name = "BindingProgress"
 	binding_percent_label.visible = false
@@ -2403,6 +2424,20 @@ func _update_loop_hud() -> void:
 	if binding_active and not last_seal_active:
 		_glance_at_seal()
 	last_seal_active = binding_active
+	var midgame_open: bool = bool(wyrdfall.get("midgame_choice_ready", false)) and not bool(simulation_host.simulation.game_finished)
+	if midgame_open and not last_midgame_offered:
+		_glance_at_caravan()
+	last_midgame_offered = midgame_open
+	var seen_seal := String(wyrdfall.get("seal_choice", ""))
+	if seen_seal != "" and seen_seal != last_seal_choice_seen:
+		if audio_director != null:
+			audio_director.play_cue("tower" if seen_seal == "wall" else "reckoning")
+		_glance_at_seal()
+	last_seal_choice_seen = seen_seal
+	var seen_mid := String(wyrdfall.get("midgame_choice", ""))
+	if seen_mid != "" and seen_mid != last_midgame_choice_seen and audio_director != null:
+		audio_director.play_cue("settler_spawn_worker" if seen_mid == "shelter" else "build_complete")
+	last_midgame_choice_seen = seen_mid
 	var steps: Array = objective.get("steps", [])
 	if objective_button != null:
 		var intention: Dictionary = simulation_host.simulation.get_current_intention()
@@ -2473,6 +2508,8 @@ func _update_loop_hud() -> void:
 		var stab := int(wyrdfall.get("stabilized", 0))
 		if stab > 0 or bool(wyrdfall.get("binding_ready", false)) or bool(wyrdfall.get("binding_active", false)):
 			parts.append("STAB %d/12" % stab)
+		if midgame_open:
+			parts.append("CARAVAN — shelter refugees or raise palisades")
 		var rival_line := String(wyrdfall.get("rival_line", ""))
 		if rival_line != "" and _rival_banner_should_show():
 			parts.append(rival_line)
@@ -2500,7 +2537,11 @@ func _update_loop_hud() -> void:
 		seal_wall_button.visible = seal_open
 	if seal_overcharge_button != null:
 		seal_overcharge_button.visible = seal_open
-	if status_plate != null and seal_open:
+	if midgame_shelter_button != null:
+		midgame_shelter_button.visible = midgame_open
+	if midgame_fortify_button != null:
+		midgame_fortify_button.visible = midgame_open
+	if status_plate != null and (seal_open or midgame_open):
 		status_plate.visible = true
 	if nightfall_panel != null:
 		nightfall_panel.visible = Time.get_ticks_msec() / 1000.0 < nightfall_event_until and (startup_overlay == null or not startup_overlay.visible)
@@ -3271,6 +3312,15 @@ func _glance_at_seal() -> void:
 	camera_rig.compose_view(fissure_world, 40.0)
 
 
+func _glance_at_caravan() -> void:
+	if camera_rig == null or world_view == null or simulation_host.simulation == null:
+		return
+	var tile: Vector2i = simulation_host.simulation.town_hall_position + Vector2i(6, 3)
+	if simulation_host.simulation.crater_war != null:
+		tile = simulation_host.simulation.crater_war._caravan_tile()
+	camera_rig.compose_view(world_view.tile_to_world(Vector2(tile)), 36.0)
+
+
 func _glance_at_shard() -> void:
 	if camera_rig == null or world_view == null or simulation_host.simulation == null:
 		return
@@ -3928,6 +3978,15 @@ func _confirm_seal_choice(path: String) -> void:
 	if simulation_host.simulation == null:
 		return
 	var result: Dictionary = simulation_host.simulation.request_seal_choice(path)
+	_show_command_result(result)
+
+
+func _confirm_midgame_choice(path: String) -> void:
+	if simulation_host.simulation == null:
+		return
+	var result: Dictionary = simulation_host.simulation.request_midgame_choice(path)
+	if bool(result.get("success", false)) and audio_director != null:
+		audio_director.play_cue("settler_spawn_worker" if path == "shelter" else "build_complete")
 	_show_command_result(result)
 
 

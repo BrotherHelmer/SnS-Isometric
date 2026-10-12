@@ -174,6 +174,12 @@ func _render_map(map_size: Vector2i, frame_snapshot: Dictionary) -> Image:
 			_stamp_landmark(image, map_size, tile, Color("#8a7a6a"), 3)
 		elif kind == "seal_choice":
 			_stamp_landmark(image, map_size, tile, Color("#7ec8d4"), 2)
+		elif kind in ["caravan", "caravan_camp"]:
+			_stamp_landmark(image, map_size, tile, Color("#efcf8a"), 2)
+		elif kind == "palisade":
+			_stamp_landmark(image, map_size, tile, Color("#d4782a"), 1)
+		elif kind == "victory_banner":
+			_stamp_landmark(image, map_size, tile, Color("#f0c44a"), 2)
 	_paint_camera(image, map_size)
 	return image
 

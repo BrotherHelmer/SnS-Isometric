@@ -87,6 +87,10 @@ var shard_crystal_material: StandardMaterial3D
 var seal_beacon: Node3D
 var seal_beacon_light: OmniLight3D
 var seal_beacon_column: MeshInstance3D
+var seal_ward_ring: MeshInstance3D
+var seal_wave: MeshInstance3D
+var seal_palisade_root: Node3D
+var seal_look_key := ""
 var wyrd_spring_views: Dictionary = {}
 var terrain_body: StaticBody3D
 var terrain_mesh_instance: MeshInstance3D
@@ -2692,10 +2696,13 @@ func _update_shard_beacon(wyrdfall: Dictionary) -> void:
 
 func _update_seal_ceremony(wyrdfall: Dictionary) -> void:
 	var sealing := bool(wyrdfall.get("binding_active", false)) or bool(wyrdfall.get("seal_active", false))
+	var celebrating := bool(wyrdfall.get("victory_ceremony", false))
+	if simulation != null and bool(simulation.victory):
+		celebrating = true
 	var fissure := Vector2i(-1, -1)
 	if simulation != null and simulation.crater_war != null:
 		fissure = simulation.crater_war.primary_fissure
-	if not sealing or fissure.x < 0:
+	if (not sealing and not celebrating) or fissure.x < 0:
 		if seal_beacon != null:
 			seal_beacon.visible = false
 		return
@@ -2727,17 +2734,148 @@ func _update_seal_ceremony(wyrdfall: Dictionary) -> void:
 		seal_beacon_light.light_energy = 2.4
 		seal_beacon_light.position = Vector3(0.0, 4.2, 0.0)
 		seal_beacon.add_child(seal_beacon_light)
+		seal_ward_ring = MeshInstance3D.new()
+		seal_ward_ring.name = "SealWard"
+		var torus := TorusMesh.new()
+		torus.inner_radius = 3.2
+		torus.outer_radius = 3.75
+		seal_ward_ring.mesh = torus
+		var ring_mat := StandardMaterial3D.new()
+		ring_mat.albedo_color = Color(0.4, 0.85, 0.95, 0.42)
+		ring_mat.emission_enabled = true
+		ring_mat.emission = Color(0.45, 0.95, 1.0)
+		ring_mat.emission_energy_multiplier = 1.1
+		ring_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		seal_ward_ring.material_override = ring_mat
+		seal_ward_ring.position = Vector3(0.0, 0.35, 0.0)
+		seal_beacon.add_child(seal_ward_ring)
+		seal_wave = MeshInstance3D.new()
+		seal_wave.name = "SealWave"
+		var disc := CylinderMesh.new()
+		disc.top_radius = 1.0
+		disc.bottom_radius = 1.0
+		disc.height = 0.14
+		seal_wave.mesh = disc
+		var wave_mat := StandardMaterial3D.new()
+		wave_mat.albedo_color = Color(0.85, 0.95, 1.0, 0.35)
+		wave_mat.emission_enabled = true
+		wave_mat.emission = Color(0.75, 0.95, 1.0)
+		wave_mat.emission_energy_multiplier = 2.2
+		wave_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		seal_wave.material_override = wave_mat
+		seal_wave.position = Vector3(0.0, 0.55, 0.0)
+		seal_wave.visible = false
+		seal_beacon.add_child(seal_wave)
+		seal_palisade_root = Node3D.new()
+		seal_palisade_root.name = "SealPalisades"
+		seal_beacon.add_child(seal_palisade_root)
 	seal_beacon.visible = true
 	seal_beacon.global_position = tile_to_world(Vector2(fissure))
+	var look: Dictionary = wyrdfall.get("seal_look", {})
+	if look.is_empty() and simulation != null and simulation.crater_war != null:
+		look = simulation.crater_war.seal_look()
+	var path := String(look.get("path", ""))
+	if celebrating:
+		path = "victory"
+	if path != seal_look_key:
+		seal_look_key = path
+		_apply_seal_look(look, celebrating)
 	var progress := clampf(float(wyrdfall.get("binding_percent", 0.0)) / 100.0, 0.0, 1.0)
-	var pulse := 1.15 + 0.55 * progress + 0.22 * sin(float(Time.get_ticks_msec()) / 180.0)
+	var hz := float(look.get("pulse_hz", 0.7))
+	if celebrating:
+		hz = 0.9
+	var pulse := 1.15 + 0.55 * progress + 0.28 * sin(float(Time.get_ticks_msec()) * 0.001 * TAU * hz)
+	if path == "overcharge":
+		pulse = 1.55 + 0.85 * progress + 0.55 * sin(float(Time.get_ticks_msec()) * 0.001 * TAU * hz)
+	elif path == "wall":
+		pulse = 1.05 + 0.35 * progress + 0.16 * sin(float(Time.get_ticks_msec()) * 0.001 * TAU * hz)
+	elif celebrating:
+		pulse = 1.45 + 0.35 * sin(float(Time.get_ticks_msec()) / 140.0)
 	if seal_beacon_light != null:
-		seal_beacon_light.light_energy = 1.8 * pulse
+		seal_beacon_light.light_energy = float(look.get("light", 1.8)) * pulse
+		if celebrating:
+			seal_beacon_light.light_energy = 3.2 * pulse
 	if seal_beacon_column != null:
 		var column_mat := seal_beacon_column.material_override as StandardMaterial3D
 		if column_mat != null:
-			column_mat.emission_energy_multiplier = 1.2 * pulse
-		seal_beacon_column.scale = Vector3(1.0 + 0.18 * progress, 1.0 + 0.35 * progress, 1.0 + 0.18 * progress)
+			column_mat.emission_energy_multiplier = (2.4 if path == "overcharge" else 1.2) * pulse
+		var fat := 1.22 if path == "overcharge" else 1.0
+		seal_beacon_column.scale = Vector3((1.0 + 0.18 * progress) * fat, 1.0 + 0.35 * progress, (1.0 + 0.18 * progress) * fat)
+	if seal_ward_ring != null:
+		var ring_mat := seal_ward_ring.material_override as StandardMaterial3D
+		if ring_mat != null:
+			ring_mat.emission_energy_multiplier = 0.9 * pulse
+		seal_ward_ring.rotation.y += 0.008 if path != "overcharge" else 0.03
+	if seal_wave != null:
+		seal_wave.visible = path == "overcharge" or celebrating
+		if seal_wave.visible:
+			var swell := 3.6 + 4.2 * (0.5 + 0.5 * sin(float(Time.get_ticks_msec()) / 70.0))
+			seal_wave.scale = Vector3(swell, 1.4, swell)
+			var wave_mat := seal_wave.material_override as StandardMaterial3D
+			if wave_mat != null:
+				wave_mat.emission_energy_multiplier = 3.4
+				wave_mat.albedo_color = Color(0.92, 0.98, 1.0, 0.55)
+
+
+func _apply_seal_look(look: Dictionary, celebrating: bool) -> void:
+	var path := String(look.get("path", ""))
+	var wall := path == "wall"
+	var charge := path == "overcharge"
+	var amber := Color(0.92, 0.62, 0.22, 0.7)
+	var cyan := Color(0.35, 0.82, 0.88, 0.55)
+	var white := Color(0.82, 0.95, 1.0, 0.72)
+	var gold := Color(0.95, 0.78, 0.28, 0.8)
+	var column_color := gold if celebrating else (amber if wall else (white if charge else cyan))
+	if seal_beacon_column != null:
+		var column_mat := seal_beacon_column.material_override as StandardMaterial3D
+		if column_mat != null:
+			column_mat.albedo_color = column_color
+			column_mat.emission = column_color.lightened(0.15)
+	if seal_beacon_light != null:
+		seal_beacon_light.light_color = Color("#f0c44a") if celebrating else (Color("#f0a24a") if wall else Color("#b8f6ff"))
+		seal_beacon_light.omni_range = 22.0 if charge or celebrating else 16.0
+	if seal_ward_ring != null:
+		var torus := TorusMesh.new()
+		var radius := 6.4 if wall else (2.1 if charge else 3.6)
+		var thick := 1.15 if wall else (0.28 if charge else 0.55)
+		if celebrating:
+			radius = 4.2
+			thick = 0.7
+		torus.inner_radius = maxf(0.2, radius - thick)
+		torus.outer_radius = radius
+		seal_ward_ring.mesh = torus
+		var ring_mat := seal_ward_ring.material_override as StandardMaterial3D
+		if ring_mat != null:
+			ring_mat.albedo_color = Color(column_color, 0.45 if charge else 0.62)
+			ring_mat.emission = column_color
+	if seal_palisade_root != null:
+		for child in seal_palisade_root.get_children():
+			child.queue_free()
+		if wall or celebrating:
+			var posts := 8 if wall else 4
+			for index in range(posts):
+				var angle := float(index) * TAU / float(posts)
+				var post := MeshInstance3D.new()
+				var box := BoxMesh.new()
+				box.size = Vector3(0.85, 3.6, 0.55)
+				post.mesh = box
+				post.position = Vector3(cos(angle) * 5.8, 1.8, sin(angle) * 5.8)
+				post.rotation.y = -angle
+				var post_mat := StandardMaterial3D.new()
+				post_mat.albedo_color = Color("#8a4a18") if wall else Color("#c9a24a")
+				post_mat.emission_enabled = true
+				post_mat.emission = Color("#ff8a2a") if wall else Color("#f0c44a")
+				post_mat.emission_energy_multiplier = 1.8
+				post.material_override = post_mat
+				seal_palisade_root.add_child(post)
+				var plank := MeshInstance3D.new()
+				var plank_mesh := BoxMesh.new()
+				plank_mesh.size = Vector3(2.4, 0.35, 0.22)
+				plank.mesh = plank_mesh
+				plank.position = Vector3(cos(angle) * 5.8, 2.4, sin(angle) * 5.8)
+				plank.rotation.y = -angle + PI * 0.5
+				plank.material_override = post_mat
+				seal_palisade_root.add_child(plank)
 
 
 func _sync_wyrd_springs(sites: Array) -> void:
@@ -5238,7 +5376,7 @@ func _sync_map_markers() -> void:
 		host.add_child(root)
 		var label := Label3D.new()
 		label.text = title
-		label.font_size = 54 if kind in ["rival_threat", "seal_choice"] else 42
+		label.font_size = 54 if kind in ["rival_threat", "seal_choice", "caravan", "victory_banner"] else 42
 		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		label.no_depth_test = true
 		label.outline_size = 10
@@ -5254,6 +5392,12 @@ func _sync_map_markers() -> void:
 			label.modulate = Color("#9a8a7a")
 		elif kind == "seal_choice":
 			label.modulate = Color("#7ec8d4")
+		elif kind in ["caravan", "caravan_camp"]:
+			label.modulate = Color("#efcf8a")
+		elif kind == "palisade":
+			label.modulate = Color("#d4782a")
+		elif kind == "victory_banner":
+			label.modulate = Color("#f0c44a")
 		elif kind == "skull":
 			label.modulate = Color("#f0a06e")
 		else:
@@ -5269,6 +5413,12 @@ func _sync_map_markers() -> void:
 			root.add_child(_ping_mesh(Color("#f05a4a"), 0.55))
 		elif kind == "seal_choice":
 			root.add_child(_ping_mesh(Color("#7ec8d4"), 0.42))
+		elif kind in ["caravan", "caravan_camp"]:
+			root.add_child(_caravan_mesh())
+		elif kind == "palisade":
+			root.add_child(_palisade_mesh())
+		elif kind == "victory_banner":
+			root.add_child(_banner_mesh(Color("#f0c44a")))
 
 
 func _banner_mesh(color: Color) -> Node3D:
@@ -5331,3 +5481,50 @@ func _smoke_mesh() -> MeshInstance3D:
 	mat.emission_energy_multiplier = 0.45
 	puff.material_override = mat
 	return puff
+
+
+func _caravan_mesh() -> Node3D:
+	var group := Node3D.new()
+	var wagon := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = Vector3(2.6, 1.1, 1.4)
+	wagon.mesh = box
+	wagon.position = Vector3(0.0, 0.85, 0.0)
+	var wood := StandardMaterial3D.new()
+	wood.albedo_color = Color("#7a4a28")
+	wood.emission_enabled = true
+	wood.emission = Color("#c48a4a")
+	wood.emission_energy_multiplier = 0.55
+	wagon.material_override = wood
+	group.add_child(wagon)
+	var canvas := MeshInstance3D.new()
+	var cloth := BoxMesh.new()
+	cloth.size = Vector3(2.1, 0.85, 1.15)
+	canvas.mesh = cloth
+	canvas.position = Vector3(0.0, 1.7, 0.0)
+	var cloth_mat := StandardMaterial3D.new()
+	cloth_mat.albedo_color = Color("#d8c48a")
+	cloth_mat.emission_enabled = true
+	cloth_mat.emission = Color("#efcf8a")
+	cloth_mat.emission_energy_multiplier = 0.7
+	canvas.material_override = cloth_mat
+	group.add_child(canvas)
+	return group
+
+
+func _palisade_mesh() -> Node3D:
+	var group := Node3D.new()
+	for index in range(3):
+		var post := MeshInstance3D.new()
+		var box := BoxMesh.new()
+		box.size = Vector3(0.32, 2.2, 0.28)
+		post.mesh = box
+		post.position = Vector3(float(index - 1) * 0.55, 1.1, 0.0)
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = Color("#6a3e22")
+		mat.emission_enabled = true
+		mat.emission = Color("#d4782a")
+		mat.emission_energy_multiplier = 0.8
+		post.material_override = mat
+		group.add_child(post)
+	return group

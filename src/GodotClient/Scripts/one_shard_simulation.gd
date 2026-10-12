@@ -1467,6 +1467,12 @@ func request_seal_choice(path: String) -> Dictionary:
 	return crater_war.request_seal_choice(path)
 
 
+func request_midgame_choice(path: String) -> Dictionary:
+	if crater_war == null:
+		return _failure("Unavailable", "No refugee caravan is offered this hour.")
+	return crater_war.request_midgame_choice(path)
+
+
 func request_begin_binding() -> Dictionary:
 	if crater_war != null:
 		if crater_war.ritual_active:
@@ -1656,7 +1662,13 @@ func get_wyrdfall_presentation() -> Dictionary:
 		"threat_tier": int(crater.get("threat_tier", 0)),
 		"threat_name": String(crater.get("threat_name", "QUIET")),
 		"foreshadow_at": float(crater.get("foreshadow_at", -1.0)),
-		"foreshadowed": bool(crater.get("foreshadowed", false))
+		"foreshadowed": bool(crater.get("foreshadowed", false)),
+		"midgame_choice_ready": bool(crater.get("midgame_choice_ready", false)),
+		"midgame_choice": String(crater.get("midgame_choice", "")),
+		"midgame_at": float(crater.get("midgame_at", -1.0)),
+		"fortify_walls": int(crater.get("fortify_walls", 0)),
+		"victory_ceremony": bool(crater.get("victory_ceremony", false)),
+		"seal_look": crater.get("seal_look", {})
 	}
 
 
