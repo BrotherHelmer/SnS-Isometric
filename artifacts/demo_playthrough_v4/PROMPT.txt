@@ -1,0 +1,23 @@
+You are re-reviewing Shard & Sovereign after TEST #16 — Seal the Fissure (PR #83). The climax is Sealing the frontier fissure when the store holds 12 Stabilized Wyrd and the player chooses Seal. Shard Binding is a later act. At 6 Stabilized the player picks faster refining or a 3-stab harvest ward. The rival reveals between 14:00 and 20:00, pushes after the first harvest, and raids after the first Stabilized.
+
+Read PLAYTHROUGH.md first. Then look at the screenshots in this folder in this order. These are the ONLY attached images:
+
+- t00_start.png — founding yard, first quest
+- t05_storehouse.png — Sawmill / Storehouse plank loop complete (minute 5)
+- t07_first_raid.png — night 1, 2 raiders, 60 s warning
+- t12_frontier.png — crater west, geologist marks the fissure
+- t19_rival.png — rival Claimant Outpost sighted (seeded reveal, 19:27 on 260821)
+- t20_capture.png — CAPTURE toast: +8 Wood, +4 Stone, +2 Wyrd
+- t24_harvester_raid.png — rival raid on the Wyrd Harvester after the first Stabilized
+- t31_choice.png — 6 Stabilized pact: faster refining (A) vs secure harvest (B)
+- t43_seal.png — SEAL BEGUN the moment the store hits 12 (43:12 on 260821)
+- t45_victory.png — THE FISSURE IS SEALED / THE CEREMONY HELD at 45:12
+
+The bot chose path A on this seed and path B on 261306 / 260918. Other seeds seal at 45:20 / 44:24 / 53:28. Longest idle stretches: 1:04 / 1:42 / 1:52 / 1:28.
+
+Rate the fun of this Seal the Fissure hour 1–10. Judge pacing against the previous 44:24 Binding hour.
+
+Return:
+1. Fun score (1–10) and one-sentence reason
+2. Pacing notes (what now works, where it is still dead)
+3. Remaining P0/P1/P2 only if needed — smallest changes, no redesign
