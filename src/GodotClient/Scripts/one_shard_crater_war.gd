@@ -26,7 +26,7 @@ const CAPTURE_STABILIZED := 0
 const ASSAULT_FORCE_SECONDS := 75.0
 const LATER_ASSAULT_FORCE_SECONDS := 150.0
 const RITUAL_RAID_SIZE := 2
-const HARVESTER_RAID_SIZE := 2
+const HARVESTER_RAID_SIZE := 1
 const SECOND_PUSH_DELAY := 180.0
 const HARVESTER_RAID_DELAY := 360.0
 const CONTEST_REPEAT_DELAY := 150.0
@@ -111,6 +111,7 @@ func tick(delta: float) -> void:
 		return
 	_note_storehouse()
 	_tick_production(delta)
+	_ward_harvester(delta)
 	_update_exposure(delta)
 	_maybe_force_capture()
 	_maybe_rival_contest()
@@ -351,6 +352,19 @@ func presentation() -> Dictionary:
 		"surveyed": geologist_surveyed,
 		"resolution": rival_resolution
 	}
+
+
+func _ward_harvester(delta: float) -> void:
+	if simulation == null or not bool(simulation.raid_active):
+		return
+	for building in simulation.buildings:
+		if bool(building.get("construction", false)):
+			continue
+		if String(building.get("type", "")) != Defs.BUILDING_WYRD_HARVESTER:
+			continue
+		var max_hp := Defs.building_hp(Defs.BUILDING_WYRD_HARVESTER)
+		if int(floor(float(simulation.elapsed_seconds))) != int(floor(float(simulation.elapsed_seconds) - delta)):
+			building["hp"] = mini(int(building.get("hp", 0)) + 4, max_hp)
 
 
 func _tick_production(delta: float) -> void:

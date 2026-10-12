@@ -354,6 +354,13 @@ func _watch_meaningful(sim, thought: Dictionary) -> void:
 		meaningful = true
 	if sim.crater_war != null and bool(sim.crater_war.ritual_active):
 		meaningful = true
+	for building in sim.get_buildings():
+		if not bool(building.get("construction", false)):
+			continue
+		if String(building.get("planned_type", building.get("type", ""))) == Defs.BUILDING_ROAD:
+			continue
+		meaningful = true
+		break
 	last_raid_active = bool(sim.raid_active)
 	if meaningful:
 		_touch_play(now)
