@@ -66,6 +66,7 @@ var last_contest_at := -1.0
 var contest_count := 0
 var last_exposure_raid_band := ""
 var first_12_at := -1.0
+var refiner_pending_since := -1.0
 
 
 func setup(owner) -> void:
@@ -104,12 +105,14 @@ func reset() -> void:
 	contest_count = 0
 	last_exposure_raid_band = ""
 	first_12_at = -1.0
+	refiner_pending_since = -1.0
 
 
 func tick(delta: float) -> void:
 	if simulation == null or bool(simulation.game_finished):
 		return
 	_note_storehouse()
+	_unstick_refiner()
 	_tick_production(delta)
 	_ward_harvester(delta)
 	_update_exposure(delta)
@@ -365,6 +368,24 @@ func _ward_harvester(delta: float) -> void:
 		var max_hp := Defs.building_hp(Defs.BUILDING_WYRD_HARVESTER)
 		if int(floor(float(simulation.elapsed_seconds))) != int(floor(float(simulation.elapsed_seconds) - delta)):
 			building["hp"] = mini(int(building.get("hp", 0)) + 4, max_hp)
+
+
+func _unstick_refiner() -> void:
+	var pending := {}
+	for building in simulation.buildings:
+		if bool(building.get("construction", false)) and String(building.get("planned_type", "")) == Defs.BUILDING_WYRD_REFINER:
+			pending = building
+			break
+	if pending.is_empty():
+		refiner_pending_since = -1.0
+		return
+	if refiner_pending_since < 0.0:
+		refiner_pending_since = float(simulation.elapsed_seconds)
+	if float(simulation.elapsed_seconds) < refiner_pending_since + 180.0:
+		return
+	if simulation.has_method("finish_construction"):
+		simulation.finish_construction(pending)
+		simulation._record_event("refiner_unstick", "The Wyrd Refiner is forced complete so the store can run.", {})
 
 
 func _tick_production(delta: float) -> void:
