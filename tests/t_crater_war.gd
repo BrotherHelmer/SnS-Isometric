@@ -1,7 +1,7 @@
 extends SceneTree
 
-## Fast gates for TEST #20: idle settlers take jobs, Channel Wyrd
-## costs are honest, and the caravan aftermath stays on the map.
+## Fast gates for TEST #21: idle crew overview + jump, Channel HP
+## feedback, and the 2 s fissure hold before victory.
 
 const Simulation = preload("res://src/GodotClient/Scripts/one_shard_simulation.gd")
 const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
@@ -358,6 +358,10 @@ func _check_channel_wyrd() -> void:
 	_check(sim.crater_war.channel_reserve == 0, "the reserve is spent on the first Channel")
 	_check(String(pick.get("message", "")).contains("reserve"), "Channel copy names the emergency reserve")
 	_check(int(wall.get("hp", 0)) >= hp_before + 1, "Channel Wyrd repairs a wall segment")
+	_check(sim.crater_war.last_channel_hp_gained >= 1, "Channel records HP gained")
+	_check(int(sim.get_run_statistics().get("channel_hp_gained", 0)) >= 1, "run stats include Channel HP")
+	_check(String(sim.crater_war.channel_feedback_line()).contains("+"), "Channel feedback names the HP change")
+	_check(String(sim.crater_war.presentation().get("channel_feedback", "")).contains("+"), "Channel presentation names the HP change")
 	_check(sim.crater_war.last_channel_tile.x >= 0, "Channel Wyrd records a repair tile")
 	_check(not sim.crater_war.channel_ready(), "Channel Wyrd cools for 20 s")
 	var again: Dictionary = sim.request_channel_wyrd()
@@ -367,6 +371,13 @@ func _check_channel_wyrd() -> void:
 	_check(sim.crater_war.channel_ready(), "Channel Wyrd returns after 20 s")
 	var summary: Dictionary = sim.crater_war.victory_summary()
 	_check(int(summary.get("channel_uses", 0)) == 1, "victory summary lists Channel uses")
+	wall["hp"] = int(wall.get("max_hp", 0))
+	sim.elapsed_seconds += CraterWar.CHANNEL_COOLDOWN + 0.2
+	sim.central_inventory[Defs.RESOURCE_STABILIZED_WYRD] = CraterWar.CHANNEL_COST
+	var hold: Dictionary = sim.request_channel_wyrd()
+	_check(bool(hold.get("success", false)), "full-HP Channel is still accepted")
+	_check(sim.crater_war.last_channel_prevented, "full-HP Channel records damage prevented")
+	_check(String(sim.crater_war.channel_feedback_line()).contains("prevent"), "Channel feedback names damage prevented")
 	var house: Dictionary = sim._create_building(Defs.BUILDING_HOUSE, sim.town_hall_position + Vector2i(5, 4))
 	house["construction"] = false
 	house["completed"] = true
@@ -505,6 +516,12 @@ func _check_idle_jobs() -> void:
 			on_jobs += 1
 	_check(on_jobs >= 1, "at least one laborer is on a real job")
 	_check(sim.idle_settler_seconds_before + 0.01 >= sim.idle_settler_seconds, "before idle-seconds is the old pool")
+	var report: Dictionary = sim.idle_crew_report()
+	_check(report.has("working") and report.has("unable"), "crew report splits working vs unable")
+	_check(String(report.get("bottleneck", "")) == "waiting for planks", "crew report names missing planks")
+	_check(int(report.get("unable_total", 0)) + int(report.get("working_total", 0)) >= 1, "crew report lists at least one settler")
+	var jump: Dictionary = report.get("jump", {})
+	_check(String(jump.get("kind", "")) == "site" or String(jump.get("label", "")).contains("House"), "waiting for planks jumps to the blocked house")
 
 
 func _check(ok: bool, message: String) -> void:

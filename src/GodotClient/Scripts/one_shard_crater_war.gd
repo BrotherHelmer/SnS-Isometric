@@ -1,10 +1,9 @@
 extends RefCounted
 
-## The Director: TEST #20 — idle settlers take haul / repair /
-## construction jobs, Channel Wyrd costs are honest (first use draws
-## the ceremony's emergency reserve), and the caravan aftermath stays
-## on the map. Channel still costs 2 Stabilized, repairs one wall/ward,
-## and cools for 20 s. The bot channels at least once per Seal.
+## The Director: TEST #21 — Channel Wyrd reports the HP it restored
+## or the damage it prevented, and the idle HUD jumps to the blockage.
+## Channel still costs 2 Stabilized, repairs one wall/ward, and cools
+## for 20 s. The bot channels at least once per Seal.
 
 const Defs = preload("one_shard_defs.gd")
 const RivalryTuning = preload("one_shard_rivalry_tuning.gd")
@@ -142,6 +141,10 @@ var channel_reserve := 0
 var last_channel_from_reserve := false
 var last_channel_at := -1.0
 var last_channel_tile := Vector2i(-1, -1)
+var last_channel_hp_before := 0
+var last_channel_hp_after := 0
+var last_channel_hp_gained := 0
+var last_channel_prevented := false
 var first_build_at := -1.0
 
 
@@ -215,6 +218,10 @@ func reset() -> void:
 	last_channel_from_reserve = false
 	last_channel_at = -1.0
 	last_channel_tile = Vector2i(-1, -1)
+	last_channel_hp_before = 0
+	last_channel_hp_after = 0
+	last_channel_hp_gained = 0
+	last_channel_prevented = false
 	first_build_at = -1.0
 	if simulation != null:
 		_seed_rival_timing()
@@ -359,6 +366,10 @@ func request_begin() -> Dictionary:
 	channel_uses = 0
 	last_channel_at = -1.0
 	last_channel_tile = Vector2i(-1, -1)
+	last_channel_hp_before = 0
+	last_channel_hp_after = 0
+	last_channel_hp_gained = 0
+	last_channel_prevented = false
 	channel_ready_at = float(simulation.elapsed_seconds)
 	ritual_active = true
 	ritual_progress = 0.0
@@ -417,7 +428,9 @@ func request_channel() -> Dictionary:
 	if tile.x >= 0:
 		simulation.add_map_marker("channel", tile, "CHANNEL WYRD", last_channel_at + 4.0)
 	var kind := String(target.get("kind", "wall"))
-	var message := "CHANNEL WYRD — emergency reserve repairs the %s." % kind if from_reserve else "CHANNEL WYRD — 2 Stabilized repairs the %s." % kind
+	var feedback := channel_feedback_line()
+	var paid := "emergency reserve repairs the %s" % kind if from_reserve else "2 Stabilized repairs the %s" % kind
+	var message := "CHANNEL WYRD — %s (%s)." % [paid, feedback.to_lower()] if feedback != "" else "CHANNEL WYRD — %s." % paid
 	simulation.last_message = message
 	simulation._add_log(message)
 	simulation.push_notice("info", "CHANNEL", message, "warning")
@@ -426,7 +439,11 @@ func request_channel() -> Dictionary:
 		"tile": tile,
 		"stabilized": CHANNEL_COST,
 		"from_reserve": from_reserve,
-		"target": kind
+		"target": kind,
+		"hp_before": last_channel_hp_before,
+		"hp_after": last_channel_hp_after,
+		"hp_gained": last_channel_hp_gained,
+		"prevented": last_channel_prevented
 	})
 	if simulation.has_method("_emit_audio"):
 		simulation._emit_audio("wyrd")
@@ -585,6 +602,11 @@ func presentation() -> Dictionary:
 		"channel_cooldown": CHANNEL_COOLDOWN,
 		"channel_target_tile": preview_channel_target().get("tile", last_channel_tile),
 		"channel_target_kind": String(preview_channel_target().get("kind", "")),
+		"channel_hp_before": last_channel_hp_before,
+		"channel_hp_after": last_channel_hp_after,
+		"channel_hp_gained": last_channel_hp_gained,
+		"channel_prevented": last_channel_prevented,
+		"channel_feedback": channel_feedback_line(),
 		"first_build_at": first_build_at,
 		"seal_look": seal_look()
 	}
@@ -1358,20 +1380,41 @@ func _find_channel_target() -> Dictionary:
 	return {}
 
 
+func channel_feedback_line() -> String:
+	if last_channel_at < 0.0:
+		return ""
+	if last_channel_prevented or last_channel_hp_gained <= 0:
+		return "next %d dmg prevented" % CHANNEL_REPAIR_HP
+	return "+%d HP" % last_channel_hp_gained
+
+
+func _note_channel_hp(before: int, after: int) -> void:
+	last_channel_hp_before = before
+	last_channel_hp_after = after
+	last_channel_hp_gained = maxi(0, after - before)
+	last_channel_prevented = last_channel_hp_gained <= 0
+
+
 func _repair_one_segment() -> Vector2i:
 	var found: Dictionary = _find_channel_target()
 	if found.is_empty():
+		_note_channel_hp(0, 0)
 		return Vector2i(-1, -1)
 	var building: Dictionary = found.get("building", {})
 	if not building.is_empty():
 		var max_hp := int(building.get("max_hp", Defs.building_hp(Defs.BUILDING_WALL)))
-		building["hp"] = mini(max_hp, int(building.get("hp", 0)) + CHANNEL_REPAIR_HP)
+		var before := int(building.get("hp", 0))
+		building["hp"] = mini(max_hp, before + CHANNEL_REPAIR_HP)
+		_note_channel_hp(before, int(building["hp"]))
 		return Vector2i(found.get("tile", Vector2i.ZERO))
 	var structure: Dictionary = found.get("structure", {})
 	if not structure.is_empty():
 		var max_hp := int(structure.get("max_hp", 220))
-		structure["hp"] = mini(max_hp, int(structure.get("hp", 0)) + CHANNEL_REPAIR_HP)
+		var before := int(structure.get("hp", 0))
+		structure["hp"] = mini(max_hp, before + CHANNEL_REPAIR_HP)
+		_note_channel_hp(before, int(structure["hp"]))
 		return Vector2i(found.get("tile", primary_fissure))
+	_note_channel_hp(0, 0)
 	return Vector2i(found.get("tile", primary_fissure))
 
 
@@ -1397,6 +1440,9 @@ func victory_summary() -> Dictionary:
 		"seal": seal_choice,
 		"channel_uses": channel_uses,
 		"channel_reserve_used": 1 if last_channel_from_reserve or channel_uses >= 1 else 0,
+		"channel_hp_gained": last_channel_hp_gained,
+		"channel_prevented": last_channel_prevented,
+		"channel_feedback": channel_feedback_line(),
 		"elapsed_seconds": float(simulation.elapsed_seconds) if simulation != null else 0.0,
 		"first_build_at": first_build_at,
 		"population": int(simulation.population_current) if simulation != null else 0,

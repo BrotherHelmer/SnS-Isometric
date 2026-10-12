@@ -307,6 +307,13 @@ var idle_workers_button: Button
 var idle_workers_since := 0.0
 var idle_workers_tracking := false
 var idle_notice_last := -1000000.0
+var idle_crew_panel: PanelContainer
+var idle_crew_body: RichTextLabel
+var idle_jump_button: Button
+var idle_build_button: Button
+var victory_hold_started := false
+var victory_hold_until := 0.0
+const VICTORY_HOLD_SECONDS := 2.0
 
 
 func _ready() -> void:
@@ -383,7 +390,7 @@ func _process(delta: float) -> void:
 	_tick_minimap(delta)
 	if simulation_host.simulation != null and simulation_host.simulation.game_finished:
 		if result_overlay != null and not result_overlay.visible and (startup_overlay == null or not startup_overlay.visible):
-			_show_result_screen()
+			_tick_victory_hold()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -407,6 +414,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.keycode == KEY_ESCAPE and scout_aiming:
 			scout_aiming = false
 			_show_status("Scout cancelled.")
+			get_viewport().set_input_as_handled()
+			return
+		if event.keycode == KEY_ESCAPE and idle_crew_panel != null and idle_crew_panel.visible:
+			_show_idle_crew(false)
 			get_viewport().set_input_as_handled()
 			return
 		if event.keycode == KEY_ESCAPE and objective_detail_panel != null and objective_detail_panel.visible:
@@ -592,6 +603,10 @@ func start_new_3d(seed_value := DEFAULT_SEED) -> void:
 	last_seal_choice_seen = ""
 	last_midgame_offered = false
 	last_midgame_choice_seen = ""
+	victory_hold_started = false
+	victory_hold_until = 0.0
+	if idle_crew_panel != null:
+		idle_crew_panel.visible = false
 	if result_overlay != null:
 		result_overlay.visible = false
 	if confirm_overlay != null:
@@ -1356,6 +1371,72 @@ func _create_ui() -> void:
 	objective_detail_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	Identity.apply_label(objective_detail_body, "body")
 	objective_scroll.add_child(objective_detail_body)
+
+	# The Director: idle overview sits under the LoopBar so STAB 6/12
+	# on the status plate stays readable the whole time.
+	idle_crew_panel = PanelContainer.new()
+	idle_crew_panel.name = "IdleCrewOverview"
+	idle_crew_panel.visible = false
+	idle_crew_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	idle_crew_panel.anchor_right = 0.0
+	idle_crew_panel.anchor_bottom = 0.0
+	idle_crew_panel.offset_left = 8.0
+	idle_crew_panel.offset_top = TOP_BAR_HEIGHT + 44.0
+	idle_crew_panel.offset_right = 360.0
+	idle_crew_panel.offset_bottom = TOP_BAR_HEIGHT + 360.0
+	idle_crew_panel.custom_minimum_size = Vector2(340, 240)
+	idle_crew_panel.clip_contents = true
+	idle_crew_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	idle_crew_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.04, 0.05, 0.055, 0.94), Color("#efcf8a")))
+	root.add_child(idle_crew_panel)
+	var idle_margin := MarginContainer.new()
+	for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
+		idle_margin.add_theme_constant_override(side, 10)
+	idle_crew_panel.add_child(idle_margin)
+	var idle_box := VBoxContainer.new()
+	idle_box.add_theme_constant_override("separation", 8)
+	idle_margin.add_child(idle_box)
+	var idle_header := HBoxContainer.new()
+	idle_box.add_child(idle_header)
+	var idle_title := Label.new()
+	idle_title.name = "IdleCrewTitle"
+	idle_title.text = "Crew"
+	idle_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	Identity.apply_label(idle_title, "caption")
+	idle_header.add_child(idle_title)
+	var close_idle := Button.new()
+	close_idle.name = "IdleCrewClose"
+	close_idle.text = "×"
+	close_idle.custom_minimum_size = Vector2(32, 28)
+	close_idle.pressed.connect(_show_idle_crew.bind(false))
+	Identity.apply_button(close_idle)
+	idle_header.add_child(close_idle)
+	idle_crew_body = RichTextLabel.new()
+	idle_crew_body.name = "IdleCrewBody"
+	idle_crew_body.bbcode_enabled = true
+	idle_crew_body.fit_content = true
+	idle_crew_body.scroll_active = true
+	idle_crew_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	idle_crew_body.custom_minimum_size = Vector2(0, 140)
+	idle_crew_body.add_theme_font_size_override("normal_font_size", Identity.SIZE_BODY)
+	idle_crew_body.add_theme_color_override("default_color", Identity.COLOR_NEUTRAL)
+	idle_box.add_child(idle_crew_body)
+	var idle_actions := HBoxContainer.new()
+	idle_actions.add_theme_constant_override("separation", 8)
+	idle_box.add_child(idle_actions)
+	idle_jump_button = Button.new()
+	idle_jump_button.name = "IdleJump"
+	idle_jump_button.text = "Go to Storehouse"
+	idle_jump_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	idle_jump_button.pressed.connect(_jump_idle_target)
+	Identity.apply_button(idle_jump_button, true)
+	idle_actions.add_child(idle_jump_button)
+	idle_build_button = Button.new()
+	idle_build_button.name = "IdleOpenBuild"
+	idle_build_button.text = "Open BUILD"
+	idle_build_button.pressed.connect(_open_build_from_idle)
+	Identity.apply_button(idle_build_button)
+	idle_actions.add_child(idle_build_button)
 
 	shard_compass = Label.new()
 	shard_compass.name = "ShardCompass"
@@ -2304,6 +2385,8 @@ func _update_ui() -> void:
 	if soldier_label != null:
 		soldier_label.text = "%d/%d" % [int(simulation_host.simulation.soldiers_available()), int(simulation_host.simulation.soldiers_total)]
 	_update_idle_workers()
+	if idle_crew_panel != null and idle_crew_panel.visible:
+		_refresh_idle_crew()
 	var night_now := bool(simulation_host.simulation.is_night)
 	if time_label != null:
 		time_label.text = _clock_title()
@@ -3306,6 +3389,8 @@ func _tick_edge_pan(delta: float) -> void:
 func _show_objective_detail(value: bool) -> void:
 	if objective_detail_panel == null or simulation_host.simulation == null:
 		return
+	if value and idle_crew_panel != null:
+		idle_crew_panel.visible = false
 	objective_detail_panel.visible = value
 	if not value:
 		return
@@ -4049,18 +4134,40 @@ func _channel_cost_label(wyrdfall: Dictionary) -> String:
 	return "2 Stab"
 
 
+func _channel_feedback_copy(wyrdfall: Dictionary) -> String:
+	var line := String(wyrdfall.get("channel_feedback", ""))
+	if line != "":
+		return line
+	if bool(wyrdfall.get("channel_prevented", false)):
+		return "next 40 dmg prevented"
+	var gained := int(wyrdfall.get("channel_hp_gained", 0))
+	if gained > 0:
+		return "+%d HP" % gained
+	return ""
+
+
 func _channel_button_copy(wyrdfall: Dictionary, remain: float) -> String:
 	var target := _channel_target_label(wyrdfall)
 	var cost := _channel_cost_label(wyrdfall)
+	var feedback := _channel_feedback_copy(wyrdfall)
 	if bool(wyrdfall.get("channel_ready", false)):
+		if feedback != "" and int(wyrdfall.get("channel_uses", 0)) > 0:
+			return "CHANNEL [C] · %s · %s · %s" % [cost, target, feedback]
 		return "CHANNEL [C] · %s · %s" % [cost, target]
+	if feedback != "":
+		return "CHANNEL [C] · %s · %s · %ds" % [feedback, target, int(ceil(remain))]
 	return "CHANNEL [C] · %s · %ds" % [target, int(ceil(remain))]
 
 
 func _channel_loop_copy(wyrdfall: Dictionary) -> String:
+	var feedback := _channel_feedback_copy(wyrdfall)
 	if bool(wyrdfall.get("channel_ready", false)):
+		if feedback != "" and int(wyrdfall.get("channel_uses", 0)) > 0:
+			return "CHANNEL [C] · %s · %s" % [feedback, _channel_target_label(wyrdfall)]
 		return "CHANNEL [C] · %s · %s" % [_channel_cost_label(wyrdfall), _channel_target_label(wyrdfall)]
 	var remain := maxf(0.0, float(wyrdfall.get("channel_ready_at", 0.0)) - float(simulation_host.simulation.elapsed_seconds))
+	if feedback != "":
+		return "CHANNEL %s · %s · %ds" % [feedback, _channel_target_label(wyrdfall), int(ceil(remain))]
 	return "CHANNEL cooling %ds · %s" % [int(ceil(remain)), _channel_target_label(wyrdfall)]
 
 
@@ -4073,12 +4180,45 @@ func _channel_tooltip(wyrdfall: Dictionary, remain: float) -> String:
 		"Cooldown: 20 s%s." % (" — ready" if bool(wyrdfall.get("channel_ready", false)) else " — %ds left" % int(ceil(remain))),
 		"Hotkey [C]."
 	]
+	var feedback := _channel_feedback_copy(wyrdfall)
+	if feedback != "" and int(wyrdfall.get("channel_uses", 0)) > 0:
+		var before := int(wyrdfall.get("channel_hp_before", 0))
+		var after := int(wyrdfall.get("channel_hp_after", 0))
+		if bool(wyrdfall.get("channel_prevented", false)):
+			lines.append("Last: %s on %s (HP already full)." % [feedback, _channel_target_label(wyrdfall)])
+		else:
+			lines.append("Last: %s on %s (%d → %d)." % [feedback, _channel_target_label(wyrdfall), before, after])
 	return "\n".join(lines)
+
+
+func _tick_victory_hold() -> void:
+	if not victory_hold_started:
+		victory_hold_started = true
+		victory_hold_until = Time.get_ticks_msec() / 1000.0 + VICTORY_HOLD_SECONDS
+		_show_idle_crew(false)
+		_frame_victory_fissure()
+		return
+	if Time.get_ticks_msec() / 1000.0 >= victory_hold_until:
+		_show_result_screen()
+
+
+func _frame_victory_fissure() -> void:
+	if simulation_host.simulation == null or world_view == null or camera_rig == null:
+		return
+	var focus_tile: Vector2i = simulation_host.simulation.shard_position
+	if simulation_host.simulation.crater_war != null and simulation_host.simulation.crater_war.primary_fissure.x >= 0:
+		focus_tile = simulation_host.simulation.crater_war.primary_fissure
+	simulation_host.simulation._reveal_radius(focus_tile, 7)
+	world_view.last_revealed_count = -1
+	_sync_presentation()
+	camera_rig.compose_view(world_view.tile_to_world(Vector2(focus_tile)), 38.0)
+	_update_day_night_lighting()
 
 
 func _show_result_screen() -> void:
 	if result_overlay == null or simulation_host.simulation == null:
 		return
+	victory_hold_started = true
 	simulation_host.paused = true
 	last_result_stats = simulation_host.simulation.get_run_statistics()
 	result_more_stats = false
@@ -4088,15 +4228,7 @@ func _show_result_screen() -> void:
 		try_again.visible = not bool(last_result_stats.get("victory", false))
 	result_overlay.visible = true
 	_set_play_chrome_visible(false)
-	if simulation_host.simulation != null and world_view != null and camera_rig != null:
-		var focus_tile: Vector2i = simulation_host.simulation.shard_position
-		if simulation_host.simulation.crater_war != null and simulation_host.simulation.crater_war.primary_fissure.x >= 0:
-			focus_tile = simulation_host.simulation.crater_war.primary_fissure
-		simulation_host.simulation._reveal_radius(focus_tile, 7)
-		world_view.last_revealed_count = -1
-		_sync_presentation()
-		camera_rig.compose_view(world_view.tile_to_world(Vector2(focus_tile)), 38.0)
-	_update_day_night_lighting()
+	_frame_victory_fissure()
 
 
 func _toggle_result_stats() -> void:
@@ -4124,7 +4256,10 @@ func _refresh_result_body() -> void:
 			"Caravan  %s" % _choice_label(String(stats.get("midgame_choice", ""))),
 			"Six-Wyrd  %s" % _choice_label(String(stats.get("wyrd_choice", ""))),
 			"Seal  %s" % _choice_label(String(stats.get("seal_choice", ""))),
-			"Channel Wyrd  %d" % int(stats.get("channel_uses", 0)),
+			"Channel Wyrd  %d%s" % [
+				int(stats.get("channel_uses", 0)),
+				"  ·  last %s" % String(stats.get("channel_feedback", "")) if String(stats.get("channel_feedback", "")) != "" else ""
+			],
 			"Completion time  %d:%02d" % [minutes, seconds],
 			"Days survived  %d" % int(stats.get("days_survived", 0)),
 			"Population  %d" % int(stats.get("population", 0)),
@@ -4301,6 +4436,8 @@ func _set_play_chrome_visible(value: bool) -> void:
 		var chrome := hud_root.find_child(chrome_name, true, false)
 		if chrome != null:
 			chrome.visible = value
+	if not value and idle_crew_panel != null:
+		idle_crew_panel.visible = false
 
 
 func _create_audio() -> void:
@@ -4651,8 +4788,8 @@ func idle_worker_count() -> int:
 	return maxi(0, int(sim.workers_free()) - int(sim._clearer_count()))
 
 
-## Look lift: the idle count is a sub-label of the population group (it used
-## to float above the console). Clicking it still opens the BUILD plans.
+## Look lift: the idle count is a sub-label of the population group.
+## Clicking it opens the crew overview (working vs unable + jump).
 func _add_idle_workers_button(host: Control) -> Button:
 	var button := Button.new()
 	button.name = "IdleWorkers"
@@ -4673,7 +4810,91 @@ func _add_idle_workers_button(host: Control) -> Button:
 
 
 func _on_idle_workers_pressed() -> void:
-	# Idle settlers only get work from a new workplace: open the BUILD plans.
+	# The Director: the idle status is the next-action door. Show who
+	# is working, who cannot, and jump to the Storehouse or blockage.
+	if idle_crew_panel != null and idle_crew_panel.visible:
+		_show_idle_crew(false)
+		return
+	_show_idle_crew(true)
+
+
+func _show_idle_crew(value: bool) -> void:
+	if idle_crew_panel == null:
+		return
+	if value and objective_detail_panel != null:
+		objective_detail_panel.visible = false
+	if value:
+		_set_build_palette_visible(false)
+	idle_crew_panel.visible = value
+	if value:
+		_refresh_idle_crew()
+
+
+func _refresh_idle_crew() -> void:
+	var sim = simulation_host.simulation
+	if sim == null or idle_crew_body == null:
+		return
+	if not sim.has_method("idle_crew_report"):
+		return
+	var report: Dictionary = sim.idle_crew_report()
+	var bottleneck := String(report.get("bottleneck", "no jobs"))
+	var idle_n := int(report.get("count", 0))
+	var working: Array = report.get("working", [])
+	var unable: Array = report.get("unable", [])
+	var working_total := int(report.get("working_total", working.size()))
+	var unable_total := int(report.get("unable_total", unable.size()))
+	var lines: Array[String] = [
+		"[b]CREW[/b]  —  %d idle · %s" % [idle_n, bottleneck],
+		""
+	]
+	lines.append("[b]Working[/b]")
+	if working.is_empty():
+		lines.append("  None on a job right now.")
+	else:
+		for row_value in working:
+			var row: Dictionary = row_value
+			lines.append("  %s — %s — %s" % [
+				String(row.get("who", "Settler")),
+				String(row.get("job", "working")),
+				String(row.get("reason", ""))
+			])
+		if working_total > working.size():
+			lines.append("  +%d more at work." % (working_total - working.size()))
+	lines.append("")
+	lines.append("[b]Unable[/b]")
+	if unable.is_empty():
+		lines.append("  Everyone who can work is working.")
+	else:
+		for row_value in unable:
+			var row: Dictionary = row_value
+			lines.append("  %s — %s" % [String(row.get("who", "Settler")), String(row.get("reason", bottleneck))])
+		if unable_total > unable.size():
+			lines.append("  +%d more waiting." % (unable_total - unable.size()))
+	idle_crew_body.text = "\n".join(lines)
+	var jump: Dictionary = report.get("jump", {})
+	if idle_jump_button != null:
+		var label := String(jump.get("label", "Go to Storehouse"))
+		idle_jump_button.text = label if label != "" else "Go to Storehouse"
+		idle_jump_button.visible = true
+
+
+func _jump_idle_target() -> void:
+	var sim = simulation_host.simulation
+	if sim == null or not sim.has_method("idle_crew_report"):
+		return
+	var jump: Dictionary = sim.idle_crew_report().get("jump", {})
+	var id := int(jump.get("id", 0))
+	var tile: Vector2i = jump.get("tile", Vector2i(-1, -1))
+	if id > 0:
+		select_building(id)
+	if camera_rig != null and world_view != null and tile.x >= 0:
+		camera_rig.focus_world(world_view.tile_to_world(Vector2(tile) + Vector2(1.0, 1.0)))
+	var label := String(jump.get("label", "the blockage")).replace("Go to ", "")
+	_show_status("Jumped to the %s." % label, 4.0)
+
+
+func _open_build_from_idle() -> void:
+	_show_idle_crew(false)
 	_set_build_palette_visible(true)
 
 
@@ -4686,7 +4907,7 @@ func _update_idle_workers() -> void:
 		idle_workers_button.visible = idle > 0 and play_has_begun and not bool(simulation_host.simulation.is_night) and (startup_overlay == null or not startup_overlay.visible)
 		if population_label != null:
 			population_label.get_parent().get_parent().tooltip_text = "Population / housing" + ("\n%d idle: %s" % [idle, bottleneck] if idle_workers_button.visible else "")
-		idle_workers_button.tooltip_text = "%d settler%s idle — %s." % [idle, "" if idle == 1 else "s", bottleneck]
+		idle_workers_button.tooltip_text = "%d settler%s idle — %s. Click for the crew overview." % [idle, "" if idle == 1 else "s", bottleneck]
 	_tick_idle_workers(idle)
 
 
