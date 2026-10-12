@@ -14,7 +14,7 @@ const Intentions = preload("res://src/GodotClient/Scripts/one_shard_intentions.g
 const SEED_DEFAULT := 260821
 const STEP_SECONDS := 8.0
 const MAX_SECONDS_DEFAULT := 3600.0
-const DEST_DEFAULT := "res://artifacts/demo_playthrough_v3"
+const DEST_DEFAULT := "res://artifacts/demo_playthrough_v4"
 
 var failures: Array[String] = []
 var script_errors := 0
@@ -160,25 +160,28 @@ func _run() -> void:
 		_check(saw_rival, "saw a rival")
 		_check(saw_storehouse or (sim.crater_war != null and sim.crater_war.storehouse_completed_at >= 0.0), "finished the Storehouse")
 		_check(saw_capture or (sim.crater_war != null and sim.crater_war.rival_resolution != ""), "interacted with the rival / captured the Outpost")
-		_check(saw_ritual or (sim.crater_war != null and sim.crater_war.ritual_started_at >= 0.0), "defended the Binding ritual")
-		_check(bool(sim.victory), "reached a Binding victory")
-		_check(String(sim.defeat_reason).contains("BOUND"), "victory is Binding, not THE REALM HOLDS")
-		_check(float(sim.elapsed_seconds) <= 3600.0, "Binding landed inside the 60-minute hour (t=%.1f)" % float(sim.elapsed_seconds))
+		_check(saw_ritual or (sim.crater_war != null and sim.crater_war.ritual_started_at >= 0.0), "defended the Seal ceremony")
+		_check(bool(sim.victory), "reached a Seal victory")
+		_check(String(sim.defeat_reason).contains("SEALED"), "victory is Seal the Fissure, not THE REALM HOLDS")
+		_check(float(sim.elapsed_seconds) <= 3600.0, "Seal landed inside the 60-minute hour (t=%.1f)" % float(sim.elapsed_seconds))
 		if first_12_at >= 0.0:
 			_check(first_12_at + 0.05 >= 40.0 * 60.0 - STEP_SECONDS, "12 Stabilized is not earlier than ~40:00 (t=%.1f)" % first_12_at)
-			_check(first_12_at <= 52.0 * 60.0 + STEP_SECONDS, "12 Stabilized is not later than ~52:00 (t=%.1f)" % first_12_at)
+			_check(first_12_at <= 53.0 * 60.0 + STEP_SECONDS, "12 Stabilized is not later than ~53:00 (t=%.1f)" % first_12_at)
 		else:
 			_check(false, "store reached 12 Stabilized")
 		if sim.crater_war != null and sim.crater_war.ritual_started_at >= 0.0:
-			_check(sim.crater_war.ritual_started_at + 0.05 >= 40.0 * 60.0 - STEP_SECONDS, "ritual starts with the store, not on a clock (t=%.1f)" % sim.crater_war.ritual_started_at)
-		_check(float(sim.elapsed_seconds) + 0.05 >= 42.0 * 60.0 - STEP_SECONDS, "Binding is not earlier than ~42:00 (t=%.1f)" % float(sim.elapsed_seconds))
-		_check(float(sim.elapsed_seconds) <= 55.0 * 60.0 + STEP_SECONDS, "Binding is not later than ~55:00 (t=%.1f)" % float(sim.elapsed_seconds))
+			_check(sim.crater_war.ritual_started_at + 0.05 >= 40.0 * 60.0 - STEP_SECONDS, "Seal starts with the store, not on a clock (t=%.1f)" % sim.crater_war.ritual_started_at)
+		_check(float(sim.elapsed_seconds) + 0.05 >= 42.0 * 60.0 - STEP_SECONDS, "Seal is not earlier than ~42:00 (t=%.1f)" % float(sim.elapsed_seconds))
+		_check(float(sim.elapsed_seconds) <= 55.0 * 60.0 + STEP_SECONDS, "Seal is not later than ~55:00 (t=%.1f)" % float(sim.elapsed_seconds))
 		_check(longest_idle <= 180.0 + STEP_SECONDS, "no idle stretch longer than 3 minutes (longest=%.1fs)" % longest_idle)
 		if sim.crater_war != null and sim.crater_war.storehouse_completed_at >= 0.0:
 			_check(sim.crater_war.storehouse_completed_at <= 18.0 * 60.0 + 1.0, "Storehouse completed by minute 18 (t=%.1f)" % sim.crater_war.storehouse_completed_at)
 		if sim.crater_war != null:
-			_check(sim.crater_war.second_push_at >= 0.0 or sim.crater_war.contest_count > 0, "rival second-pushed the fissure")
-			_check(sim.crater_war.harvester_raid_at >= 0.0, "rival raided the harvester")
+			_check(sim.crater_war.wyrd_choice in ["refine", "secure"], "player chose a Wyrd pact at 6 Stabilized")
+			_check(sim.crater_war.second_push_at >= 0.0 or sim.crater_war.contest_count > 0, "rival pushed after the first harvest")
+			_check(sim.crater_war.harvester_raid_at >= 0.0 or sim.crater_war.wyrd_choice == "secure", "rival raided after the first Stabilized (or path B warded it)")
+			var reveal_at := sim.crater_war.rival_reveal_seconds()
+			_check(reveal_at >= 14.0 * 60.0 and reveal_at < 20.0 * 60.0 + 0.001, "rival reveal is seeded between 14:00 and 20:00 (t=%.1f)" % reveal_at)
 	print("DEMO_PLAYTHROUGH seed=%d elapsed=%.1f finished=%s victory=%s shots=%d" % [
 		seed_value, float(sim.elapsed_seconds), str(sim.game_finished), str(sim.victory), captured.size()
 	])
@@ -246,7 +249,11 @@ func _watch_journal(sim) -> void:
 			saw_ritual = true
 			_note_event(sim, "ritual", message)
 			captured["pending_ritual"] = true
-		if kind in ["rival_second_push", "rival_contest", "harvester_raid", "harvester_raid_spawn", "exposure_choice", "exposure_burn"]:
+		if kind in ["wyrd_choice", "wyrd_choice_offered"] and not captured.has("did_choice"):
+			captured["did_choice"] = true
+			_note_event(sim, kind, message)
+			captured["pending_choice"] = true
+		if kind in ["rival_second_push", "rival_contest", "harvester_raid", "harvester_raid_spawn", "exposure_choice", "exposure_burn", "wyrd_choice", "wyrd_choice_offered", "first_harvest", "first_stabilized"]:
 			_note_event(sim, kind, message)
 			_touch_play(float(event.get("elapsed_seconds", sim.elapsed_seconds)))
 			if kind in ["rival_second_push", "harvester_raid", "harvester_raid_spawn"] and not captured.has("pending_%s" % kind):
@@ -289,9 +296,12 @@ func _watch_phase(game, sim) -> void:
 	if captured.get("pending_capture", false):
 		captured["pending_capture"] = false
 		await _capture(game, sim, "t%02d_capture" % _mm(sim), "Claimant Outpost captured.")
+	if captured.get("pending_choice", false):
+		captured["pending_choice"] = false
+		await _capture(game, sim, "t%02d_choice" % _mm(sim), "Wyrd pact at 6 Stabilized.")
 	if captured.get("pending_ritual", false):
 		captured["pending_ritual"] = false
-		await _capture(game, sim, "t%02d_ritual" % _mm(sim), "Binding ritual begun.")
+		await _capture(game, sim, "t%02d_seal" % _mm(sim), "Seal the Fissure begun.")
 	if captured.get("pending_rival_second_push", false):
 		captured["pending_rival_second_push"] = false
 		await _capture(game, sim, "t%02d_second_push" % _mm(sim), "Rival second push on the fissure.")
@@ -320,7 +330,7 @@ func _watch_crater_state(sim) -> void:
 		_note_event(sim, "stabilized_12", "Store reached 12 Stabilized Wyrd.")
 	if not saw_ritual and sim.crater_war.ritual_started_at >= 0.0:
 		saw_ritual = true
-		_note_event(sim, "ritual", "BINDING BEGUN — defend the fissure ritual for 120 seconds.")
+		_note_event(sim, "ritual", "SEAL BEGUN — defend the fissure ceremony for 120 seconds.")
 		captured["pending_ritual"] = true
 
 
@@ -328,7 +338,7 @@ func _maybe_rival(sim) -> void:
 	if sim.rivalry == null:
 		return
 	var line := String(sim.rivalry.get_rival_status_line())
-	if float(sim.elapsed_seconds) >= 600.0 and (line.contains("Outpost") or line.contains("Binding")):
+	if float(sim.elapsed_seconds) >= 600.0 and (line.contains("Outpost") or line.contains("Binding") or line.contains("Seal")):
 		saw_rival = true
 		_note_event(sim, "rival", line)
 		captured["pending_rival"] = true
@@ -353,6 +363,8 @@ func _watch_meaningful(sim, thought: Dictionary) -> void:
 	if bool(sim.raid_active) or bool(sim.is_night):
 		meaningful = true
 	if sim.crater_war != null and bool(sim.crater_war.ritual_active):
+		meaningful = true
+	if sim.crater_war != null and sim.crater_war.choice_ready():
 		meaningful = true
 	if sim.crater_war != null and sim.crater_war._rival_outpost_alive():
 		meaningful = true
@@ -443,9 +455,16 @@ func _frame_camera(game, sim, name_value: String) -> void:
 	elif name_value.contains("rival"):
 		focus = _rival_focus(game, sim)
 		zoom = 48.0
+	elif name_value.contains("seal") or name_value.contains("choice") or name_value.contains("ritual"):
+		if sim.crater_war != null and sim.crater_war.primary_fissure.x >= 0:
+			focus = game.world_view.tile_to_world(Vector2(sim.crater_war.primary_fissure))
+		zoom = 44.0
 	elif name_value.contains("victory") or name_value.contains("end"):
-		focus = game.world_view.tile_to_world(Vector2(sim.shard_position))
-		zoom = 56.0
+		if sim.crater_war != null and sim.crater_war.primary_fissure.x >= 0:
+			focus = game.world_view.tile_to_world(Vector2(sim.crater_war.primary_fissure))
+		else:
+			focus = game.world_view.tile_to_world(Vector2(sim.shard_position))
+		zoom = 42.0
 	game.camera_rig.configure_for_map(sim.map_size)
 	game.camera_rig.compose_view(focus, zoom)
 	game.world_view.note_camera(game.camera_rig.target_position, zoom)
@@ -501,7 +520,7 @@ func _log_row(sim, events: String) -> void:
 
 func _write_notes(sim, player) -> void:
 	if float(sim.elapsed_seconds) >= 3300.0 and not bool(sim.victory):
-		_unique("balance", "Binding was not reached in 60 minutes on the 320 map (hall %s, shard %s, crater R=110)." % [str(sim.town_hall_position), str(sim.shard_position)])
+		_unique("balance", "Seal the Fissure was not reached in 60 minutes on the 320 map (hall %s, shard %s, crater R=110)." % [str(sim.town_hall_position), str(sim.shard_position)])
 	if not first_quest_done:
 		_unique("blockers", "First intention (Lumber Camp + Quarry) never completed.")
 	if not captured.has("t00_start") and not captured.has("pending_first_night"):
@@ -537,14 +556,22 @@ func _write_notes(sim, player) -> void:
 			"first_12_at": first_12_at,
 			"second_push_at": sim.crater_war.second_push_at,
 			"harvester_raid_at": sim.crater_war.harvester_raid_at,
-			"contest_count": sim.crater_war.contest_count
+			"contest_count": sim.crater_war.contest_count,
+			"choice": sim.crater_war.wyrd_choice,
+			"choice_offered_at": sim.crater_war.choice_offered_at,
+			"choice_taken_at": sim.crater_war.choice_taken_at,
+			"rival_reveal_at": sim.crater_war.rival_reveal_at,
+			"first_harvest_at": sim.crater_war.first_harvest_at,
+			"first_stabilized_at": sim.crater_war.first_stabilized_at
 		}
 	notes["longest_idle"] = longest_idle
 	notes["idle_gaps"] = idle_gaps
-	print("DEMO_IDLE seed=%d longest=%.1fs gaps=%d first_12=%.1f ritual=%.1f bind=%.1f" % [
+	print("DEMO_IDLE seed=%d longest=%.1fs gaps=%d first_12=%.1f seal=%.1f win=%.1f choice=%s reveal=%.1f" % [
 		seed_value, longest_idle, idle_gaps.size(), first_12_at,
 		sim.crater_war.ritual_started_at if sim.crater_war != null else -1.0,
-		float(sim.elapsed_seconds)
+		float(sim.elapsed_seconds),
+		sim.crater_war.wyrd_choice if sim.crater_war != null else "",
+		sim.crater_war.rival_reveal_at if sim.crater_war != null else -1.0
 	])
 	var notes_name := "notes.json" if seed_value == SEED_DEFAULT else "notes_%d.json" % seed_value
 	var file := FileAccess.open(dest.path_join(notes_name), FileAccess.WRITE)

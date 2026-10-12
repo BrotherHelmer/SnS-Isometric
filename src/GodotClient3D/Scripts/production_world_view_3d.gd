@@ -84,6 +84,9 @@ var shard_beacon: Node3D
 var shard_beacon_light: OmniLight3D
 var shard_beacon_column: MeshInstance3D
 var shard_crystal_material: StandardMaterial3D
+var seal_beacon: Node3D
+var seal_beacon_light: OmniLight3D
+var seal_beacon_column: MeshInstance3D
 var wyrd_spring_views: Dictionary = {}
 var terrain_body: StaticBody3D
 var terrain_mesh_instance: MeshInstance3D
@@ -315,6 +318,7 @@ func sync_frame(frame_snapshot: Dictionary) -> void:
 	_sync_decorative_props(frame_snapshot.get("decorative_props", []))
 	_sync_claim_overlays(frame_snapshot.get("lumen_sources", []), frame_snapshot.get("claims", {}))
 	_update_shard_beacon(frame_snapshot.get("wyrdfall", {}))
+	_update_seal_ceremony(frame_snapshot.get("wyrdfall", {}))
 	_sync_wyrd_springs(frame_snapshot.get("wyrd_sites", []))
 	_sync_map_markers()
 	if reveal_changed:
@@ -2684,6 +2688,56 @@ func _update_shard_beacon(wyrdfall: Dictionary) -> void:
 			material.emission_energy_multiplier = (0.55 if binding else 0.22) * pulse
 	if shard_crystal_material != null:
 		shard_crystal_material.emission_energy_multiplier = (0.70 if binding else 0.32) * pulse
+
+
+func _update_seal_ceremony(wyrdfall: Dictionary) -> void:
+	var sealing := bool(wyrdfall.get("binding_active", false)) or bool(wyrdfall.get("seal_active", false))
+	var fissure := Vector2i(-1, -1)
+	if simulation != null and simulation.crater_war != null:
+		fissure = simulation.crater_war.primary_fissure
+	if not sealing or fissure.x < 0:
+		if seal_beacon != null:
+			seal_beacon.visible = false
+		return
+	if seal_beacon == null:
+		seal_beacon = Node3D.new()
+		seal_beacon.name = "SealCeremony"
+		if vfx_root != null:
+			vfx_root.add_child(seal_beacon)
+		else:
+			add_child(seal_beacon)
+		seal_beacon_column = MeshInstance3D.new()
+		var column := CylinderMesh.new()
+		column.top_radius = 0.22
+		column.bottom_radius = 0.55
+		column.height = 7.2
+		seal_beacon_column.mesh = column
+		var material := StandardMaterial3D.new()
+		material.albedo_color = Color(0.35, 0.82, 0.88, 0.55)
+		material.emission_enabled = true
+		material.emission = Color(0.45, 0.95, 1.0, 1)
+		material.emission_energy_multiplier = 1.6
+		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		seal_beacon_column.material_override = material
+		seal_beacon_column.position = Vector3(0.0, 3.6, 0.0)
+		seal_beacon.add_child(seal_beacon_column)
+		seal_beacon_light = OmniLight3D.new()
+		seal_beacon_light.light_color = Color("#8ef6ff")
+		seal_beacon_light.omni_range = 18.0
+		seal_beacon_light.light_energy = 2.4
+		seal_beacon_light.position = Vector3(0.0, 4.2, 0.0)
+		seal_beacon.add_child(seal_beacon_light)
+	seal_beacon.visible = true
+	seal_beacon.global_position = tile_to_world(Vector2(fissure))
+	var progress := clampf(float(wyrdfall.get("binding_percent", 0.0)) / 100.0, 0.0, 1.0)
+	var pulse := 1.15 + 0.55 * progress + 0.22 * sin(float(Time.get_ticks_msec()) / 180.0)
+	if seal_beacon_light != null:
+		seal_beacon_light.light_energy = 1.8 * pulse
+	if seal_beacon_column != null:
+		var column_mat := seal_beacon_column.material_override as StandardMaterial3D
+		if column_mat != null:
+			column_mat.emission_energy_multiplier = 1.2 * pulse
+		seal_beacon_column.scale = Vector3(1.0 + 0.18 * progress, 1.0 + 0.35 * progress, 1.0 + 0.18 * progress)
 
 
 func _sync_wyrd_springs(sites: Array) -> void:

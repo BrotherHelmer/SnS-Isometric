@@ -51,8 +51,8 @@ const BUILDINGS := {
 	"WALL": ROOT + "/buildings/building_bridge_A.gltf",
 	"LUMEN_PILLAR": ROOT + "/opening_style/lumen_pillar.tscn",
 	"CLAIMANT_OUTPOST": ROOT + "/opening_style/watchtower.tscn",
-	"WYRD_HARVESTER": ROOT + "/opening_style/lumen_pillar.tscn",
-	"WYRD_REFINER": ROOT + "/opening_style/storehouse.tscn",
+	"WYRD_HARVESTER": ROOT + "/opening_style/wyrd_harvester.tscn",
+	"WYRD_REFINER": ROOT + "/opening_style/wyrd_refiner.tscn",
 	"ENEMY_CAMP": ROOT + "/opening_style/enemy_camp.tscn",
 }
 

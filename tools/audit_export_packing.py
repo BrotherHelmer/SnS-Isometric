@@ -40,6 +40,8 @@ ASSET_CATALOG_GROUPS = {
         "res://assets/settlement3d/runtime/opening_style/barracks.tscn",
         "res://assets/settlement3d/runtime/buildings/building_bridge_A.gltf",
         "res://assets/settlement3d/runtime/opening_style/lumen_pillar.tscn",
+        "res://assets/settlement3d/runtime/opening_style/wyrd_harvester.tscn",
+        "res://assets/settlement3d/runtime/opening_style/wyrd_refiner.tscn",
         "res://assets/settlement3d/runtime/opening_style/enemy_camp.tscn",
     ],
     "TOOLS": [
