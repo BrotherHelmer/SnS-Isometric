@@ -26,8 +26,8 @@ const PATH_REFINE := "refine"
 const PATH_SECURE := "secure"
 const SECURE_INVESTMENT := 3
 const REFINE_PATH_INTERVAL := 12.0
-const REFINE_PATH_INPUT := 2
-const SECURE_HARVEST_INTERVAL := 22.0
+const REFINE_PATH_INPUT := 3
+const SECURE_HARVEST_INTERVAL := 18.0
 const PASSAGE_WOOD := 8
 const CAPTURE_WOOD := 8
 const CAPTURE_STONE := 4
@@ -831,7 +831,7 @@ func request_choice(path: String) -> Dictionary:
 	choice_taken_at = float(simulation.elapsed_seconds)
 	var message := ""
 	if picked == PATH_REFINE:
-		message = "FASTER REFINING — the kiln runs hotter. 2 raw become 1 Stabilized."
+		message = "FASTER REFINING — the kiln runs hotter. Raw converts before exposure can burn it."
 	else:
 		message = "SECURE HARVEST — 3 Stabilized ward the vent. Raids lose their teeth."
 	simulation.last_message = message

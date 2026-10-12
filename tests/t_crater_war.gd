@@ -167,7 +167,7 @@ func _check_wyrd_choice() -> void:
 	var early: Dictionary = refine_sim.request_wyrd_choice("refine")
 	_check(bool(early.get("success", false)), "path A faster refining is accepted")
 	_check(refine_sim.crater_war.wyrd_choice == CraterWar.PATH_REFINE, "path A is stored")
-	_check(refine_sim.crater_war._refine_input() == CraterWar.REFINE_PATH_INPUT, "path A refines 2 raw")
+	_check(refine_sim.crater_war._refine_input() == CraterWar.REFINE_INPUT, "path A still spends 3 raw so harvest paces the hour")
 	_check(refine_sim.crater_war._refine_interval() == CraterWar.REFINE_PATH_INTERVAL, "path A refines faster")
 	_check(int(refine_sim.central_inventory.get(Defs.RESOURCE_STABILIZED_WYRD, 0)) == 6, "path A spends no Stabilized")
 
