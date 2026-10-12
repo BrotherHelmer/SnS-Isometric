@@ -37,6 +37,8 @@ const BUILDING_MODEL_SCALE := {
 	"WALL": 0.86,
 	"LUMEN_PILLAR": 2.10,
 	"CLAIMANT_OUTPOST": 3.25,
+	"WYRD_HARVESTER": 2.10,
+	"WYRD_REFINER": 5.50,
 }
 
 # Runtime model bounds at unit scale. They keep socket, focus, construction,
@@ -56,6 +58,8 @@ const BUILDING_UNIT_SIZE := {
 	"WATCHTOWER": Vector3(0.9933, 2.1920, 1.1533),
 	"BARRACKS": Vector3(1.4400, 1.6401, 1.5661),
 	"CLAIMANT_OUTPOST": Vector3(0.9933, 2.1920, 1.1533),
+	"WYRD_HARVESTER": Vector3(0.8, 1.3, 0.8),
+	"WYRD_REFINER": Vector3(0.7918, 0.9300, 0.8536),
 }
 
 const WORLD_PROP_SCALE := {

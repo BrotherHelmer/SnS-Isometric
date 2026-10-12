@@ -19,6 +19,7 @@ var last_actions: Array[String] = []
 var last_failures: Array[String] = []
 var orders: Array[Dictionary] = []
 var scouted := false
+var last_scout_day := 0
 var last_idle_reason := ""
 
 
@@ -32,6 +33,7 @@ func think(sim) -> Dictionary:
 	_defend(sim)
 	_defend_night(sim)
 	_pursue_economy(sim)
+	_pursue_crater_war(sim)
 	_scout(sim)
 	_expand_toward_shard(sim)
 	_contest_rivals(sim)
@@ -71,12 +73,13 @@ func _pursue_economy(sim) -> void:
 		else:
 			last_idle_reason = "waiting for Lumber Camp so Quarry unlocks"
 		return
-	if _unlocked(sim, Defs.BUILDING_STOREHOUSE) and _count(sim, Defs.BUILDING_STOREHOUSE) < 1 and _need_storage(sim):
+	if _unlocked(sim, Defs.BUILDING_SAWMILL) and _count(sim, Defs.BUILDING_SAWMILL) < 1:
+		_try_build(sim, Defs.BUILDING_SAWMILL, sim.town_hall_position + Vector2i(10, 7))
+		return
+	if _unlocked(sim, Defs.BUILDING_STOREHOUSE) and _count(sim, Defs.BUILDING_STOREHOUSE) < 1:
 		if _try_build(sim, Defs.BUILDING_STOREHOUSE, sim.town_hall_position + Vector2i(4, 10)):
 			return
-		# Do not stall the hour on an unaffordable Storehouse — sawmill first.
-	if _unlocked(sim, Defs.BUILDING_SAWMILL) and _count(sim, Defs.BUILDING_SAWMILL) < 1 and _stock(sim, Defs.RESOURCE_WOOD) >= 8:
-		_try_build(sim, Defs.BUILDING_SAWMILL, sim.town_hall_position + Vector2i(10, 7))
+		last_idle_reason = "waiting on planks/stone for the Storehouse"
 		return
 	if _unlocked(sim, Defs.BUILDING_BAKERY) and _count(sim, Defs.BUILDING_BAKERY) < 1 and _stock(sim, Defs.RESOURCE_WHEAT) >= 4:
 		_try_build(sim, Defs.BUILDING_BAKERY, sim.town_hall_position + Vector2i(8, 11))
@@ -98,7 +101,9 @@ func _defend_night(sim) -> void:
 		var toward: Vector2i = (sim.shard_position - sim.town_hall_position).sign()
 		_try_build(sim, Defs.BUILDING_WATCHTOWER, sim.town_hall_position + toward + Vector2i(1, 1))
 		return
-	if _pending_buildings(sim) >= MAX_PENDING_SITES:
+	if not _has_completed(sim, Defs.BUILDING_SAWMILL) and _count(sim, Defs.BUILDING_SAWMILL) < 1:
+		return
+	if not _has_completed(sim, Defs.BUILDING_STOREHOUSE) and _count(sim, Defs.BUILDING_STOREHOUSE) < 1:
 		return
 	if _unlocked(sim, Defs.BUILDING_BARRACKS) and _count(sim, Defs.BUILDING_BARRACKS) < 1:
 		_try_build(sim, Defs.BUILDING_BARRACKS, sim.town_hall_position + Vector2i(6, 2))
@@ -111,8 +116,10 @@ func _defend(sim) -> void:
 
 
 func _scout(sim) -> void:
-	if scouted and int(sim.day_count) < 3:
+	if scouted and int(sim.day_count) <= last_scout_day:
 		return
+	if scouted and int(sim.day_count) >= 3:
+		scouted = false
 	if int(sim.soldiers_total) < 1:
 		return
 	if _food(sim) < 4:
@@ -124,6 +131,7 @@ func _scout(sim) -> void:
 	var result: Dictionary = sim.request_scout_direction(scout_id, target)
 	if bool(result.get("success", false)):
 		scouted = true
+		last_scout_day = int(sim.day_count)
 		_note(sim, "SCOUT", target, String(result.get("message", "")))
 	else:
 		last_failures.append("scout: %s" % String(result.get("message", "")))
@@ -144,12 +152,72 @@ func _expand_toward_shard(sim) -> void:
 		requirements = sim.rivalry.claim_requirements("player")
 	if not bool(requirements.get("lumen", false)):
 		_place_forward_structure(sim, Defs.BUILDING_LUMEN_PILLAR)
-	if _stock(sim, Defs.RESOURCE_WOOD) >= 18:
-		_place_forward_structure(sim, Defs.BUILDING_OUTPOST)
+	# The Director: a corridor Outpost unlocks full harvest. The frontier
+	# stake is already on the vent; do not spam the distant Shard.
+	if _stock(sim, Defs.RESOURCE_WOOD) >= 18 and sim.crater_war != null and not sim.crater_war.route_secured():
+		_try_waypoint_outpost(sim)
+
+
+func _pursue_crater_war(sim) -> void:
+	if sim.crater_war == null:
+		return
+	if sim.crater_war.primary_fissure.x >= 0 and not sim.crater_war.geologist_surveyed:
+		var survey: Dictionary = sim.request_survey()
+		if bool(survey.get("success", false)):
+			_note(sim, "SURVEY", sim.crater_war.primary_fissure, String(survey.get("message", "")))
+	if sim.crater_war.geologist_surveyed:
+		_extend_roads(sim, sim.crater_war.primary_fissure, 2)
+	if sim.crater_war.geologist_surveyed and _unlocked(sim, Defs.BUILDING_WYRD_HARVESTER) and _count(sim, Defs.BUILDING_WYRD_HARVESTER) < 1:
+		if _try_build(sim, Defs.BUILDING_WYRD_HARVESTER, sim.crater_war.primary_fissure):
+			return
+	# Corridor Outpost can start while the harvester team is still walking.
+	if not sim.crater_war.route_secured() and _count(sim, Defs.BUILDING_WYRD_HARVESTER) >= 1:
+		if _pending_buildings(sim) <= MAX_PENDING_SITES:
+			if _try_waypoint_outpost(sim):
+				return
+	var need_refiner := _unlocked(sim, Defs.BUILDING_WYRD_REFINER) and _count(sim, Defs.BUILDING_WYRD_REFINER) < 1
+	var late_refiner := need_refiner and float(sim.elapsed_seconds) >= 25.0 * 60.0 and _count(sim, Defs.BUILDING_WYRD_HARVESTER) >= 1
+	if late_refiner:
+		if _try_build(sim, Defs.BUILDING_WYRD_REFINER, sim.town_hall_position + Vector2i(9, 4)):
+			return
+	if _pending_buildings(sim) >= MAX_PENDING_SITES:
+		return
+	if need_refiner and _has_completed(sim, Defs.BUILDING_WYRD_HARVESTER):
+		if _try_build(sim, Defs.BUILDING_WYRD_REFINER, sim.town_hall_position + Vector2i(9, 4)):
+			return
+	if not _has_completed(sim, Defs.BUILDING_WYRD_HARVESTER):
+		return
+	if not sim.crater_war.route_secured():
+		if _try_waypoint_outpost(sim):
+			return
+	if _count(sim, Defs.BUILDING_OUTPOST) < 2:
+		if _try_frontier_outpost(sim):
+			return
+	if sim.crater_war.harvester_unlumened() and _unlocked(sim, Defs.BUILDING_LUMEN_PILLAR) and _stock(sim, Defs.RESOURCE_WYRD) >= 3:
+		if _try_build(sim, Defs.BUILDING_LUMEN_PILLAR, _harvester_tile(sim)):
+			return
+	if _unlocked(sim, Defs.BUILDING_WATCHTOWER) and _count(sim, Defs.BUILDING_WATCHTOWER) < 2:
+		if _try_build(sim, Defs.BUILDING_WATCHTOWER, _harvester_tile(sim)):
+			return
+	if _unlocked(sim, Defs.BUILDING_WALL) and _count(sim, Defs.BUILDING_WALL) < 3:
+		if _try_build(sim, Defs.BUILDING_WALL, _harvester_tile(sim)):
+			return
+	if _count(sim, Defs.BUILDING_HOUSE) < 3 and _stock(sim, Defs.RESOURCE_WOOD) >= 4:
+		_try_build(sim, Defs.BUILDING_HOUSE, sim.town_hall_position + Vector2i(2, 8))
+		return
+	if _count(sim, Defs.BUILDING_FARM) < 2 and _stock(sim, Defs.RESOURCE_WOOD) >= 4:
+		_try_build(sim, Defs.BUILDING_FARM, sim.town_hall_position + Vector2i(1, 10))
 
 
 func _contest_rivals(sim) -> void:
-	if sim.rivalry == null or int(sim.soldiers_total) < 1:
+	if sim.rivalry == null:
+		return
+	if sim.crater_war != null and bool(sim.demo_rival_revealed) and String(sim.crater_war.rival_resolution) == "" and int(sim.soldiers_total) < 1 and float(sim.elapsed_seconds) >= 1200.0 and _stock(sim, Defs.RESOURCE_WOOD) >= 8:
+		var deal: Dictionary = sim.request_passage_deal()
+		if bool(deal.get("success", false)):
+			_note(sim, "PASSAGE", sim.crater_war.primary_fissure, String(deal.get("message", "")))
+			return
+	if int(sim.soldiers_total) < 1:
 		return
 	for target in sim.rivalry.get_structures("rival"):
 		if String(target.get("type", "")) != Defs.BUILDING_OUTPOST:
@@ -164,9 +232,20 @@ func _contest_rivals(sim) -> void:
 		var result: Dictionary = sim.request_outpost_assault(int(target.get("id", 0)))
 		if bool(result.get("success", false)):
 			_note(sim, "ASSAULT", Vector2i(target.get("position", Vector2i.ZERO)), String(result.get("message", "")))
+		elif sim.crater_war != null and _stock(sim, Defs.RESOURCE_WOOD) >= 8:
+			var fallback: Dictionary = sim.request_passage_deal()
+			if bool(fallback.get("success", false)):
+				_note(sim, "PASSAGE", sim.crater_war.primary_fissure, String(fallback.get("message", "")))
 
 
 func _try_bind(sim) -> void:
+	if sim.crater_war != null and sim.crater_war.can_begin():
+		var crater_bind: Dictionary = sim.request_begin_binding()
+		if bool(crater_bind.get("success", false)):
+			_note(sim, "BIND", sim.crater_war.primary_fissure, String(crater_bind.get("message", "")))
+		else:
+			last_failures.append("bind: %s" % String(crater_bind.get("message", "")))
+		return
 	if sim.rivalry == null:
 		return
 	var ready: Dictionary = sim.rivalry.claim_requirements("player")
@@ -178,9 +257,53 @@ func _try_bind(sim) -> void:
 			last_failures.append("bind: %s" % String(result.get("message", "")))
 
 
+func _try_waypoint_outpost(sim) -> bool:
+	if not _can_afford(sim, Defs.BUILDING_OUTPOST):
+		last_idle_reason = "cannot afford the corridor Outpost"
+		return false
+	var marker := Vector2i(-1, -1)
+	if sim.crater_war != null:
+		marker = sim.crater_war.waypoint_tile()
+	if marker.x < 0:
+		marker = _midpoint(sim.town_hall_position, _frontier_target(sim))
+	var hall: Vector2i = sim.town_hall_position
+	var aims: Array[Vector2i] = [marker]
+	for radius in range(1, 6):
+		for ox in range(-radius, radius + 1):
+			aims.append(marker + Vector2i(ox, -radius))
+			aims.append(marker + Vector2i(ox, radius))
+			aims.append(marker + Vector2i(-radius, ox))
+			aims.append(marker + Vector2i(radius, ox))
+	for aim_value in aims:
+		var aim: Vector2i = aim_value
+		if absi(aim.x - hall.x) + absi(aim.y - hall.y) < 8:
+			continue
+		if _try_build(sim, Defs.BUILDING_OUTPOST, aim):
+			return true
+	_extend_roads(sim, marker, 2)
+	return false
+
+
+func _harvester_tile(sim) -> Vector2i:
+	for building in sim.get_buildings():
+		if bool(building.get("construction", false)):
+			continue
+		if String(building.get("type", "")) == Defs.BUILDING_WYRD_HARVESTER:
+			return Vector2i(building.get("position", Vector2i.ZERO))
+	if sim.crater_war != null and sim.crater_war.primary_fissure.x >= 0:
+		return sim.crater_war.primary_fissure
+	return _frontier_target(sim)
+
+
+func _midpoint(a: Vector2i, b: Vector2i) -> Vector2i:
+	return Vector2i(int(round((a.x + b.x) * 0.5)), int(round((a.y + b.y) * 0.5)))
+
+
 func _try_frontier_outpost(sim) -> bool:
 	var hall: Vector2i = sim.town_hall_position
 	var marker := _frontier_target(sim)
+	if sim.crater_war != null and sim.crater_war.primary_fissure.x >= 0:
+		marker = sim.crater_war.primary_fissure
 	var aims: Array[Vector2i] = [marker]
 	for radius in range(1, 5):
 		for ox in range(-radius, radius + 1):
@@ -411,6 +534,8 @@ func _early_road_target(sim) -> Vector2i:
 
 
 func _frontier_target(sim) -> Vector2i:
+	if sim.crater_war != null and sim.crater_war.primary_fissure.x >= 0:
+		return sim.crater_war.primary_fissure
 	var marker: Variant = sim.founding_site.get("frontier_marker", Vector2i(-1, -1))
 	if marker is Vector2i and marker.x >= 0:
 		return marker
@@ -499,6 +624,8 @@ func _unlocked(sim, building_type: String) -> bool:
 			return sim.is_military_unlocked() or has_tower
 		Defs.BUILDING_LUMEN_PILLAR, Defs.BUILDING_OUTPOST:
 			return has_tower or (has_lumber and has_house and int(sim.day_count) >= 2)
+		Defs.BUILDING_WYRD_HARVESTER, Defs.BUILDING_WYRD_REFINER:
+			return sim.crater_war != null and bool(sim.crater_war.geologist_surveyed)
 		_:
 			return true
 

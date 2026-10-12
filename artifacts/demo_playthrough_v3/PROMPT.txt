@@ -1,0 +1,23 @@
+You are re-reviewing Shard & Sovereign after TEST #15 — P1 demo fixes plus a vertical slice of The Crater War (PR #82). Binding starts when the store holds 12 Stabilized Wyrd and the player chooses Bind — not on a clock. The Wyrd economy is paced so 12 Stabilized lands at 40–52 min and Binding at 42–55 min.
+
+Read PLAYTHROUGH.md first. Then look at the screenshots in this folder in this order. These are the ONLY attached images:
+
+- t00_start.png — founding yard, first quest
+- t05_storehouse.png — Sawmill / Storehouse plank loop complete (minute 5)
+- t07_first_raid.png — night 1, 2 raiders, 60 s warning
+- t12_frontier.png — crater west, geologist marks the fissure
+- t18_rival.png — rival Claimant Outpost sighted (demo reveal beat)
+- t19_capture.png — CAPTURE toast: +8 Wood, +4 Stone, +2 Wyrd (0 Stabilized)
+- t22_second_push.png — rival raises a second Outpost on the fissure
+- t25_harvester_raid.png — rival raid on the Wyrd Harvester
+- t42_ritual.png — BINDING BEGUN the moment the store hits 12 (42:24 on 260821)
+- t44_victory.png — THE FISSURE IS BOUND / THE RITUAL HELD at 44:24
+
+The bot earned 12 Stabilized, then chose to start the 120 s ritual. Other seeds bind at 46:32 / 46:40 / 52:24 — not a shared clock. Longest idle stretches: 1:45 / 2:27 / 2:28 / 1:28.
+
+Rate the fun of this Crater War hour 1–10. Judge pacing against the previous 28–36 min dump and the fake 47:04 timer win.
+
+Return:
+1. Fun score (1–10) and one-sentence reason
+2. Pacing notes (what now works, where it is still dead)
+3. Remaining P0/P1/P2 only if needed — smallest changes, no redesign

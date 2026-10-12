@@ -31,6 +31,8 @@ const BUILD_PALETTE := [
 	Defs.BUILDING_BARRACKS,
 	Defs.BUILDING_LUMEN_PILLAR,
 	Defs.BUILDING_OUTPOST,
+	Defs.BUILDING_WYRD_HARVESTER,
+	Defs.BUILDING_WYRD_REFINER,
 	Defs.TOOL_CLEAR_AREA,
 ]
 const STARTER_BUILDINGS := [
@@ -40,13 +42,13 @@ const STARTER_BUILDINGS := [
 	Defs.BUILDING_FARM,
 ]
 const BUILD_CATEGORIES := {
-	"ESSENTIALS": [Defs.BUILDING_ROAD, Defs.BUILDING_HOUSE, Defs.BUILDING_LUMBER_CAMP, Defs.BUILDING_FARM, Defs.BUILDING_WATCHTOWER, Defs.BUILDING_OUTPOST],
+	"ESSENTIALS": [Defs.BUILDING_ROAD, Defs.BUILDING_HOUSE, Defs.BUILDING_LUMBER_CAMP, Defs.BUILDING_FARM, Defs.BUILDING_WATCHTOWER, Defs.BUILDING_OUTPOST, Defs.BUILDING_WYRD_HARVESTER],
 	"INFRASTRUCTURE": [Defs.BUILDING_ROAD, Defs.TOOL_CLEAR_AREA],
 	"HOUSING": [Defs.BUILDING_HOUSE],
 	"FOOD": [Defs.BUILDING_FARM, Defs.BUILDING_BAKERY],
 	"INDUSTRY": [Defs.BUILDING_LUMBER_CAMP, Defs.BUILDING_QUARRY, Defs.BUILDING_SAWMILL, Defs.BUILDING_STOREHOUSE],
 	"MILITARY": [Defs.BUILDING_WALL, Defs.BUILDING_WATCHTOWER, Defs.BUILDING_BARRACKS],
-	"SPECIAL": [Defs.BUILDING_LUMEN_PILLAR, Defs.BUILDING_OUTPOST],
+	"SPECIAL": [Defs.BUILDING_LUMEN_PILLAR, Defs.BUILDING_OUTPOST, Defs.BUILDING_WYRD_HARVESTER, Defs.BUILDING_WYRD_REFINER],
 }
 const BUILD_PURPOSES := {
 	"ROAD": "Connects buildings and speeds travel.",
@@ -62,6 +64,8 @@ const BUILD_PURPOSES := {
 	"BARRACKS": "Trains a free recruit using Bread and time.",
 	"LUMEN_PILLAR": "Extends Lumen so settlement can exist in the Wyrd-corrupted wilds.",
 	"CLAIMANT_OUTPOST": "Pushes your realm toward the Shard. Harvests Wyrd and raises night pressure.",
+	"WYRD_HARVESTER": "Sits on a marked fissure and drinks raw Wyrd. Unlumened harvesters raise Exposure.",
+	"WYRD_REFINER": "Turns 2 raw Wyrd into 1 Stabilized Wyrd for the Binding ritual.",
 	"CLEAR_AREA": "Mark trees for high-priority clearing. Not required for normal building.",
 }
 const AUDIO_PATHS := {
@@ -893,6 +897,7 @@ func _create_ui() -> void:
 	resource_chips["wheat"] = _add_resource_chip(chip_host, "wheat", "Wheat")
 	resource_chips["bread"] = _add_resource_chip(chip_host, "bread", "Bread")
 	resource_chips["wyrd"] = _add_resource_chip(chip_host, "wyrd", "Wyrd")
+	resource_chips["stabilized_wyrd"] = _add_resource_chip(chip_host, "wyrd", "Stab.")
 	var people_host := _top_capsule(top_row, "PeopleGroup")
 	population_label = _add_top_stat(people_host, "PopulationChip", "pop", "Population / housing")
 	idle_workers_button = _add_idle_workers_button(population_label.get_parent())
@@ -2211,7 +2216,8 @@ func _update_ui() -> void:
 		"stone": int(resources.get(Defs.RESOURCE_STONE, 0)),
 		"wheat": int(resources.get(Defs.RESOURCE_WHEAT, 0)),
 		"bread": int(resources.get(Defs.RESOURCE_BREAD, 0)),
-		"wyrd": int(resources.get(Defs.RESOURCE_WYRD, 0))
+		"wyrd": int(resources.get(Defs.RESOURCE_WYRD, 0)),
+		"stabilized_wyrd": int(resources.get(Defs.RESOURCE_STABILIZED_WYRD, 0))
 	}
 	for key in chip_values:
 		if resource_chips.has(key):
@@ -2421,6 +2427,12 @@ func _update_loop_hud() -> void:
 				_maybe_show_nightfall(wyrdfall)
 				var threat := String(Dictionary(wyrdfall.get("forecast", {})).get("threat", "QUIET"))
 				parts.append("Night in %d:%02d · %s" % [int(remaining / 60.0), int(remaining) % 60, threat])
+		var exposure := float(wyrdfall.get("exposure", 0.0))
+		if exposure >= 0.4:
+			parts.append("EXPOSURE %.0f%%" % (exposure * 100.0))
+		var stab := int(wyrdfall.get("stabilized", 0))
+		if stab > 0 or bool(wyrdfall.get("binding_ready", false)) or bool(wyrdfall.get("binding_active", false)):
+			parts.append("STAB %d/12" % stab)
 		var rival_line := String(wyrdfall.get("rival_line", ""))
 		if rival_line != "" and _rival_banner_should_show():
 			parts.append(rival_line)
@@ -3331,6 +3343,8 @@ func is_build_unlocked(building_type: String) -> bool:
 			return sim.is_military_unlocked() or has_tower
 		Defs.BUILDING_LUMEN_PILLAR, Defs.BUILDING_OUTPOST:
 			return has_tower or (has_lumber and has_house and int(sim.day_count) >= 2)
+		Defs.BUILDING_WYRD_HARVESTER, Defs.BUILDING_WYRD_REFINER:
+			return sim.crater_war != null and bool(sim.crater_war.geologist_surveyed)
 		_:
 			return true
 
@@ -3347,6 +3361,8 @@ func unlock_hint(building_type: String) -> String:
 			return "Available from the second minute"
 		Defs.BUILDING_LUMEN_PILLAR, Defs.BUILDING_OUTPOST:
 			return "Unlocks after you raise a Watchtower"
+		Defs.BUILDING_WYRD_HARVESTER, Defs.BUILDING_WYRD_REFINER:
+			return "Unlocks after the geologist marks a fissure"
 		_:
 			return "Not yet available"
 
@@ -3869,6 +3885,8 @@ func _refresh_result_body() -> void:
 	var reason := String(stats.get("defeat_reason", ""))
 	if won and reason.contains("HOLDS"):
 		result_title.text = "THE REALM HOLDS\nFIVE DAYS"
+	elif won and (reason.contains("FISSURE") or reason.contains("BOUND")):
+		result_title.text = "THE FISSURE IS BOUND\nTHE RITUAL HELD"
 	elif won:
 		result_title.text = "SHARD BOUND\nREALM SECURED"
 	else:

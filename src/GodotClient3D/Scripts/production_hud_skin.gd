@@ -74,6 +74,8 @@ const THUMBS := {
 	"BARRACKS": preload("res://assets/settlement3d/runtime/interface/thumbs/BARRACKS.png"),
 	"LUMEN_PILLAR": preload("res://assets/settlement3d/runtime/interface/thumbs/LUMEN_PILLAR.png"),
 	"CLAIMANT_OUTPOST": preload("res://assets/settlement3d/runtime/interface/thumbs/CLAIMANT_OUTPOST.png"),
+	"WYRD_HARVESTER": preload("res://assets/settlement3d/runtime/interface/thumbs/LUMEN_PILLAR.png"),
+	"WYRD_REFINER": preload("res://assets/settlement3d/runtime/interface/thumbs/STOREHOUSE.png"),
 	"CLEAR_AREA": preload("res://assets/settlement3d/runtime/interface/thumbs/CLEAR_AREA.png"),
 	"TOWN_HALL": preload("res://assets/settlement3d/runtime/interface/thumbs/TOWN_HALL.png"),
 	"CASTLE": preload("res://assets/settlement3d/runtime/interface/thumbs/CASTLE.png"),
