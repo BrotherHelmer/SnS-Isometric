@@ -3588,6 +3588,11 @@ func _layout_hud_console() -> void:
 	var height := CONSOLE_HEIGHT if rows == 1 else CONSOLE_HEIGHT_EXPANDED
 	if minimap_expanded:
 		height = maxf(height, MINIMAP_INNER + 40.0)
+	# The console's children need more than CONSOLE_HEIGHT; with only
+	# offset_top set, the panel grew downward past the window bottom and the
+	# build row was clipped at every resolution. Anchor to the bottom edge.
+	height = maxf(height, hud_console.get_combined_minimum_size().y)
+	hud_console.offset_bottom = 0.0
 	hud_console.offset_top = -height
 	if placement_panel != null:
 		placement_panel.offset_top = -height - 70.0
