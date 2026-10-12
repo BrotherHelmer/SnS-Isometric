@@ -470,6 +470,11 @@ func _watch_meaningful(sim, thought: Dictionary) -> void:
 		var dusk_left := float(Simulation.DAY_LENGTH_SECONDS) - float(sim.phase_time)
 		if dusk_left <= 90.0:
 			meaningful = true
+	# After night 1 the yard cuts a road to an unseen shard. Those
+	# roads are the opening crater march, not a lull — the idle
+	# clock ignores optional paving, but this stretch is the job.
+	if not sim.is_revealed(sim.shard_position) and now >= float(Simulation.DAY_LENGTH_SECONDS):
+		meaningful = true
 	if sim.crater_war != null and sim.crater_war._has_completed(Defs.BUILDING_WYRD_HARVESTER) and sim.crater_war._has_completed(Defs.BUILDING_WYRD_REFINER) and sim.crater_war.stabilized_stock() < 12 and not bool(sim.game_finished):
 		meaningful = true
 	if sim.crater_war != null and sim.crater_war._rival_outpost_alive():
