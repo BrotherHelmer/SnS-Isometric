@@ -242,7 +242,7 @@ func _contest_rivals(sim) -> void:
 func _try_wyrd_choice(sim) -> void:
 	if sim.crater_war == null or not sim.crater_war.choice_ready():
 		return
-	var path := sim.crater_war.bot_path_for_seed(int(sim.rng_seed))
+	var path: String = sim.crater_war.bot_path_for_seed(int(sim.rng_seed))
 	var result: Dictionary = sim.request_wyrd_choice(path)
 	if bool(result.get("success", false)):
 		_note(sim, "CHOICE", sim.crater_war.primary_fissure, String(result.get("message", "")))

@@ -2470,7 +2470,7 @@ func _update_loop_hud() -> void:
 			loop_label.add_theme_color_override("font_color", Color("#ff9d8f") if raid_now else (Color("#b9c8ff") if simulation_host.simulation.is_night else Color("#e6dcc0")))
 	if bind_button != null:
 		bind_button.visible = bool(wyrdfall.get("binding_ready", false)) and not simulation_host.simulation.game_finished and not binding_active
-	var choice_open := bool(wyrdfall.get("choice_ready", false)) and not simulation_host.simulation.game_finished
+	var choice_open: bool = bool(wyrdfall.get("choice_ready", false)) and not bool(simulation_host.simulation.game_finished)
 	if choice_refine_button != null:
 		choice_refine_button.visible = choice_open
 	if choice_secure_button != null:

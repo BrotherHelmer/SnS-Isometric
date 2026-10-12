@@ -180,7 +180,7 @@ func _run() -> void:
 			_check(sim.crater_war.wyrd_choice in ["refine", "secure"], "player chose a Wyrd pact at 6 Stabilized")
 			_check(sim.crater_war.second_push_at >= 0.0 or sim.crater_war.contest_count > 0, "rival pushed after the first harvest")
 			_check(sim.crater_war.harvester_raid_at >= 0.0 or sim.crater_war.wyrd_choice == "secure", "rival raided after the first Stabilized (or path B warded it)")
-			var reveal_at := sim.crater_war.rival_reveal_seconds()
+			var reveal_at: float = sim.crater_war.rival_reveal_seconds()
 			_check(reveal_at >= 14.0 * 60.0 and reveal_at < 20.0 * 60.0 + 0.001, "rival reveal is seeded between 14:00 and 20:00 (t=%.1f)" % reveal_at)
 	print("DEMO_PLAYTHROUGH seed=%d elapsed=%.1f finished=%s victory=%s shots=%d" % [
 		seed_value, float(sim.elapsed_seconds), str(sim.game_finished), str(sim.victory), captured.size()

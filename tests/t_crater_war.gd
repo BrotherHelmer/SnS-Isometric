@@ -57,7 +57,7 @@ func _check_seed_slice(seed_value: int) -> void:
 	var sim: Simulation = Simulation.new()
 	sim.start_new_run(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, seed_value, true)
 	_check(sim.crater_war != null, "seed %d attaches crater war" % seed_value)
-	var reveal_at := sim.crater_war.rival_reveal_seconds()
+	var reveal_at: float = sim.crater_war.rival_reveal_seconds()
 	_check(reveal_at + 0.001 >= CraterWar.RIVAL_REVEAL_MIN, "seed %d reveal is after 14:00 (t=%.1f)" % [seed_value, reveal_at])
 	_check(reveal_at < CraterWar.RIVAL_REVEAL_MIN + CraterWar.RIVAL_REVEAL_SPAN + 0.001, "seed %d reveal is before 20:00 (t=%.1f)" % [seed_value, reveal_at])
 	sim.elapsed_seconds = Simulation.DEMO_FRONTIER_SECONDS
@@ -78,7 +78,7 @@ func _check_seed_slice(seed_value: int) -> void:
 				var d := sim._manhattan(Vector2i(structure.get("position", Vector2i.ZERO)), sim.crater_war.primary_fissure)
 				_check(d <= 8, "seed %d rival sits on the same fissure (d=%d)" % [seed_value, d])
 	_check(rival_here, "seed %d plants a rival outpost on the fissure" % seed_value)
-	var path := sim.crater_war.bot_path_for_seed(seed_value)
+	var path: String = sim.crater_war.bot_path_for_seed(seed_value)
 	var expected := CraterWar.PATH_REFINE if SEEDS.find(seed_value) % 2 == 0 else CraterWar.PATH_SECURE
 	_check(path == expected, "seed %d bot path is %s" % [seed_value, expected])
 	var hook: Dictionary = sim.crater_war.shard_binding_hook()
