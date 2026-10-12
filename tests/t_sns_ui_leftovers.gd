@@ -84,6 +84,8 @@ func _run() -> void:
 	_check(game.idle_crew_panel != null and game.idle_crew_panel.visible, "clicking the idle count opens the crew overview")
 	_check(game.build_panel == null or not game.build_panel.visible, "overview does not steal the click into BUILD")
 	sim.central_inventory[Defs.RESOURCE_STABILIZED_WYRD] = 6
+	if game.has_method("_sync_presentation"):
+		game._sync_presentation()
 	game._update_ui()
 	_check(game.idle_crew_panel.visible, "overview stays open while Seal progress is shown")
 	_check(game.loop_label != null and "STAB 6/12" in game.loop_label.text, "Seal 6/12 stays visible with the overview open")

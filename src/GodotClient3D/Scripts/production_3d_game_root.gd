@@ -2517,9 +2517,9 @@ func _refresh_resource_chip_flash() -> void:
 func _update_loop_hud() -> void:
 	if simulation_host.simulation == null:
 		return
-	var wyrdfall: Dictionary = current_frame_snapshot.get("wyrdfall", {})
-	if wyrdfall.is_empty() and simulation_host.simulation.has_method("get_wyrdfall_presentation"):
-		wyrdfall = simulation_host.simulation.get_wyrdfall_presentation()
+	# Live presentation so STAB 6/12 and Channel feedback stay honest
+	# when the frame snapshot is a tick behind (idle overview, leftover).
+	var wyrdfall: Dictionary = simulation_host.simulation.get_wyrdfall_presentation() if simulation_host.simulation.has_method("get_wyrdfall_presentation") else current_frame_snapshot.get("wyrdfall", {})
 	var objective: Dictionary = wyrdfall.get("objective", {})
 	var binding_active := bool(wyrdfall.get("binding_active", false))
 	if binding_active and not last_seal_active:
