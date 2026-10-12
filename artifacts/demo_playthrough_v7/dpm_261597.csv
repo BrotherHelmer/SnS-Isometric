@@ -1,0 +1,770 @@
+elapsed,day,night,event,detail,seconds_since_command,idle_gap
+0.0,1,0,"build_placed","Construction started.",0.0,0
+16.0,1,0,"build_placed","Construction started.",0.0,0
+32.0,1,0,"build_placed","Construction started.",0.0,0
+72.0,1,0,"build_placed","Construction started.",0.0,0
+98.6,1,0,"intention_complete","A Settlement Begins",26.6,0
+98.6,1,0,"intention_complete","Feed the Settlement",26.6,0
+104.0,1,0,"build_placed","Construction started.",0.0,0
+120.0,1,0,"build_placed","Construction started.",0.0,0
+125.0,1,0,"resource_blocked","QUARRY: Output storage full",5.0,0
+135.4,1,0,"resource_blocked","SAWMILL: Waiting for logs",15.4,0
+153.6,1,0,"resource_blocked","FARM: Output storage full",33.6,1
+155.8,1,0,"resource_blocked","WATCHTOWER: Waiting for worker",35.8,1
+160.0,1,0,"build_placed","Construction started.",0.0,0
+168.0,1,0,"build_placed","Construction started.",0.0,0
+174.9,1,0,"resource_blocked","FARM: Output storage full",6.9,0
+181.3,1,0,"resource_blocked","SAWMILL: Waiting for logs",13.3,0
+186.5,1,0,"resource_blocked","LUMBER CAMP: Output storage full",18.5,0
+232.0,1,0,"build_placed","Construction started.",0.0,0
+240.0,1,0,"build_placed","Construction started.",0.0,0
+242.5,1,0,"resource_blocked","SAWMILL: Waiting for logs",2.5,0
+247.1,1,0,"intention_complete","Prepare for Nightfall",7.1,0
+265.3,1,0,"resource_blocked","BAKERY: Waiting for worker",25.3,0
+267.2,1,0,"resource_blocked","FARM: Output storage full",27.2,0
+268.0,1,0,"resource_blocked","SAWMILL: Waiting for logs",28.0,0
+272.0,1,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+275.0,1,0,"resource_blocked","BAKERY: Waiting for wheat",3.0,0
+315.8,1,0,"resource_blocked","BAKERY: Waiting for wheat",43.8,1
+330.0,1,0,"dusk_warning","Dusk approaches",58.0,1
+360.0,1,0,"horn_warning","RAID IN 60 SECONDS — hostiles from the east. They mean Town Hall.",88.0,1
+392.4,1,0,"resource_blocked","QUARRY: Output storage full",120.4,1
+420.0,1,1,"raid_started","wave=2 intent=raid_probe",148.0,1
+420.0,1,1,"night_started","Night 1",148.0,1
+446.7,1,1,"building_damaged","Watchtower is under attack.",174.7,1
+446.7,1,1,"building_damaged","Watchtower is under attack.",174.7,1
+448.9,1,1,"building_damaged","Watchtower is under attack.",176.9,1
+448.9,1,1,"building_damaged","Watchtower is under attack.",176.9,1
+451.1,1,1,"building_damaged","Watchtower is under attack.",179.1,1
+451.1,1,1,"building_damaged","Watchtower is under attack.",179.1,1
+453.3,1,1,"building_damaged","Watchtower is under attack.",181.3,1
+453.3,1,1,"building_damaged","Watchtower is under attack.",181.3,1
+455.5,1,1,"building_damaged","Watchtower is under attack.",183.5,1
+455.5,1,1,"building_damaged","Watchtower is under attack.",183.5,1
+457.7,1,1,"building_damaged","Watchtower is under attack.",185.7,1
+457.7,1,1,"building_damaged","Watchtower is under attack.",185.7,1
+459.9,1,1,"building_damaged","Watchtower is under attack.",187.9,1
+462.1,1,1,"building_damaged","Watchtower is under attack.",190.1,1
+464.3,1,1,"building_damaged","Watchtower is under attack.",192.3,1
+466.5,1,1,"building_damaged","Watchtower is under attack.",194.5,1
+468.7,1,1,"building_damaged","Watchtower is under attack.",196.7,1
+470.9,1,1,"building_damaged","Watchtower is under attack.",198.9,1
+473.1,1,1,"building_damaged","Watchtower is under attack.",201.1,1
+475.3,1,1,"building_damaged","Watchtower is under attack.",203.3,1
+600.1,2,0,"dawn","Day 2",328.1,1
+600.1,2,0,"dawn_aftermath","DAWN — Night 1 survived",328.1,1
+600.1,2,0,"intention_complete","Where Did They Come From?",328.1,1
+601.1,2,0,"resource_blocked","SAWMILL: Waiting for logs",329.1,1
+603.0,2,0,"resource_blocked","BAKERY: Waiting for wheat",331.0,1
+608.0,2,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+626.8,2,0,"resource_blocked","QUARRY: No resources in range",18.8,0
+659.0,2,0,"discovery","An overturned cart; still packed. +7 Wood  +4 Bread",51.0,1
+720.0,2,0,"build_placed","Construction started.",0.0,0
+720.0,2,0,"build_placed","Construction started.",0.0,0
+733.7,2,0,"resource_blocked","SAWMILL: Waiting for logs",13.7,0
+774.5,2,0,"resource_blocked","SAWMILL: Waiting for logs",54.5,1
+810.2,2,0,"resource_blocked","SAWMILL: Waiting for logs",90.2,1
+829.7,2,0,"resource_blocked","LUMBER CAMP: Output storage full",109.7,1
+830.6,2,0,"resource_blocked","SAWMILL: Waiting for logs",110.6,1
+858.2,2,0,"resource_blocked","LUMBER CAMP: Output storage full",138.2,1
+859.7,2,0,"resource_blocked","LUMBER CAMP: Output storage full",139.7,1
+865.1,2,0,"resource_blocked","LUMBER CAMP: Output storage full",145.1,1
+866.8,2,0,"resource_blocked","LUMBER CAMP: Output storage full",146.8,1
+871.4,2,0,"resource_blocked","SAWMILL: Waiting for logs",151.4,1
+878.4,2,0,"resource_blocked","BAKERY: Waiting for wheat",158.4,1
+885.6,2,0,"resource_blocked","LUMBER CAMP: Output storage full",165.6,1
+895.9,2,0,"resource_blocked","LUMBER CAMP: Output storage full",175.9,1
+896.9,2,0,"resource_blocked","SAWMILL: Waiting for logs",176.9,1
+912.0,2,0,"resource_blocked","LUMBER CAMP: Output storage full",192.0,1
+915.3,2,0,"resource_blocked","LUMBER CAMP: Output storage full",195.3,1
+922.4,2,0,"resource_blocked","SAWMILL: Waiting for logs",202.4,1
+923.3,2,0,"resource_blocked","LUMBER CAMP: Output storage full",203.3,1
+925.3,2,0,"resource_blocked","LUMBER CAMP: Output storage full",205.3,1
+930.1,2,0,"dusk_warning","Dusk approaches",210.1,1
+930.4,2,0,"resource_blocked","LUMBER CAMP: Output storage full",210.4,1
+932.7,2,0,"resource_blocked","LUMBER CAMP: Output storage full",212.7,1
+937.7,2,0,"resource_blocked","SAWMILL: Waiting for logs",217.7,1
+938.2,2,0,"resource_blocked","LUMBER CAMP: Output storage full",218.2,1
+943.3,2,0,"resource_blocked","LUMBER CAMP: Output storage full",223.3,1
+946.5,2,0,"resource_blocked","LUMBER CAMP: Output storage full",226.5,1
+950.4,2,0,"resource_blocked","LUMBER CAMP: Output storage full",230.4,1
+951.6,2,0,"resource_blocked","FARM: Output storage full",231.6,1
+955.6,2,0,"resource_blocked","LUMBER CAMP: Output storage full",235.6,1
+958.1,2,0,"resource_blocked","SAWMILL: Waiting for logs",238.1,1
+960.1,2,0,"horn_warning","RAID IN 60 SECONDS — hostiles from the east. They mean Storehouse.",240.1,1
+965.1,2,0,"resource_blocked","LUMBER CAMP: Output storage full",245.1,1
+968.1,2,0,"resource_blocked","LUMBER CAMP: Output storage full",248.1,1
+968.1,2,0,"resource_blocked","FARM: Output storage full",248.1,1
+992.8,2,0,"resource_blocked","LUMBER CAMP: Output storage full",272.8,1
+998.9,2,0,"resource_blocked","SAWMILL: Waiting for logs",278.9,1
+1015.3,2,0,"resource_blocked","FARM: Output storage full",295.3,1
+1020.1,2,1,"raid_started","wave=5 intent=raid_probe",300.1,1
+1020.1,2,1,"night_started","Night 2",300.1,1
+1022.5,2,1,"building_damaged","Storehouse is under attack.",302.5,1
+1023.2,2,1,"building_damaged","Storehouse is under attack.",303.2,1
+1027.6,2,1,"building_damaged","Sawmill is under attack.",307.6,1
+1031.7,2,1,"building_damaged","Sawmill is under attack.",311.7,1
+1036.6,2,1,"building_damaged","Watchtower is under attack.",316.6,1
+1037.9,2,1,"building_damaged","Farm is under attack.",317.9,1
+1039.3,2,1,"building_damaged","Sawmill is under attack.",319.3,1
+1047.2,2,1,"building_damaged","Sawmill is under attack.",327.2,1
+1048.0,2,1,"building_damaged","Watchtower is under attack.",328.0,1
+1058.5,2,1,"building_damaged","Farm is under attack.",338.5,1
+1185.6,2,1,"discovery","Broken stone ridges hold a rich quarry.",465.6,1
+1200.2,3,0,"dawn","Day 3",480.2,1
+1200.2,3,0,"dawn_aftermath","DAWN — Night 2 survived",480.2,1
+1200.8,3,0,"resource_blocked","LUMBER CAMP: Output storage full",480.8,1
+1201.3,3,0,"resource_blocked","BAKERY: Waiting for wheat",481.3,1
+1204.5,3,0,"resource_blocked","SAWMILL: Waiting for logs",484.5,1
+1220.1,3,0,"resource_blocked","LUMBER CAMP: Output storage full",500.1,1
+1220.2,3,0,"resource_blocked","FARM: Output storage full",500.2,1
+1231.8,3,0,"resource_blocked","LUMBER CAMP: Output storage full",511.8,1
+1232.0,3,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+1242.1,3,0,"resource_blocked","BAKERY: Waiting for wheat",10.1,0
+1258.1,3,0,"resource_blocked","FARM: Output storage full",26.1,0
+1266.4,3,0,"resource_blocked","FARM: Output storage full",34.4,1
+1285.9,3,0,"resource_blocked","LUMBER CAMP: Output storage full",53.9,1
+1288.0,3,0,"build_placed","Construction started.",0.0,0
+1296.9,3,0,"resource_blocked","LUMBER CAMP: Output storage full",8.9,0
+1301.4,3,0,"resource_blocked","SAWMILL: Waiting for logs",13.4,0
+1337.2,3,0,"resource_blocked","LUMBER CAMP: Output storage full",49.2,1
+1339.2,3,0,"resource_blocked","FARM: Output storage full",51.2,1
+1342.2,3,0,"resource_blocked","SAWMILL: Waiting for logs",54.2,1
+1344.0,3,0,"build_placed","Construction started.",0.0,0
+1354.3,3,0,"resource_blocked","BAKERY: Waiting for wheat",10.3,0
+1372.9,3,0,"resource_blocked","FARM: Output storage full",28.9,0
+1374.7,3,0,"resource_blocked","BAKERY: Waiting for wheat",30.7,1
+1377.9,3,0,"resource_blocked","SAWMILL: Waiting for logs",33.9,1
+1393.0,3,0,"resource_blocked","LUMBER CAMP: Output storage full",49.0,1
+1398.3,3,0,"resource_blocked","SAWMILL: Waiting for logs",54.3,1
+1408.0,3,0,"build_placed","Construction started.",0.0,0
+1413.7,3,0,"resource_blocked","LUMBER CAMP: Output storage full",5.7,0
+1418.7,3,0,"resource_blocked","SAWMILL: Waiting for logs",10.7,0
+1423.2,3,0,"resource_blocked","LUMBER CAMP: Output storage full",15.2,0
+1428.9,3,0,"resource_blocked","SAWMILL: Waiting for logs",20.9,0
+1464.6,3,0,"resource_blocked","SAWMILL: Waiting for logs",56.6,1
+1470.5,3,0,"resource_blocked","LUMBER CAMP: Output storage full",62.5,1
+1480.1,3,0,"resource_blocked","LUMBER CAMP: Output storage full",72.1,1
+1486.0,3,0,"resource_blocked","LUMBER CAMP: Output storage full",78.0,1
+1495.2,3,0,"resource_blocked","SAWMILL: Waiting for logs",87.2,1
+1498.1,3,0,"building_damaged","Wyrd Harvester is under attack.",90.1,1
+1500.3,3,0,"building_damaged","Wyrd Harvester is under attack.",92.3,1
+1502.5,3,0,"building_damaged","Wyrd Harvester is under attack.",94.5,1
+1504.0,3,0,"build_placed","Construction started.",0.0,0
+1504.7,3,0,"building_damaged","Wyrd Harvester is under attack.",0.7,0
+1506.9,3,0,"building_damaged","Wyrd Harvester is under attack.",2.9,0
+1509.1,3,0,"building_damaged","Wyrd Harvester is under attack.",5.1,0
+1522.0,3,0,"resource_blocked","FARM: Output storage full",18.0,0
+1526.2,3,0,"resource_blocked","LUMBER CAMP: Output storage full",22.2,0
+1527.7,3,0,"resource_blocked","BAKERY: Waiting for wheat",23.7,0
+1530.2,3,0,"dusk_warning","Dusk approaches",26.2,0
+1547.3,3,0,"resource_blocked","FARM: Output storage full",43.3,1
+1550.4,3,0,"resource_blocked","LUMBER CAMP: Output storage full",46.4,1
+1552.0,3,0,"build_placed","Construction started.",0.0,0
+1556.4,3,0,"resource_blocked","SAWMILL: Waiting for logs",4.4,0
+1560.2,3,0,"horn_warning","RAID IN 60 SECONDS — hostiles from the south-west. They mean Town Hall.",8.2,0
+1561.0,3,0,"resource_blocked","LUMBER CAMP: Output storage full",9.0,0
+1561.0,3,0,"resource_blocked","FARM: Output storage full",9.0,0
+1563.4,3,0,"resource_blocked","BAKERY: Waiting for wheat",11.4,0
+1567.8,3,0,"resource_blocked","LUMBER CAMP: Output storage full",15.8,0
+1581.9,3,0,"resource_blocked","SAWMILL: Waiting for logs",29.9,0
+1613.1,3,0,"resource_blocked","LUMBER CAMP: Output storage full",61.1,1
+1620.2,3,1,"raid_started","wave=5 intent=raid_center",68.2,1
+1620.2,3,1,"night_started","Night 3",68.2,1
+1634.9,3,1,"building_damaged","Watchtower is under attack.",82.9,1
+1639.9,3,1,"building_damaged","Watchtower is under attack.",87.9,1
+1659.7,3,1,"building_damaged","Watchtower is under attack.",107.7,1
+1663.5,3,1,"building_damaged","Watchtower is under attack.",111.5,1
+1667.8,3,1,"building_damaged","Watchtower is under attack.",115.8,1
+1670.5,3,1,"building_damaged","Watchtower is under attack.",118.5,1
+1800.3,4,0,"dawn","Day 4",248.3,1
+1800.3,4,0,"dawn_aftermath","DAWN — Night 3 survived",248.3,1
+1800.4,4,0,"resource_blocked","LUMBER CAMP: Output storage full",248.4,1
+1801.5,4,0,"resource_blocked","FARM: Output storage full",249.5,1
+1802.8,4,0,"resource_blocked","SAWMILL: Waiting for logs",250.8,1
+1804.7,4,0,"resource_blocked","BAKERY: Waiting for wheat",252.7,1
+1808.0,4,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+1813.9,4,0,"resource_blocked","LUMBER CAMP: Output storage full",5.9,0
+1820.2,4,0,"resource_blocked","LUMBER CAMP: Output storage full",12.2,0
+1825.9,4,0,"resource_blocked","LUMBER CAMP: Output storage full",17.9,0
+1828.8,4,0,"resource_blocked","LUMBER CAMP: Output storage full",20.8,0
+1828.8,4,0,"resource_blocked","FARM: Output storage full",20.8,0
+1833.0,4,0,"resource_blocked","FARM: Output storage full",25.0,0
+1835.3,4,0,"resource_blocked","BAKERY: Waiting for wheat",27.3,0
+1838.5,4,0,"resource_blocked","SAWMILL: Waiting for logs",30.5,1
+1840.0,4,0,"build_placed","Construction started.",0.0,0
+1851.8,4,0,"resource_blocked","FARM: Output storage full",11.8,0
+1865.9,4,0,"resource_blocked","BAKERY: Waiting for wheat",25.9,0
+1874.4,4,0,"resource_blocked","LUMBER CAMP: Output storage full",34.4,1
+1876.7,4,0,"resource_blocked","FARM: Output storage full",36.7,1
+1880.0,4,0,"build_placed","Construction started.",0.0,0
+1889.5,4,0,"resource_blocked","SAWMILL: Waiting for logs",9.5,0
+1891.4,4,0,"resource_blocked","BAKERY: Waiting for wheat",11.4,0
+1908.0,4,0,"resource_blocked","FARM: Output storage full",28.0,0
+1914.3,4,0,"resource_blocked","LUMBER CAMP: Output storage full",34.3,1
+1917.3,4,0,"resource_blocked","LUMBER CAMP: Output storage full",37.3,1
+1932.7,4,0,"resource_blocked","LUMBER CAMP: Output storage full",52.7,1
+1935.4,4,0,"resource_blocked","SAWMILL: Waiting for logs",55.4,1
+1936.0,4,0,"build_placed","Construction started.",0.0,0
+1952.3,4,0,"resource_blocked","LUMBER CAMP: Output storage full",16.3,0
+1952.3,4,0,"resource_blocked","FARM: Output storage full",16.3,0
+1957.4,4,0,"resource_blocked","LUMBER CAMP: Output storage full",21.4,0
+1957.4,4,0,"resource_blocked","SAWMILL: Output storage full",21.4,0
+1962.8,4,0,"resource_blocked","BAKERY: Waiting for wheat",26.8,0
+1964.8,4,0,"resource_blocked","FARM: Output storage full",28.8,0
+1966.8,4,0,"resource_blocked","LUMBER CAMP: Output storage full",30.8,1
+1971.1,4,0,"resource_blocked","SAWMILL: Waiting for logs",35.1,1
+1982.3,4,0,"resource_blocked","LUMBER CAMP: Output storage full",46.3,1
+1984.8,4,0,"resource_blocked","FARM: Output storage full",48.8,1
+1984.8,4,0,"resource_blocked","SAWMILL: Output storage full",48.8,1
+1990.7,4,0,"resource_blocked","FARM: Output storage full",54.7,1
+1990.7,4,0,"resource_blocked","SAWMILL: Output storage full",54.7,1
+1991.5,4,0,"resource_blocked","SAWMILL: Waiting for logs",55.5,1
+1998.7,4,0,"resource_blocked","FARM: Output storage full",62.7,1
+1998.7,4,0,"resource_blocked","SAWMILL: Output storage full",62.7,1
+2000.0,4,0,"build_placed","Construction started.",0.0,0
+2001.7,4,0,"resource_blocked","SAWMILL: Waiting for logs",1.7,0
+2003.6,4,0,"resource_blocked","BAKERY: Waiting for wheat",3.6,0
+2010.4,4,0,"resource_blocked","FARM: Output storage full",10.4,0
+2010.4,4,0,"resource_blocked","SAWMILL: Output storage full",10.4,0
+2011.6,4,0,"resource_blocked","FARM: Output storage full",11.6,0
+2011.9,4,0,"resource_blocked","SAWMILL: Waiting for logs",11.9,0
+2012.0,4,0,"resource_blocked","SAWMILL: Output storage full",12.0,0
+2017.0,4,0,"resource_blocked","SAWMILL: Waiting for logs",17.0,0
+2029.4,4,0,"resource_blocked","FARM: Output storage full",29.4,0
+2029.4,4,0,"resource_blocked","SAWMILL: Output storage full",29.4,0
+2032.3,4,0,"resource_blocked","SAWMILL: Waiting for logs",32.3,1
+2040.5,4,0,"resource_blocked","SAWMILL: Output storage full",40.5,1
+2042.3,4,0,"resource_blocked","FARM: Output storage full",42.3,1
+2042.3,4,0,"resource_blocked","FARM: Output storage full",42.3,1
+2042.5,4,0,"resource_blocked","SAWMILL: Waiting for logs",42.5,1
+2042.6,4,0,"resource_blocked","SAWMILL: Output storage full",42.6,1
+2043.0,4,0,"resource_blocked","FARM: Output storage full",43.0,1
+2047.6,4,0,"resource_blocked","SAWMILL: Waiting for logs",47.6,1
+2047.7,4,0,"resource_blocked","SAWMILL: Output storage full",47.7,1
+2051.3,4,0,"resource_blocked","FARM: Output storage full",51.3,1
+2052.7,4,0,"resource_blocked","SAWMILL: Waiting for logs",52.7,1
+2054.6,4,0,"resource_blocked","BAKERY: Waiting for wheat",54.6,1
+2070.1,4,0,"resource_blocked","FARM: Output storage full",70.1,1
+2070.1,4,0,"resource_blocked","SAWMILL: Output storage full",70.1,1
+2073.1,4,0,"resource_blocked","SAWMILL: Waiting for logs",73.1,1
+2083.1,4,0,"resource_blocked","FARM: Output storage full",83.1,1
+2083.1,4,0,"resource_blocked","SAWMILL: Output storage full",83.1,1
+2083.3,4,0,"resource_blocked","SAWMILL: Waiting for logs",83.3,1
+2086.1,4,0,"resource_blocked","FARM: Output storage full",86.1,1
+2086.1,4,0,"resource_blocked","SAWMILL: Output storage full",86.1,1
+2088.4,4,0,"resource_blocked","SAWMILL: Waiting for logs",88.4,1
+2093.0,4,0,"resource_blocked","FARM: Output storage full",93.0,1
+2093.0,4,0,"resource_blocked","SAWMILL: Output storage full",93.0,1
+2093.5,4,0,"resource_blocked","SAWMILL: Waiting for logs",93.5,1
+0.0,1,0,"build_placed","Construction started.",0.0,0
+16.0,1,0,"build_placed","Construction started.",0.0,0
+32.0,1,0,"build_placed","Construction started.",0.0,0
+72.0,1,0,"build_placed","Construction started.",0.0,0
+98.6,1,0,"intention_complete","A Settlement Begins",26.6,0
+98.6,1,0,"intention_complete","Feed the Settlement",26.6,0
+104.0,1,0,"build_placed","Construction started.",0.0,0
+120.0,1,0,"build_placed","Construction started.",0.0,0
+125.0,1,0,"resource_blocked","QUARRY: Output storage full",5.0,0
+135.4,1,0,"resource_blocked","SAWMILL: Waiting for logs",15.4,0
+153.6,1,0,"resource_blocked","FARM: Output storage full",33.6,1
+155.8,1,0,"resource_blocked","WATCHTOWER: Waiting for worker",35.8,1
+160.0,1,0,"build_placed","Construction started.",0.0,0
+168.0,1,0,"build_placed","Construction started.",0.0,0
+174.9,1,0,"resource_blocked","FARM: Output storage full",6.9,0
+181.3,1,0,"resource_blocked","SAWMILL: Waiting for logs",13.3,0
+186.5,1,0,"resource_blocked","LUMBER CAMP: Output storage full",18.5,0
+232.0,1,0,"build_placed","Construction started.",0.0,0
+240.0,1,0,"build_placed","Construction started.",0.0,0
+242.5,1,0,"resource_blocked","SAWMILL: Waiting for logs",2.5,0
+247.1,1,0,"intention_complete","Prepare for Nightfall",7.1,0
+265.3,1,0,"resource_blocked","BAKERY: Waiting for worker",25.3,0
+267.2,1,0,"resource_blocked","FARM: Output storage full",27.2,0
+268.0,1,0,"resource_blocked","SAWMILL: Waiting for logs",28.0,0
+272.0,1,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+275.0,1,0,"resource_blocked","BAKERY: Waiting for wheat",3.0,0
+315.8,1,0,"resource_blocked","BAKERY: Waiting for wheat",43.8,1
+330.0,1,0,"dusk_warning","Dusk approaches",58.0,1
+360.0,1,0,"horn_warning","RAID IN 60 SECONDS — hostiles from the east. They mean Town Hall.",88.0,1
+392.4,1,0,"resource_blocked","QUARRY: Output storage full",120.4,1
+420.0,1,1,"raid_started","wave=2 intent=raid_probe",148.0,1
+420.0,1,1,"night_started","Night 1",148.0,1
+446.7,1,1,"building_damaged","Watchtower is under attack.",174.7,1
+446.7,1,1,"building_damaged","Watchtower is under attack.",174.7,1
+448.9,1,1,"building_damaged","Watchtower is under attack.",176.9,1
+448.9,1,1,"building_damaged","Watchtower is under attack.",176.9,1
+451.1,1,1,"building_damaged","Watchtower is under attack.",179.1,1
+451.1,1,1,"building_damaged","Watchtower is under attack.",179.1,1
+453.3,1,1,"building_damaged","Watchtower is under attack.",181.3,1
+453.3,1,1,"building_damaged","Watchtower is under attack.",181.3,1
+455.5,1,1,"building_damaged","Watchtower is under attack.",183.5,1
+455.5,1,1,"building_damaged","Watchtower is under attack.",183.5,1
+457.7,1,1,"building_damaged","Watchtower is under attack.",185.7,1
+457.7,1,1,"building_damaged","Watchtower is under attack.",185.7,1
+459.9,1,1,"building_damaged","Watchtower is under attack.",187.9,1
+462.1,1,1,"building_damaged","Watchtower is under attack.",190.1,1
+464.3,1,1,"building_damaged","Watchtower is under attack.",192.3,1
+466.5,1,1,"building_damaged","Watchtower is under attack.",194.5,1
+468.7,1,1,"building_damaged","Watchtower is under attack.",196.7,1
+470.9,1,1,"building_damaged","Watchtower is under attack.",198.9,1
+473.1,1,1,"building_damaged","Watchtower is under attack.",201.1,1
+475.3,1,1,"building_damaged","Watchtower is under attack.",203.3,1
+0.0,1,0,"build_placed","Construction started.",0.0,0
+16.0,1,0,"build_placed","Construction started.",0.0,0
+32.0,1,0,"build_placed","Construction started.",0.0,0
+72.0,1,0,"build_placed","Construction started.",0.0,0
+98.6,1,0,"intention_complete","A Settlement Begins",26.6,0
+98.6,1,0,"intention_complete","Feed the Settlement",26.6,0
+104.0,1,0,"build_placed","Construction started.",0.0,0
+120.0,1,0,"build_placed","Construction started.",0.0,0
+125.0,1,0,"resource_blocked","QUARRY: Output storage full",5.0,0
+135.4,1,0,"resource_blocked","SAWMILL: Waiting for logs",15.4,0
+153.6,1,0,"resource_blocked","FARM: Output storage full",33.6,1
+155.8,1,0,"resource_blocked","WATCHTOWER: Waiting for worker",35.8,1
+160.0,1,0,"build_placed","Construction started.",0.0,0
+168.0,1,0,"build_placed","Construction started.",0.0,0
+174.9,1,0,"resource_blocked","FARM: Output storage full",6.9,0
+181.3,1,0,"resource_blocked","SAWMILL: Waiting for logs",13.3,0
+186.5,1,0,"resource_blocked","LUMBER CAMP: Output storage full",18.5,0
+232.0,1,0,"build_placed","Construction started.",0.0,0
+240.0,1,0,"build_placed","Construction started.",0.0,0
+242.5,1,0,"resource_blocked","SAWMILL: Waiting for logs",2.5,0
+247.1,1,0,"intention_complete","Prepare for Nightfall",7.1,0
+265.3,1,0,"resource_blocked","BAKERY: Waiting for worker",25.3,0
+267.2,1,0,"resource_blocked","FARM: Output storage full",27.2,0
+268.0,1,0,"resource_blocked","SAWMILL: Waiting for logs",28.0,0
+272.0,1,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+275.0,1,0,"resource_blocked","BAKERY: Waiting for wheat",3.0,0
+315.8,1,0,"resource_blocked","BAKERY: Waiting for wheat",43.8,1
+330.0,1,0,"dusk_warning","Dusk approaches",58.0,1
+360.0,1,0,"horn_warning","RAID IN 60 SECONDS — hostiles from the east. They mean Town Hall.",88.0,1
+392.4,1,0,"resource_blocked","QUARRY: Output storage full",120.4,1
+420.0,1,1,"raid_started","wave=2 intent=raid_probe",148.0,1
+420.0,1,1,"night_started","Night 1",148.0,1
+446.7,1,1,"building_damaged","Watchtower is under attack.",174.7,1
+446.7,1,1,"building_damaged","Watchtower is under attack.",174.7,1
+448.9,1,1,"building_damaged","Watchtower is under attack.",176.9,1
+448.9,1,1,"building_damaged","Watchtower is under attack.",176.9,1
+451.1,1,1,"building_damaged","Watchtower is under attack.",179.1,1
+451.1,1,1,"building_damaged","Watchtower is under attack.",179.1,1
+453.3,1,1,"building_damaged","Watchtower is under attack.",181.3,1
+453.3,1,1,"building_damaged","Watchtower is under attack.",181.3,1
+455.5,1,1,"building_damaged","Watchtower is under attack.",183.5,1
+455.5,1,1,"building_damaged","Watchtower is under attack.",183.5,1
+457.7,1,1,"building_damaged","Watchtower is under attack.",185.7,1
+457.7,1,1,"building_damaged","Watchtower is under attack.",185.7,1
+459.9,1,1,"building_damaged","Watchtower is under attack.",187.9,1
+462.1,1,1,"building_damaged","Watchtower is under attack.",190.1,1
+464.3,1,1,"building_damaged","Watchtower is under attack.",192.3,1
+466.5,1,1,"building_damaged","Watchtower is under attack.",194.5,1
+468.7,1,1,"building_damaged","Watchtower is under attack.",196.7,1
+470.9,1,1,"building_damaged","Watchtower is under attack.",198.9,1
+473.1,1,1,"building_damaged","Watchtower is under attack.",201.1,1
+475.3,1,1,"building_damaged","Watchtower is under attack.",203.3,1
+600.1,2,0,"dawn","Day 2",328.1,1
+600.1,2,0,"dawn_aftermath","DAWN — Night 1 survived",328.1,1
+600.1,2,0,"intention_complete","Where Did They Come From?",328.1,1
+601.1,2,0,"resource_blocked","SAWMILL: Waiting for logs",329.1,1
+603.0,2,0,"resource_blocked","BAKERY: Waiting for wheat",331.0,1
+608.0,2,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+626.8,2,0,"resource_blocked","QUARRY: No resources in range",18.8,0
+659.0,2,0,"discovery","An overturned cart; still packed. +7 Wood  +4 Bread",51.0,1
+720.0,2,0,"build_placed","Construction started.",0.0,0
+720.0,2,0,"build_placed","Construction started.",0.0,0
+733.7,2,0,"resource_blocked","SAWMILL: Waiting for logs",13.7,0
+774.5,2,0,"resource_blocked","SAWMILL: Waiting for logs",54.5,1
+810.2,2,0,"resource_blocked","SAWMILL: Waiting for logs",90.2,1
+829.7,2,0,"resource_blocked","LUMBER CAMP: Output storage full",109.7,1
+830.6,2,0,"resource_blocked","SAWMILL: Waiting for logs",110.6,1
+858.2,2,0,"resource_blocked","LUMBER CAMP: Output storage full",138.2,1
+859.7,2,0,"resource_blocked","LUMBER CAMP: Output storage full",139.7,1
+865.1,2,0,"resource_blocked","LUMBER CAMP: Output storage full",145.1,1
+866.8,2,0,"resource_blocked","LUMBER CAMP: Output storage full",146.8,1
+871.4,2,0,"resource_blocked","SAWMILL: Waiting for logs",151.4,1
+878.4,2,0,"resource_blocked","BAKERY: Waiting for wheat",158.4,1
+885.6,2,0,"resource_blocked","LUMBER CAMP: Output storage full",165.6,1
+895.9,2,0,"resource_blocked","LUMBER CAMP: Output storage full",175.9,1
+896.9,2,0,"resource_blocked","SAWMILL: Waiting for logs",176.9,1
+912.0,2,0,"resource_blocked","LUMBER CAMP: Output storage full",192.0,1
+915.3,2,0,"resource_blocked","LUMBER CAMP: Output storage full",195.3,1
+922.4,2,0,"resource_blocked","SAWMILL: Waiting for logs",202.4,1
+923.3,2,0,"resource_blocked","LUMBER CAMP: Output storage full",203.3,1
+925.3,2,0,"resource_blocked","LUMBER CAMP: Output storage full",205.3,1
+930.1,2,0,"dusk_warning","Dusk approaches",210.1,1
+930.4,2,0,"resource_blocked","LUMBER CAMP: Output storage full",210.4,1
+932.7,2,0,"resource_blocked","LUMBER CAMP: Output storage full",212.7,1
+937.7,2,0,"resource_blocked","SAWMILL: Waiting for logs",217.7,1
+938.2,2,0,"resource_blocked","LUMBER CAMP: Output storage full",218.2,1
+943.3,2,0,"resource_blocked","LUMBER CAMP: Output storage full",223.3,1
+946.5,2,0,"resource_blocked","LUMBER CAMP: Output storage full",226.5,1
+950.4,2,0,"resource_blocked","LUMBER CAMP: Output storage full",230.4,1
+951.6,2,0,"resource_blocked","FARM: Output storage full",231.6,1
+955.6,2,0,"resource_blocked","LUMBER CAMP: Output storage full",235.6,1
+958.1,2,0,"resource_blocked","SAWMILL: Waiting for logs",238.1,1
+960.1,2,0,"horn_warning","RAID IN 60 SECONDS — hostiles from the east. They mean Storehouse.",240.1,1
+965.1,2,0,"resource_blocked","LUMBER CAMP: Output storage full",245.1,1
+968.1,2,0,"resource_blocked","LUMBER CAMP: Output storage full",248.1,1
+968.1,2,0,"resource_blocked","FARM: Output storage full",248.1,1
+992.8,2,0,"resource_blocked","LUMBER CAMP: Output storage full",272.8,1
+998.9,2,0,"resource_blocked","SAWMILL: Waiting for logs",278.9,1
+1015.3,2,0,"resource_blocked","FARM: Output storage full",295.3,1
+1020.1,2,1,"raid_started","wave=5 intent=raid_probe",300.1,1
+1020.1,2,1,"night_started","Night 2",300.1,1
+1022.5,2,1,"building_damaged","Storehouse is under attack.",302.5,1
+1023.2,2,1,"building_damaged","Storehouse is under attack.",303.2,1
+1027.6,2,1,"building_damaged","Sawmill is under attack.",307.6,1
+1031.7,2,1,"building_damaged","Sawmill is under attack.",311.7,1
+1036.6,2,1,"building_damaged","Watchtower is under attack.",316.6,1
+1037.9,2,1,"building_damaged","Farm is under attack.",317.9,1
+1039.3,2,1,"building_damaged","Sawmill is under attack.",319.3,1
+1047.2,2,1,"building_damaged","Sawmill is under attack.",327.2,1
+1048.0,2,1,"building_damaged","Watchtower is under attack.",328.0,1
+1058.5,2,1,"building_damaged","Farm is under attack.",338.5,1
+1185.6,2,1,"discovery","Broken stone ridges hold a rich quarry.",465.6,1
+1200.2,3,0,"dawn","Day 3",480.2,1
+1200.2,3,0,"dawn_aftermath","DAWN — Night 2 survived",480.2,1
+1200.8,3,0,"resource_blocked","LUMBER CAMP: Output storage full",480.8,1
+1201.3,3,0,"resource_blocked","BAKERY: Waiting for wheat",481.3,1
+1204.5,3,0,"resource_blocked","SAWMILL: Waiting for logs",484.5,1
+1220.1,3,0,"resource_blocked","LUMBER CAMP: Output storage full",500.1,1
+1220.2,3,0,"resource_blocked","FARM: Output storage full",500.2,1
+1231.8,3,0,"resource_blocked","LUMBER CAMP: Output storage full",511.8,1
+1232.0,3,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+1242.1,3,0,"resource_blocked","BAKERY: Waiting for wheat",10.1,0
+1258.1,3,0,"resource_blocked","FARM: Output storage full",26.1,0
+1266.4,3,0,"resource_blocked","FARM: Output storage full",34.4,1
+1285.9,3,0,"resource_blocked","LUMBER CAMP: Output storage full",53.9,1
+1288.0,3,0,"build_placed","Construction started.",0.0,0
+1296.9,3,0,"resource_blocked","LUMBER CAMP: Output storage full",8.9,0
+1301.4,3,0,"resource_blocked","SAWMILL: Waiting for logs",13.4,0
+1337.2,3,0,"resource_blocked","LUMBER CAMP: Output storage full",49.2,1
+1339.2,3,0,"resource_blocked","FARM: Output storage full",51.2,1
+1342.2,3,0,"resource_blocked","SAWMILL: Waiting for logs",54.2,1
+1344.0,3,0,"build_placed","Construction started.",0.0,0
+1354.3,3,0,"resource_blocked","BAKERY: Waiting for wheat",10.3,0
+1372.9,3,0,"resource_blocked","FARM: Output storage full",28.9,0
+1374.7,3,0,"resource_blocked","BAKERY: Waiting for wheat",30.7,1
+1377.9,3,0,"resource_blocked","SAWMILL: Waiting for logs",33.9,1
+1393.0,3,0,"resource_blocked","LUMBER CAMP: Output storage full",49.0,1
+1398.3,3,0,"resource_blocked","SAWMILL: Waiting for logs",54.3,1
+1408.0,3,0,"build_placed","Construction started.",0.0,0
+1413.7,3,0,"resource_blocked","LUMBER CAMP: Output storage full",5.7,0
+1418.7,3,0,"resource_blocked","SAWMILL: Waiting for logs",10.7,0
+1423.2,3,0,"resource_blocked","LUMBER CAMP: Output storage full",15.2,0
+1428.9,3,0,"resource_blocked","SAWMILL: Waiting for logs",20.9,0
+1464.6,3,0,"resource_blocked","SAWMILL: Waiting for logs",56.6,1
+1470.5,3,0,"resource_blocked","LUMBER CAMP: Output storage full",62.5,1
+1480.1,3,0,"resource_blocked","LUMBER CAMP: Output storage full",72.1,1
+1486.0,3,0,"resource_blocked","LUMBER CAMP: Output storage full",78.0,1
+1495.2,3,0,"resource_blocked","SAWMILL: Waiting for logs",87.2,1
+1498.1,3,0,"building_damaged","Wyrd Harvester is under attack.",90.1,1
+1500.3,3,0,"building_damaged","Wyrd Harvester is under attack.",92.3,1
+1502.5,3,0,"building_damaged","Wyrd Harvester is under attack.",94.5,1
+1504.0,3,0,"build_placed","Construction started.",0.0,0
+1504.7,3,0,"building_damaged","Wyrd Harvester is under attack.",0.7,0
+1506.9,3,0,"building_damaged","Wyrd Harvester is under attack.",2.9,0
+1509.1,3,0,"building_damaged","Wyrd Harvester is under attack.",5.1,0
+1522.0,3,0,"resource_blocked","FARM: Output storage full",18.0,0
+1526.2,3,0,"resource_blocked","LUMBER CAMP: Output storage full",22.2,0
+1527.7,3,0,"resource_blocked","BAKERY: Waiting for wheat",23.7,0
+1530.2,3,0,"dusk_warning","Dusk approaches",26.2,0
+1547.3,3,0,"resource_blocked","FARM: Output storage full",43.3,1
+1550.4,3,0,"resource_blocked","LUMBER CAMP: Output storage full",46.4,1
+1552.0,3,0,"build_placed","Construction started.",0.0,0
+1556.4,3,0,"resource_blocked","SAWMILL: Waiting for logs",4.4,0
+1560.2,3,0,"horn_warning","RAID IN 60 SECONDS — hostiles from the south-west. They mean Town Hall.",8.2,0
+1561.0,3,0,"resource_blocked","LUMBER CAMP: Output storage full",9.0,0
+1561.0,3,0,"resource_blocked","FARM: Output storage full",9.0,0
+1563.4,3,0,"resource_blocked","BAKERY: Waiting for wheat",11.4,0
+1567.8,3,0,"resource_blocked","LUMBER CAMP: Output storage full",15.8,0
+1581.9,3,0,"resource_blocked","SAWMILL: Waiting for logs",29.9,0
+1613.1,3,0,"resource_blocked","LUMBER CAMP: Output storage full",61.1,1
+1620.2,3,1,"raid_started","wave=5 intent=raid_center",68.2,1
+1620.2,3,1,"night_started","Night 3",68.2,1
+1634.9,3,1,"building_damaged","Watchtower is under attack.",82.9,1
+1639.9,3,1,"building_damaged","Watchtower is under attack.",87.9,1
+1659.7,3,1,"building_damaged","Watchtower is under attack.",107.7,1
+1663.5,3,1,"building_damaged","Watchtower is under attack.",111.5,1
+1667.8,3,1,"building_damaged","Watchtower is under attack.",115.8,1
+1670.5,3,1,"building_damaged","Watchtower is under attack.",118.5,1
+1800.3,4,0,"dawn","Day 4",248.3,1
+1800.3,4,0,"dawn_aftermath","DAWN — Night 3 survived",248.3,1
+1800.4,4,0,"resource_blocked","LUMBER CAMP: Output storage full",248.4,1
+1801.5,4,0,"resource_blocked","FARM: Output storage full",249.5,1
+1802.8,4,0,"resource_blocked","SAWMILL: Waiting for logs",250.8,1
+1804.7,4,0,"resource_blocked","BAKERY: Waiting for wheat",252.7,1
+1808.0,4,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+1813.9,4,0,"resource_blocked","LUMBER CAMP: Output storage full",5.9,0
+1820.2,4,0,"resource_blocked","LUMBER CAMP: Output storage full",12.2,0
+1825.9,4,0,"resource_blocked","LUMBER CAMP: Output storage full",17.9,0
+1828.8,4,0,"resource_blocked","LUMBER CAMP: Output storage full",20.8,0
+1828.8,4,0,"resource_blocked","FARM: Output storage full",20.8,0
+1833.0,4,0,"resource_blocked","FARM: Output storage full",25.0,0
+1835.3,4,0,"resource_blocked","BAKERY: Waiting for wheat",27.3,0
+1838.5,4,0,"resource_blocked","SAWMILL: Waiting for logs",30.5,1
+1840.0,4,0,"build_placed","Construction started.",0.0,0
+1851.8,4,0,"resource_blocked","FARM: Output storage full",11.8,0
+1865.9,4,0,"resource_blocked","BAKERY: Waiting for wheat",25.9,0
+1874.4,4,0,"resource_blocked","LUMBER CAMP: Output storage full",34.4,1
+1876.7,4,0,"resource_blocked","FARM: Output storage full",36.7,1
+1880.0,4,0,"build_placed","Construction started.",0.0,0
+1889.5,4,0,"resource_blocked","SAWMILL: Waiting for logs",9.5,0
+1891.4,4,0,"resource_blocked","BAKERY: Waiting for wheat",11.4,0
+1908.0,4,0,"resource_blocked","FARM: Output storage full",28.0,0
+1914.3,4,0,"resource_blocked","LUMBER CAMP: Output storage full",34.3,1
+1917.3,4,0,"resource_blocked","LUMBER CAMP: Output storage full",37.3,1
+1932.7,4,0,"resource_blocked","LUMBER CAMP: Output storage full",52.7,1
+1935.4,4,0,"resource_blocked","SAWMILL: Waiting for logs",55.4,1
+1936.0,4,0,"build_placed","Construction started.",0.0,0
+1952.3,4,0,"resource_blocked","LUMBER CAMP: Output storage full",16.3,0
+1952.3,4,0,"resource_blocked","FARM: Output storage full",16.3,0
+1957.4,4,0,"resource_blocked","LUMBER CAMP: Output storage full",21.4,0
+1957.4,4,0,"resource_blocked","SAWMILL: Output storage full",21.4,0
+1962.8,4,0,"resource_blocked","BAKERY: Waiting for wheat",26.8,0
+1964.8,4,0,"resource_blocked","FARM: Output storage full",28.8,0
+1966.8,4,0,"resource_blocked","LUMBER CAMP: Output storage full",30.8,1
+1971.1,4,0,"resource_blocked","SAWMILL: Waiting for logs",35.1,1
+1982.3,4,0,"resource_blocked","LUMBER CAMP: Output storage full",46.3,1
+1984.8,4,0,"resource_blocked","FARM: Output storage full",48.8,1
+1984.8,4,0,"resource_blocked","SAWMILL: Output storage full",48.8,1
+1990.7,4,0,"resource_blocked","FARM: Output storage full",54.7,1
+1990.7,4,0,"resource_blocked","SAWMILL: Output storage full",54.7,1
+1991.5,4,0,"resource_blocked","SAWMILL: Waiting for logs",55.5,1
+1998.7,4,0,"resource_blocked","FARM: Output storage full",62.7,1
+1998.7,4,0,"resource_blocked","SAWMILL: Output storage full",62.7,1
+2000.0,4,0,"build_placed","Construction started.",0.0,0
+2001.7,4,0,"resource_blocked","SAWMILL: Waiting for logs",1.7,0
+2003.6,4,0,"resource_blocked","BAKERY: Waiting for wheat",3.6,0
+2010.4,4,0,"resource_blocked","FARM: Output storage full",10.4,0
+2010.4,4,0,"resource_blocked","SAWMILL: Output storage full",10.4,0
+2011.6,4,0,"resource_blocked","FARM: Output storage full",11.6,0
+2011.9,4,0,"resource_blocked","SAWMILL: Waiting for logs",11.9,0
+2012.0,4,0,"resource_blocked","SAWMILL: Output storage full",12.0,0
+2017.0,4,0,"resource_blocked","SAWMILL: Waiting for logs",17.0,0
+2029.4,4,0,"resource_blocked","FARM: Output storage full",29.4,0
+2029.4,4,0,"resource_blocked","SAWMILL: Output storage full",29.4,0
+2032.3,4,0,"resource_blocked","SAWMILL: Waiting for logs",32.3,1
+2040.5,4,0,"resource_blocked","SAWMILL: Output storage full",40.5,1
+2042.3,4,0,"resource_blocked","FARM: Output storage full",42.3,1
+2042.3,4,0,"resource_blocked","FARM: Output storage full",42.3,1
+2042.5,4,0,"resource_blocked","SAWMILL: Waiting for logs",42.5,1
+2042.6,4,0,"resource_blocked","SAWMILL: Output storage full",42.6,1
+2043.0,4,0,"resource_blocked","FARM: Output storage full",43.0,1
+2047.6,4,0,"resource_blocked","SAWMILL: Waiting for logs",47.6,1
+2047.7,4,0,"resource_blocked","SAWMILL: Output storage full",47.7,1
+2051.3,4,0,"resource_blocked","FARM: Output storage full",51.3,1
+2052.7,4,0,"resource_blocked","SAWMILL: Waiting for logs",52.7,1
+2054.6,4,0,"resource_blocked","BAKERY: Waiting for wheat",54.6,1
+2070.1,4,0,"resource_blocked","FARM: Output storage full",70.1,1
+2070.1,4,0,"resource_blocked","SAWMILL: Output storage full",70.1,1
+2073.1,4,0,"resource_blocked","SAWMILL: Waiting for logs",73.1,1
+2083.1,4,0,"resource_blocked","FARM: Output storage full",83.1,1
+2083.1,4,0,"resource_blocked","SAWMILL: Output storage full",83.1,1
+2083.3,4,0,"resource_blocked","SAWMILL: Waiting for logs",83.3,1
+2086.1,4,0,"resource_blocked","FARM: Output storage full",86.1,1
+2086.1,4,0,"resource_blocked","SAWMILL: Output storage full",86.1,1
+2088.4,4,0,"resource_blocked","SAWMILL: Waiting for logs",88.4,1
+2093.0,4,0,"resource_blocked","FARM: Output storage full",93.0,1
+2093.0,4,0,"resource_blocked","SAWMILL: Output storage full",93.0,1
+2093.5,4,0,"resource_blocked","SAWMILL: Waiting for logs",93.5,1
+2100.5,4,0,"resource_blocked","BAKERY: Waiting for wheat",100.5,1
+2105.5,4,0,"resource_blocked","FARM: Output storage full",105.5,1
+2105.5,4,0,"resource_blocked","SAWMILL: Output storage full",105.5,1
+2108.8,4,0,"resource_blocked","SAWMILL: Waiting for logs",108.8,1
+2113.2,4,0,"resource_blocked","FARM: Output storage full",113.2,1
+2113.2,4,0,"resource_blocked","SAWMILL: Output storage full",113.2,1
+2113.9,4,0,"resource_blocked","SAWMILL: Waiting for logs",113.9,1
+2116.2,4,0,"resource_blocked","FARM: Output storage full",116.2,1
+2116.2,4,0,"resource_blocked","SAWMILL: Output storage full",116.2,1
+2118.4,4,0,"resource_blocked","FARM: Output storage full",118.4,1
+2118.4,4,0,"resource_blocked","FARM: Output storage full",118.4,1
+2119.0,4,0,"resource_blocked","SAWMILL: Waiting for logs",119.0,1
+2124.5,4,0,"resource_blocked","FARM: Output storage full",124.5,1
+2124.5,4,0,"resource_blocked","SAWMILL: Output storage full",124.5,1
+2129.2,4,0,"resource_blocked","SAWMILL: Waiting for logs",129.2,1
+2130.3,4,0,"dusk_warning","Dusk approaches",130.3,1
+2136.7,4,0,"resource_blocked","FARM: Output storage full",136.7,1
+2136.7,4,0,"resource_blocked","SAWMILL: Output storage full",136.7,1
+2139.4,4,0,"resource_blocked","SAWMILL: Waiting for logs",139.4,1
+2147.0,4,0,"resource_blocked","SAWMILL: Output storage full",147.0,1
+2149.6,4,0,"resource_blocked","FARM: Output storage full",149.6,1
+2149.6,4,0,"resource_blocked","SAWMILL: Waiting for logs",149.6,1
+2149.6,4,0,"resource_blocked","FARM: Output storage full",149.6,1
+2149.6,4,0,"resource_blocked","FARM: Output storage full",149.6,1
+2149.7,4,0,"resource_blocked","SAWMILL: Output storage full",149.7,1
+2154.7,4,0,"resource_blocked","SAWMILL: Waiting for logs",154.7,1
+2155.8,4,0,"resource_blocked","SAWMILL: Output storage full",155.8,1
+2159.8,4,0,"resource_blocked","SAWMILL: Waiting for logs",159.8,1
+2160.3,4,0,"horn_warning","RAID IN 60 SECONDS — hostiles from the east. They mean Wyrd Harvester.",160.3,1
+2161.7,4,0,"resource_blocked","BAKERY: Waiting for wheat",161.7,1
+2168.0,4,0,"resource_blocked","FARM: Output storage full",168.0,1
+2168.0,4,0,"resource_blocked","SAWMILL: Output storage full",168.0,1
+2170.0,4,0,"resource_blocked","SAWMILL: Waiting for logs",170.0,1
+2171.0,4,0,"resource_blocked","FARM: Output storage full",171.0,1
+2171.0,4,0,"resource_blocked","SAWMILL: Output storage full",171.0,1
+2171.0,4,0,"resource_blocked","FARM: Output storage full",171.0,1
+2171.0,4,0,"resource_blocked","FARM: Output storage full",171.0,1
+2175.1,4,0,"resource_blocked","SAWMILL: Waiting for logs",175.1,1
+2181.1,4,0,"resource_blocked","FARM: Output storage full",181.1,1
+2181.1,4,0,"resource_blocked","SAWMILL: Output storage full",181.1,1
+2181.2,4,0,"resource_blocked","FARM: Output storage full",181.2,1
+2185.3,4,0,"resource_blocked","SAWMILL: Waiting for logs",185.3,1
+2197.4,4,0,"resource_blocked","BAKERY: Waiting for wheat",197.4,1
+2220.3,4,1,"raid_started","wave=5 intent=raid_economy",220.3,1
+2220.3,4,1,"night_started","Night 4",220.3,1
+2223.8,4,1,"building_damaged","Storehouse is under attack.",223.8,1
+2228.1,4,1,"building_damaged","Sawmill is under attack.",228.1,1
+2230.3,4,1,"building_damaged","Storehouse is under attack.",230.3,1
+2232.5,4,1,"building_damaged","Sawmill is under attack.",232.5,1
+2234.7,4,1,"building_damaged","Sawmill is under attack.",234.7,1
+2236.9,4,1,"building_damaged","Sawmill is under attack.",236.9,1
+2239.1,4,1,"building_damaged","Sawmill is under attack.",239.1,1
+2240.9,4,1,"building_damaged","Quarry is under attack.",240.9,1
+2241.3,4,1,"building_damaged","Sawmill is under attack.",241.3,1
+2243.5,4,1,"building_damaged","Sawmill is under attack.",243.5,1
+2245.7,4,1,"building_damaged","Sawmill is under attack.",245.7,1
+2247.9,4,1,"building_damaged","Storehouse is under attack.",247.9,1
+2250.1,4,1,"building_damaged","Sawmill is under attack.",250.1,1
+2252.9,4,1,"building_damaged","Sawmill is under attack.",252.9,1
+2257.9,4,1,"building_damaged","Storehouse is under attack.",257.9,1
+2260.7,4,1,"building_damaged","Storehouse is under attack.",260.7,1
+2262.9,4,1,"building_damaged","Storehouse is under attack.",262.9,1
+2266.1,4,1,"building_damaged","Storehouse is under attack.",266.1,1
+2268.9,4,1,"building_damaged","Storehouse is under attack.",268.9,1
+2271.1,4,1,"building_damaged","Sawmill is under attack.",271.1,1
+2274.3,4,1,"building_damaged","Storehouse is under attack.",274.3,1
+2277.1,4,1,"building_damaged","Sawmill is under attack.",277.1,1
+2279.3,4,1,"building_damaged","Sawmill is under attack.",279.3,1
+2282.5,4,1,"building_damaged","Sawmill is under attack.",282.5,1
+2286.9,4,1,"building_damaged","Storehouse is under attack.",286.9,1
+2290.1,4,1,"building_damaged","Storehouse is under attack.",290.1,1
+2292.3,4,1,"building_damaged","Storehouse is under attack.",292.3,1
+2295.1,4,1,"building_damaged","Sawmill is under attack.",295.1,1
+2299.9,4,1,"building_damaged","Storehouse is under attack.",299.9,1
+2302.7,4,1,"building_damaged","Storehouse is under attack.",302.7,1
+2304.9,4,1,"building_damaged","Storehouse is under attack.",304.9,1
+2308.1,4,1,"building_damaged","Storehouse is under attack.",308.1,1
+2310.9,4,1,"building_damaged","Storehouse is under attack.",310.9,1
+2313.1,4,1,"building_damaged","Sawmill is under attack.",313.1,1
+2316.3,4,1,"building_damaged","Storehouse is under attack.",316.3,1
+2319.1,4,1,"building_damaged","Sawmill is under attack.",319.1,1
+2321.3,4,1,"building_damaged","Sawmill is under attack.",321.3,1
+2324.5,4,1,"building_damaged","Sawmill is under attack.",324.5,1
+2326.2,4,1,"building_damaged","Storehouse is under attack.",326.2,1
+2327.3,4,1,"building_damaged","Storehouse is under attack.",327.3,1
+2328.0,4,1,"build_placed","Construction started.",0.0,0
+2328.7,4,1,"building_damaged","Storehouse is under attack.",0.7,0
+2330.4,4,1,"building_damaged","Storehouse is under attack.",2.4,0
+2332.6,4,1,"building_damaged","Storehouse is under attack.",4.6,0
+2334.8,4,1,"building_damaged","Storehouse is under attack.",6.8,0
+2337.0,4,1,"building_damaged","Storehouse is under attack.",9.0,0
+2339.2,4,1,"building_damaged","Storehouse is under attack.",11.2,0
+2341.4,4,1,"building_damaged","Storehouse is under attack.",13.4,0
+2343.6,4,1,"building_damaged","Storehouse is under attack.",15.6,0
+2345.8,4,1,"building_damaged","Storehouse is under attack.",17.8,0
+2348.0,4,1,"building_damaged","Storehouse is under attack.",20.0,0
+2350.2,4,1,"building_damaged","Storehouse is under attack.",22.2,0
+2354.5,4,1,"building_damaged","Farm is under attack.",26.5,0
+2359.3,4,1,"building_damaged","Farm is under attack.",31.3,1
+2364.7,4,1,"building_damaged","Farm is under attack.",36.7,1
+2367.7,4,1,"building_damaged","Farm is under attack.",39.7,1
+2400.4,5,0,"dawn","Day 5",72.4,1
+2400.4,5,0,"dawn_aftermath","DAWN — Night 4 survived",72.4,1
+2401.1,5,0,"resource_blocked","LUMBER CAMP: Output storage full",73.1,1
+2403.0,5,0,"resource_blocked","BAKERY: Waiting for wheat",75.0,1
+2408.0,5,0,"resource_blocked","FARM: Output storage full",80.0,1
+2408.0,5,0,"scout_order","Sigrid scouts toward the fog.",0.0,0
+2408.3,5,0,"resource_blocked","FARM: Output storage full",0.3,0
+2414.7,5,0,"resource_blocked","FARM: Output storage full",6.7,0
+2432.3,5,0,"resource_blocked","FARM: Output storage full",24.3,0
+2436.5,5,0,"resource_blocked","FARM: Output storage full",28.5,0
+2440.0,5,0,"build_placed","Construction started.",0.0,0
+2444.3,5,0,"resource_blocked","SAWMILL: Waiting for logs",4.3,0
+2448.9,5,0,"resource_blocked","BAKERY: Waiting for wheat",8.9,0
+2450.2,5,0,"resource_blocked","FARM: Output storage full",10.2,0
+2486.0,5,0,"resource_blocked","LUMBER CAMP: Output storage full",46.0,1
+2486.0,5,0,"resource_blocked","FARM: Output storage full",46.0,1
+2490.9,5,0,"resource_blocked","LUMBER CAMP: Output storage full",50.9,1
+2491.0,5,0,"resource_blocked","LUMBER CAMP: No resources in range",51.0,1
+2493.7,5,0,"resource_blocked","LUMBER CAMP: Output storage full",53.7,1
+2493.7,5,0,"resource_blocked","FARM: Output storage full",53.7,1
+2494.1,5,0,"resource_blocked","LUMBER CAMP: No resources in range",54.1,1
+2494.8,5,0,"resource_blocked","BAKERY: Waiting for wheat",54.8,1
+2515.7,5,0,"resource_blocked","SAWMILL: Waiting for logs",75.7,1
+2520.3,5,0,"resource_blocked","BAKERY: Waiting for wheat",80.3,1
+2520.4,5,0,"resource_blocked","LUMBER CAMP: Output storage full",80.4,1
+2522.0,5,0,"resource_blocked","LUMBER CAMP: No resources in range",82.0,1
+2526.1,5,0,"resource_blocked","LUMBER CAMP: Output storage full",86.1,1
+2526.7,5,0,"resource_blocked","FARM: Output storage full",86.7,1
+2526.7,5,0,"resource_blocked","SAWMILL: Output storage full",86.7,1
+2528.2,5,0,"resource_blocked","LUMBER CAMP: No resources in range",88.2,1
+2531.0,5,0,"resource_blocked","SAWMILL: Waiting for logs",91.0,1
+2548.0,5,0,"resource_blocked","FARM: Output storage full",108.0,1
+2550.9,5,0,"resource_blocked","BAKERY: Waiting for wheat",110.9,1
+2557.0,5,0,"resource_blocked","FARM: Output storage full",117.0,1
+2557.0,5,0,"resource_blocked","SAWMILL: Output storage full",117.0,1
+2561.6,5,0,"resource_blocked","SAWMILL: Waiting for logs",121.6,1
+2566.2,5,0,"resource_blocked","BAKERY: Waiting for wheat",126.2,1
+2575.4,5,0,"resource_blocked","FARM: Output storage full",135.4,1
+2575.5,5,0,"resource_blocked","FARM: Output storage full",135.5,1
+2581.5,5,0,"resource_blocked","BAKERY: Waiting for wheat",141.5,1
+2590.3,5,0,"resource_blocked","SAWMILL: Output storage full",150.3,1
+2592.2,5,0,"resource_blocked","SAWMILL: Waiting for logs",152.2,1
+2593.6,5,0,"resource_blocked","FARM: Output storage full",153.6,1
+2593.6,5,0,"resource_blocked","SAWMILL: Output storage full",153.6,1
+2597.3,5,0,"resource_blocked","SAWMILL: Waiting for logs",157.3,1
+2609.8,5,0,"resource_blocked","FARM: Output storage full",169.8,1
+2617.1,5,0,"resource_blocked","FARM: Output storage full",177.1,1
+2622.7,5,0,"resource_blocked","FARM: Output storage full",182.7,1
+2622.7,5,0,"resource_blocked","FARM: Output storage full",182.7,1
+2622.7,5,0,"resource_blocked","SAWMILL: Output storage full",182.7,1
+2622.8,5,0,"resource_blocked","SAWMILL: Waiting for logs",182.8,1
+2622.9,5,0,"resource_blocked","SAWMILL: Output storage full",182.9,1
+2627.9,5,0,"resource_blocked","SAWMILL: Waiting for logs",187.9,1
+2633.5,5,0,"resource_blocked","FARM: Output storage full",193.5,1
+2638.3,5,0,"resource_blocked","FARM: Output storage full",198.3,1
+2661.9,5,0,"resource_blocked","FARM: Output storage full",221.9,1
+2663.1,5,0,"resource_blocked","BAKERY: Waiting for wheat",223.1,1
+2667.4,5,0,"resource_blocked","FARM: Output storage full",227.4,1
+2668.4,5,0,"resource_blocked","FARM: Output storage full",228.4,1
+2674.3,5,0,"resource_blocked","FARM: Output storage full",234.3,1
+2677.0,5,0,"resource_blocked","SAWMILL: Output storage full",237.0,1
+2677.5,5,0,"resource_blocked","FARM: Output storage full",237.5,1
+2678.9,5,0,"resource_blocked","SAWMILL: Waiting for logs",238.9,1
+2683.5,5,0,"resource_blocked","BAKERY: Waiting for wheat",243.5,1
+2687.2,5,0,"resource_blocked","SAWMILL: Output storage full",247.2,1
+2689.1,5,0,"resource_blocked","SAWMILL: Waiting for logs",249.1,1
+2691.3,5,0,"resource_blocked","FARM: Output storage full",251.3,1
+2691.3,5,0,"resource_blocked","SAWMILL: Output storage full",251.3,1
+2691.7,5,0,"resource_blocked","FARM: Output storage full",251.7,1
+2694.2,5,0,"resource_blocked","SAWMILL: Waiting for logs",254.2,1
+2694.3,5,0,"resource_blocked","SAWMILL: Output storage full",254.3,1
+2698.8,5,0,"resource_blocked","FARM: Output storage full",258.8,1
+2699.3,5,0,"resource_blocked","SAWMILL: Waiting for logs",259.3,1
+2699.4,5,0,"resource_blocked","SAWMILL: Output storage full",259.4,1
+2704.4,5,0,"resource_blocked","SAWMILL: Waiting for logs",264.4,1
+2706.6,5,0,"resource_blocked","FARM: Output storage full",266.6,1
+2719.2,5,0,"resource_blocked","BAKERY: Waiting for wheat",279.2,1
+2726.2,5,0,"resource_blocked","FARM: Output storage full",286.2,1
+2730.4,5,0,"dusk_warning","Dusk approaches",290.4,1
+2732.2,5,0,"resource_blocked","FARM: Output storage full",292.2,1
+2732.2,5,0,"resource_blocked","FARM: Output storage full",292.2,1
+2732.2,5,0,"resource_blocked","SAWMILL: Output storage full",292.2,1
+2733.6,5,0,"resource_blocked","FARM: Output storage full",293.6,1
+2734.3,5,0,"resource_blocked","FARM: Output storage full",294.3,1
+2735.0,5,0,"resource_blocked","SAWMILL: Waiting for logs",295.0,1
+2735.1,5,0,"resource_blocked","SAWMILL: Output storage full",295.1,1
+2740.1,5,0,"resource_blocked","SAWMILL: Waiting for logs",300.1,1
+2753.0,5,0,"resource_blocked","FARM: Output storage full",313.0,1
+2756.0,5,0,"resource_blocked","FARM: Output storage full",316.0,1
+2760.0,5,0,"resource_blocked","BAKERY: Waiting for wheat",320.0,1
+2760.4,5,0,"horn_warning","RAID IN 60 SECONDS — hostiles from the east. They mean Outpost.",320.4,1
+2769.2,5,0,"resource_blocked","FARM: Output storage full",329.2,1
+2770.1,5,0,"resource_blocked","FARM: Output storage full",330.1,1
+2770.1,5,0,"resource_blocked","SAWMILL: Output storage full",330.1,1
+2770.7,5,0,"resource_blocked","SAWMILL: Waiting for logs",330.7,1
+2770.8,5,0,"resource_blocked","FARM: Output storage full",330.8,1
+2770.8,5,0,"resource_blocked","SAWMILL: Output storage full",330.8,1
+2775.8,5,0,"resource_blocked","SAWMILL: Waiting for logs",335.8,1
+2795.7,5,0,"resource_blocked","BAKERY: Waiting for wheat",355.7,1
+2807.9,5,0,"resource_blocked","FARM: Output storage full",367.9,1

@@ -1149,6 +1149,15 @@ func _create_ui() -> void:
 	Identity.apply_button(bind_button, true)
 	bind_button.pressed.connect(_prompt_binding)
 	status_row.add_child(bind_button)
+	channel_button = Button.new()
+	channel_button.name = "ChannelWyrd"
+	channel_button.text = "CHANNEL WYRD [C]"
+	channel_button.visible = false
+	channel_button.custom_minimum_size.x = 176.0
+	channel_button.tooltip_text = "Spend 2 Stabilized to repair one wall or ward segment. 20 s cooldown.  [C]"
+	Identity.apply_button(channel_button, true)
+	channel_button.pressed.connect(_confirm_channel)
+	status_row.add_child(channel_button)
 	choice_refine_button = Button.new()
 	choice_refine_button.name = "ChoiceRefine"
 	choice_refine_button.text = "FASTER REFINE"
@@ -1197,15 +1206,6 @@ func _create_ui() -> void:
 	Identity.apply_button(midgame_fortify_button, true)
 	midgame_fortify_button.pressed.connect(func() -> void: _confirm_midgame_choice("fortify"))
 	status_row.add_child(midgame_fortify_button)
-	channel_button = Button.new()
-	channel_button.name = "ChannelWyrd"
-	channel_button.text = "CHANNEL WYRD [C]"
-	channel_button.visible = false
-	channel_button.custom_minimum_size.x = 176.0
-	channel_button.tooltip_text = "Spend 2 Stabilized to repair one wall or ward segment. 20 s cooldown.  [C]"
-	Identity.apply_button(channel_button, true)
-	channel_button.pressed.connect(_confirm_channel)
-	status_row.add_child(channel_button)
 	binding_percent_label = Label.new()
 	binding_percent_label.name = "BindingProgress"
 	binding_percent_label.visible = false
@@ -2514,6 +2514,7 @@ func _update_loop_hud() -> void:
 	if binding_percent_label != null:
 		binding_percent_label.visible = binding_active
 		binding_percent_label.text = "%d%%" % int(wyrdfall.get("binding_percent", 0))
+	var channel_open: bool = binding_active and not bool(simulation_host.simulation.game_finished)
 	if loop_label != null:
 		var parts: Array[String] = []
 		if binding_active:
@@ -2534,6 +2535,8 @@ func _update_loop_hud() -> void:
 			parts.append("STAB %d/12" % stab)
 		if midgame_open:
 			parts.append("CARAVAN — shelter refugees or raise palisades")
+		if channel_open:
+			parts.append("CHANNEL WYRD [C]" if bool(wyrdfall.get("channel_ready", false)) else "CHANNEL cooling")
 		var rival_line := String(wyrdfall.get("rival_line", ""))
 		if rival_line != "" and _rival_banner_should_show():
 			parts.append(rival_line)
@@ -2565,7 +2568,6 @@ func _update_loop_hud() -> void:
 		midgame_shelter_button.visible = midgame_open
 	if midgame_fortify_button != null:
 		midgame_fortify_button.visible = midgame_open
-	var channel_open: bool = binding_active and not bool(simulation_host.simulation.game_finished)
 	if channel_button != null:
 		channel_button.visible = channel_open
 		var channel_ready := bool(wyrdfall.get("channel_ready", false))
