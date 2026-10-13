@@ -40,14 +40,14 @@ const PROFILES := {
 	},
 	"scalable_low": {
 		"name": "scalable_low",
-		# Hotfix 5: iGPU default. Keeps the look (4-split sun shadow since hotfix 7,
+		# Hotfix 5: iGPU default (sun shadow OFF, 2 splits = pre-freeze state, hotfix 7,
 		# most vegetation) while dropping SSAO, MSAA and glow; 3D at 0.85 FSR.
 		"foliage_density": 0.85,
 		"grass_density": 0.70,
-		"shadows": true,
+		"shadows": false,
 		"shadow_distance": 40.0,
 		"shadow_blur": 1.0,
-		"shadow_splits": 4,
+		"shadow_splits": 2,
 		"water_detail": 0.6,
 		"vfx_density": 0.6,
 		"animation_lod": 0.8,
