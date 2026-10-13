@@ -9727,19 +9727,43 @@ func _ensure_path_grid_unprofiled() -> void:
 	for building_value in buildings:
 		var indexed_building: Dictionary = building_value
 		building_types_by_id[int(indexed_building.get("id", 0))] = String(indexed_building.get("type", ""))
+	# Hotfix 5 perf: the full 320x320 per-tile loop (string keys + 4 dictionary
+	# lookups + 4 setter calls per cell) cost ~430 ms on every invalidation, i.e.
+	# every building placement / completion / dusk / dawn. Same rules, but only
+	# tiles that can differ from plain terrain take the slow path.
+	var base_weight := 1.0 / ROAD_MOVE_MULTIPLIER
+	var full_region := Rect2i(Vector2i.ZERO, map_size)
+	path_grid.fill_weight_scale_region(full_region, base_weight)
+	hostile_path_grid.fill_weight_scale_region(full_region, base_weight)
+	var special: Dictionary = {}
+	for source in [occupied_tiles, water_tiles, connected_roads, connected_walls]:
+		for key in source.keys():
+			var special_tile: Vector2i = _tile_from_key(String(key)) if typeof(key) == TYPE_STRING else Vector2i(key)
+			if special_tile.x >= 0 and special_tile.y >= 0 and special_tile.x < map_size.x and special_tile.y < map_size.y:
+				special[special_tile] = true
+	var gate_closed := is_gate_closed()
 	for y in range(map_size.y):
+		var row = map_tiles[y]
 		for x in range(map_size.x):
+			var terrain := String(row[x])
 			var tile := Vector2i(x, y)
+			if not special.has(tile):
+				if terrain == Defs.TILE_SHARD:
+					path_grid.set_point_solid(tile, true)
+					hostile_path_grid.set_point_solid(tile, true)
+				elif terrain == Defs.TILE_TREE or terrain == Defs.TILE_ROCK:
+					hostile_path_grid.set_point_solid(tile, true)
+				continue
 			var tile_key := _tile_key(tile)
 			var building_type := String(building_types_by_id.get(int(occupied_tiles.get(tile_key, 0)), ""))
-			var terrain := String(get_tile(tile))
 			var wet := is_water_tile(tile) and not connected_roads.has(tile_key)
-			var blocked := terrain == Defs.TILE_SHARD or wet or (_is_gate_tile(tile) and is_gate_closed())
-			var hostile_blocked := terrain in [Defs.TILE_SHARD, Defs.TILE_TREE, Defs.TILE_ROCK] or wet or (_is_gate_tile(tile) and is_gate_closed())
+			var gate_shut := gate_closed and building_type == Defs.BUILDING_ROAD and _is_gate_tile(tile)
+			var blocked := terrain == Defs.TILE_SHARD or wet or gate_shut
+			var hostile_blocked := terrain in [Defs.TILE_SHARD, Defs.TILE_TREE, Defs.TILE_ROCK] or wet or gate_shut
 			if building_type != "" and building_type != Defs.BUILDING_ROAD:
 				blocked = true
 				hostile_blocked = true
-			var move_weight := 1.0 if connected_walls.has(tile_key) or building_type == Defs.BUILDING_ROAD else 1.0 / ROAD_MOVE_MULTIPLIER
+			var move_weight := 1.0 if connected_walls.has(tile_key) or building_type == Defs.BUILDING_ROAD else base_weight
 			path_grid.set_point_solid(tile, blocked)
 			path_grid.set_point_weight_scale(tile, move_weight)
 			hostile_path_grid.set_point_solid(tile, hostile_blocked)
