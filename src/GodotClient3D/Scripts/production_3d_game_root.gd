@@ -409,6 +409,7 @@ func _tick_fps_overlay(delta: float) -> void:
 
 func _process(delta: float) -> void:
 	hud_clock += delta
+	_sync_shadow_boom()
 	_tick_fps_overlay(delta)
 	var ticks := simulation_host.advance(delta)
 	if ticks > 0 or last_synced_tick < 0:
@@ -4498,6 +4499,7 @@ func _apply_sun_shadow_settings(light: DirectionalLight3D) -> void:
 	light.directional_shadow_split_2 = 0.32
 	light.directional_shadow_split_3 = 0.58
 	light.directional_shadow_max_distance = float(quality_profile.get("shadow_distance", 56.0))
+	light.set_meta("base_shadow_distance", light.directional_shadow_max_distance)
 	light.directional_shadow_fade_start = 0.85
 	light.directional_shadow_pancake_size = 4.0
 	light.shadow_bias = 0.05
@@ -6224,3 +6226,10 @@ func _evidence_shot(shot_name: String, description: String) -> void:
 
 func _evidence_log(line: String) -> void:
 	print("[%s] EVIDENCE_CAPTURE %s" % [Time.get_datetime_string_from_system(), line])
+
+
+func _sync_shadow_boom() -> void:
+	# Keep shadow coverage constant when the camera boom lengthens.
+	if camera_rig == null or sun_light == null or not sun_light.has_meta("base_shadow_distance"):
+		return
+	sun_light.directional_shadow_max_distance = float(sun_light.get_meta("base_shadow_distance")) + camera_rig.boom_extra * 1.4142

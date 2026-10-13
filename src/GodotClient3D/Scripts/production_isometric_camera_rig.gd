@@ -61,6 +61,7 @@ func _process(delta: float) -> void:
 	position = position.lerp(target_position, minf(1.0, delta * 9.0))
 	target_zoom = clampf(target_zoom, CLOSE_ZOOM, zoom_cap)
 	camera.size = clampf(lerpf(camera.size, target_zoom, minf(1.0, delta * 10.0)), CLOSE_ZOOM, zoom_cap)
+	_apply_boom()
 
 
 # Camera input must arrive before Control nodes consume it. The Phase 3 HUD
@@ -148,7 +149,7 @@ func compose_view(world_position: Vector3, orthographic_size: float) -> void:
 	position = target_position
 	if camera != null:
 		camera.size = target_zoom
-		camera.position = Vector3(0.0, 32.0, 32.0)
+		_apply_boom()
 		camera.rotation_degrees = Vector3(-45.0, 0.0, 0.0)
 
 
@@ -167,3 +168,15 @@ func _pan(amount: Vector2, immediate := false, source := "script") -> void:
 func _clamp_target() -> void:
 	target_position.x = clampf(target_position.x, pan_bounds.position.x, pan_bounds.end.x)
 	target_position.z = clampf(target_position.z, pan_bounds.position.y, pan_bounds.end.y)
+
+
+## Extra boom length (m, per axis) so the bottom edge of the ortho view never
+## starts below greybox hills (ortho: image unchanged, only near-clip moves).
+var boom_extra := 0.0
+
+
+func _apply_boom() -> void:
+	if camera == null:
+		return
+	boom_extra = maxf(0.0, 30.0 + camera.size * 0.36 - 32.0)
+	camera.position = Vector3(0.0, 32.0 + boom_extra, 32.0 + boom_extra)
