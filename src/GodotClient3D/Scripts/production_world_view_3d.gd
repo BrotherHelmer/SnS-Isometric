@@ -285,6 +285,7 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 		_terrain_color_grid = PackedColorArray()
 		_terrain_lookups_ready = false
 	_rebake_queue.clear()
+	_rebake_job = {}
 	_chunk_occupation_hashes.clear()
 	simulation = simulation_value
 	map_size = Vector2i(world_snapshot.get("map_size", Vector2i.ZERO))
@@ -916,12 +917,22 @@ func _rebuild_chunk(coord: Vector2i, lod: int, rebuild_collision: bool) -> void:
 	host.name = "Chunk_%d_%d" % [coord.x, coord.y]
 	host.visible = true
 	chunk_root.add_child(host)
+	var _pc := FrameProfiler.t0()
 	_build_chunk_terrain(host, coord, lod, rebuild_collision)
+	FrameProfiler.add("chunk.terrain", _pc)
+	_pc = FrameProfiler.t0()
 	_build_chunk_water(host, coord, lod)
+	FrameProfiler.add("chunk.water", _pc)
+	_pc = FrameProfiler.t0()
 	_build_chunk_nature(host, coord, lod)
+	FrameProfiler.add("chunk.nature", _pc)
+	_pc = FrameProfiler.t0()
 	if lod == CHUNK_LOD_NEAR:
 		_build_chunk_grass(host, coord)
+	FrameProfiler.add("chunk.grass", _pc)
+	_pc = FrameProfiler.t0()
 	_build_chunk_rival_seat(host, coord, lod)
+	FrameProfiler.add("chunk.rival", _pc)
 	chunk_nodes[_chunk_key(coord)] = host
 	chunk_lod[_chunk_key(coord)] = lod
 	_recount_chunks()
@@ -1260,13 +1271,202 @@ func _rebake_occupied_chunks() -> void:
 var _rebake_queue: Array[String] = []
 
 
+## Hotfix 6: a dirty chunk is rebuilt as a time-budgeted job (rows per
+## frame, ~2.5 ms) into a detached host, then swapped in one frame. Visual
+## only: the sim already committed; same builders' maths, same result.
+const REBAKE_BUDGET_USEC := 2500
+var _rebake_job: Dictionary = {}
+
+
 func _drain_rebake_queue() -> void:
-	if _rebake_queue.is_empty():
+	var started := Time.get_ticks_usec()
+	while Time.get_ticks_usec() - started < REBAKE_BUDGET_USEC:
+		if _rebake_job.is_empty():
+			if _rebake_queue.is_empty():
+				return
+			var key: String = _rebake_queue.pop_front()
+			var lod := int(chunk_lod.get(key, CHUNK_LOD_NONE))
+			if lod == CHUNK_LOD_NONE or chunk_root == null or simulation == null:
+				continue
+			_rebake_job = _rebake_job_new(key, lod)
+		_rebake_job_step(started)
+
+
+func _rebake_job_new(key: String, lod: int) -> Dictionary:
+	var verts := CHUNK_TILES + 1
+	var heights := PackedFloat32Array()
+	var colors := PackedColorArray()
+	heights.resize(verts * verts)
+	colors.resize(verts * verts)
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	return {
+		"key": key, "coord": _chunk_from_key(key), "lod": lod,
+		"old": chunk_nodes.get(key, null), "stage": 0, "row": 0,
+		"heights": heights, "colors": colors, "surface": surface,
+		"mesh": null, "nature": {}, "grass": {},
+	}
+
+
+func _rebake_job_step(started: int) -> void:
+	var job := _rebake_job
+	var coord: Vector2i = job["coord"]
+	var lod: int = job["lod"]
+	var origin := _chunk_origin(coord)
+	var verts := CHUNK_TILES + 1
+	var stage: int = job["stage"]
+	if stage == 0:
+		var heights: PackedFloat32Array = job["heights"]
+		var colors: PackedColorArray = job["colors"]
+		var j: int = job["row"]
+		while j < verts:
+			for i in verts:
+				var tile := Vector2i(
+					clampi(origin.x + i, 0, map_size.x - 1),
+					clampi(origin.y + j, 0, map_size.y - 1)
+				)
+				var world := ScaleProfile.tile_to_flat_world(Vector2(tile), map_size)
+				var sim_y := float(simulation.get_height(tile)) * ScaleProfile.TERRAIN_ELEVATION_UNIT_METRES
+				heights[j * verts + i] = sim_y + _visual_relief_y(Vector2(world.x, world.z))
+				colors[j * verts + i] = _fast_chunk_color(tile)
+			j += 1
+			if Time.get_ticks_usec() - started >= REBAKE_BUDGET_USEC:
+				break
+		job["heights"] = heights
+		job["colors"] = colors
+		job["row"] = j
+		if j >= verts:
+			job["stage"] = 1
+			job["row"] = 0
+	elif stage == 1:
+		var heights: PackedFloat32Array = job["heights"]
+		var colors: PackedColorArray = job["colors"]
+		var surface: SurfaceTool = job["surface"]
+		var half := ScaleProfile.LOGICAL_CELL_METRES * 0.5
+		var j: int = job["row"]
+		while j < CHUNK_TILES:
+			for i in CHUNK_TILES:
+				var tile := Vector2i(origin.x + i, origin.y + j)
+				if not simulation.is_inside_map(tile):
+					continue
+				var c00 := ScaleProfile.tile_to_flat_world(Vector2(tile), map_size)
+				var p00 := Vector3(c00.x - half, heights[j * verts + i], c00.z - half)
+				var p10 := Vector3(c00.x + half, heights[j * verts + i + 1], c00.z - half)
+				var p11 := Vector3(c00.x + half, heights[(j + 1) * verts + i + 1], c00.z + half)
+				var p01 := Vector3(c00.x - half, heights[(j + 1) * verts + i], c00.z + half)
+				_add_quad_colored(surface, p00, p10, p11, p01, Vector3.UP, colors[j * verts + i], colors[j * verts + i + 1], colors[(j + 1) * verts + i + 1], colors[(j + 1) * verts + i])
+			j += 1
+			if Time.get_ticks_usec() - started >= REBAKE_BUDGET_USEC:
+				break
+		job["row"] = j
+		if j >= CHUNK_TILES:
+			job["mesh"] = surface.commit()
+			job["stage"] = 2
+			job["row"] = origin.y
+	elif stage == 2:
+		var step := 1 if lod == CHUNK_LOD_NEAR else 2
+		var y: int = job["row"]
+		while y < origin.y + CHUNK_TILES:
+			_rebake_nature_row(job["nature"], origin, y, step, lod)
+			y += step
+			if Time.get_ticks_usec() - started >= REBAKE_BUDGET_USEC:
+				break
+		job["row"] = y
+		if y >= origin.y + CHUNK_TILES:
+			job["stage"] = 3 if lod == CHUNK_LOD_NEAR and not Catalog.GRASS.is_empty() else 4
+			job["row"] = origin.y
+	elif stage == 3:
+		var occupied := _terrain_occupied_cache if _terrain_lookups_ready else _structure_tiles()
+		var y: int = job["row"]
+		while y < origin.y + CHUNK_TILES:
+			_rebake_grass_row(job["grass"], origin, y, occupied)
+			y += 1
+			if Time.get_ticks_usec() - started >= REBAKE_BUDGET_USEC:
+				break
+		job["row"] = y
+		if y >= origin.y + CHUNK_TILES:
+			job["stage"] = 4
+	else:
+		var _pfj := FrameProfiler.t0()
+		_rebake_job_finish(job)
+		FrameProfiler.add("rebake.finish", _pfj)
+		_rebake_job = {}
+
+
+func _rebake_nature_row(transforms_by_path: Dictionary, origin: Vector2i, y: int, step: int, lod: int) -> void:
+	# Same body as _build_chunk_nature, one row.
+	for x in range(origin.x, origin.x + CHUNK_TILES, step):
+		var tile := Vector2i(x, y)
+		if not simulation.is_inside_map(tile) or not simulation.is_revealed(tile):
+			continue
+		var tile_type := String(simulation.get_tile(tile))
+		if tile_type == Defs.TILE_TREE:
+			if _nature_suppressed_near_activity(tile):
+				continue
+			if _same_type_neighbors(tile, Defs.TILE_TREE) <= 1 and _near_founding_meadow(tile):
+				continue
+			if lod == CHUNK_LOD_FAR:
+				_append_nature_transform(transforms_by_path, _tree_path_for_tile(tile, 0, 2), tile, 0, 0.45, 0.85, 0.12)
+			else:
+				var neighbors := _same_type_neighbors(tile, Defs.TILE_TREE)
+				var path_value := _tree_path_for_tile(tile, 0, neighbors)
+				var scales := _tree_scale_range(path_value, neighbors)
+				_append_nature_transform(transforms_by_path, path_value, tile, 0, 0.55, float(scales.x), float(scales.y))
+		elif tile_type == Defs.TILE_ROCK and lod == CHUNK_LOD_NEAR:
+			if _nature_suppressed_near_activity(tile):
+				continue
+			var rock_path := String(Catalog.ROCKS[_tile_hash(tile, 101) % Catalog.ROCKS.size()]) if Catalog.ROCKS.size() > 0 else ""
+			if rock_path != "":
+				_append_nature_transform(transforms_by_path, rock_path, tile, 0, 0.66, 0.70, 0.18)
+
+
+func _rebake_grass_row(transforms_by_path: Dictionary, origin: Vector2i, y: int, occupied: Dictionary) -> void:
+	# Same body as _build_chunk_grass, one row.
+	for x in range(origin.x, origin.x + CHUNK_TILES):
+		var tile := Vector2i(x, y)
+		if not simulation.is_inside_map(tile) or not simulation.is_revealed(tile):
+			continue
+		if String(simulation.get_tile(tile)) != Defs.TILE_GRASS:
+			continue
+		if occupied.has(_tile_key(tile)) or _is_road_tile(tile):
+			continue
+		if _in_founding_yard(tile):
+			continue
+		var forest_edge := _same_type_neighbors(tile, Defs.TILE_TREE)
+		if forest_edge < 1 and _tile_hash(tile, 19) % 7 != 0:
+			continue
+		var grass_path := String(Catalog.GRASS[_tile_hash(tile, 83) % Catalog.GRASS.size()])
+		_append_nature_transform(transforms_by_path, grass_path, tile, 0, 0.95, 1.32, 0.70)
+
+
+func _rebake_job_finish(job: Dictionary) -> void:
+	var key: String = job["key"]
+	var coord: Vector2i = job["coord"]
+	var lod: int = job["lod"]
+	# Streaming rebuilt or unloaded the chunk meanwhile: drop the job.
+	if int(chunk_lod.get(key, CHUNK_LOD_NONE)) != lod or chunk_nodes.get(key, null) != job["old"]:
 		return
-	var key: String = _rebake_queue.pop_front()
-	var lod := int(chunk_lod.get(key, CHUNK_LOD_NONE))
-	if lod != CHUNK_LOD_NONE:
-		_rebuild_chunk(_chunk_from_key(key), lod, false)
+	_unload_chunk(coord)
+	var host := Node3D.new()
+	host.name = "Chunk_%d_%d" % [coord.x, coord.y]
+	host.visible = true
+	chunk_root.add_child(host)
+	var mesh: Mesh = job["mesh"]
+	if mesh != null:
+		var instance := MeshInstance3D.new()
+		instance.name = "Terrain"
+		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		instance.mesh = mesh
+		_apply_ground_material(instance)
+		host.add_child(instance)
+	_build_chunk_water(host, coord, lod)
+	_spawn_nature_multimeshes(host, job["nature"])
+	if lod == CHUNK_LOD_NEAR and not Catalog.GRASS.is_empty() and simulation != null:
+		_spawn_nature_multimeshes(host, job["grass"])
+	_build_chunk_rival_seat(host, coord, lod)
+	chunk_nodes[key] = host
+	chunk_lod[key] = lod
+	_recount_chunks()
 
 
 func _commit_terrain_mesh(rebuild_collision: bool) -> void:
