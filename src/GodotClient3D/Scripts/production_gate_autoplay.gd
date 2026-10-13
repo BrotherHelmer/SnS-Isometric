@@ -188,6 +188,12 @@ func _process(_engine_delta: float) -> void:
 	if t >= duration and not busy:
 		_note("unfocused_frames=%d" % unfocused_frames)
 		_note("gate end t=%.0f day=%d pop=%d buildings=%d finished=%s" % [t, int(sim.day_count), int(sim.population_current), sim.buildings.size(), str(sim.game_finished)])
+		var _prof = preload("res://src/GodotClient3D/Scripts/production_frame_profiler.gd")
+		if _prof.frames > 0:
+			var _keys: Array = _prof.totals.keys()
+			_keys.sort_custom(func(x, y): return int(_prof.totals[x]) > int(_prof.totals[y]))
+			for _k in _keys:
+				_note("profile %s avg_us=%d" % [_k, int(_prof.totals[_k]) / _prof.frames])
 		game.get_tree().quit()
 
 
