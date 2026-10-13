@@ -6360,3 +6360,14 @@ func _paint_vision_disk_mask(mask: PackedByteArray, mask_size: Vector2i, center:
 		var row := (y / FOG_MASK_DIVISOR) * mask_size.x
 		for x in range(start_x, x1 + 1, FOG_MASK_DIVISOR):
 			mask[row + x / FOG_MASK_DIVISOR] = 1
+
+
+## Smoothed ground height under a world XZ point, for the camera pivot (greybox only).
+func camera_ground_y(xz: Vector2) -> float:
+	if not _ensure_landform():
+		return 0.0
+	var t := _xz_to_tilef(xz)
+	var acc := 0.0
+	for o in [Vector2.ZERO, Vector2(6, 0), Vector2(-6, 0), Vector2(0, 6), Vector2(0, -6)]:
+		acc += height_at_logical(t + o)
+	return acc / 5.0

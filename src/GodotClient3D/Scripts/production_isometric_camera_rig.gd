@@ -47,6 +47,8 @@ func _ready() -> void:
 	add_child(camera)
 	rotation.y = PREFERRED_YAW
 	position = target_position
+	if ground_height.is_valid():
+		position.y = float(ground_height.call(Vector2(position.x, position.z)))
 
 
 func _process(delta: float) -> void:
@@ -58,6 +60,8 @@ func _process(delta: float) -> void:
 		)
 		if input_vector != Vector2.ZERO:
 			_pan(input_vector.normalized() * delta * target_zoom * 0.42, false, "keyboard")
+	if ground_height.is_valid():
+		target_position.y = float(ground_height.call(Vector2(target_position.x, target_position.z)))
 	position = position.lerp(target_position, minf(1.0, delta * 9.0))
 	target_zoom = clampf(target_zoom, CLOSE_ZOOM, zoom_cap)
 	camera.size = clampf(lerpf(camera.size, target_zoom, minf(1.0, delta * 10.0)), CLOSE_ZOOM, zoom_cap)
@@ -146,6 +150,8 @@ func compose_view(world_position: Vector3, orthographic_size: float) -> void:
 	target_position = Vector3(world_position.x, 0.0, world_position.z)
 	target_zoom = clampf(orthographic_size, CLOSE_ZOOM, zoom_cap)
 	_clamp_target()
+	if ground_height.is_valid():
+		target_position.y = float(ground_height.call(Vector2(target_position.x, target_position.z)))
 	position = target_position
 	if camera != null:
 		camera.size = target_zoom
@@ -180,3 +186,8 @@ func _apply_boom() -> void:
 		return
 	boom_extra = maxf(0.0, 30.0 + camera.size * 0.36 - 32.0)
 	camera.position = Vector3(0.0, 32.0 + boom_extra, 32.0 + boom_extra)
+
+
+## Optional ground-height follow (greybox relief): pivot rides the terrain so
+## the framed subject stays centred on hills. Unset = legacy flat pivot.
+var ground_height := Callable()

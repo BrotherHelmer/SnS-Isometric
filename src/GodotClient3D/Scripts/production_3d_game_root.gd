@@ -413,6 +413,8 @@ var _pipelines_warmed := false
 
 
 func _process(delta: float) -> void:
+	if camera_rig != null and world_view != null and not camera_rig.ground_height.is_valid() and world_view.greybox_enabled():
+		camera_rig.ground_height = world_view.camera_ground_y
 	FrameProfiler.frame_begin()
 	if not _pipelines_warmed and world_view != null and get_viewport().get_camera_3d() != null:
 		_pipelines_warmed = true
