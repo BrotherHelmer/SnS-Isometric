@@ -115,6 +115,10 @@ func _process(_engine_delta: float) -> void:
 		if not d5_vp_rid.is_valid():
 			d5_vp_rid = game.get_viewport().get_viewport_rid()
 			RenderingServer.viewport_set_measure_render_time(d5_vp_rid, true)
+		if "--gate-diag-no-shadow" in OS.get_cmdline_user_args() and game.sun_light != null and game.sun_light.shadow_enabled:
+			game.sun_light.shadow_enabled = false
+		if "--gate-diag-splits4" in OS.get_cmdline_user_args() and game.sun_light != null and game.sun_light.directional_shadow_mode != DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS:
+			game.sun_light.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
 		if d5_scale > 0.0 and absf(game.get_viewport().scaling_3d_scale - d5_scale) > 0.001:
 			game.get_viewport().scaling_3d_scale = d5_scale
 		var cpu_r := RenderingServer.viewport_get_measured_render_time_cpu(d5_vp_rid) + RenderingServer.get_frame_setup_time_cpu()
