@@ -362,8 +362,43 @@ func _run_release_check() -> void:
 	await check_script.run(self)
 
 
+var fps_overlay: Label
+var fps_overlay_worst := 0.0
+var fps_overlay_timer := 0.0
+
+
+## Hotfix 3b: F2 (or --fps-overlay) shows FPS, frame time, worst frame and
+## the active quality preset so playtest screenshots carry the numbers.
+func _tick_fps_overlay(delta: float) -> void:
+	if fps_overlay == null:
+		fps_overlay = Label.new()
+		fps_overlay.name = "FpsOverlay"
+		fps_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		fps_overlay.add_theme_font_size_override("font_size", 14)
+		fps_overlay.add_theme_color_override("font_color", Color("#f0e6c8"))
+		fps_overlay.add_theme_color_override("font_outline_color", Color.BLACK)
+		fps_overlay.add_theme_constant_override("outline_size", 4)
+		fps_overlay.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		fps_overlay.offset_left = -330.0
+		fps_overlay.offset_right = -8.0
+		fps_overlay.offset_top = 58.0
+		fps_overlay.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		fps_overlay.visible = "--fps-overlay" in OS.get_cmdline_user_args()
+		(hud_root if hud_root != null else self).add_child(fps_overlay)
+	fps_overlay_worst = maxf(fps_overlay_worst, delta)
+	fps_overlay_timer += delta
+	if fps_overlay.visible and fps_overlay_timer >= 0.5:
+		var size := get_viewport().get_visible_rect().size
+		fps_overlay.text = "%d FPS · %.1f ms · worst %.0f ms\n%s · 3D x%.2f · %dx%d" % [Engine.get_frames_per_second(), 1000.0 / maxf(1.0, Engine.get_frames_per_second()), fps_overlay_worst * 1000.0, String(quality_profile.get("name", "?")), get_viewport().scaling_3d_scale, DisplayServer.window_get_size().x, DisplayServer.window_get_size().y]
+		if OS.get_environment("SNS_FPS_LOG") != "":
+			print("FPS_OVERLAY fps=%d worst_ms=%.0f" % [Engine.get_frames_per_second(), fps_overlay_worst * 1000.0])
+		fps_overlay_worst = 0.0
+		fps_overlay_timer = 0.0
+
+
 func _process(delta: float) -> void:
 	hud_clock += delta
+	_tick_fps_overlay(delta)
 	var ticks := simulation_host.advance(delta)
 	if ticks > 0 or last_synced_tick < 0:
 		_sync_presentation()
@@ -418,6 +453,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		if startup_overlay != null and startup_overlay.visible:
 			return
 		if _handle_hud_hotkey(event as InputEventKey):
+			get_viewport().set_input_as_handled()
+			return
+		if event.keycode == KEY_F2 and fps_overlay != null:
+			fps_overlay.visible = not fps_overlay.visible
 			get_viewport().set_input_as_handled()
 			return
 		match event.keycode:

@@ -293,6 +293,7 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 	# these signatures stayed 0. That doubled start_new_3d past 2 s.
 	terrain_height_signature = _calculate_height_signature()
 	terrain_occupation_signature = _calculate_occupation_signature()
+	_chunk_occupation_hashes = _calculate_chunk_occupation_hashes()
 
 
 func bind_fog_overlay(_camera: Camera3D) -> void:
@@ -1144,13 +1145,49 @@ func _rebake_terrain_occupation() -> void:
 	terrain_occupation_signature = _calculate_occupation_signature()
 
 
+var _chunk_occupation_hashes: Dictionary = {}
+
+
+## Hotfix 3b: per-chunk occupation hash, so a new road tile or a construction
+## state change rebakes only the chunks it touches (not all ~13 at ~260 ms).
+func _calculate_chunk_occupation_hashes() -> Dictionary:
+	var hashes := {}
+	if simulation == null:
+		return hashes
+	var margin := 4
+	var items: Array = []
+	if simulation.connected_roads != null:
+		for key_value in simulation.connected_roads.keys():
+			var parts := String(key_value).split(",")
+			if parts.size() == 2:
+				items.append([Vector2i(int(parts[0]), int(parts[1])), Vector2i.ONE, String(key_value).hash()])
+	for building_value in simulation.get_buildings():
+		var building: Dictionary = building_value
+		var tile: Vector2i = building.get("position", Vector2i.ZERO)
+		var fp: Vector2i = simulation._building_footprint(building)
+		items.append([tile, fp, int(building.get("id", 0)) * 11 + tile.x * 13 + tile.y * 17 + int(bool(building.get("construction", false))) * 7 + 3])
+	for item in items:
+		var lo := chunk_of_tile(Vector2i(item[0]) - Vector2i(margin, margin))
+		var hi := chunk_of_tile(Vector2i(item[0]) + Vector2i(item[1]) + Vector2i(margin, margin))
+		for cy in range(lo.y, hi.y + 1):
+			for cx in range(lo.x, hi.x + 1):
+				var key := _chunk_key(Vector2i(cx, cy))
+				hashes[key] = int((int(hashes.get(key, 19)) * 31 + int(item[2])) & 0x7fffffff)
+	return hashes
+
+
 func _rebake_occupied_chunks() -> void:
+	var next := _calculate_chunk_occupation_hashes()
+	var full := _chunk_occupation_hashes.is_empty()
 	var keys: Array = chunk_nodes.keys()
 	for key_value in keys:
-		var coord := _chunk_from_key(String(key_value))
 		var lod := int(chunk_lod.get(key_value, CHUNK_LOD_NONE))
-		if lod != CHUNK_LOD_NONE:
-			_rebuild_chunk(coord, lod, false)
+		if lod == CHUNK_LOD_NONE:
+			continue
+		if not full and int(next.get(key_value, 19)) == int(_chunk_occupation_hashes.get(key_value, 19)):
+			continue
+		_rebuild_chunk(_chunk_from_key(String(key_value)), lod, false)
+	_chunk_occupation_hashes = next
 
 
 func _commit_terrain_mesh(rebuild_collision: bool) -> void:
