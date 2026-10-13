@@ -1138,7 +1138,7 @@ func _build_chunk_nature(host: Node3D, coord: Vector2i, lod: int) -> void:
 				var rock_path := String(Catalog.ROCKS[_tile_hash(tile, 101) % Catalog.ROCKS.size()]) if Catalog.ROCKS.size() > 0 else ""
 				if rock_path != "":
 					_append_nature_transform(transforms_by_path, rock_path, tile, 0, 0.66, 0.70, 0.18)
-	_spawn_nature_multimeshes(host, transforms_by_path)
+	_spawn_nature_multimeshes(host, transforms_by_path, true)
 
 
 func _build_chunk_grass(host: Node3D, coord: Vector2i) -> void:
@@ -1163,7 +1163,7 @@ func _build_chunk_grass(host: Node3D, coord: Vector2i) -> void:
 				continue
 			var grass_path := String(Catalog.GRASS[_tile_hash(tile, 83) % Catalog.GRASS.size()])
 			_append_nature_transform(transforms_by_path, grass_path, tile, 0, 0.95, 1.32, 0.70)
-	_spawn_nature_multimeshes(host, transforms_by_path)
+	_spawn_nature_multimeshes(host, transforms_by_path, true)
 
 
 func _build_chunk_rival_seat(host: Node3D, coord: Vector2i, lod: int) -> void:
@@ -1494,9 +1494,9 @@ func _rebake_job_finish(job: Dictionary) -> void:
 		_apply_ground_material(instance)
 		host.add_child(instance)
 	_build_chunk_water(host, coord, lod)
-	_spawn_nature_multimeshes(host, job["nature"])
+	_spawn_nature_multimeshes(host, job["nature"], true)
 	if lod == CHUNK_LOD_NEAR and not Catalog.GRASS.is_empty() and simulation != null:
-		_spawn_nature_multimeshes(host, job["grass"])
+		_spawn_nature_multimeshes(host, job["grass"], true)
 	_build_chunk_rival_seat(host, coord, lod)
 	chunk_nodes[key] = host
 	chunk_lod[key] = lod
@@ -2462,7 +2462,7 @@ func _spawn_nature_contact_ao(host: Node3D, transforms_by_path: Dictionary, inte
 	ContactAO.spawn_multimesh(host, contacts, intensity)
 
 
-func _spawn_nature_multimeshes(host: Node3D, transforms_by_path: Dictionary) -> void:
+func _spawn_nature_multimeshes(host: Node3D, transforms_by_path: Dictionary, share_materials: bool = false) -> void:
 	for path_value in transforms_by_path:
 		var mesh := _mesh_for_nature_path(String(path_value))
 		if mesh == null:
@@ -2477,7 +2477,7 @@ func _spawn_nature_multimeshes(host: Node3D, transforms_by_path: Dictionary) -> 
 		var instance := MultiMeshInstance3D.new()
 		instance.name = "Composed_%s" % String(path_value).get_file().get_basename()
 		instance.multimesh = multimesh
-		var foliage := _foliage_material(mesh, path_value)
+		var foliage := _shared_foliage_material(mesh, String(path_value)) if share_materials else _foliage_material(mesh, path_value)
 		if foliage != null:
 			instance.material_override = foliage
 		host.add_child(instance)
@@ -5767,6 +5767,23 @@ func _is_tree_path(path_value: String) -> bool:
 func _is_scatter_path(path_value: String) -> bool:
 	var name := path_value.get_file().get_basename()
 	return name in ["grass", "flowers", "bush"]
+
+
+## Hotfix 6: chunks share one foliage material per (path, mesh,
+## atmosphere) instead of a fresh ShaderMaterial per MultiMesh per rebake.
+## Same inputs -> same parameters, so the look is identical.
+var _foliage_material_cache: Dictionary = {}
+
+
+func _shared_foliage_material(mesh: Mesh, path_value: String) -> Material:
+	var key := "%s|%d|%s" % [path_value, mesh.get_instance_id() if mesh != null else 0, var_to_str(_atmosphere_scale)]
+	if _foliage_material_cache.has(key):
+		return _foliage_material_cache[key]
+	if _foliage_material_cache.size() > 256:
+		_foliage_material_cache.clear()
+	var material := _foliage_material(mesh, path_value)
+	_foliage_material_cache[key] = material
+	return material
 
 
 func _foliage_material(mesh: Mesh, path_value: String) -> Material:
