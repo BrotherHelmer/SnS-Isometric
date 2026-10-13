@@ -121,6 +121,10 @@ func _process(_engine_delta: float) -> void:
 			game.sun_light.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
 		if d5_scale > 0.0 and absf(game.get_viewport().scaling_3d_scale - d5_scale) > 0.001:
 			game.get_viewport().scaling_3d_scale = d5_scale
+		# Perf checkpoint (measurement only, never shipped defaults):
+		# --gate-fps-cap=N, --gate-diag-cheap-ground, --gate-diag-cheap-foliage.
+		if frames % 60 == 0:
+			_checkpoint_overrides()
 		var cpu_r := RenderingServer.viewport_get_measured_render_time_cpu(d5_vp_rid) + RenderingServer.get_frame_setup_time_cpu()
 		var gpu_r := RenderingServer.viewport_get_measured_render_time_gpu(d5_vp_rid)
 		var proc := float(Performance.get_monitor(Performance.TIME_PROCESS)) * 1000.0
@@ -287,3 +291,40 @@ func _top_sections() -> String:
 		if int(sections[key]) >= 2000:
 			parts.append("%s=%d" % [key, int(sections[key]) / 1000])
 	return " ".join(parts)
+
+
+var _cheap_foliage_mats: Dictionary = {}
+
+
+func _checkpoint_overrides() -> void:
+	var args := OS.get_cmdline_user_args()
+	for arg in args:
+		if String(arg).begins_with("--gate-fps-cap="):
+			var cap := int(String(arg).get_slice("=", 1))
+			if Engine.max_fps != cap:
+				Engine.max_fps = cap
+	var wv = game.world_view
+	if wv == null or wv.chunk_root == null:
+		return
+	var cheap_ground := "--gate-diag-cheap-ground" in args
+	var cheap_foliage := "--gate-diag-cheap-foliage" in args
+	if not cheap_ground and not cheap_foliage:
+		return
+	for node in wv.chunk_root.find_children("*", "GeometryInstance3D", true, false):
+		var gi := node as GeometryInstance3D
+		var mat := gi.material_override
+		if cheap_ground and gi is MeshInstance3D and gi.name == "Terrain" and mat is ShaderMaterial:
+			(mat as ShaderMaterial).set_shader_parameter("lod_cheap", 1.0)
+		elif cheap_foliage and gi is MultiMeshInstance3D and mat is ShaderMaterial:
+			var sm := mat as ShaderMaterial
+			var albedo = sm.get_shader_parameter("albedo_color")
+			if typeof(albedo) != TYPE_VECTOR3:
+				continue
+			var key := str(albedo)
+			if not _cheap_foliage_mats.has(key):
+				var std := StandardMaterial3D.new()
+				std.albedo_color = Color(albedo.x, albedo.y, albedo.z)
+				std.roughness = 0.9
+				std.shading_mode = BaseMaterial3D.SHADING_MODE_PER_VERTEX
+				_cheap_foliage_mats[key] = std
+			gi.material_override = _cheap_foliage_mats[key]
