@@ -67,7 +67,7 @@ func setup(game_value, dir_value: String, duration_value: float) -> void:
 	d5_log = FileAccess.open(dir.path_join("d5_perf.csv"), FileAccess.WRITE)
 	d5_log.store_line("t_wall,game_s,fps,proc_ms,cpu_render_ms,gpu_render_ms,draw_calls,primitives,objects,video_mem_mb,static_mem_mb,nodes,compiles_total,buildings,scale")
 	d5_frames = FileAccess.open(dir.path_join("d5_frames.csv"), FileAccess.WRITE)
-	d5_frames.store_line("t_wall,frame_ms,cpu_render_ms,gpu_render_ms,proc_ms,compiles_delta,draw_calls,think_ms,buildings")
+	d5_frames.store_line("t_wall,frame_ms,cpu_render_ms,gpu_render_ms,proc_ms,compiles_delta,draw_calls,think_ms,buildings,root_ms,sync_frame_ms,sim_ms")
 	# [time, name, action]
 	shots = [
 		[2.0, "01_title_menu", ""],
@@ -122,7 +122,12 @@ func _process(_engine_delta: float) -> void:
 		var proc := float(Performance.get_monitor(Performance.TIME_PROCESS)) * 1000.0
 		var comp := _d5_compiles()
 		var dc := int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
-		d5_frames.store_line("%.2f,%.1f,%.2f,%.2f,%.2f,%d,%d,%d,%d" % [t, delta * 1000.0, cpu_r, gpu_r, proc, comp - d5_last_compiles, dc, _think_ms_prev, sim.buildings.size()])
+		var pv: Dictionary = FrameProfiler.previous
+		var root_us := 0
+		for k in pv:
+			if String(k).begins_with("root."):
+				root_us += int(pv[k])
+		d5_frames.store_line("%.2f,%.1f,%.2f,%.2f,%.2f,%d,%d,%d,%d,%.2f,%.2f,%.2f" % [t, delta * 1000.0, cpu_r, gpu_r, proc, comp - d5_last_compiles, dc, _think_ms_prev, sim.buildings.size(), root_us / 1000.0, int(pv.get("pres.sync_frame", 0)) / 1000.0, int(pv.get("root.sim_advance", 0)) / 1000.0])
 		d5_last_compiles = comp
 		d5_sec_gpu += gpu_r; d5_sec_cpu += cpu_r; d5_sec_proc += proc; d5_sec_n += 1
 	_think_ms_prev = 0
@@ -238,6 +243,9 @@ func _shot_async(name: String, action: String) -> void:
 	_note("shot %s t=%.0f" % [name, t])
 	match action:
 		"new_realm":
+			for a in OS.get_cmdline_user_args():
+				if a.begins_with("--gate-seed=") and game.seed_edit != null:
+					game.seed_edit.text = a.trim_prefix("--gate-seed=")
 			game._start_from_menu()
 			started = true
 			_note("NEW REALM -> BEGIN seed=%d" % int(game.simulation_host.simulation.rng_seed))
