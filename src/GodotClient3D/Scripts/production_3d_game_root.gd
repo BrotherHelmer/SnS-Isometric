@@ -1,6 +1,7 @@
 class_name ProductionGameRoot3D
 extends Node3D
 
+const GateAutoplay = preload("res://src/GodotClient3D/Scripts/production_gate_autoplay.gd")
 const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
 const Simulation = preload("res://src/GodotClient/Scripts/one_shard_simulation.gd")
 const Catalog = preload("res://src/GodotClient3D/Scripts/production_asset_catalog.gd")
@@ -346,7 +347,7 @@ func _ready() -> void:
 		call_deferred("_run_release_check")
 	for gate_arg in OS.get_cmdline_user_args():
 		if gate_arg.begins_with("--gate-autoplay="):
-			var gate = load("res://src/GodotClient3D/Scripts/production_gate_autoplay.gd").new()
+			var gate = GateAutoplay.new()
 			gate.name = "GateAutoplay"
 			add_child(gate)
 			var gate_secs := 1200.0
