@@ -7,6 +7,7 @@ const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
 const Catalog = preload("res://src/GodotClient3D/Scripts/production_asset_catalog.gd")
 const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_profile.gd")
 const BuildingView = preload("res://src/GodotClient3D/Scripts/production_building_view_3d.gd")
+const WarmupCatalog = preload("res://src/GodotClient3D/Scripts/production_asset_catalog.gd")
 const CharacterView = preload("res://src/GodotClient3D/Scripts/production_character_view_3d.gd")
 const RoadView = preload("res://src/GodotClient3D/Scripts/production_road_view_3d.gd")
 const HaloCatalog = preload("res://src/GodotClient3D/Scripts/production_building_halo.gd")
@@ -658,6 +659,11 @@ func _named_root(root_name: String) -> Node3D:
 
 
 func _process(_delta: float) -> void:
+	if _warmup_frames > 0:
+		_warmup_frames -= 1
+		if _warmup_frames == 0 and _warmup_root != null:
+			_warmup_root.queue_free()
+			_warmup_root = null
 	var _pf19 := FrameProfiler.t0()
 	_drain_rebake_queue()
 	FrameProfiler.add("wv._drain_rebake_queue", _pf19)
@@ -5858,3 +5864,30 @@ func _channel_flash_mesh() -> Node3D:
 	ring.material_override = mat
 	group.add_child(ring)
 	return group
+
+
+
+## Hotfix 6: compile every building pipeline (finished + construction
+## variants, colour + shadow pass) while the title menu is up, so the first
+## House is not a cold-cache 3 s hitch. Instances sit just past the near
+## plane at sub-pixel scale for a few frames, then are freed.
+var _warmup_root: Node3D
+var _warmup_frames := 0
+
+
+func warm_up_pipelines(camera: Camera3D) -> void:
+	if camera == null or _warmup_root != null:
+		return
+	_warmup_root = Node3D.new()
+	_warmup_root.name = "PipelineWarmup"
+	add_child(_warmup_root)
+	var index := 0
+	for type_value in WarmupCatalog.BUILDINGS.keys():
+		for construction in [false, true]:
+			var view := BuildingView.new()
+			view.configure({"id": -90000 - index, "type": String(type_value), "construction": construction, "construction_fraction": 0.5, "rotation": 0, "faction": "player"})
+			_warmup_root.add_child(view)
+			index += 1
+	_warmup_root.global_transform = camera.global_transform.translated_local(Vector3(0.0, 0.0, -maxf(camera.near, 0.05) * 3.0))
+	_warmup_root.scale = Vector3.ONE * 0.001
+	_warmup_frames = 6
