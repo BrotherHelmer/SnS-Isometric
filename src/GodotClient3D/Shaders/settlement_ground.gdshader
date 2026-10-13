@@ -62,7 +62,7 @@ uniform float greybox = 0.0;
 uniform vec2 crater_xz = vec2(0.0);
 uniform float crater_radius_m = 90.0;
 uniform vec3 slope_rock : source_color = vec3(0.36, 0.34, 0.30);
-uniform vec3 wyrd_basalt : source_color = vec3(0.16, 0.19, 0.24);
+uniform vec3 wyrd_basalt : source_color = vec3(0.38, 0.40, 0.46);
 uniform vec3 wyrd_vein : source_color = vec3(0.30, 0.85, 0.92);
 uniform vec3 ejecta_rubble : source_color = vec3(0.45, 0.43, 0.39);
 
