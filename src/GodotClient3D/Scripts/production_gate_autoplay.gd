@@ -30,6 +30,23 @@ var started := false
 var busy := false
 var unfocused_frames := 0
 var _think_ms_prev := 0
+# D5 measurement
+var d5_log: FileAccess
+var d5_frames: FileAccess
+var d5_scale := -1.0
+var d5_vp_rid: RID
+var d5_last_compiles := 0
+var d5_sec_gpu := 0.0
+var d5_sec_cpu := 0.0
+var d5_sec_proc := 0.0
+var d5_sec_n := 0
+
+
+func _d5_compiles() -> int:
+	var total := 0
+	for m in [Performance.PIPELINE_COMPILATIONS_CANVAS, Performance.PIPELINE_COMPILATIONS_MESH, Performance.PIPELINE_COMPILATIONS_SURFACE, Performance.PIPELINE_COMPILATIONS_DRAW, Performance.PIPELINE_COMPILATIONS_SPECIALIZATION]:
+		total += int(Performance.get_monitor(m))
+	return total
 var jump_night := "--gate-jump-night" in OS.get_cmdline_user_args()
 
 
@@ -44,6 +61,13 @@ func setup(game_value, dir_value: String, duration_value: float) -> void:
 	stall_log = FileAccess.open(dir.path_join("stalls.csv"), FileAccess.WRITE)
 	stall_log.store_line("t_wall,frame_ms,game_s,rebake_queue,autosave_task,buildings,harness_think_ms,night,top_sections")
 	player = Player.new()
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--gate-render-scale="):
+			d5_scale = float(a.trim_prefix("--gate-render-scale="))
+	d5_log = FileAccess.open(dir.path_join("d5_perf.csv"), FileAccess.WRITE)
+	d5_log.store_line("t_wall,game_s,fps,proc_ms,cpu_render_ms,gpu_render_ms,draw_calls,primitives,objects,video_mem_mb,static_mem_mb,nodes,compiles_total,buildings,scale")
+	d5_frames = FileAccess.open(dir.path_join("d5_frames.csv"), FileAccess.WRITE)
+	d5_frames.store_line("t_wall,frame_ms,cpu_render_ms,gpu_render_ms,proc_ms,compiles_delta,draw_calls,think_ms,buildings")
 	# [time, name, action]
 	shots = [
 		[2.0, "01_title_menu", ""],
@@ -87,8 +111,27 @@ func _process(_engine_delta: float) -> void:
 	if delta > 0.1 and started:
 		stall_log.store_line("%.1f,%.0f,%.1f,%d,%d,%d,%d,%d,%s" % [t, delta * 1000.0, float(sim.elapsed_seconds), game.world_view._rebake_queue.size(), game.simulation_host._autosave_task, sim.buildings.size(), _think_ms_prev, int(bool(sim.is_night)), _top_sections()])
 		stall_log.flush()
+	if d5_frames != null and started:
+		if not d5_vp_rid.is_valid():
+			d5_vp_rid = game.get_viewport().get_viewport_rid()
+			RenderingServer.viewport_set_measure_render_time(d5_vp_rid, true)
+		if d5_scale > 0.0 and absf(game.get_viewport().scaling_3d_scale - d5_scale) > 0.001:
+			game.get_viewport().scaling_3d_scale = d5_scale
+		var cpu_r := RenderingServer.viewport_get_measured_render_time_cpu(d5_vp_rid) + RenderingServer.get_frame_setup_time_cpu()
+		var gpu_r := RenderingServer.viewport_get_measured_render_time_gpu(d5_vp_rid)
+		var proc := float(Performance.get_monitor(Performance.TIME_PROCESS)) * 1000.0
+		var comp := _d5_compiles()
+		var dc := int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
+		d5_frames.store_line("%.2f,%.1f,%.2f,%.2f,%.2f,%d,%d,%d,%d" % [t, delta * 1000.0, cpu_r, gpu_r, proc, comp - d5_last_compiles, dc, _think_ms_prev, sim.buildings.size()])
+		d5_last_compiles = comp
+		d5_sec_gpu += gpu_r; d5_sec_cpu += cpu_r; d5_sec_proc += proc; d5_sec_n += 1
 	_think_ms_prev = 0
 	sec_t += delta
+	if sec_t >= 1.0 and d5_log != null and started and d5_sec_n > 0:
+		d5_log.store_line("%.0f,%.0f,%.1f,%.2f,%.2f,%.2f,%d,%d,%d,%.1f,%.1f,%d,%d,%d,%.2f" % [t, float(sim.elapsed_seconds), frames / sec_t, d5_sec_proc / d5_sec_n, d5_sec_cpu / d5_sec_n, d5_sec_gpu / d5_sec_n, int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)), int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)), int(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)), float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0, float(Performance.get_monitor(Performance.MEMORY_STATIC)) / 1048576.0, int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)), _d5_compiles(), sim.buildings.size(), game.get_viewport().scaling_3d_scale])
+		d5_log.flush()
+		d5_frames.flush()
+		d5_sec_gpu = 0.0; d5_sec_cpu = 0.0; d5_sec_proc = 0.0; d5_sec_n = 0
 	if sec_t >= 1.0:
 		fps_log.store_line("%.0f,%.0f,%.1f,%.0f,%d,%d,%d,%d,%d" % [t, float(sim.elapsed_seconds), frames / sec_t, worst * 1000.0, int(sim.day_count), int(bool(sim.is_night)), int(sim.population_current), sim.buildings.size(), game.world_view._rebake_queue.size()])
 		fps_log.flush()
