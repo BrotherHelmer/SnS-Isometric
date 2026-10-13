@@ -272,6 +272,8 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 		_terrain_road_cache.clear()
 		_terrain_color_grid = PackedColorArray()
 		_terrain_lookups_ready = false
+	_rebake_queue.clear()
+	_chunk_occupation_hashes.clear()
 	simulation = simulation_value
 	map_size = Vector2i(world_snapshot.get("map_size", Vector2i.ZERO))
 	visual_seed = int(world_snapshot.get("seed", 1))
@@ -612,6 +614,7 @@ func _named_root(root_name: String) -> Node3D:
 
 
 func _process(_delta: float) -> void:
+	_drain_rebake_queue()
 	if stream_enabled and simulation != null and map_size.x > 0:
 		stream_chunks(STREAM_BUDGET_USEC)
 
@@ -1186,8 +1189,23 @@ func _rebake_occupied_chunks() -> void:
 			continue
 		if not full and int(next.get(key_value, 19)) == int(_chunk_occupation_hashes.get(key_value, 19)):
 			continue
-		_rebuild_chunk(_chunk_from_key(String(key_value)), lod, false)
+		if not _rebake_queue.has(String(key_value)):
+			_rebake_queue.append(String(key_value))
 	_chunk_occupation_hashes = next
+
+
+## Hotfix 5: dirty chunks rebake one per frame (~20 ms each) instead of all
+## in the frame that changed (60–260 ms hitch).
+var _rebake_queue: Array[String] = []
+
+
+func _drain_rebake_queue() -> void:
+	if _rebake_queue.is_empty():
+		return
+	var key: String = _rebake_queue.pop_front()
+	var lod := int(chunk_lod.get(key, CHUNK_LOD_NONE))
+	if lod != CHUNK_LOD_NONE:
+		_rebuild_chunk(_chunk_from_key(key), lod, false)
 
 
 func _commit_terrain_mesh(rebuild_collision: bool) -> void:

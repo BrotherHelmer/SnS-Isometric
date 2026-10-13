@@ -57,10 +57,10 @@ func advance(delta: float) -> int:
 		return 0
 	if not simulation.game_finished:
 		autosave_elapsed += delta
-		if autosave_elapsed >= AUTOSAVE_SECONDS:
+		if autosave_elapsed >= AUTOSAVE_SECONDS and _autosave_task < 0:
 			autosave_elapsed = 0.0
-			var success: bool = simulation.save_to_path(Simulation.AUTOSAVE_PATH)
-			autosave_finished.emit(success, simulation.get_last_message())
+			_start_async_autosave()
+	_poll_async_autosave()
 	tick_accumulator += delta * speed_multiplier
 	var ticks := 0
 	while tick_accumulator >= Simulation.TICK_SECONDS and ticks < MAX_TICKS_PER_RENDER_FRAME:
@@ -74,6 +74,33 @@ func advance(delta: float) -> int:
 		tick_accumulator = fmod(tick_accumulator, Simulation.TICK_SECONDS)
 		dropped_backlog_frames += 1
 	return ticks
+
+
+## Hotfix 5: autosave snapshot is taken on the main thread (~2 ms); JSON,
+## write, verify and backup rotation (~200 ms) run on a worker thread.
+const SaveStore = preload("res://src/GodotClient/Scripts/one_shard_save_store.gd")
+var _autosave_task := -1
+var _autosave_result: Dictionary = {}
+
+
+func _start_async_autosave() -> void:
+	var data: Dictionary = simulation._serialize_state().duplicate(true)
+	var path: String = Simulation.AUTOSAVE_PATH
+	_autosave_result = {}
+	_autosave_task = WorkerThreadPool.add_task(func() -> void:
+		_autosave_result = SaveStore.write_save(path, data)
+	)
+
+
+func _poll_async_autosave() -> void:
+	if _autosave_task < 0 or not WorkerThreadPool.is_task_completed(_autosave_task):
+		return
+	WorkerThreadPool.wait_for_task_completion(_autosave_task)
+	_autosave_task = -1
+	var success := bool(_autosave_result.get("success", false))
+	if success:
+		simulation._add_log("Run saved.")
+	autosave_finished.emit(success, String(_autosave_result.get("message", "Save failed.")))
 
 
 func render_lead_seconds() -> float:

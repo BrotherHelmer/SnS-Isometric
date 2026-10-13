@@ -344,6 +344,16 @@ func _ready() -> void:
 		_show_start_menu()
 	if "--verify-release" in OS.get_cmdline_user_args():
 		call_deferred("_run_release_check")
+	for gate_arg in OS.get_cmdline_user_args():
+		if gate_arg.begins_with("--gate-autoplay="):
+			var gate = load("res://src/GodotClient3D/Scripts/production_gate_autoplay.gd").new()
+			gate.name = "GateAutoplay"
+			add_child(gate)
+			var gate_secs := 1200.0
+			for a2 in OS.get_cmdline_user_args():
+				if a2.begins_with("--gate-seconds="):
+					gate_secs = float(a2.trim_prefix("--gate-seconds="))
+			gate.setup(self, gate_arg.trim_prefix("--gate-autoplay="), gate_secs)
 	debug_audio_cycle_active = bool(launch.get("debug_audio_cycle", false))
 	debug_ui_scene = String(launch.get("debug_ui_scene", ""))
 	debug_quit_after = bool(launch.get("debug_quit", false))
@@ -822,7 +832,7 @@ func _sync_presentation() -> void:
 
 
 func _create_lighting() -> void:
-	get_viewport().msaa_3d = Viewport.MSAA_2X if bool(quality_profile.get("shadows", true)) else Viewport.MSAA_DISABLED
+	get_viewport().msaa_3d = Viewport.MSAA_2X if bool(quality_profile.get("msaa", true)) else Viewport.MSAA_DISABLED
 	var environment_node := WorldEnvironment.new()
 	environment_node.name = "ShardlitEnvironment"
 	var environment := Environment.new()
@@ -1816,14 +1826,31 @@ func _set_build_palette_visible(value: bool) -> void:
 		_update_inspector()
 
 
+var _build_panel_height := 410.0
+
+
 func _set_build_category(index: int) -> void:
 	if build_category_select != null and index >= 0 and index < build_category_select.item_count:
 		current_build_category = String(build_category_select.get_item_metadata(index))
 	for category in build_category_sections:
 		(build_category_sections[category] as Control).visible = String(category) == current_build_category
 	if build_panel != null:
-		var card_count := Array(BUILD_CATEGORIES.get(current_build_category, [])).size()
-		build_panel.size.y = minf(410.0, 145.0 + float(card_count) * 61.0)
+		var card_count := 0
+		var section: Control = build_category_sections.get(current_build_category, null)
+		if section != null:
+			var hint := section.get_node_or_null("LockedHint")
+			for child in section.get_children():
+				if child is Control and child != hint and (child as Control).visible:
+					card_count += 1
+			if card_count == 0 and hint == null:
+				hint = HudSkin.caption("Nothing here yet. These plans unlock as your realm grows (see the objective).", HudSkin.SIZE_MIN)
+				hint.name = "LockedHint"
+				hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				section.add_child(hint)
+			if hint != null:
+				hint.visible = card_count == 0
+		_build_panel_height = minf(410.0, 145.0 + float(maxi(card_count, 1)) * 61.0)
+		_layout_hud_console()
 
 
 func _create_placement_ghost() -> void:
@@ -3633,7 +3660,13 @@ func _layout_hud_console() -> void:
 	if hud_console == null:
 		return
 	var unlocked := visible_build_types().size()
-	var rows := 1 if unlocked <= BUILD_GRID_COLUMNS else 2
+	# Hotfix 5: at most two rows; the strip widens (up to 8 columns) so all
+	# 16 plans stay visible instead of a third/fourth row below the screen.
+	var columns := clampi(ceili(float(unlocked) / 2.0), BUILD_GRID_COLUMNS, 8)
+	var grid := hud_root.find_child("BuildGrid", true, false) if hud_root != null else null
+	if grid is GridContainer:
+		(grid as GridContainer).columns = columns
+	var rows := 1 if unlocked <= columns else 2
 	var height := CONSOLE_HEIGHT if rows == 1 else CONSOLE_HEIGHT_EXPANDED
 	if minimap_expanded:
 		height = maxf(height, MINIMAP_INNER + 40.0)
@@ -3643,6 +3676,12 @@ func _layout_hud_console() -> void:
 	height = maxf(height, hud_console.get_combined_minimum_size().y)
 	hud_console.offset_bottom = 0.0
 	hud_console.offset_top = -height
+	if build_panel != null:
+		# Hotfix 5: the plans popup sits above the live console height and
+		# never extends above the top bar on short (1024x768) windows.
+		var avail := get_viewport().get_visible_rect().size.y - height - TOP_BAR_HEIGHT - 24.0
+		build_panel.offset_bottom = -height - 8.0
+		build_panel.offset_top = -height - 8.0 - clampf(_build_panel_height, 200.0, maxf(200.0, avail))
 	if placement_panel != null:
 		placement_panel.offset_top = -height - 70.0
 		placement_panel.offset_bottom = -height - 8.0
@@ -4278,8 +4317,8 @@ func apply_quality_profile(profile_name: String) -> void:
 	quality_profile = QualityProfile.get_profile(profile_name)
 	var low := String(quality_profile.get("name", "")) == "scalable_low"
 	get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR if low else Viewport.SCALING_3D_MODE_BILINEAR
-	get_viewport().scaling_3d_scale = 0.75 if low else 1.0
-	get_viewport().msaa_3d = Viewport.MSAA_2X if bool(quality_profile.get("shadows", true)) else Viewport.MSAA_DISABLED
+	get_viewport().scaling_3d_scale = float(quality_profile.get("render_scale", 0.85)) if low else 1.0
+	get_viewport().msaa_3d = Viewport.MSAA_2X if bool(quality_profile.get("msaa", true)) else Viewport.MSAA_DISABLED
 	if sun_light != null:
 		sun_light.shadow_enabled = bool(quality_profile.get("shadows", true))
 		sun_light.light_angular_distance = 0.0
@@ -4449,6 +4488,8 @@ func _apply_sun_shadow_settings(light: DirectionalLight3D) -> void:
 	var splits := int(quality_profile.get("shadow_splits", 2))
 	if splits >= 4:
 		light.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+	elif splits <= 1:
+		light.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
 	else:
 		light.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 	var high := String(quality_profile.get("name", "recommended")) == "high"
