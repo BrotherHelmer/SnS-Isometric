@@ -1051,6 +1051,15 @@ func _build_chunk_nature(host: Node3D, coord: Vector2i, lod: int) -> void:
 					var path_value := _tree_path_for_tile(tile, 0, neighbors)
 					var scales := _tree_scale_range(path_value, neighbors)
 					_append_nature_transform(transforms_by_path, path_value, tile, 0, 0.55, float(scales.x), float(scales.y))
+					if greybox_enabled() and neighbors >= 3:
+						# Greybox forest density: interior forest tiles carry 1-2 extra
+						# trunks; a slow noise thins them into glades (visual only).
+						var glade := _tile_hash(Vector2i(x >> 3, y >> 3), 211) % 100
+						var extra := 2 if glade < 55 else (1 if glade < 80 else 0)
+						for k in extra:
+							var off := _deterministic_offset(tile, 1 + k, 1.15)
+							var gy := height_at_logical(Vector2(tile) + off / ScaleProfile.LOGICAL_CELL_METRES) + 0.04
+							_append_nature_transform(transforms_by_path, _tree_path_for_tile(tile, 1 + k, neighbors), tile, 1 + k, 1.15, float(scales.x) * 0.9, float(scales.y), gy)
 			elif tile_type == Defs.TILE_ROCK and lod == CHUNK_LOD_NEAR:
 				if _nature_suppressed_near_activity(tile):
 					continue
