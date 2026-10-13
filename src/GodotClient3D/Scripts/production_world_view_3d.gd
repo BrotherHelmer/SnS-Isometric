@@ -135,6 +135,15 @@ var animated_civilian_count := 0
 var carriers_with_cargo := 0
 var construction_activity_count := 0
 var last_revealed_count := -1
+# Hotfix 6: explored lattice cache, filled incrementally from the
+# insertion-ordered revealed_tiles dict (rebuilt on clear/load).
+var _explored_lattice := PackedByteArray()
+var _explored_lattice_size := Vector2i.ZERO
+var _explored_lattice_dict: Dictionary = {}
+var _explored_lattice_count := 0
+var _inside_lattice := PackedByteArray()
+var _inside_lattice_size := Vector2i.ZERO
+var _inside_lattice_sim: Object = null
 var last_fog_signature := ""
 var fog_visibility_texture: ImageTexture
 var fog_mask_bytes := PackedByteArray()
@@ -3648,20 +3657,31 @@ func _sync_fog(force: bool) -> void:
 	last_revealed_count = revealed_count
 	# Always keep the shroud. Fully-revealed maps still need the off-map
 	# #17272A wall so zoom-out cannot read a diamond board.
-	var visible_tiles := _paint_current_vision()
 	var mask_size := Vector2i(ceili(float(map_size.x) / FOG_MASK_DIVISOR), ceili(float(map_size.y) / FOG_MASK_DIVISOR))
+	# Hotfix 6: paint vision straight onto the mask lattice (no per-tile
+	# string-keyed Dictionary; was ~45 ms per fog change on Shard).
+	var visible_mask := _paint_current_vision_mask(mask_size)
+	var explored := _explored_lattice_for(mask_size)
+	if _inside_lattice_size != mask_size or _inside_lattice_sim != simulation:
+		_inside_lattice = PackedByteArray()
+		_inside_lattice.resize(mask_size.x * mask_size.y)
+		for iy in mask_size.y:
+			for ix in mask_size.x:
+				if simulation.is_inside_map(Vector2i(ix * FOG_MASK_DIVISOR, iy * FOG_MASK_DIVISOR)):
+					_inside_lattice[iy * mask_size.x + ix] = 1
+		_inside_lattice_size = mask_size
+		_inside_lattice_sim = simulation
 	var mask_bytes := PackedByteArray()
-	mask_bytes.resize(mask_size.x * mask_size.y)
-	for mask_y in mask_size.y:
-		for mask_x in mask_size.x:
-			var sample := Vector2i(mask_x * FOG_MASK_DIVISOR, mask_y * FOG_MASK_DIVISOR)
-			var shroud := FOG_UNEXPLORED
-			if simulation.is_inside_map(sample):
-				if visible_tiles.has(_tile_key(sample)):
-					shroud = FOG_VISIBLE
-				elif simulation.is_revealed(sample):
-					shroud = FOG_EXPLORED
-			mask_bytes[mask_y * mask_size.x + mask_x] = shroud
+	var cells := mask_size.x * mask_size.y
+	mask_bytes.resize(cells)
+	for i in cells:
+		var shroud := FOG_UNEXPLORED
+		if _inside_lattice[i] != 0:
+			if visible_mask[i] != 0:
+				shroud = FOG_VISIBLE
+			elif explored[i] != 0:
+				shroud = FOG_EXPLORED
+		mask_bytes[i] = shroud
 	var upsample := FOG_DISPLAY_UPSAMPLE if map_size.x <= 80 else 2
 	# 320² at divisor 1 was ~400 ms of the 2242 ms start. 2×2 cells still
 	# feather inside the 1.25-cell shader.
@@ -3706,6 +3726,34 @@ func _sync_fog(force: bool) -> void:
 		fog_screen_material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
 		fog_screen_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
 	_ensure_fog_volume()
+
+
+func _explored_lattice_for(mask_size: Vector2i) -> PackedByteArray:
+	var revealed: Dictionary = simulation.revealed_tiles
+	var count := revealed.size()
+	var start := _explored_lattice_count
+	if not is_same(revealed, _explored_lattice_dict) or mask_size != _explored_lattice_size or count < start:
+		_explored_lattice = PackedByteArray()
+		_explored_lattice.resize(mask_size.x * mask_size.y)
+		_explored_lattice_size = mask_size
+		_explored_lattice_dict = revealed
+		start = 0
+	if count > start:
+		var keys := revealed.keys()
+		for i in range(start, count):
+			var parts := String(keys[i]).split(",")
+			if parts.size() != 2:
+				continue
+			var x := int(parts[0])
+			var y := int(parts[1])
+			if x < 0 or y < 0 or x % FOG_MASK_DIVISOR != 0 or y % FOG_MASK_DIVISOR != 0:
+				continue
+			var mx := x / FOG_MASK_DIVISOR
+			var my := y / FOG_MASK_DIVISOR
+			if mx < mask_size.x and my < mask_size.y:
+				_explored_lattice[my * mask_size.x + mx] = 1
+	_explored_lattice_count = count
+	return _explored_lattice
 
 
 func _fog_vision_signature(revealed_count: int) -> String:
@@ -5981,3 +6029,51 @@ func warm_up_pipelines(camera: Camera3D) -> void:
 	_warmup_root.global_transform = camera.global_transform.translated_local(Vector3(0.0, 0.0, -maxf(camera.near, 0.05) * 3.0))
 	_warmup_root.scale = Vector3.ONE * 0.001
 	_warmup_frames = 6
+
+
+
+## Hotfix 6: same disks as _paint_current_vision(), but only the tiles the
+## fog mask samples (multiples of FOG_MASK_DIVISOR) are written, as bytes.
+func _paint_current_vision_mask(mask_size: Vector2i) -> PackedByteArray:
+	var mask := PackedByteArray()
+	mask.resize(mask_size.x * mask_size.y)
+	if simulation == null:
+		return mask
+	if simulation.is_town_hall_founded():
+		var hall_fp := Defs.building_footprint(Defs.BUILDING_TOWN_HALL)
+		var hall_center: Vector2i = simulation._footprint_center(simulation.town_hall_position, hall_fp)
+		_paint_vision_disk_mask(mask, mask_size, hall_center, simulation.building_vision_radius(Defs.BUILDING_TOWN_HALL))
+	for building_value in simulation.get_buildings():
+		var building: Dictionary = building_value
+		if bool(building.get("construction", false)):
+			continue
+		var building_type := String(building.get("type", ""))
+		if building_type == Defs.BUILDING_TOWN_HALL:
+			continue
+		var center: Vector2i = building.get("position", Vector2i.ZERO)
+		if building_type != Defs.BUILDING_ROAD:
+			center = simulation._footprint_center(center, _building_footprint_for_visual(building, building_type))
+		_paint_vision_disk_mask(mask, mask_size, center, simulation.building_vision_radius(building_type))
+	for worker_value in simulation.workers:
+		var worker: Dictionary = worker_value
+		if int(worker.get("hp", 1)) <= 0:
+			continue
+		var tile: Vector2i = simulation._unit_tile(worker)
+		_paint_vision_disk_mask(mask, mask_size, tile, simulation.unit_vision_radius(String(worker.get("type", ""))))
+	return mask
+
+
+func _paint_vision_disk_mask(mask: PackedByteArray, mask_size: Vector2i, center: Vector2i, radius: int) -> void:
+	if radius <= 0:
+		return
+	var y0 := maxi(0, center.y - radius)
+	var y1 := mini(map_size.y - 1, center.y + radius)
+	var start_y := ((y0 + FOG_MASK_DIVISOR - 1) / FOG_MASK_DIVISOR) * FOG_MASK_DIVISOR
+	for y in range(start_y, y1 + 1, FOG_MASK_DIVISOR):
+		var span := radius - absi(y - center.y)
+		var x0 := maxi(0, center.x - span)
+		var x1 := mini(map_size.x - 1, center.x + span)
+		var start_x := ((x0 + FOG_MASK_DIVISOR - 1) / FOG_MASK_DIVISOR) * FOG_MASK_DIVISOR
+		var row := (y / FOG_MASK_DIVISOR) * mask_size.x
+		for x in range(start_x, x1 + 1, FOG_MASK_DIVISOR):
+			mask[row + x / FOG_MASK_DIVISOR] = 1
