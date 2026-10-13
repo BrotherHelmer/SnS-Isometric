@@ -287,6 +287,7 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 		_terrain_lookups_ready = false
 	_rebake_queue.clear()
 	_rebake_job = {}
+	_stream_job = {}
 	_chunk_occupation_hashes.clear()
 	simulation = simulation_value
 	map_size = Vector2i(world_snapshot.get("map_size", Vector2i.ZERO))
@@ -791,6 +792,15 @@ func stream_chunks(budget_usec: int = STREAM_BUDGET_USEC) -> void:
 		return
 	var t0 := Time.get_ticks_usec()
 	_enqueue_desired_chunks()
+	# Hotfix 7: a chunk load is a time-budgeted job (same builders as the
+	# rebake job), shown when complete. Unloads stay immediate.
+	if not _stream_job.is_empty():
+		while Time.get_ticks_usec() - t0 < REBAKE_BUDGET_USEC:
+			if _rebake_job_step(_stream_job, t0):
+				_stream_job = {}
+				break
+		last_stream_ms = float(Time.get_ticks_usec() - t0) / 1000.0
+		return
 	var built := 0
 	while not chunk_queue.is_empty():
 		if built > 0 and Time.get_ticks_usec() - t0 >= budget_usec:
@@ -804,7 +814,11 @@ func stream_chunks(budget_usec: int = STREAM_BUDGET_USEC) -> void:
 			_unload_chunk(coord)
 			continue
 		if wanted != current:
-			_rebuild_chunk(coord, wanted, true)
+			_stream_job = _rebake_job_new(_chunk_key(coord), wanted)
+			_stream_job["collision"] = true
+			_stream_job["stream"] = true
+			if _rebake_job_step(_stream_job, t0):
+				_stream_job = {}
 			built += 1
 	last_stream_ms = float(Time.get_ticks_usec() - t0) / 1000.0
 	if last_stream_ms > 100.0:
@@ -1310,6 +1324,7 @@ var _rebake_queue: Array[String] = []
 ## only: the sim already committed; same builders' maths, same result.
 const REBAKE_BUDGET_USEC := 2500
 var _rebake_job: Dictionary = {}
+var _stream_job: Dictionary = {}
 
 
 func _drain_rebake_queue() -> void:
@@ -1323,7 +1338,8 @@ func _drain_rebake_queue() -> void:
 			if lod == CHUNK_LOD_NONE or chunk_root == null or simulation == null:
 				continue
 			_rebake_job = _rebake_job_new(key, lod)
-		_rebake_job_step(started)
+		if _rebake_job_step(_rebake_job, started):
+			_rebake_job = {}
 
 
 func _rebake_job_new(key: String, lod: int) -> Dictionary:
@@ -1338,12 +1354,11 @@ func _rebake_job_new(key: String, lod: int) -> Dictionary:
 		"key": key, "coord": _chunk_from_key(key), "lod": lod,
 		"old": chunk_nodes.get(key, null), "stage": 0, "row": 0,
 		"heights": heights, "colors": colors, "surface": surface,
-		"mesh": null, "nature": {}, "grass": {},
+		"mesh": null, "nature": {}, "grass": {}, "collision": false, "stream": false,
 	}
 
 
-func _rebake_job_step(started: int) -> void:
-	var job := _rebake_job
+func _rebake_job_step(job: Dictionary, started: int) -> bool:
 	var coord: Vector2i = job["coord"]
 	var lod: int = job["lod"]
 	var origin := _chunk_origin(coord)
@@ -1424,7 +1439,8 @@ func _rebake_job_step(started: int) -> void:
 		var _pfj := FrameProfiler.t0()
 		_rebake_job_finish(job)
 		FrameProfiler.add("rebake.finish", _pfj)
-		_rebake_job = {}
+		return true
+	return false
 
 
 func _rebake_nature_row(transforms_by_path: Dictionary, origin: Vector2i, y: int, step: int, lod: int) -> void:
@@ -1478,7 +1494,14 @@ func _rebake_job_finish(job: Dictionary) -> void:
 	var coord: Vector2i = job["coord"]
 	var lod: int = job["lod"]
 	# Streaming rebuilt or unloaded the chunk meanwhile: drop the job.
-	if int(chunk_lod.get(key, CHUNK_LOD_NONE)) != lod or chunk_nodes.get(key, null) != job["old"]:
+	if chunk_nodes.get(key, null) != job["old"]:
+		if not bool(job["stream"]) and not _rebake_queue.has(key):
+			_rebake_queue.append(key)
+		return
+	if bool(job["stream"]):
+		if _desired_lod(coord) != lod:
+			return
+	elif int(chunk_lod.get(key, CHUNK_LOD_NONE)) != lod:
 		return
 	_unload_chunk(coord)
 	var host := Node3D.new()
@@ -1493,6 +1516,19 @@ func _rebake_job_finish(job: Dictionary) -> void:
 		instance.mesh = mesh
 		_apply_ground_material(instance)
 		host.add_child(instance)
+	if bool(job["collision"]) and lod == CHUNK_LOD_NEAR:
+		var body := StaticBody3D.new()
+		body.name = "TerrainPicker"
+		body.set_meta("selection_kind", "terrain")
+		var collision := CollisionShape3D.new()
+		var box := BoxShape3D.new()
+		var cell := ScaleProfile.LOGICAL_CELL_METRES
+		box.size = Vector3(cell * float(CHUNK_TILES), 4.0, cell * float(CHUNK_TILES))
+		collision.shape = box
+		var mid := _chunk_origin(coord) + Vector2i(CHUNK_TILES / 2, CHUNK_TILES / 2)
+		body.position = tile_to_world(Vector2(mid))
+		body.add_child(collision)
+		host.add_child(body)
 	_build_chunk_water(host, coord, lod)
 	_spawn_nature_multimeshes(host, job["nature"], true)
 	if lod == CHUNK_LOD_NEAR and not Catalog.GRASS.is_empty() and simulation != null:
