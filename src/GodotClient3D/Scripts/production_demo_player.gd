@@ -21,6 +21,7 @@ var orders: Array[Dictionary] = []
 var scouted := false
 var last_scout_day := 0
 var last_idle_reason := ""
+var _waypoint_retry_at := 0.0
 
 
 func think(sim) -> Dictionary:
@@ -322,19 +323,20 @@ func _try_waypoint_outpost(sim) -> bool:
 	if marker.x < 0:
 		marker = _midpoint(sim.town_hall_position, _frontier_target(sim))
 	var hall: Vector2i = sim.town_hall_position
+	# Gate harness perf: each aim runs _best_site (radius 22) twice, so the old
+	# 121-aim ring cost ~6.5 s per think() once the Lumen Pillar stood and froze
+	# the whole frame. _best_site already covers the ring; probe the marker only
+	# and back off 30 s between failed attempts.
+	if float(sim.elapsed_seconds) < _waypoint_retry_at:
+		return false
 	var aims: Array[Vector2i] = [marker]
-	for radius in range(1, 6):
-		for ox in range(-radius, radius + 1):
-			aims.append(marker + Vector2i(ox, -radius))
-			aims.append(marker + Vector2i(ox, radius))
-			aims.append(marker + Vector2i(-radius, ox))
-			aims.append(marker + Vector2i(radius, ox))
 	for aim_value in aims:
 		var aim: Vector2i = aim_value
 		if absi(aim.x - hall.x) + absi(aim.y - hall.y) < 8:
 			continue
 		if _try_build(sim, Defs.BUILDING_OUTPOST, aim):
 			return true
+	_waypoint_retry_at = float(sim.elapsed_seconds) + 30.0
 	_extend_roads(sim, marker, 2)
 	return false
 
@@ -372,6 +374,7 @@ func _try_frontier_outpost(sim) -> bool:
 			continue
 		if _try_build(sim, Defs.BUILDING_OUTPOST, aim):
 			return true
+	_waypoint_retry_at = float(sim.elapsed_seconds) + 30.0
 	_extend_roads(sim, marker, 2)
 	return false
 

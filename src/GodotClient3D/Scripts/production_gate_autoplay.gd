@@ -28,6 +28,7 @@ var day2_logged := false
 var started := false
 var busy := false
 var unfocused_frames := 0
+var _think_ms_prev := 0
 var jump_night := "--gate-jump-night" in OS.get_cmdline_user_args()
 
 
@@ -39,7 +40,7 @@ func setup(game_value, dir_value: String, duration_value: float) -> void:
 	fps_log = FileAccess.open(dir.path_join("fps.csv"), FileAccess.WRITE)
 	fps_log.store_line("t_wall,game_s,fps,worst_ms,day,night,pop,buildings,rebake_queue")
 	stall_log = FileAccess.open(dir.path_join("stalls.csv"), FileAccess.WRITE)
-	stall_log.store_line("t_wall,frame_ms,game_s,rebake_queue,autosave_task,buildings")
+	stall_log.store_line("t_wall,frame_ms,game_s,rebake_queue,autosave_task,buildings,harness_think_ms,night")
 	player = Player.new()
 	# [time, name, action]
 	shots = [
@@ -82,8 +83,9 @@ func _process(_engine_delta: float) -> void:
 	worst = maxf(worst, delta)
 	var sim = game.simulation_host.simulation
 	if delta > 0.1 and started:
-		stall_log.store_line("%.1f,%.0f,%.1f,%d,%d,%d" % [t, delta * 1000.0, float(sim.elapsed_seconds), game.world_view._rebake_queue.size(), game.simulation_host._autosave_task, sim.buildings.size()])
+		stall_log.store_line("%.1f,%.0f,%.1f,%d,%d,%d,%d,%d" % [t, delta * 1000.0, float(sim.elapsed_seconds), game.world_view._rebake_queue.size(), game.simulation_host._autosave_task, sim.buildings.size(), _think_ms_prev, int(bool(sim.is_night))])
 		stall_log.flush()
+	_think_ms_prev = 0
 	sec_t += delta
 	if sec_t >= 1.0:
 		fps_log.store_line("%.0f,%.0f,%.1f,%.0f,%d,%d,%d,%d,%d" % [t, float(sim.elapsed_seconds), frames / sec_t, worst * 1000.0, int(sim.day_count), int(bool(sim.is_night)), int(sim.population_current), sim.buildings.size(), game.world_view._rebake_queue.size()])
@@ -112,7 +114,9 @@ func _process(_engine_delta: float) -> void:
 		think_t += delta
 		if think_t >= think_every:
 			think_t = 0.0
+			var think_start := Time.get_ticks_usec()
 			player.think(sim)
+			_think_ms_prev = int((Time.get_ticks_usec() - think_start) / 1000)
 	if bool(sim.is_night) and night_seen_at < 0.0 and started:
 		night_seen_at = t
 	if night_seen_at >= 0.0 and not night_shot and t - night_seen_at >= 25.0 and not busy:
