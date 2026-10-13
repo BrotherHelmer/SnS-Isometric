@@ -833,7 +833,7 @@ func _sync_presentation() -> void:
 
 
 func _create_lighting() -> void:
-	get_viewport().msaa_3d = Viewport.MSAA_2X if bool(quality_profile.get("shadows", true)) else Viewport.MSAA_DISABLED
+	get_viewport().msaa_3d = Viewport.MSAA_2X if bool(quality_profile.get("msaa", true)) else Viewport.MSAA_DISABLED
 	var environment_node := WorldEnvironment.new()
 	environment_node.name = "ShardlitEnvironment"
 	var environment := Environment.new()
@@ -4318,8 +4318,8 @@ func apply_quality_profile(profile_name: String) -> void:
 	quality_profile = QualityProfile.get_profile(profile_name)
 	var low := String(quality_profile.get("name", "")) == "scalable_low"
 	get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR if low else Viewport.SCALING_3D_MODE_BILINEAR
-	get_viewport().scaling_3d_scale = 0.75 if low else 1.0
-	get_viewport().msaa_3d = Viewport.MSAA_2X if bool(quality_profile.get("shadows", true)) else Viewport.MSAA_DISABLED
+	get_viewport().scaling_3d_scale = float(quality_profile.get("render_scale", 0.85)) if low else 1.0
+	get_viewport().msaa_3d = Viewport.MSAA_2X if bool(quality_profile.get("msaa", true)) else Viewport.MSAA_DISABLED
 	if sun_light != null:
 		sun_light.shadow_enabled = bool(quality_profile.get("shadows", true))
 		sun_light.light_angular_distance = 0.0
@@ -4489,6 +4489,8 @@ func _apply_sun_shadow_settings(light: DirectionalLight3D) -> void:
 	var splits := int(quality_profile.get("shadow_splits", 2))
 	if splits >= 4:
 		light.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+	elif splits <= 1:
+		light.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
 	else:
 		light.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 	var high := String(quality_profile.get("name", "recommended")) == "high"
