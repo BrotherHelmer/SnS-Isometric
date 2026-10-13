@@ -409,8 +409,14 @@ func _tick_fps_overlay(delta: float) -> void:
 		fps_overlay_timer = 0.0
 
 
+var _pipelines_warmed := false
+
+
 func _process(delta: float) -> void:
 	FrameProfiler.frame_begin()
+	if not _pipelines_warmed and world_view != null and get_viewport().get_camera_3d() != null:
+		_pipelines_warmed = true
+		world_view.warm_up_pipelines(get_viewport().get_camera_3d())
 	hud_clock += delta
 	_sync_shadow_boom()
 	var _pf20 := FrameProfiler.t0()
