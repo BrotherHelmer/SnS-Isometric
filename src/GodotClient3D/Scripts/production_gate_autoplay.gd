@@ -6,6 +6,7 @@ extends Node
 ## the HUD uses. Runs in real time at 1x, logs FPS each second, every frame
 ## >100 ms with context, and saves viewport screenshots (HUD + FPS overlay).
 
+const FrameProfiler = preload("res://src/GodotClient3D/Scripts/production_frame_profiler.gd")
 const Player = preload("res://src/GodotClient3D/Scripts/production_demo_player.gd")
 
 var game
@@ -33,6 +34,7 @@ var jump_night := "--gate-jump-night" in OS.get_cmdline_user_args()
 
 
 func setup(game_value, dir_value: String, duration_value: float) -> void:
+	FrameProfiler.enabled = true
 	game = game_value
 	dir = dir_value
 	duration = duration_value
@@ -40,7 +42,7 @@ func setup(game_value, dir_value: String, duration_value: float) -> void:
 	fps_log = FileAccess.open(dir.path_join("fps.csv"), FileAccess.WRITE)
 	fps_log.store_line("t_wall,game_s,fps,worst_ms,day,night,pop,buildings,rebake_queue")
 	stall_log = FileAccess.open(dir.path_join("stalls.csv"), FileAccess.WRITE)
-	stall_log.store_line("t_wall,frame_ms,game_s,rebake_queue,autosave_task,buildings,harness_think_ms,night")
+	stall_log.store_line("t_wall,frame_ms,game_s,rebake_queue,autosave_task,buildings,harness_think_ms,night,top_sections")
 	player = Player.new()
 	# [time, name, action]
 	shots = [
@@ -83,7 +85,7 @@ func _process(_engine_delta: float) -> void:
 	worst = maxf(worst, delta)
 	var sim = game.simulation_host.simulation
 	if delta > 0.1 and started:
-		stall_log.store_line("%.1f,%.0f,%.1f,%d,%d,%d,%d,%d" % [t, delta * 1000.0, float(sim.elapsed_seconds), game.world_view._rebake_queue.size(), game.simulation_host._autosave_task, sim.buildings.size(), _think_ms_prev, int(bool(sim.is_night))])
+		stall_log.store_line("%.1f,%.0f,%.1f,%d,%d,%d,%d,%d,%s" % [t, delta * 1000.0, float(sim.elapsed_seconds), game.world_view._rebake_queue.size(), game.simulation_host._autosave_task, sim.buildings.size(), _think_ms_prev, int(bool(sim.is_night)), _top_sections()])
 		stall_log.flush()
 	_think_ms_prev = 0
 	sec_t += delta
@@ -212,3 +214,15 @@ func _shot_async(name: String, action: String) -> void:
 				pass
 			elif action.begins_with("palette:"):
 				game._set_build_palette_visible(false)
+
+
+## Hotfix 6: the previous frame's per-section timings (ms), largest first.
+func _top_sections() -> String:
+	var sections: Dictionary = FrameProfiler.previous
+	var keys := sections.keys()
+	keys.sort_custom(func(a, b): return sections[a] > sections[b])
+	var parts: Array[String] = []
+	for key in keys.slice(0, 6):
+		if int(sections[key]) >= 2000:
+			parts.append("%s=%d" % [key, int(sections[key]) / 1000])
+	return " ".join(parts)

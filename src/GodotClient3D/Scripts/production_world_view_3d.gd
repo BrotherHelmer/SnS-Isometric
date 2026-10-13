@@ -2,6 +2,8 @@ class_name ProductionWorldView3D
 extends Node3D
 
 const Landform = preload("res://src/GodotClient3D/Scripts/production_landform.gd")
+const FrameProfiler = preload("res://src/GodotClient3D/Scripts/production_frame_profiler.gd")
+
 const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
 const Catalog = preload("res://src/GodotClient3D/Scripts/production_asset_catalog.gd")
 const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_profile.gd")
@@ -309,13 +311,21 @@ func sync_frame(frame_snapshot: Dictionary) -> void:
 	# One lookup pass per frame. GFX-E corner averaging used to call
 	# _terrain_color ~16× per cell, and each call scanned every building
 	# for roads — that is the 8 s new-game / 112 s showcase first-frame.
+	var _pf1 := FrameProfiler.t0()
 	_refresh_terrain_lookups()
+	FrameProfiler.add("wv._refresh_terrain_lookups", _pf1)
+	var _pf_sig := FrameProfiler.t0()
 	var next_height_signature := _calculate_height_signature()
 	var next_occupation := _calculate_occupation_signature()
+	FrameProfiler.add("wv.signatures", _pf_sig)
 	if next_height_signature != terrain_height_signature:
+		var _pf_rt := FrameProfiler.t0()
 		_rebuild_terrain()
+		FrameProfiler.add("wv._rebuild_terrain", _pf_rt)
 	elif next_occupation != terrain_occupation_signature:
+		var _pf_ro := FrameProfiler.t0()
 		_rebake_occupied_chunks()
+		FrameProfiler.add("wv._rebake_occupied_chunks", _pf_ro)
 		# Hotfix 3: the rebake never stored the new signature, so after the
 		# first road or building every frame rebaked every chunk (~260 ms).
 		terrain_occupation_signature = next_occupation
@@ -323,23 +333,57 @@ func sync_frame(frame_snapshot: Dictionary) -> void:
 	var reveal_changed := revealed_count != last_revealed_count
 	if reveal_changed:
 		_enqueue_revealed_chunks()
+	var _pf2 := FrameProfiler.t0()
 	_sync_fog(false)
+	FrameProfiler.add("wv._sync_fog", _pf2)
+	var _pf3 := FrameProfiler.t0()
 	_sync_roads(frame_snapshot.get("roads", []))
+	FrameProfiler.add("wv._sync_roads", _pf3)
+	var _pf4 := FrameProfiler.t0()
 	_sync_buildings(frame_snapshot.get("buildings", []))
+	FrameProfiler.add("wv._sync_buildings", _pf4)
+	var _pf5 := FrameProfiler.t0()
 	_rebuild_building_halos(false)
+	FrameProfiler.add("wv._rebuild_building_halos", _pf5)
+	var _pf6 := FrameProfiler.t0()
 	_sync_characters(frame_snapshot.get("workers", []))
+	FrameProfiler.add("wv._sync_characters", _pf6)
+	var _pf7 := FrameProfiler.t0()
 	_sync_gates(frame_snapshot.get("roads", []))
+	FrameProfiler.add("wv._sync_gates", _pf7)
+	var _pf8 := FrameProfiler.t0()
 	_sync_rival_roads(frame_snapshot.get("rival_roads", []))
+	FrameProfiler.add("wv._sync_rival_roads", _pf8)
+	var _pf9 := FrameProfiler.t0()
 	_sync_rivalry_structures(frame_snapshot.get("rivalry_structures", []))
+	FrameProfiler.add("wv._sync_rivalry_structures", _pf9)
+	var _pf10 := FrameProfiler.t0()
 	_sync_combatants(frame_snapshot.get("combatants", []))
+	FrameProfiler.add("wv._sync_combatants", _pf10)
+	var _pf11 := FrameProfiler.t0()
 	_sync_projectiles(frame_snapshot.get("projectiles", []))
+	FrameProfiler.add("wv._sync_projectiles", _pf11)
+	var _pf12 := FrameProfiler.t0()
 	_sync_decorative_props(frame_snapshot.get("decorative_props", []))
+	FrameProfiler.add("wv._sync_decorative_props", _pf12)
+	var _pf13 := FrameProfiler.t0()
 	_sync_claim_overlays(frame_snapshot.get("lumen_sources", []), frame_snapshot.get("claims", {}))
+	FrameProfiler.add("wv._sync_claim_overlays", _pf13)
+	var _pf14 := FrameProfiler.t0()
 	_update_shard_beacon(frame_snapshot.get("wyrdfall", {}))
+	FrameProfiler.add("wv._update_shard_beacon", _pf14)
+	var _pf15 := FrameProfiler.t0()
 	_update_seal_ceremony(frame_snapshot.get("wyrdfall", {}))
+	FrameProfiler.add("wv._update_seal_ceremony", _pf15)
+	var _pf16 := FrameProfiler.t0()
 	_update_channel_flash(frame_snapshot.get("wyrdfall", {}))
+	FrameProfiler.add("wv._update_channel_flash", _pf16)
+	var _pf17 := FrameProfiler.t0()
 	_sync_wyrd_springs(frame_snapshot.get("wyrd_sites", []))
+	FrameProfiler.add("wv._sync_wyrd_springs", _pf17)
+	var _pf18 := FrameProfiler.t0()
 	_sync_map_markers()
+	FrameProfiler.add("wv._sync_map_markers", _pf18)
 	if reveal_changed:
 		_rebuild_edge_forest(false)
 		_rebuild_world_rim(false)
@@ -615,7 +659,9 @@ func _named_root(root_name: String) -> Node3D:
 
 
 func _process(_delta: float) -> void:
+	var _pf19 := FrameProfiler.t0()
 	_drain_rebake_queue()
+	FrameProfiler.add("wv._drain_rebake_queue", _pf19)
 	if stream_enabled and simulation != null and map_size.x > 0:
 		stream_chunks(STREAM_BUDGET_USEC)
 
