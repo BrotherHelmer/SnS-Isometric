@@ -27,6 +27,7 @@ var night_shot := false
 var day2_logged := false
 var started := false
 var busy := false
+var unfocused_frames := 0
 var jump_night := "--gate-jump-night" in OS.get_cmdline_user_args()
 
 
@@ -63,9 +64,19 @@ func setup(game_value, dir_value: String, duration_value: float) -> void:
 	]
 
 
-func _process(delta: float) -> void:
+var _last_us := 0
+
+
+func _process(_engine_delta: float) -> void:
 	if game == null:
 		return
+	# Wall-clock frame time (engine delta can under-report when the OS
+	# throttles the window), so FPS/stall numbers are honest.
+	var now_us := Time.get_ticks_usec()
+	var delta := 0.016 if _last_us == 0 else float(now_us - _last_us) / 1000000.0
+	_last_us = now_us
+	if not DisplayServer.window_is_focused():
+		unfocused_frames += 1
 	t += delta
 	frames += 1
 	worst = maxf(worst, delta)
@@ -117,6 +128,7 @@ func _process(delta: float) -> void:
 		shot_index += 1
 		_run_shot(String(s[1]), String(s[2]))
 	if t >= duration and not busy:
+		_note("unfocused_frames=%d" % unfocused_frames)
 		_note("gate end t=%.0f day=%d pop=%d buildings=%d finished=%s" % [t, int(sim.day_count), int(sim.population_current), sim.buildings.size(), str(sim.game_finished)])
 		game.get_tree().quit()
 
