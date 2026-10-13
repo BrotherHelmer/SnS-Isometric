@@ -317,6 +317,8 @@ func _ready() -> void:
 	get_window().title = "Shard & Sovereign"
 	call_deferred("_apply_window_title")
 	var launch := _parse_launch_options()
+	if not _has_quality_arg():
+		launch["quality"] = _default_quality()
 	quality_profile = QualityProfile.get_profile(String(launch.get("quality", "recommended")))
 	_create_lighting()
 	_create_ui()
@@ -2305,10 +2307,16 @@ func _update_ui() -> void:
 		soldier_label.text = "%d/%d" % [int(simulation_host.simulation.soldiers_available()), int(simulation_host.simulation.soldiers_total)]
 	_update_idle_workers()
 	var night_now := bool(simulation_host.simulation.is_night)
+	# Hotfix 3: the clock capsule carries the realm summary that used to be
+	# repeated in the bottom Realm panel (day, phase timer, pop, workers, bread).
+	var sim_now = simulation_host.simulation
+	var settlement_now: Dictionary = current_frame_snapshot.get("settlement", {})
+	var food_now := int(settlement_now.get("food", 0))
+	var demand_now := int(settlement_now.get("next_food_demand", 0))
 	if time_label != null:
-		time_label.text = _clock_title()
+		time_label.text = "%s  ·  Pop %d/%d" % [_clock_title(), int(sim_now.population_current), int(sim_now.housing_capacity)]
 	if phase_label != null:
-		phase_label.text = _phase_countdown_text()
+		phase_label.text = "%s  ·  Workers %d  ·  Bread %s" % [_phase_countdown_text(), int(sim_now.workers_free()), ("%d/%d" % [food_now, demand_now]) if demand_now > 0 else str(food_now)]
 	_sync_speed_controls()
 	if day_icon != null:
 		day_icon.texture = HudSkin.icon("moon" if night_now else "sun")
@@ -2607,9 +2615,11 @@ func _update_inspector() -> void:
 	if inspector_panel.visible:
 		_decorate_inspector()
 	if realm_overview != null:
-		realm_overview.visible = not inspector_panel.visible
-		if realm_overview.visible:
-			_update_realm_overview()
+		# Hotfix 3: the realm summary lives in the top bar now; the right
+		# console panel only appears for a selection, so it never covers Map.
+		realm_overview.visible = false
+	if selection_host != null:
+		selection_host.visible = inspector_panel.visible
 
 
 func _update_inspector_core() -> void:
@@ -4227,6 +4237,9 @@ func _apply_menu_quality() -> void:
 
 func apply_quality_profile(profile_name: String) -> void:
 	quality_profile = QualityProfile.get_profile(profile_name)
+	var low := String(quality_profile.get("name", "")) == "scalable_low"
+	get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR if low else Viewport.SCALING_3D_MODE_BILINEAR
+	get_viewport().scaling_3d_scale = 0.75 if low else 1.0
 	get_viewport().msaa_3d = Viewport.MSAA_2X if bool(quality_profile.get("shadows", true)) else Viewport.MSAA_DISABLED
 	if sun_light != null:
 		sun_light.shadow_enabled = bool(quality_profile.get("shadows", true))
@@ -4836,9 +4849,35 @@ func _save_display_settings() -> void:
 	settings.save(DISPLAY_SETTINGS_PATH)
 
 
+func _has_quality_arg() -> bool:
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--quality="):
+			return true
+	return false
+
+
+## Hotfix 3: integrated GPUs (Shard: Radeon 660M-class iGPU) start on the
+## low preset unless the player picked a quality in Settings.
+func _default_quality() -> String:
+	if RenderingServer.get_video_adapter_type() == RenderingDevice.DEVICE_TYPE_INTEGRATED_GPU:
+		return "scalable_low"
+	return "recommended"
+
+
+func _select_quality_item(wanted: String) -> void:
+	if quality_select == null:
+		return
+	for i in quality_select.item_count:
+		if String(quality_select.get_item_metadata(i)) == wanted:
+			quality_select.select(i)
+			return
+
+
 func _restore_display_settings() -> void:
 	var settings := ConfigFile.new()
 	if settings.load(DISPLAY_SETTINGS_PATH) != OK:
+		_select_quality_item(String(quality_profile.get("name", "recommended")))
+		_apply_menu_quality()
 		return
 	var wanted := String(settings.get_value("display", "quality", "recommended"))
 	var picked := 0

@@ -312,6 +312,9 @@ func sync_frame(frame_snapshot: Dictionary) -> void:
 		_rebuild_terrain()
 	elif next_occupation != terrain_occupation_signature:
 		_rebake_occupied_chunks()
+		# Hotfix 3: the rebake never stored the new signature, so after the
+		# first road or building every frame rebaked every chunk (~260 ms).
+		terrain_occupation_signature = next_occupation
 	var revealed_count := int(frame_snapshot.get("revealed_count", simulation.revealed_tiles.size()))
 	var reveal_changed := revealed_count != last_revealed_count
 	if reveal_changed:
