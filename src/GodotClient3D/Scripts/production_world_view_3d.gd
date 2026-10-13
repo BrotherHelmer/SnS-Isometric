@@ -1,6 +1,7 @@
 class_name ProductionWorldView3D
 extends Node3D
 
+const Landform = preload("res://src/GodotClient3D/Scripts/production_landform.gd")
 const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
 const Catalog = preload("res://src/GodotClient3D/Scripts/production_asset_catalog.gd")
 const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_profile.gd")
@@ -909,6 +910,20 @@ func _build_chunk_terrain(host: Node3D, coord: Vector2i, lod: int, rebuild_colli
 			var sim_y := float(simulation.get_height(tile)) * ScaleProfile.TERRAIN_ELEVATION_UNIT_METRES
 			heights[j * verts + i] = sim_y + _visual_relief_y(Vector2(world.x, world.z))
 			colors[j * verts + i] = _fast_chunk_color(tile)
+	# Greybox: smooth per-vertex normals from the landform so hills shade
+	# and receive the sun shadow (the legacy slab used a flat UP normal).
+	var normals: Array[Vector3] = []
+	if _ensure_landform():
+		normals.resize(verts * verts)
+		var cell2 := 2.0 * ScaleProfile.LOGICAL_CELL_METRES
+		for j in verts:
+			for i in verts:
+				var t := Vector2i(origin.x + i, origin.y + j)
+				var hl := _terrain_h_tile(t + Vector2i(-1, 0))
+				var hr := _terrain_h_tile(t + Vector2i(1, 0))
+				var hu := _terrain_h_tile(t + Vector2i(0, -1))
+				var hd := _terrain_h_tile(t + Vector2i(0, 1))
+				normals[j * verts + i] = Vector3(hl - hr, cell2, hu - hd).normalized()
 	var surface := SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for j in CHUNK_TILES:
@@ -921,7 +936,10 @@ func _build_chunk_terrain(host: Node3D, coord: Vector2i, lod: int, rebuild_colli
 			var p10 := Vector3(c00.x + half, heights[j * verts + i + 1], c00.z - half)
 			var p11 := Vector3(c00.x + half, heights[(j + 1) * verts + i + 1], c00.z + half)
 			var p01 := Vector3(c00.x - half, heights[(j + 1) * verts + i], c00.z + half)
-			_add_quad_colored(surface, p00, p10, p11, p01, Vector3.UP, colors[j * verts + i], colors[j * verts + i + 1], colors[(j + 1) * verts + i + 1], colors[(j + 1) * verts + i])
+			if normals.is_empty():
+				_add_quad_colored(surface, p00, p10, p11, p01, Vector3.UP, colors[j * verts + i], colors[j * verts + i + 1], colors[(j + 1) * verts + i + 1], colors[(j + 1) * verts + i])
+			else:
+				_add_quad_smooth(surface, [p00, p10, p11, p01], [normals[j * verts + i], normals[j * verts + i + 1], normals[(j + 1) * verts + i + 1], normals[(j + 1) * verts + i]], [colors[j * verts + i], colors[j * verts + i + 1], colors[(j + 1) * verts + i + 1], colors[(j + 1) * verts + i]])
 	var mesh := surface.commit()
 	if mesh == null:
 		return
@@ -969,6 +987,7 @@ func _build_chunk_water(host: Node3D, coord: Vector2i, lod: int) -> void:
 		return
 	var origin := _chunk_origin(coord)
 	var points: Array[Vector3] = []
+	var water_ys: Array[float] = []
 	var step := 1 if lod == CHUNK_LOD_NEAR else 2
 	for y in range(origin.y, origin.y + CHUNK_TILES, step):
 		for x in range(origin.x, origin.x + CHUNK_TILES, step):
@@ -978,6 +997,12 @@ func _build_chunk_water(host: Node3D, coord: Vector2i, lod: int) -> void:
 			if not waters.has("%d,%d" % [tile.x, tile.y]):
 				continue
 			points.append(tile_to_world(Vector2(tile)))
+			var wy := WATER_Y
+			if _ensure_landform():
+				var wl: float = landform.water_level[tile.y * map_size.x + tile.x]
+				if not is_nan(wl):
+					wy = float(simulation.get_height(tile)) * ScaleProfile.TERRAIN_ELEVATION_UNIT_METRES + wl
+			water_ys.append(wy)
 	if points.is_empty():
 		return
 	var mesh := BoxMesh.new()
@@ -992,7 +1017,7 @@ func _build_chunk_water(host: Node3D, coord: Vector2i, lod: int) -> void:
 	batch.instance_count = points.size()
 	for i in points.size():
 		var xf := Transform3D()
-		xf.origin = Vector3(points[i].x, WATER_Y, points[i].z)
+		xf.origin = Vector3(points[i].x, water_ys[i], points[i].z)
 		batch.set_instance_transform(i, xf)
 	var instance := MultiMeshInstance3D.new()
 	instance.name = "ChunkWater"
@@ -1261,6 +1286,11 @@ func _apply_ground_material(host: MeshInstance3D) -> void:
 	material.set_shader_parameter("beach_margin_metres", BEACH_MARGIN_METRES)
 	material.set_shader_parameter("coast_jut_metres", COAST_JUT_METRES)
 	material.set_shader_parameter("apron_mode", 0.0)
+	if _ensure_landform():
+		var cw := ScaleProfile.tile_to_flat_world(landform.crater_center, map_size)
+		material.set_shader_parameter("greybox", 1.0)
+		material.set_shader_parameter("crater_xz", Vector2(cw.x, cw.z))
+		material.set_shader_parameter("crater_radius_m", float(landform.crater_rim_tiles) * ScaleProfile.LOGICAL_CELL_METRES)
 	host.material_override = material
 
 
@@ -1626,7 +1656,44 @@ func _add_terrain_cell(surface: SurfaceTool, tile: Vector2i) -> void:
 		_add_quad(surface, a, b, down_b, down_a, normal, color.darkened(0.24))
 
 
+## Visual Reset S1 greybox: seeded landform (off with --greybox=off or
+## SNS_GREYBOX=0). Presentation only; the simulation is unchanged.
+var landform = null
+var _landform_key := ""
+
+
+static func greybox_enabled() -> bool:
+	if OS.get_environment("SNS_GREYBOX") == "0":
+		return false
+	return not ("--greybox=off" in OS.get_cmdline_user_args())
+
+
+func _ensure_landform() -> bool:
+	if simulation == null or map_size == Vector2i.ZERO or not greybox_enabled():
+		return false
+	if has_node("Horizon"):
+		(get_node("Horizon") as Node3D).visible = false  # landform replaces the horizon silhouettes
+	var key := "%d|%d|%s|%s|%s" % [simulation.get_instance_id(), int(simulation.rng_seed), str(map_size), str(simulation.town_hall_position), str(simulation.shard_position)]
+	if key != _landform_key or landform == null:
+		landform = Landform.new()
+		landform.build(simulation, int(simulation.rng_seed))
+		_landform_key = key
+		print("GREYBOX landform seed=%d built in %.0f ms" % [int(simulation.rng_seed), landform.build_ms])
+	return true
+
+
+func _xz_to_tilef(xz: Vector2) -> Vector2:
+	var half := Vector2(map_size - Vector2i.ONE) * 0.5
+	return Vector2(xz.x / ScaleProfile.LOGICAL_CELL_METRES + half.x, xz.y / ScaleProfile.LOGICAL_CELL_METRES + half.y)
+
+
 func _visual_relief_y(xz: Vector2) -> float:
+	if _ensure_landform():
+		return landform.sample_tiles(_xz_to_tilef(xz))
+	return _legacy_relief_y(xz)
+
+
+func _legacy_relief_y(xz: Vector2) -> float:
 	# Presentation only. Village stays flat. The pit sinks around the
 	# Shard; displaced earth rises at the excavation rim.
 	if simulation == null or map_size == Vector2i.ZERO:
@@ -1691,6 +1758,18 @@ func _road_dip_at(xz: Vector2) -> float:
 
 func _add_quad(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, normal: Vector3, color: Color) -> void:
 	_add_quad_colored(surface, a, b, c, d, normal, color, color, color, color)
+
+
+func _terrain_h_tile(t: Vector2i) -> float:
+	var c := Vector2i(clampi(t.x, 0, map_size.x - 1), clampi(t.y, 0, map_size.y - 1))
+	return float(simulation.get_height(c)) * ScaleProfile.TERRAIN_ELEVATION_UNIT_METRES + float(landform.at_tile(t))
+
+
+func _add_quad_smooth(surface: SurfaceTool, p: Array, nrm: Array, col: Array) -> void:
+	for k in [0, 1, 2, 0, 2, 3]:
+		surface.set_normal(nrm[k])
+		surface.set_color((col[k] as Color).srgb_to_linear())
+		surface.add_vertex(p[k])
 
 
 func _add_quad_colored(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, normal: Vector3, ca: Color, cb: Color, cc: Color, cd: Color) -> void:
@@ -1860,6 +1939,8 @@ func _calculate_height_signature() -> int:
 	# Heights are authored at generate-time. A full 320² scan every frame
 	# is the first-frame hitch. Hash seed + size + hall instead.
 	var value := 17 + visual_seed * 31 + map_size.x * 13 + map_size.y * 17
+	if greybox_enabled() and simulation != null:
+		value = int((value + simulation.town_hall_position.x * 5 + simulation.town_hall_position.y * 3 + int(simulation.rng_seed)) & 0x7fffffff)
 	if simulation != null and simulation.is_town_hall_founded():
 		var hall: Vector2i = simulation.town_hall_position
 		value = int((value + hall.x * 7 + hall.y * 11 + int(simulation.crater_pit_radius * 10.0)) & 0x7fffffff)

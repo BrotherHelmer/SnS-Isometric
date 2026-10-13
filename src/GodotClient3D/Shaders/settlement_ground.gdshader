@@ -56,6 +56,15 @@ uniform float coast_jut_metres = 14.0;
 uniform float apron_mode = 0.0;
 
 varying vec3 world_pos;
+varying vec3 world_nrm;
+// Visual Reset S1 greybox: slope rock + Wyrd crater geology.
+uniform float greybox = 0.0;
+uniform vec2 crater_xz = vec2(0.0);
+uniform float crater_radius_m = 90.0;
+uniform vec3 slope_rock : source_color = vec3(0.36, 0.34, 0.30);
+uniform vec3 wyrd_basalt : source_color = vec3(0.16, 0.19, 0.24);
+uniform vec3 wyrd_vein : source_color = vec3(0.30, 0.85, 0.92);
+uniform vec3 ejecta_rubble : source_color = vec3(0.45, 0.43, 0.39);
 
 float coast_noise(vec2 p) {
 	return sin(p.x * 0.048 + p.y * 0.037 + 0.41) * 0.42
@@ -102,6 +111,7 @@ vec2 road_control_uv(vec2 world_xz) {
 
 void vertex() {
 	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	world_nrm = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 }
 
 void fragment() {
@@ -222,13 +232,33 @@ void fragment() {
 	if (apron_mode > 0.5) {
 		albedo = mix(albedo, wet_sand, (1.0 - smoothstep(0.0, 4.8, max(land, 0.0))) * 0.78);
 	}
+	vec3 geo_emit = vec3(0.0);
+	if (greybox > 0.5) {
+		float slope = 1.0 - clamp(world_nrm.y, 0.0, 1.0);
+		float rocky = smoothstep(0.16, 0.34, slope + (broad - 0.5) * 0.10) * (1.0 - road_w);
+		albedo = mix(albedo, slope_rock * mix(0.85, 1.1, patch), rocky * 0.85);
+		float dc = distance(world_pos.xz, crater_xz) / max(crater_radius_m, 1.0);
+		float bowl = 1.0 - smoothstep(0.92, 1.04, dc + (broad - 0.5) * 0.08);
+		float ejecta = (1.0 - bowl) * (1.0 - smoothstep(1.0, 1.65, dc + (patch - 0.5) * 0.25));
+		albedo = mix(albedo, ejecta_rubble * mix(0.8, 1.15, detail), ejecta * 0.55);
+		vec3 basalt = wyrd_basalt * mix(0.75, 1.2, fbm(world_pos.xz * 0.09));
+		albedo = mix(albedo, basalt, bowl * 0.92);
+		// Fissures: thin ridged noise lines inside the bowl and spilling over the rim.
+		float n = fbm(world_pos.xz * 0.11 + vec2(3.0, 9.0));
+		float line = 1.0 - smoothstep(0.0, 0.012, abs(n - 0.5));
+		float vein = line * (bowl + ejecta * 0.5) * smoothstep(0.15, 0.6, 1.0 - dc * 0.6);
+		albedo = mix(albedo, wyrd_vein * 0.55, vein * 0.8);
+		geo_emit = wyrd_vein * vein * 0.18;
+	}
 	ALBEDO = albedo;
+	EMISSION = geo_emit;
+	vec3 base_n = greybox > 0.5 ? normalize(world_nrm) : vec3(0.0, 1.0, 0.0);
 	if (lod_cheap > 0.5) {
-		NORMAL = normalize((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
+		NORMAL = normalize((VIEW_MATRIX * vec4(base_n, 0.0)).xyz);
 	} else {
 		float bump_w = mix(0.20, 0.36, road_w);
-		vec3 bump = normalize(vec3((detail - 0.5) * bump_w, 1.0, (patch - 0.5) * bump_w));
-		NORMAL = normalize((VIEW_MATRIX * vec4(bump, 0.0)).xyz);
+		vec3 bump = vec3((detail - 0.5) * bump_w, 0.0, (patch - 0.5) * bump_w);
+		NORMAL = normalize((VIEW_MATRIX * vec4(normalize(base_n + bump), 0.0)).xyz);
 	}
 	ROUGHNESS = 0.94;
 	METALLIC = 0.0;
