@@ -1,6 +1,8 @@
 class_name ProductionGameRoot3D
 extends Node3D
 
+const FrameProfiler = preload("res://src/GodotClient3D/Scripts/production_frame_profiler.gd")
+
 const GateAutoplay = preload("res://src/GodotClient3D/Scripts/production_gate_autoplay.gd")
 const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
 const Simulation = preload("res://src/GodotClient/Scripts/one_shard_simulation.gd")
@@ -408,27 +410,56 @@ func _tick_fps_overlay(delta: float) -> void:
 
 
 func _process(delta: float) -> void:
+	FrameProfiler.frame_begin()
 	hud_clock += delta
+	var _pf20 := FrameProfiler.t0()
 	_tick_fps_overlay(delta)
+	FrameProfiler.add("root._tick_fps_overlay", _pf20)
+	var _pf_adv := FrameProfiler.t0()
 	var ticks := simulation_host.advance(delta)
+	FrameProfiler.add("root.sim_advance", _pf_adv)
 	if ticks > 0 or last_synced_tick < 0:
+		var _pf_sp := FrameProfiler.t0()
 		_sync_presentation()
+		FrameProfiler.add("root._sync_presentation", _pf_sp)
+	var _pf21 := FrameProfiler.t0()
 	_update_placement_ghost()
+	FrameProfiler.add("root._update_placement_ghost", _pf21)
 	ui_elapsed += delta
 	if ui_elapsed >= 0.15:
 		ui_elapsed = 0.0
+		var _pf_ui := FrameProfiler.t0()
 		_update_ui()
+		FrameProfiler.add("root._update_ui", _pf_ui)
+		var _pf_dn := FrameProfiler.t0()
 		_update_day_night_lighting()
+		FrameProfiler.add("root._update_day_night_lighting", _pf_dn)
+	var _pf22 := FrameProfiler.t0()
 	_process_audio_events()
+	FrameProfiler.add("root._process_audio_events", _pf22)
+	var _pf23 := FrameProfiler.t0()
 	_tick_audio(delta)
+	FrameProfiler.add("root._tick_audio", _pf23)
 	if debug_audio_cycle_active or debug_ui_scene != "":
 		_tick_debug_harness(delta)
+	var _pf24 := FrameProfiler.t0()
 	_tick_toasts(delta)
+	FrameProfiler.add("root._tick_toasts", _pf24)
+	var _pf25 := FrameProfiler.t0()
 	_tick_notice_feed()
+	FrameProfiler.add("root._tick_notice_feed", _pf25)
+	var _pf26 := FrameProfiler.t0()
 	_tick_shard_glance()
+	FrameProfiler.add("root._tick_shard_glance", _pf26)
+	var _pf27 := FrameProfiler.t0()
 	_tick_edge_pan(delta)
+	FrameProfiler.add("root._tick_edge_pan", _pf27)
+	var _pf28 := FrameProfiler.t0()
 	_update_shard_compass()
+	FrameProfiler.add("root._update_shard_compass", _pf28)
+	var _pf29 := FrameProfiler.t0()
 	_tick_minimap(delta)
+	FrameProfiler.add("root._tick_minimap", _pf29)
 	if simulation_host.simulation != null and simulation_host.simulation.game_finished:
 		if result_overlay != null and not result_overlay.visible and (startup_overlay == null or not startup_overlay.visible):
 			_show_result_screen()
@@ -815,10 +846,16 @@ func _initialize_presentation() -> void:
 
 
 func _sync_presentation() -> void:
+	var _pf_cap := FrameProfiler.t0()
 	var frame := presentation_adapter.capture_frame(simulation_host.simulation, simulation_host.render_lead_seconds())
+	FrameProfiler.add("pres.capture_frame", _pf_cap)
 	current_frame_snapshot = frame
+	var _pf30 := FrameProfiler.t0()
 	world_view.sync_frame(frame)
+	FrameProfiler.add("pres.sync_frame", _pf30)
+	var _pf31 := FrameProfiler.t0()
 	world_view.note_camera(camera_rig.target_position, camera_rig.target_zoom)
+	FrameProfiler.add("pres.note_camera", _pf31)
 	var frontier_pad := 48.0 if placement_type != "" else 28.0
 	var opening := is_equal_approx(camera_rig.target_zoom, ProductionIsometricCameraRig3D.OPENING_ZOOM)
 	if opening:
