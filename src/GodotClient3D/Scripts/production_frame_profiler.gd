@@ -7,6 +7,9 @@ extends RefCounted
 static var enabled := false
 static var current: Dictionary = {}
 static var previous: Dictionary = {}
+## Whole-run totals (usec) and frame count, for the harness summary.
+static var totals: Dictionary = {}
+static var frames := 0
 
 
 static func t0() -> int:
@@ -22,5 +25,8 @@ static func add(section: String, started: int) -> void:
 static func frame_begin() -> void:
 	if not enabled:
 		return
+	for k in current:
+		totals[k] = int(totals.get(k, 0)) + int(current[k])
+	frames += 1
 	previous = current
 	current = {}
