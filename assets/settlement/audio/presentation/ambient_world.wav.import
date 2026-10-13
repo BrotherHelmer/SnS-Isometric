@@ -2,13 +2,13 @@
 
 importer="wav"
 type="AudioStreamWAV"
-uid="uid://6b3608ec4b8a4c21"
-path="res://.godot/imported/ambient_world.wav-d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9.sample"
+uid="uid://l2yy5lmdkjeu"
+path="res://.godot/imported/ambient_world.wav-db1341cff9e50fe4fed390e6d474b92b.sample"
 
 [deps]
 
 source_file="res://assets/settlement/audio/presentation/ambient_world.wav"
-dest_files=["res://.godot/imported/ambient_world.wav-d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9.sample"]
+dest_files=["res://.godot/imported/ambient_world.wav-db1341cff9e50fe4fed390e6d474b92b.sample"]
 
 [params]
 
