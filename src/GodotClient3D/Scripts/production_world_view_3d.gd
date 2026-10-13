@@ -255,6 +255,7 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 		terrain_body = null
 		terrain_mesh_instance = null
 		building_views.clear()
+		_building_snapshot_hashes.clear()
 		character_views.clear()
 		road_views.clear()
 		road_signatures.clear()
@@ -318,12 +319,31 @@ func bind_fog_overlay(_camera: Camera3D) -> void:
 		_ensure_fog_screen()
 
 
+var _terrain_lookup_sig := -1
+
+
+## Every input of _refresh_terrain_lookups: road keys and, per building,
+## id / position / construction / type / planned_type / footprint.
+func _terrain_lookup_signature() -> int:
+	if simulation == null:
+		return 0
+	var parts: Array = [simulation.connected_roads.hash() if simulation.connected_roads != null else 0, map_size]
+	for building_value in simulation.get_buildings():
+		var b: Dictionary = building_value
+		parts.append([b.get("id", 0), b.get("position", Vector2i.ZERO), b.get("construction", false), b.get("type", ""), b.get("planned_type", ""), b.get("footprint", null)])
+	return parts.hash()
+
+
 func sync_frame(frame_snapshot: Dictionary) -> void:
 	# One lookup pass per frame. GFX-E corner averaging used to call
 	# _terrain_color ~16× per cell, and each call scanned every building
 	# for roads — that is the 8 s new-game / 112 s showcase first-frame.
 	var _pf1 := FrameProfiler.t0()
-	_refresh_terrain_lookups()
+	# Hotfix 7: rebuild the lookups only when one of their inputs changed.
+	var lookup_sig := _terrain_lookup_signature()
+	if lookup_sig != _terrain_lookup_sig or not _terrain_lookups_ready:
+		_refresh_terrain_lookups()
+		_terrain_lookup_sig = lookup_sig
 	FrameProfiler.add("wv._refresh_terrain_lookups", _pf1)
 	var _pf_sig := FrameProfiler.t0()
 	var next_height_signature := _calculate_height_signature()
@@ -3518,6 +3538,9 @@ func _spawn_road_stamp_multimesh(node_name: String, transforms: Array, color: Co
 	road_stamp_root.add_child(instance)
 
 
+var _building_snapshot_hashes: Dictionary = {}
+
+
 func _sync_buildings(building_snapshots: Array) -> void:
 	var desired: Dictionary = {}
 	construction_activity_count = 0
@@ -3534,6 +3557,12 @@ func _sync_buildings(building_snapshots: Array) -> void:
 			buildings_root.add_child(view)
 			building_views[id] = view
 		else:
+			# Hotfix 7: apply_snapshot is a pure function of the snapshot;
+			# skip it (and the position write) when nothing changed.
+			var snap_hash := snapshot.hash()
+			if int(_building_snapshot_hashes.get(id, -1)) == snap_hash:
+				continue
+			_building_snapshot_hashes[id] = snap_hash
 			var view: ProductionBuildingView3D = building_views[id]
 			view.position = tile_to_world(Vector2(snapshot.get("center", Vector2.ZERO)))
 			view.apply_snapshot(snapshot)
@@ -3542,6 +3571,7 @@ func _sync_buildings(building_snapshots: Array) -> void:
 			continue
 		(building_views[id_value] as Node).queue_free()
 		building_views.erase(id_value)
+		_building_snapshot_hashes.erase(id_value)
 	set_selection(selected_building_id, selected_worker_id)
 
 
