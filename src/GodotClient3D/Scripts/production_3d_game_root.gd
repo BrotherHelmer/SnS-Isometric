@@ -326,6 +326,7 @@ func _ready() -> void:
 	_create_lighting()
 	_create_ui()
 	_restore_display_settings()
+	_apply_vsync_mode()
 	_create_audio()
 	_create_placement_ghost()
 	fixture_stage = String(launch.get("fixture", ""))
@@ -6313,3 +6314,18 @@ func _evidence_shot(shot_name: String, description: String) -> void:
 
 func _evidence_log(line: String) -> void:
 	print("[%s] EVIDENCE_CAPTURE %s" % [Time.get_datetime_string_from_system(), line])
+
+
+## Beta: VSync defaults to mailbox (no tearing, no FIFO stall to 30 FPS when a
+## frame takes 17-20 ms on a 60 Hz iGPU laptop). Falls back to the driver's
+## FIFO if mailbox is unsupported. `--vsync=fifo|off|mailbox` overrides.
+func _apply_vsync_mode() -> void:
+	var mode := DisplayServer.VSYNC_MAILBOX
+	for a in OS.get_cmdline_user_args():
+		var s := String(a)
+		if s == "--vsync=fifo":
+			mode = DisplayServer.VSYNC_ENABLED
+		elif s == "--vsync=off":
+			mode = DisplayServer.VSYNC_DISABLED
+	DisplayServer.window_set_vsync_mode(mode)
+	print("VSYNC requested=%d actual=%d" % [mode, DisplayServer.window_get_vsync_mode()])
