@@ -10,3 +10,4 @@
 - Issue 5/7 BLOCKED: Shard (Spawn) offline at 22:00. Runner ready: tools/perf_checkpoint/greybox_shard.ps1 (Low, Recommended, 6 checkpoint options).
 - Matrix regenerated after camera follow (all 4 PASS); INDEX.md written; Windows pck d430c4b exported to evidence. Shard still offline 23:08 -> perf + checkpoint pending.
 - 14/10: harness fixes 5b8f4f7 (quarry backoff gate flag, --gate-iso-* flags, shots honour --quality). Isolation pass starting on Shard.
+- 11:37 Shard isolation run started (tools/perf_checkpoint/greybox_iso.ps1, pck 5b8f4f7): 7 Medium baselines interleaved with ssao_off, msaa_off, glow_on, ssr_on, splits2, atlas1024; 200 s each, skip 60 s; then quick day/dusk/night shots per variant.
