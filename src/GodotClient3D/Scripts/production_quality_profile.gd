@@ -41,7 +41,7 @@ const PROFILES := {
 	"scalable_low": {
 		"name": "scalable_low",
 		# Hotfix 5: iGPU default (sun shadow OFF, 2 splits = pre-freeze state, hotfix 7,
-		# most vegetation) while dropping SSAO, MSAA and glow; 3D at 0.85 FSR.
+		# most vegetation) while dropping SSAO, MSAA and glow; 3D at 0.75 FSR (beta: was 0.85).
 		"foliage_density": 0.85,
 		"grass_density": 0.70,
 		"shadows": false,
@@ -53,7 +53,7 @@ const PROFILES := {
 		"animation_lod": 0.8,
 		"ambient_actor_budget": 0,
 		"anti_aliasing": "disabled_by_launch_profile",
-		"render_scale": 0.85,
+		"render_scale": 0.75,
 		"msaa": false,
 		"ssil": false,
 		"glow": false,

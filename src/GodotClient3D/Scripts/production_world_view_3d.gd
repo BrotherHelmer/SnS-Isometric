@@ -5889,17 +5889,25 @@ func _instantiate_cached(path_value: String) -> Node3D:
 	return packed.instantiate() as Node3D if packed != null else null
 
 
+var _map_marker_sig := -1
+
+
 func _sync_map_markers() -> void:
 	var host := get_node_or_null("MapMarkers")
 	if host == null:
 		host = Node3D.new()
 		host.name = "MapMarkers"
 		add_child(host)
+	# Beta: markers were freed and rebuilt (Label3D + meshes) on every sim
+	# tick; rebuild only when the marker list actually changed.
+	var markers: Array = simulation.get_map_markers() if simulation != null and simulation.has_method("get_map_markers") else []
+	var marker_sig := hash(var_to_str(markers))
+	if marker_sig == _map_marker_sig and host.get_child_count() == markers.size():
+		return
+	_map_marker_sig = marker_sig
 	for child in host.get_children():
 		child.queue_free()
-	if simulation == null or not simulation.has_method("get_map_markers"):
-		return
-	for marker_value in simulation.get_map_markers():
+	for marker_value in markers:
 		var marker: Dictionary = marker_value
 		var tile: Vector2i = marker.get("position", Vector2i.ZERO)
 		var kind := String(marker.get("kind", ""))
