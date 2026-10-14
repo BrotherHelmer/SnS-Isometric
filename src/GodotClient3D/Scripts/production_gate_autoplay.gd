@@ -125,6 +125,12 @@ func _process(_engine_delta: float) -> void:
 		# --gate-fps-cap=N, --gate-diag-cheap-ground, --gate-diag-cheap-foliage.
 		if frames % 60 == 0:
 			_checkpoint_overrides()
+			if started and "--gate-diag-hide-ui" in OS.get_cmdline_user_args():
+				game.ui_layer.visible = false
+			if started and "--gate-diag-hide-chars" in OS.get_cmdline_user_args():
+				for v in game.world_view.character_views.values():
+					v.visible = false
+					v.process_mode = Node.PROCESS_MODE_DISABLED
 			apply_iso_overrides(game)
 		if not _iso_written and t > 20.0:
 			_iso_written = true
@@ -267,7 +273,16 @@ func _shot_async(name: String, action: String) -> void:
 			for a in OS.get_cmdline_user_args():
 				if a.begins_with("--gate-seed=") and game.seed_edit != null:
 					game.seed_edit.text = a.trim_prefix("--gate-seed=")
-			game._start_from_menu()
+			var lt := _loadtest_seconds()
+			if lt > 0.0:
+				# Perf A/B only: resume the saved late-game settlement, no shots, fixed duration.
+				game.load_game()
+				shots = []
+				duration = t + lt
+				game._select_town_hall()
+				game.select_building(0)
+			else:
+				game._start_from_menu()
 			started = true
 			_note("NEW REALM -> BEGIN seed=%d" % int(game.simulation_host.simulation.rng_seed))
 		"log":
@@ -388,3 +403,12 @@ static func iso_state(g: Node) -> String:
 	var env: Environment = g.environment_resource
 	var sun: DirectionalLight3D = g.sun_light
 	return "profile=%s scale=%.2f msaa=%d ssao=%s glow=%s ssr=%s shadows=%s split_mode=%d atlas=%s iso=%s" % [String(g.quality_profile.get("name", "?")), g.get_viewport().scaling_3d_scale, int(g.get_viewport().msaa_3d), str(env.ssao_enabled), str(env.glow_enabled), str(env.ssr_enabled), str(sun.shadow_enabled if sun else false), int(sun.directional_shadow_mode) if sun else -1, "profile-default" if _iso_atlas_applied < 0 else str(_iso_atlas_applied), str(iso_args())]
+
+
+## Beta perf A/B (harness only): `--gate-loadtest=<seconds>` loads the autosave
+## instead of starting a new realm and measures for that many seconds.
+static func _loadtest_seconds() -> float:
+	for a in OS.get_cmdline_user_args():
+		if String(a).begins_with("--gate-loadtest="):
+			return float(String(a).trim_prefix("--gate-loadtest="))
+	return 0.0
