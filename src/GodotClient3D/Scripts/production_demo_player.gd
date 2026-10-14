@@ -400,15 +400,27 @@ func _try_build(sim, building_type: String, aim: Vector2i) -> bool:
 	return false
 
 
+## Gate-only (measurement harness): after a failed Quarry search, back off 20 s
+## and scan only the 12 nearest rocks, so the bot's 360-540 ms search does not
+## pollute frame metrics. Off unless `--gate-bot-quarry-backoff`.
+var _gate_quarry_backoff := "--gate-bot-quarry-backoff" in OS.get_cmdline_user_args()
+var _quarry_retry_at_ms := 0
+
+
 func _try_quarry(sim) -> bool:
 	if not _can_afford(sim, Defs.BUILDING_QUARRY):
 		last_idle_reason = "cannot afford Quarry"
+		return false
+	if _gate_quarry_backoff and Time.get_ticks_msec() < _quarry_retry_at_ms:
+		last_idle_reason = "quarry backoff (gate)"
 		return false
 	var rocks := _revealed_kind(sim, sim.town_hall_position, Defs.TILE_ROCK, 32)
 	var preferred: Variant = sim.founding_site.get("quarry_stone", Vector2i(-1, -1))
 	if preferred is Vector2i and preferred.x >= 0:
 		rocks.erase(preferred)
 		rocks.insert(0, preferred)
+	if _gate_quarry_backoff and rocks.size() > 12:
+		rocks.resize(12)
 	if rocks.is_empty():
 		last_failures.append("QUARRY: no revealed rock")
 		_extend_roads(sim, _aim_resource(sim, Defs.TILE_ROCK, Vector2i(8, 2)), 2)
@@ -438,6 +450,8 @@ func _try_quarry(sim) -> bool:
 							road_aim_score = score
 	_extend_roads(sim, road_aim, 2)
 	last_failures.append("QUARRY: %d rocks visible, none placeable yet %s" % [rocks.size(), str(reasons)])
+	if _gate_quarry_backoff:
+		_quarry_retry_at_ms = Time.get_ticks_msec() + 20000
 	print("DEMO_AI quarry_fail rocks=%d reasons=%s aim=%s" % [rocks.size(), str(reasons), str(road_aim)])
 	return false
 

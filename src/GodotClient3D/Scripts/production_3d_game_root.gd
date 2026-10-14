@@ -5042,7 +5042,12 @@ func _select_quality_item(wanted: String) -> void:
 
 func _restore_display_settings() -> void:
 	var settings := ConfigFile.new()
-	if settings.load(DISPLAY_SETTINGS_PATH) != OK:
+	# Harness runs (gate / screenshot flags) honour --quality over a saved setting.
+	var harness := false
+	for a in OS.get_cmdline_user_args():
+		if String(a).begins_with("--gate-") or String(a).begins_with("--greybox-shots") or String(a).begins_with("--gfx-"):
+			harness = true
+	if (harness and _has_quality_arg()) or settings.load(DISPLAY_SETTINGS_PATH) != OK:
 		_select_quality_item(String(quality_profile.get("name", "recommended")))
 		_apply_menu_quality()
 		return

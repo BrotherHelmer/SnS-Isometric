@@ -1,4 +1,5 @@
 extends Node
+const GateIso = preload("res://src/GodotClient3D/Scripts/production_gate_autoplay.gd")
 
 ## GPU shot harness for a normal Windows export.
 ## Active only when SNS_GFX_SHOTS=<dir> is set or --gfx-shots[=]<dir>
@@ -245,8 +246,15 @@ func _run_greybox() -> void:
 		game._sync_presentation()
 		game.camera_rig.compose_view(home, float(item[3]))
 		_drain_streaming(wv)
+		GateIso.apply_iso_overrides(game)
 		await _capture("%s.png" % item[0])
 		notes.store_line("%s draw_calls=%d prims=%d" % [item[0], int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)), int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME))])
+	notes.store_line(GateIso.iso_state(game))
+	if "--greybox-shots-quick" in OS.get_cmdline_user_args():
+		notes.close()
+		print("GREYBOX_SHOTS PASS dir=%s" % dest)
+		get_tree().quit(0)
+		return
 	# Landform review: reveal everything, day light.
 	for y in sim.map_size.y:
 		for x in sim.map_size.x:
