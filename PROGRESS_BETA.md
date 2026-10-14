@@ -14,3 +14,7 @@ Baseline: hotfix7 run7 (b4dab21, Low) 37.5 avg FPS, median 26.5 ms, GPU median 1
 - 00:50 R2 gate DONE (d84f040, pck 0b999b4d): 20 min no crash, day 2, 106 bld, avg 47.6 FPS (t>=90), 1% low 28.8, median 21.4 ms. FPS >=45 MET. Per 2 min: 57,59,54,50,51,46,42,40,41,42,42. Max spike 6339 ms = harness bot think (outpost aim scan 6.2 s), not game. NOTE: stderr shows mailbox unavailable at fullscreen swapchain resize -> FIFO (r1 too); gains are from markers + scale.
 - 00:51 R3 gate launched (pck e8408491 = bae28e8).
 - 00:58 R4 (local): Settlement Plans popup 300->360 px wide, cap 410->640, keeps clear of objective bar: all Essentials plans visible without scroll at 1920x1200 (box shot r4_box_build_menu_essentials.png). Harness: outpost aim scan capped 150 ms/think (gate flag only).
+- 01:00 pre-release playtest-beta-r2-d84f040 published (PASS on Shard, ChatGPT pending), zip sha256 084ad326.
+- 01:12 R3 gate DONE (bae28e8, pck e8408491): no crash, avg 51.1 FPS, 1% low 33.0, median 19.5 ms, max 497 ms; per 2 min 57,59,58,54,56,51,45,44,45,46. PASS on Shard. Pre-release playtest-beta-r3-bae28e8 published (zip sha256 54d05b2d).
+- 01:13 R4 gate launched (a23c318 build, pck b3aa80b0).
+- Review set for Black: evidence r2/ r3/ (19 shots + sheet_rN.jpg + REPORT). NOTE: this executor has no SendToAgent; parent must forward to Black (a4223999-...).
