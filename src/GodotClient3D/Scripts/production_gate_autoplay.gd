@@ -6,6 +6,7 @@ extends Node
 ## the HUD uses. Runs in real time at 1x, logs FPS each second, every frame
 ## >100 ms with context, and saves viewport screenshots (HUD + FPS overlay).
 
+const FrameProfiler = preload("res://src/GodotClient3D/Scripts/production_frame_profiler.gd")
 const Player = preload("res://src/GodotClient3D/Scripts/production_demo_player.gd")
 
 var game
@@ -27,10 +28,30 @@ var night_shot := false
 var day2_logged := false
 var started := false
 var busy := false
+var unfocused_frames := 0
+var _think_ms_prev := 0
+# D5 measurement
+var d5_log: FileAccess
+var d5_frames: FileAccess
+var d5_scale := -1.0
+var d5_vp_rid: RID
+var d5_last_compiles := 0
+var d5_sec_gpu := 0.0
+var d5_sec_cpu := 0.0
+var d5_sec_proc := 0.0
+var d5_sec_n := 0
+
+
+func _d5_compiles() -> int:
+	var total := 0
+	for m in [Performance.PIPELINE_COMPILATIONS_CANVAS, Performance.PIPELINE_COMPILATIONS_MESH, Performance.PIPELINE_COMPILATIONS_SURFACE, Performance.PIPELINE_COMPILATIONS_DRAW, Performance.PIPELINE_COMPILATIONS_SPECIALIZATION]:
+		total += int(Performance.get_monitor(m))
+	return total
 var jump_night := "--gate-jump-night" in OS.get_cmdline_user_args()
 
 
 func setup(game_value, dir_value: String, duration_value: float) -> void:
+	FrameProfiler.enabled = true
 	game = game_value
 	dir = dir_value
 	duration = duration_value
@@ -38,8 +59,15 @@ func setup(game_value, dir_value: String, duration_value: float) -> void:
 	fps_log = FileAccess.open(dir.path_join("fps.csv"), FileAccess.WRITE)
 	fps_log.store_line("t_wall,game_s,fps,worst_ms,day,night,pop,buildings,rebake_queue")
 	stall_log = FileAccess.open(dir.path_join("stalls.csv"), FileAccess.WRITE)
-	stall_log.store_line("t_wall,frame_ms,game_s,rebake_queue,autosave_task,buildings")
+	stall_log.store_line("t_wall,frame_ms,game_s,rebake_queue,autosave_task,buildings,harness_think_ms,night,top_sections")
 	player = Player.new()
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--gate-render-scale="):
+			d5_scale = float(a.trim_prefix("--gate-render-scale="))
+	d5_log = FileAccess.open(dir.path_join("d5_perf.csv"), FileAccess.WRITE)
+	d5_log.store_line("t_wall,game_s,fps,proc_ms,cpu_render_ms,gpu_render_ms,draw_calls,primitives,objects,video_mem_mb,static_mem_mb,nodes,compiles_total,buildings,scale")
+	d5_frames = FileAccess.open(dir.path_join("d5_frames.csv"), FileAccess.WRITE)
+	d5_frames.store_line("t_wall,frame_ms,cpu_render_ms,gpu_render_ms,proc_ms,compiles_delta,draw_calls,think_ms,buildings,root_ms,sync_frame_ms,sim_ms")
 	# [time, name, action]
 	shots = [
 		[2.0, "01_title_menu", ""],
@@ -63,17 +91,67 @@ func setup(game_value, dir_value: String, duration_value: float) -> void:
 	]
 
 
-func _process(delta: float) -> void:
+var _last_us := 0
+
+
+func _process(_engine_delta: float) -> void:
 	if game == null:
 		return
+	# Wall-clock frame time (engine delta can under-report when the OS
+	# throttles the window), so FPS/stall numbers are honest.
+	var now_us := Time.get_ticks_usec()
+	var delta := 0.016 if _last_us == 0 else float(now_us - _last_us) / 1000000.0
+	_last_us = now_us
+	if not DisplayServer.window_is_focused():
+		unfocused_frames += 1
 	t += delta
 	frames += 1
 	worst = maxf(worst, delta)
 	var sim = game.simulation_host.simulation
 	if delta > 0.1 and started:
-		stall_log.store_line("%.1f,%.0f,%.1f,%d,%d,%d" % [t, delta * 1000.0, float(sim.elapsed_seconds), game.world_view._rebake_queue.size(), game.simulation_host._autosave_task, sim.buildings.size()])
+		stall_log.store_line("%.1f,%.0f,%.1f,%d,%d,%d,%d,%d,%s" % [t, delta * 1000.0, float(sim.elapsed_seconds), game.world_view._rebake_queue.size(), game.simulation_host._autosave_task, sim.buildings.size(), _think_ms_prev, int(bool(sim.is_night)), _top_sections()])
 		stall_log.flush()
+	if d5_frames != null and started:
+		if not d5_vp_rid.is_valid():
+			d5_vp_rid = game.get_viewport().get_viewport_rid()
+			RenderingServer.viewport_set_measure_render_time(d5_vp_rid, true)
+		if "--gate-diag-no-shadow" in OS.get_cmdline_user_args() and game.sun_light != null and game.sun_light.shadow_enabled:
+			game.sun_light.shadow_enabled = false
+		if "--gate-diag-splits4" in OS.get_cmdline_user_args() and game.sun_light != null and game.sun_light.directional_shadow_mode != DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS:
+			game.sun_light.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+		if d5_scale > 0.0 and absf(game.get_viewport().scaling_3d_scale - d5_scale) > 0.001:
+			game.get_viewport().scaling_3d_scale = d5_scale
+		# Perf checkpoint (measurement only, never shipped defaults):
+		# --gate-fps-cap=N, --gate-diag-cheap-ground, --gate-diag-cheap-foliage.
+		if frames % 60 == 0:
+			_checkpoint_overrides()
+			apply_iso_overrides(game)
+		if not _iso_written and t > 20.0:
+			_iso_written = true
+			apply_iso_overrides(game)
+			var st := FileAccess.open(dir.path_join("iso_state.txt"), FileAccess.WRITE)
+			st.store_line(iso_state(game))
+			st.close()
+		var cpu_r := RenderingServer.viewport_get_measured_render_time_cpu(d5_vp_rid) + RenderingServer.get_frame_setup_time_cpu()
+		var gpu_r := RenderingServer.viewport_get_measured_render_time_gpu(d5_vp_rid)
+		var proc := float(Performance.get_monitor(Performance.TIME_PROCESS)) * 1000.0
+		var comp := _d5_compiles()
+		var dc := int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
+		var pv: Dictionary = FrameProfiler.previous
+		var root_us := 0
+		for k in pv:
+			if String(k).begins_with("root."):
+				root_us += int(pv[k])
+		d5_frames.store_line("%.2f,%.1f,%.2f,%.2f,%.2f,%d,%d,%d,%d,%.2f,%.2f,%.2f" % [t, delta * 1000.0, cpu_r, gpu_r, proc, comp - d5_last_compiles, dc, _think_ms_prev, sim.buildings.size(), root_us / 1000.0, int(pv.get("pres.sync_frame", 0)) / 1000.0, int(pv.get("root.sim_advance", 0)) / 1000.0])
+		d5_last_compiles = comp
+		d5_sec_gpu += gpu_r; d5_sec_cpu += cpu_r; d5_sec_proc += proc; d5_sec_n += 1
+	_think_ms_prev = 0
 	sec_t += delta
+	if sec_t >= 1.0 and d5_log != null and started and d5_sec_n > 0:
+		d5_log.store_line("%.0f,%.0f,%.1f,%.2f,%.2f,%.2f,%d,%d,%d,%.1f,%.1f,%d,%d,%d,%.2f" % [t, float(sim.elapsed_seconds), frames / sec_t, d5_sec_proc / d5_sec_n, d5_sec_cpu / d5_sec_n, d5_sec_gpu / d5_sec_n, int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)), int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)), int(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)), float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0, float(Performance.get_monitor(Performance.MEMORY_STATIC)) / 1048576.0, int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)), _d5_compiles(), sim.buildings.size(), game.get_viewport().scaling_3d_scale])
+		d5_log.flush()
+		d5_frames.flush()
+		d5_sec_gpu = 0.0; d5_sec_cpu = 0.0; d5_sec_proc = 0.0; d5_sec_n = 0
 	if sec_t >= 1.0:
 		fps_log.store_line("%.0f,%.0f,%.1f,%.0f,%d,%d,%d,%d,%d" % [t, float(sim.elapsed_seconds), frames / sec_t, worst * 1000.0, int(sim.day_count), int(bool(sim.is_night)), int(sim.population_current), sim.buildings.size(), game.world_view._rebake_queue.size()])
 		fps_log.flush()
@@ -101,7 +179,9 @@ func _process(delta: float) -> void:
 		think_t += delta
 		if think_t >= think_every:
 			think_t = 0.0
+			var think_start := Time.get_ticks_usec()
 			player.think(sim)
+			_think_ms_prev = int((Time.get_ticks_usec() - think_start) / 1000)
 	if bool(sim.is_night) and night_seen_at < 0.0 and started:
 		night_seen_at = t
 	if night_seen_at >= 0.0 and not night_shot and t - night_seen_at >= 25.0 and not busy:
@@ -117,7 +197,14 @@ func _process(delta: float) -> void:
 		shot_index += 1
 		_run_shot(String(s[1]), String(s[2]))
 	if t >= duration and not busy:
+		_note("unfocused_frames=%d" % unfocused_frames)
 		_note("gate end t=%.0f day=%d pop=%d buildings=%d finished=%s" % [t, int(sim.day_count), int(sim.population_current), sim.buildings.size(), str(sim.game_finished)])
+		var _prof = preload("res://src/GodotClient3D/Scripts/production_frame_profiler.gd")
+		if _prof.frames > 0:
+			var _keys: Array = _prof.totals.keys()
+			_keys.sort_custom(func(x, y): return int(_prof.totals[x]) > int(_prof.totals[y]))
+			for _k in _keys:
+				_note("profile %s avg_us=%d" % [_k, int(_prof.totals[_k]) / _prof.frames])
 		game.get_tree().quit()
 
 
@@ -177,6 +264,9 @@ func _shot_async(name: String, action: String) -> void:
 	_note("shot %s t=%.0f" % [name, t])
 	match action:
 		"new_realm":
+			for a in OS.get_cmdline_user_args():
+				if a.begins_with("--gate-seed=") and game.seed_edit != null:
+					game.seed_edit.text = a.trim_prefix("--gate-seed=")
 			game._start_from_menu()
 			started = true
 			_note("NEW REALM -> BEGIN seed=%d" % int(game.simulation_host.simulation.rng_seed))
@@ -196,3 +286,105 @@ func _shot_async(name: String, action: String) -> void:
 				pass
 			elif action.begins_with("palette:"):
 				game._set_build_palette_visible(false)
+
+
+## Hotfix 6: the previous frame's per-section timings (ms), largest first.
+func _top_sections() -> String:
+	var sections: Dictionary = FrameProfiler.previous
+	var keys := sections.keys()
+	keys.sort_custom(func(a, b): return sections[a] > sections[b])
+	var parts: Array[String] = []
+	for key in keys.slice(0, 6):
+		if int(sections[key]) >= 2000:
+			parts.append("%s=%d" % [key, int(sections[key]) / 1000])
+	return " ".join(parts)
+
+
+var _cheap_foliage_mats: Dictionary = {}
+
+
+func _checkpoint_overrides() -> void:
+	var args := OS.get_cmdline_user_args()
+	for arg in args:
+		if String(arg).begins_with("--gate-fps-cap="):
+			var cap := int(String(arg).get_slice("=", 1))
+			if Engine.max_fps != cap:
+				Engine.max_fps = cap
+	var wv = game.world_view
+	if wv == null or wv.chunk_root == null:
+		return
+	var cheap_ground := "--gate-diag-cheap-ground" in args
+	var cheap_foliage := "--gate-diag-cheap-foliage" in args
+	if not cheap_ground and not cheap_foliage:
+		return
+	for node in wv.chunk_root.find_children("*", "GeometryInstance3D", true, false):
+		var gi := node as GeometryInstance3D
+		var mat := gi.material_override
+		if cheap_ground and gi is MeshInstance3D and gi.name == "Terrain" and mat is ShaderMaterial:
+			(mat as ShaderMaterial).set_shader_parameter("lod_cheap", 1.0)
+		elif cheap_foliage and gi is MultiMeshInstance3D and mat is ShaderMaterial:
+			var sm := mat as ShaderMaterial
+			var albedo = sm.get_shader_parameter("albedo_color")
+			if typeof(albedo) != TYPE_VECTOR3:
+				continue
+			var key := str(albedo)
+			if not _cheap_foliage_mats.has(key):
+				var std := StandardMaterial3D.new()
+				std.albedo_color = Color(albedo.x, albedo.y, albedo.z)
+				std.roughness = 0.9
+				std.shading_mode = BaseMaterial3D.SHADING_MODE_PER_VERTEX
+				_cheap_foliage_mats[key] = std
+			gi.material_override = _cheap_foliage_mats[key]
+
+
+## Isolation pass (measurement only, gate/shots flags; shipped defaults untouched):
+## --gate-iso-ssao=0|1 --gate-iso-msaa=0|2|4 --gate-iso-glow=0|1 --gate-iso-ssr=0|1
+## --gate-iso-splits=1|2|4 --gate-iso-shadow-atlas=<px>. Re-applied every 60 frames
+## because day/night lighting re-applies the quality features.
+static var _iso_atlas_applied := -1
+var _iso_written := false
+
+
+static func iso_args() -> Dictionary:
+	var out := {}
+	for a in OS.get_cmdline_user_args():
+		if String(a).begins_with("--gate-iso-"):
+			var kv := String(a).trim_prefix("--gate-iso-").split("=")
+			if kv.size() == 2:
+				out[kv[0]] = int(kv[1])
+	return out
+
+
+static func apply_iso_overrides(g: Node) -> void:
+	if g == null:
+		return
+	for a in OS.get_cmdline_user_args():
+		if String(a).begins_with("--gate-render-scale="):
+			g.get_viewport().scaling_3d_scale = float(String(a).trim_prefix("--gate-render-scale="))
+	var iso := iso_args()
+	if iso.is_empty():
+		return
+	var env: Environment = g.environment_resource
+	if env != null:
+		if iso.has("ssao"):
+			env.ssao_enabled = iso["ssao"] != 0
+		if iso.has("glow"):
+			env.glow_enabled = iso["glow"] != 0
+		if iso.has("ssr"):
+			env.ssr_enabled = iso["ssr"] != 0
+	if iso.has("msaa"):
+		var m: int = iso["msaa"]
+		g.get_viewport().msaa_3d = Viewport.MSAA_4X if m >= 4 else (Viewport.MSAA_2X if m == 2 else Viewport.MSAA_DISABLED)
+	var sun: DirectionalLight3D = g.sun_light
+	if sun != null and iso.has("splits"):
+		var sp: int = iso["splits"]
+		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS if sp >= 4 else (DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS if sp == 2 else DirectionalLight3D.SHADOW_ORTHOGONAL)
+	if iso.has("shadow-atlas") and _iso_atlas_applied != int(iso["shadow-atlas"]):
+		_iso_atlas_applied = int(iso["shadow-atlas"])
+		RenderingServer.directional_shadow_atlas_set_size(_iso_atlas_applied, true)
+
+
+static func iso_state(g: Node) -> String:
+	var env: Environment = g.environment_resource
+	var sun: DirectionalLight3D = g.sun_light
+	return "profile=%s scale=%.2f msaa=%d ssao=%s glow=%s ssr=%s shadows=%s split_mode=%d atlas=%s iso=%s" % [String(g.quality_profile.get("name", "?")), g.get_viewport().scaling_3d_scale, int(g.get_viewport().msaa_3d), str(env.ssao_enabled), str(env.glow_enabled), str(env.ssr_enabled), str(sun.shadow_enabled if sun else false), int(sun.directional_shadow_mode) if sun else -1, "profile-default" if _iso_atlas_applied < 0 else str(_iso_atlas_applied), str(iso_args())]

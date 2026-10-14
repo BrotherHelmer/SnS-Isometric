@@ -1,6 +1,8 @@
 class_name ProductionGameRoot3D
 extends Node3D
 
+const FrameProfiler = preload("res://src/GodotClient3D/Scripts/production_frame_profiler.gd")
+
 const GateAutoplay = preload("res://src/GodotClient3D/Scripts/production_gate_autoplay.gd")
 const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
 const Simulation = preload("res://src/GodotClient/Scripts/one_shard_simulation.gd")
@@ -407,28 +409,66 @@ func _tick_fps_overlay(delta: float) -> void:
 		fps_overlay_timer = 0.0
 
 
+var _pipelines_warmed := false
+
+
 func _process(delta: float) -> void:
+	if camera_rig != null and world_view != null and not camera_rig.ground_height.is_valid() and world_view.greybox_enabled():
+		camera_rig.ground_height = world_view.camera_ground_y
+	FrameProfiler.frame_begin()
+	if not _pipelines_warmed and world_view != null and get_viewport().get_camera_3d() != null:
+		_pipelines_warmed = true
+		world_view.warm_up_pipelines(get_viewport().get_camera_3d())
 	hud_clock += delta
+	_sync_shadow_boom()
+	var _pf20 := FrameProfiler.t0()
 	_tick_fps_overlay(delta)
+	FrameProfiler.add("root._tick_fps_overlay", _pf20)
+	var _pf_adv := FrameProfiler.t0()
 	var ticks := simulation_host.advance(delta)
+	FrameProfiler.add("root.sim_advance", _pf_adv)
 	if ticks > 0 or last_synced_tick < 0:
+		var _pf_sp := FrameProfiler.t0()
 		_sync_presentation()
+		FrameProfiler.add("root._sync_presentation", _pf_sp)
+	var _pf21 := FrameProfiler.t0()
 	_update_placement_ghost()
+	FrameProfiler.add("root._update_placement_ghost", _pf21)
 	ui_elapsed += delta
 	if ui_elapsed >= 0.15:
 		ui_elapsed = 0.0
+		var _pf_ui := FrameProfiler.t0()
 		_update_ui()
+		FrameProfiler.add("root._update_ui", _pf_ui)
+		var _pf_dn := FrameProfiler.t0()
 		_update_day_night_lighting()
+		FrameProfiler.add("root._update_day_night_lighting", _pf_dn)
+	var _pf22 := FrameProfiler.t0()
 	_process_audio_events()
+	FrameProfiler.add("root._process_audio_events", _pf22)
+	var _pf23 := FrameProfiler.t0()
 	_tick_audio(delta)
+	FrameProfiler.add("root._tick_audio", _pf23)
 	if debug_audio_cycle_active or debug_ui_scene != "":
 		_tick_debug_harness(delta)
+	var _pf24 := FrameProfiler.t0()
 	_tick_toasts(delta)
+	FrameProfiler.add("root._tick_toasts", _pf24)
+	var _pf25 := FrameProfiler.t0()
 	_tick_notice_feed()
+	FrameProfiler.add("root._tick_notice_feed", _pf25)
+	var _pf26 := FrameProfiler.t0()
 	_tick_shard_glance()
+	FrameProfiler.add("root._tick_shard_glance", _pf26)
+	var _pf27 := FrameProfiler.t0()
 	_tick_edge_pan(delta)
+	FrameProfiler.add("root._tick_edge_pan", _pf27)
+	var _pf28 := FrameProfiler.t0()
 	_update_shard_compass()
+	FrameProfiler.add("root._update_shard_compass", _pf28)
+	var _pf29 := FrameProfiler.t0()
 	_tick_minimap(delta)
+	FrameProfiler.add("root._tick_minimap", _pf29)
 	if simulation_host.simulation != null and simulation_host.simulation.game_finished:
 		if result_overlay != null and not result_overlay.visible and (startup_overlay == null or not startup_overlay.visible):
 			_show_result_screen()
@@ -815,10 +855,16 @@ func _initialize_presentation() -> void:
 
 
 func _sync_presentation() -> void:
+	var _pf_cap := FrameProfiler.t0()
 	var frame := presentation_adapter.capture_frame(simulation_host.simulation, simulation_host.render_lead_seconds())
+	FrameProfiler.add("pres.capture_frame", _pf_cap)
 	current_frame_snapshot = frame
+	var _pf30 := FrameProfiler.t0()
 	world_view.sync_frame(frame)
+	FrameProfiler.add("pres.sync_frame", _pf30)
+	var _pf31 := FrameProfiler.t0()
 	world_view.note_camera(camera_rig.target_position, camera_rig.target_zoom)
+	FrameProfiler.add("pres.note_camera", _pf31)
 	var frontier_pad := 48.0 if placement_type != "" else 28.0
 	var opening := is_equal_approx(camera_rig.target_zoom, ProductionIsometricCameraRig3D.OPENING_ZOOM)
 	if opening:
@@ -833,7 +879,7 @@ func _sync_presentation() -> void:
 
 
 func _create_lighting() -> void:
-	get_viewport().msaa_3d = Viewport.MSAA_2X if bool(quality_profile.get("shadows", true)) else Viewport.MSAA_DISABLED
+	get_viewport().msaa_3d = Viewport.MSAA_2X if bool(quality_profile.get("msaa", true)) else Viewport.MSAA_DISABLED
 	var environment_node := WorldEnvironment.new()
 	environment_node.name = "ShardlitEnvironment"
 	var environment := Environment.new()
@@ -2367,12 +2413,16 @@ func _update_ui() -> void:
 	for key in chip_values:
 		if resource_chips.has(key):
 			(resource_chips[key] as Label).text = str(chip_values[key])
+	var _pu_rates := FrameProfiler.t0()
 	_update_resource_rates(chip_values)
+	FrameProfiler.add("ui.rates", _pu_rates)
 	if population_label != null:
 		population_label.text = "%d/%d" % [int(resources.get(Defs.RESOURCE_POPULATION_USED, 0)), int(resources.get(Defs.RESOURCE_POPULATION_MAX, 0))]
 	if soldier_label != null:
 		soldier_label.text = "%d/%d" % [int(simulation_host.simulation.soldiers_available()), int(simulation_host.simulation.soldiers_total)]
+	var _pu_idle := FrameProfiler.t0()
 	_update_idle_workers()
+	FrameProfiler.add("ui.idle", _pu_idle)
 	var night_now := bool(simulation_host.simulation.is_night)
 	# Hotfix 3: the clock capsule carries the realm summary that used to be
 	# repeated in the bottom Realm panel (day, phase timer, pop, workers, bread).
@@ -2384,7 +2434,9 @@ func _update_ui() -> void:
 		time_label.text = "%s  ·  Pop %d/%d" % [_clock_title(), int(sim_now.population_current), int(sim_now.housing_capacity)]
 	if phase_label != null:
 		phase_label.text = "%s  ·  Workers %d  ·  Bread %s" % [_phase_countdown_text(), int(sim_now.workers_free()), ("%d/%d" % [food_now, demand_now]) if demand_now > 0 else str(food_now)]
+	var _pu_speed := FrameProfiler.t0()
 	_sync_speed_controls()
+	FrameProfiler.add("ui.speed", _pu_speed)
 	if day_icon != null:
 		day_icon.texture = HudSkin.icon("moon" if night_now else "sun")
 	if phase_bar != null:
@@ -2396,9 +2448,16 @@ func _update_ui() -> void:
 	if Time.get_ticks_msec() / 1000.0 >= status_message_until:
 		status_label.text = ""
 		status_message_text = ""
+	var _pu_notices := FrameProfiler.t0()
 	_ingest_simulation_notices()
+	FrameProfiler.add("ui.notices", _pu_notices)
+	var _pu_raid := FrameProfiler.t0()
 	_update_raid_banner()
+	FrameProfiler.add("ui.raid", _pu_raid)
+	var _pu_loophud := FrameProfiler.t0()
 	_update_loop_hud()
+	FrameProfiler.add("ui.loophud", _pu_loophud)
+	var _pu_btn := FrameProfiler.t0()
 	for building_type in build_buttons:
 		var button: Button = build_buttons[building_type]
 		var unlocked := is_build_unlocked(String(building_type))
@@ -2411,16 +2470,42 @@ func _update_ui() -> void:
 			label = "FRONTIER  ·  " + label
 		button.text = label
 		button.tooltip_text = _building_tooltip(String(building_type)) + ("\n\nUnavailable: %s" % reason if reason != "" else "")
+	FrameProfiler.add("ui.build_buttons", _pu_btn)
+	var _pu_strip := FrameProfiler.t0()
 	_refresh_build_strip_state()
+	FrameProfiler.add("ui.strip", _pu_strip)
+	var _pu_flash := FrameProfiler.t0()
 	_refresh_resource_chip_flash()
+	FrameProfiler.add("ui.flash", _pu_flash)
+	var _pu_inspector := FrameProfiler.t0()
 	_update_inspector()
+	FrameProfiler.add("ui.inspector", _pu_inspector)
 
 
 ## Playtest.31 UI: affordability on the C&C strip (cost on button, dimmed when
 ## unaffordable) and building tooltips suppressed while the placement hint is up
 ## so only one panel is visible at a time.
+var _build_strip_signature := ""
+
+
 func _refresh_build_strip_state() -> void:
 	var placing := placement_type != ""
+	# Hotfix 7: theme overrides / modulate / tooltips were rewritten every
+	# frame (relayout). Only redo them when an input to them changed.
+	var sig_parts: Array = [placing, build_strip_buttons.size(), build_strip_types.hash(), build_strip_tooltips.hash(), get_viewport().get_visible_rect().size]
+	for sig_type in build_strip_types:
+		var sig_unlocked := is_build_unlocked(String(sig_type))
+		sig_parts.append(sig_unlocked)
+		sig_parts.append(String(sig_type) == Defs.TOOL_CLEAR_AREA or _missing_resources(String(sig_type)).is_empty())
+		if not sig_unlocked:
+			sig_parts.append(unlock_hint(String(sig_type)))
+	var signature := var_to_str(sig_parts)
+	if signature == _build_strip_signature:
+		var _pu_lay := FrameProfiler.t0()
+		_layout_hud_console()
+		FrameProfiler.add("ui.layout", _pu_lay)
+		return
+	_build_strip_signature = signature
 	for index in build_strip_buttons.size():
 		var building_type: String = build_strip_types[index] if index < build_strip_types.size() else ""
 		var btn: Button = build_strip_buttons[index]
@@ -4318,8 +4403,8 @@ func apply_quality_profile(profile_name: String) -> void:
 	quality_profile = QualityProfile.get_profile(profile_name)
 	var low := String(quality_profile.get("name", "")) == "scalable_low"
 	get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR if low else Viewport.SCALING_3D_MODE_BILINEAR
-	get_viewport().scaling_3d_scale = 0.75 if low else 1.0
-	get_viewport().msaa_3d = Viewport.MSAA_2X if bool(quality_profile.get("shadows", true)) else Viewport.MSAA_DISABLED
+	get_viewport().scaling_3d_scale = float(quality_profile.get("render_scale", 0.85)) if low else 1.0
+	get_viewport().msaa_3d = Viewport.MSAA_2X if bool(quality_profile.get("msaa", true)) else Viewport.MSAA_DISABLED
 	if sun_light != null:
 		sun_light.shadow_enabled = bool(quality_profile.get("shadows", true))
 		sun_light.light_angular_distance = 0.0
@@ -4489,6 +4574,8 @@ func _apply_sun_shadow_settings(light: DirectionalLight3D) -> void:
 	var splits := int(quality_profile.get("shadow_splits", 2))
 	if splits >= 4:
 		light.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+	elif splits <= 1:
+		light.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
 	else:
 		light.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 	var high := String(quality_profile.get("name", "recommended")) == "high"
@@ -4498,6 +4585,7 @@ func _apply_sun_shadow_settings(light: DirectionalLight3D) -> void:
 	light.directional_shadow_split_2 = 0.32
 	light.directional_shadow_split_3 = 0.58
 	light.directional_shadow_max_distance = float(quality_profile.get("shadow_distance", 56.0))
+	light.set_meta("base_shadow_distance", light.directional_shadow_max_distance)
 	light.directional_shadow_fade_start = 0.85
 	light.directional_shadow_pancake_size = 4.0
 	light.shadow_bias = 0.05
@@ -4954,7 +5042,12 @@ func _select_quality_item(wanted: String) -> void:
 
 func _restore_display_settings() -> void:
 	var settings := ConfigFile.new()
-	if settings.load(DISPLAY_SETTINGS_PATH) != OK:
+	# Harness runs (gate / screenshot flags) honour --quality over a saved setting.
+	var harness := false
+	for a in OS.get_cmdline_user_args():
+		if String(a).begins_with("--gate-") or String(a).begins_with("--greybox-shots") or String(a).begins_with("--gfx-"):
+			harness = true
+	if (harness and _has_quality_arg()) or settings.load(DISPLAY_SETTINGS_PATH) != OK:
 		_select_quality_item(String(quality_profile.get("name", "recommended")))
 		_apply_menu_quality()
 		return
@@ -6224,3 +6317,10 @@ func _evidence_shot(shot_name: String, description: String) -> void:
 
 func _evidence_log(line: String) -> void:
 	print("[%s] EVIDENCE_CAPTURE %s" % [Time.get_datetime_string_from_system(), line])
+
+
+func _sync_shadow_boom() -> void:
+	# Keep shadow coverage constant when the camera boom lengthens.
+	if camera_rig == null or sun_light == null or not sun_light.has_meta("base_shadow_distance"):
+		return
+	sun_light.directional_shadow_max_distance = float(sun_light.get_meta("base_shadow_distance")) + camera_rig.boom_extra * 1.4142

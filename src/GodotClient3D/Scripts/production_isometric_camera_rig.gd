@@ -47,6 +47,8 @@ func _ready() -> void:
 	add_child(camera)
 	rotation.y = PREFERRED_YAW
 	position = target_position
+	if ground_height.is_valid():
+		position.y = float(ground_height.call(Vector2(position.x, position.z)))
 
 
 func _process(delta: float) -> void:
@@ -58,9 +60,12 @@ func _process(delta: float) -> void:
 		)
 		if input_vector != Vector2.ZERO:
 			_pan(input_vector.normalized() * delta * target_zoom * 0.42, false, "keyboard")
+	if ground_height.is_valid():
+		target_position.y = float(ground_height.call(Vector2(target_position.x, target_position.z)))
 	position = position.lerp(target_position, minf(1.0, delta * 9.0))
 	target_zoom = clampf(target_zoom, CLOSE_ZOOM, zoom_cap)
 	camera.size = clampf(lerpf(camera.size, target_zoom, minf(1.0, delta * 10.0)), CLOSE_ZOOM, zoom_cap)
+	_apply_boom()
 
 
 # Camera input must arrive before Control nodes consume it. The Phase 3 HUD
@@ -145,10 +150,12 @@ func compose_view(world_position: Vector3, orthographic_size: float) -> void:
 	target_position = Vector3(world_position.x, 0.0, world_position.z)
 	target_zoom = clampf(orthographic_size, CLOSE_ZOOM, zoom_cap)
 	_clamp_target()
+	if ground_height.is_valid():
+		target_position.y = float(ground_height.call(Vector2(target_position.x, target_position.z)))
 	position = target_position
 	if camera != null:
 		camera.size = target_zoom
-		camera.position = Vector3(0.0, 32.0, 32.0)
+		_apply_boom()
 		camera.rotation_degrees = Vector3(-45.0, 0.0, 0.0)
 
 
@@ -167,3 +174,20 @@ func _pan(amount: Vector2, immediate := false, source := "script") -> void:
 func _clamp_target() -> void:
 	target_position.x = clampf(target_position.x, pan_bounds.position.x, pan_bounds.end.x)
 	target_position.z = clampf(target_position.z, pan_bounds.position.y, pan_bounds.end.y)
+
+
+## Extra boom length (m, per axis) so the bottom edge of the ortho view never
+## starts below greybox hills (ortho: image unchanged, only near-clip moves).
+var boom_extra := 0.0
+
+
+func _apply_boom() -> void:
+	if camera == null:
+		return
+	boom_extra = maxf(0.0, 30.0 + camera.size * 0.36 - 32.0)
+	camera.position = Vector3(0.0, 32.0 + boom_extra, 32.0 + boom_extra)
+
+
+## Optional ground-height follow (greybox relief): pivot rides the terrain so
+## the framed subject stays centred on hills. Unset = legacy flat pivot.
+var ground_height := Callable()
