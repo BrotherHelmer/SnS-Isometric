@@ -6,6 +6,8 @@ const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_p
 const ContactAO = preload("res://src/GodotClient3D/Scripts/production_contact_ao.gd")
 const BuildingMaterials = preload("res://src/GodotClient3D/Scripts/production_building_materials.gd")
 
+const VisualLab = preload("res://src/GodotClient3D/Scripts/production_visual_lab.gd")
+var _lab_model := false
 var entity_id := 0
 var building_type := ""
 var footprint := Vector2i.ONE
@@ -115,6 +117,7 @@ func camera_focus_position() -> Vector3:
 
 
 func _rebuild() -> void:
+	_lab_model = false
 	for child in get_children():
 		remove_child(child)
 		child.queue_free()
@@ -147,7 +150,8 @@ func _rebuild() -> void:
 		_create_completed_model()
 		_create_workyard()
 		_create_workyard_grounding()
-		_create_building_identity_markers()
+		if not _lab_model:
+			_create_building_identity_markers()
 	_create_ownership_banner()
 	_create_contact_ao()
 
@@ -159,6 +163,14 @@ func _create_completed_model() -> void:
 	if building_type == "TOWN_HALL":
 		_create_founding_hall_model()
 		return
+	var lab_kit := VisualLab.candidate()
+	if lab_kit != "":
+		var lab_model := VisualLab.build(lab_kit, building_type, footprint, entity_id)
+		if lab_model != null:
+			model_root = lab_model
+			_lab_model = true
+			add_child(model_root)
+			return
 	var packed := load(Catalog.building_path(building_type)) as PackedScene
 	if packed == null:
 		return
