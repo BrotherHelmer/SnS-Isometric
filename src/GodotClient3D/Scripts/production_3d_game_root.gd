@@ -1512,14 +1512,14 @@ func _create_ui() -> void:
 	# T-SNS-UI: the full plan list opens as a themed popup above the console.
 	build_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	build_panel.offset_left = 8.0
-	build_panel.offset_right = 300.0
+	build_panel.offset_right = 360.0  # beta: wider so plan text wraps to 2 lines
 	build_panel.offset_top = -CONSOLE_HEIGHT - 8.0 - 380.0
 	build_panel.offset_bottom = -CONSOLE_HEIGHT - 8.0
 	build_panel.add_theme_stylebox_override("panel", HudSkin.frame("panel", 4.0))
 	root.add_child(build_panel)
 	var build_margin := MarginContainer.new()
 	for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
-		build_margin.add_theme_constant_override(side, 14)
+		build_margin.add_theme_constant_override(side, 10)
 	build_panel.add_child(build_margin)
 	var build_box := VBoxContainer.new()
 	build_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1560,7 +1560,7 @@ func _create_ui() -> void:
 		var section := VBoxContainer.new()
 		section.name = "%sPlans" % String(category).capitalize()
 		section.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		section.add_theme_constant_override("separation", 7)
+		section.add_theme_constant_override("separation", 5)
 		section_host.add_child(section)
 		build_category_sections[category] = section
 		for building_type in BUILD_CATEGORIES[category]:
@@ -1919,7 +1919,7 @@ func _set_build_category(index: int) -> void:
 				section.add_child(hint)
 			if hint != null:
 				hint.visible = card_count == 0
-		_build_panel_height = minf(410.0, 145.0 + float(maxi(card_count, 1)) * 61.0)
+		_build_panel_height = minf(640.0, 145.0 + float(maxi(card_count, 1)) * 61.0)  # beta: was 410 (Essentials scrolled)
 		_layout_hud_console()
 
 
@@ -3788,7 +3788,7 @@ func _layout_hud_console() -> void:
 	if build_panel != null:
 		# Hotfix 5: the plans popup sits above the live console height and
 		# never extends above the top bar on short (1024x768) windows.
-		var avail := get_viewport().get_visible_rect().size.y - height - TOP_BAR_HEIGHT - 24.0
+		var avail := get_viewport().get_visible_rect().size.y - height - TOP_BAR_HEIGHT - 56.0
 		build_panel.offset_bottom = -height - 8.0
 		build_panel.offset_top = -height - 8.0 - clampf(_build_panel_height, 200.0, maxf(200.0, avail))
 	if placement_panel != null:

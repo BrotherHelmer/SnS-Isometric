@@ -368,10 +368,14 @@ func _try_frontier_outpost(sim) -> bool:
 			aims.append(marker + Vector2i(ox, radius))
 			aims.append(marker + Vector2i(-radius, ox))
 			aims.append(marker + Vector2i(radius, ox))
+	var _aim_t0 := Time.get_ticks_msec()
 	for aim_value in aims:
 		var aim: Vector2i = aim_value
 		if absi(aim.x - hall.x) + absi(aim.y - hall.y) < 16:
 			continue
+		# Gate-only: cap the outpost aim scan at 150 ms per think (was up to 6 s).
+		if _gate_quarry_backoff and Time.get_ticks_msec() - _aim_t0 > 150:
+			break
 		if _try_build(sim, Defs.BUILDING_OUTPOST, aim):
 			return true
 	_waypoint_retry_at = float(sim.elapsed_seconds) + 30.0

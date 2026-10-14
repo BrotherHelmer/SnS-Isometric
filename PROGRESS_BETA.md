@@ -11,3 +11,6 @@ Baseline: hotfix7 run7 (b4dab21, Low) 37.5 avg FPS, median 26.5 ms, GPU median 1
 - 00:29 R2 changes: map markers rebuilt only when the marker list changes; Low 3D render scale 0.85 -> 0.75 (FSR). CI quick PASS (known smoke), pck 0b999b4d.
 - 00:29 R2 gate launched on Shard (d84f040). At t=5 min: 57.8 avg (r1 at same point ~55).
 - 00:33 R3 change (local, built /tmp/beta_r3): presentation capture and 3D apply alternate frames (never both on one frame; one tick of extra latency ~16 ms). Box xvfb 200 s harness: 0 script errors, settlement grows.
+- 00:50 R2 gate DONE (d84f040, pck 0b999b4d): 20 min no crash, day 2, 106 bld, avg 47.6 FPS (t>=90), 1% low 28.8, median 21.4 ms. FPS >=45 MET. Per 2 min: 57,59,54,50,51,46,42,40,41,42,42. Max spike 6339 ms = harness bot think (outpost aim scan 6.2 s), not game. NOTE: stderr shows mailbox unavailable at fullscreen swapchain resize -> FIFO (r1 too); gains are from markers + scale.
+- 00:51 R3 gate launched (pck e8408491 = bae28e8).
+- 00:58 R4 (local): Settlement Plans popup 300->360 px wide, cap 410->640, keeps clear of objective bar: all Essentials plans visible without scroll at 1920x1200 (box shot r4_box_build_menu_essentials.png). Harness: outpost aim scan capped 150 ms/think (gate flag only).
