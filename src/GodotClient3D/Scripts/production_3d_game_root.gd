@@ -3482,7 +3482,61 @@ func _pressure_unlocked() -> bool:
 func _toggle_objective_detail() -> void:
 	if objective_detail_panel == null:
 		return
-	_show_objective_detail(not objective_detail_panel.visible)
+	var opening := not objective_detail_panel.visible
+	_show_objective_detail(opening)
+	if opening:
+		_jump_to_objective_target()
+
+
+## Beta: objectives are actionable. A quarry/stone objective jumps the camera to
+## the nearest revealed rock deposit where a Quarry can actually be placed and
+## pings it; other objectives keep the goal list only.
+var _objective_ping: Node3D = null
+
+
+func _jump_to_objective_target() -> void:
+	var sim = simulation_host.simulation if simulation_host != null else null
+	if sim == null or objective_button == null or camera_rig == null or world_view == null:
+		return
+	var text := objective_button.text.to_lower()
+	if not ("quarry" in text or "stone" in text):
+		return
+	var origin: Vector2i = sim.town_hall_position
+	var best := Vector2i(-1, -1)
+	var best_d := 1 << 30
+	for y in range(maxi(0, origin.y - 24), mini(sim.map_size.y, origin.y + 25)):
+		for x in range(maxi(0, origin.x - 24), mini(sim.map_size.x, origin.x + 25)):
+			var tile := Vector2i(x, y)
+			var d := absi(x - origin.x) + absi(y - origin.y)
+			if d >= best_d or String(sim.get_tile(tile)) != Defs.TILE_ROCK or not sim.is_revealed(tile):
+				continue
+			for off in [Vector2i.ZERO, Vector2i(-1, 0), Vector2i(0, -1), Vector2i(-1, -1), Vector2i(1, 0), Vector2i(0, 1)]:
+				if bool(sim.validate_placement(Defs.BUILDING_QUARRY, tile + off).get("success", false)):
+					best = tile
+					best_d = d
+					break
+	if best.x < 0:
+		_show_toast("Stone", "No placeable rock is revealed yet. Scout or extend roads toward grey rock.", "info", 4.0)
+		return
+	var world := world_view.tile_to_world(Vector2(best))
+	camera_rig.compose_view(world, 34.0)
+	if _objective_ping != null and is_instance_valid(_objective_ping):
+		_objective_ping.queue_free()
+	_objective_ping = Node3D.new()
+	_objective_ping.name = "ObjectivePing"
+	_objective_ping.add_child(world_view._ping_mesh(Color("#7ee0d4"), 0.9))
+	var label := Label3D.new()
+	label.text = "Quarry here"
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.no_depth_test = true
+	label.font_size = 48
+	label.outline_size = 10
+	label.position = Vector3.UP * 3.0
+	_objective_ping.add_child(label)
+	world_view.add_child(_objective_ping)
+	_objective_ping.global_position = world
+	get_tree().create_timer(8.0).timeout.connect(func(): if is_instance_valid(_objective_ping): _objective_ping.queue_free())
+	_show_toast("Quarry", "Rock deposit marked. Press 5 (Quarry) and place it on the marked rock, then link it with a Road.", "info", 5.0)
 
 
 func _tick_edge_pan(delta: float) -> void:
@@ -4914,7 +4968,36 @@ func _add_idle_workers_button(host: Control) -> Button:
 
 
 func _on_idle_workers_pressed() -> void:
-	# Idle settlers only get work from a new workplace: open the BUILD plans.
+	# Beta: jump to the building that is blocking work (no road, waiting for
+	# materials, unstaffed) and say how to fix it; else open the BUILD plans.
+	var sim = simulation_host.simulation if simulation_host != null else null
+	if sim != null and camera_rig != null and world_view != null:
+		for building_value in sim.buildings:
+			var b: Dictionary = building_value
+			var kind := String(b.get("planned_type", "")) if bool(b.get("construction", false)) else String(b.get("type", ""))
+			if kind == Defs.BUILDING_ROAD or kind == Defs.BUILDING_TOWN_HALL:
+				continue
+			var fix := ""
+			if not bool(b.get("connected", true)):
+				fix = "No road access. Draw a Road (1) from this %s to your road network." % Defs.building_name(kind)
+			elif bool(b.get("construction", false)) and not Dictionary(b.get("materials_needed", {})).is_empty():
+				var need: Array[String] = []
+				var needed: Dictionary = b.get("materials_needed", {})
+				var got: Dictionary = b.get("materials_delivered", {})
+				for r in needed:
+					var left := int(needed[r]) - int(got.get(r, 0))
+					if left > 0:
+						need.append("%d %s" % [left, Defs.resource_name(String(r))])
+				if not need.is_empty() and sim.has_method("get_available_resource"):
+					for r in needed:
+						if int(sim.get_available_resource(String(r))) <= 0 and int(needed[r]) > int(got.get(r, 0)):
+							fix = "This %s is waiting for %s. Produce more %s first." % [Defs.building_name(kind), ", ".join(need), Defs.resource_name(String(r))]
+							break
+			if fix != "":
+				select_building(int(b.get("id", 0)))
+				camera_rig.compose_view(world_view.focus_for_building(int(b.get("id", 0))), 30.0)
+				_show_toast("Blocked", fix, "warning", 5.0)
+				return
 	_set_build_palette_visible(true)
 
 
