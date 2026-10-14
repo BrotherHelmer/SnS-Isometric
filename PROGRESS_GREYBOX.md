@@ -9,3 +9,4 @@
 - Issue 4: 4-seed matrix (260918, 261306, 261597, 424242) in /home/box/cos/evidence/2026-10-13-sns-vr-s1/greybox/<seed>/.
 - Issue 5/7 BLOCKED: Shard (Spawn) offline at 22:00. Runner ready: tools/perf_checkpoint/greybox_shard.ps1 (Low, Recommended, 6 checkpoint options).
 - Matrix regenerated after camera follow (all 4 PASS); INDEX.md written; Windows pck d430c4b exported to evidence. Shard still offline 23:08 -> perf + checkpoint pending.
+- 14/10: harness fixes 5b8f4f7 (quarry backoff gate flag, --gate-iso-* flags, shots honour --quality). Isolation pass starting on Shard.
