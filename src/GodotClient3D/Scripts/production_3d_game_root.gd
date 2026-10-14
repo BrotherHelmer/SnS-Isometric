@@ -3802,6 +3802,10 @@ func _layout_hud_console() -> void:
 	# Hotfix 5: at most two rows; the strip widens (up to 8 columns) so all
 	# 16 plans stay visible instead of a third/fourth row below the screen.
 	var columns := clampi(ceili(float(unlocked) / 2.0), BUILD_GRID_COLUMNS, 8)
+	# Beta: on wide windows (1280+ logical) every plan fits one row, so the
+	# console stays at its compact height instead of ~20 % of the screen.
+	if get_viewport().get_visible_rect().size.x >= 1200.0:
+		columns = clampi(unlocked, BUILD_GRID_COLUMNS, 16)
 	var grid := hud_root.find_child("BuildGrid", true, false) if hud_root != null else null
 	if grid is GridContainer:
 		(grid as GridContainer).columns = columns

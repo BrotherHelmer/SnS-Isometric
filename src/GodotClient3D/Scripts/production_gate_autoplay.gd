@@ -277,7 +277,15 @@ func _shot_async(name: String, action: String) -> void:
 			if lt > 0.0:
 				# Perf A/B only: resume the saved late-game settlement, no shots, fixed duration.
 				game.load_game()
-				shots = []
+				# Late-game UI shots right after the load (same tabs as the gate).
+				var late: Array = []
+				var k := 0.0
+				for sh in shots.slice(3, 12):
+					late.append([t + 6.0 + k, "late_" + String(sh[1]), sh[2]])
+					k += 3.0
+				late.append([t + 6.0 + k, "late_town", "focus"])
+				shots = late
+				shot_index = 0
 				duration = t + lt
 				game._select_town_hall()
 				game.select_building(0)
