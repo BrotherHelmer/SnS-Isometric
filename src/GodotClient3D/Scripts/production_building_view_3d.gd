@@ -7,6 +7,8 @@ const ContactAO = preload("res://src/GodotClient3D/Scripts/production_contact_ao
 const BuildingMaterials = preload("res://src/GodotClient3D/Scripts/production_building_materials.gd")
 
 var entity_id := 0
+## Beta: set from the quality profile; Low (0.6) thins chimney smoke.
+static var vfx_density := 1.0
 var building_type := ""
 var footprint := Vector2i.ONE
 var rotation_quarters := 0
@@ -994,7 +996,7 @@ func _update_activity_presentation(active: bool, night: bool) -> void:
 	if building_type in ["BAKERY", "LUMBER_CAMP", "SAWMILL", "HOUSE", "TOWN_HALL"] and work_smoke == null:
 		work_smoke = CPUParticles3D.new()
 		work_smoke.name = "ChimneySmoke"
-		work_smoke.amount = 18
+		work_smoke.amount = maxi(8, int(round(18.0 * vfx_density)))
 		work_smoke.lifetime = 3.6
 		work_smoke.emission_shape = CPUParticles3D.EMISSION_SHAPE_POINT
 		work_smoke.direction = Vector3.UP
@@ -1015,7 +1017,8 @@ func _update_activity_presentation(active: bool, night: bool) -> void:
 		work_smoke.position = sockets["vfx"].position + Vector3(0.0, 0.85, 0.0)
 		add_child(work_smoke)
 	if work_smoke != null:
-		work_smoke.emitting = active or building_type in ["HOUSE", "TOWN_HALL", "BAKERY"]
+		var idle_smoke := building_type in ["TOWN_HALL", "BAKERY"] or (building_type == "HOUSE" and (vfx_density >= 1.0 or entity_id % 3 == 0))
+		work_smoke.emitting = active or idle_smoke
 	if building_type == "WATCHTOWER":
 		if lantern_light == null:
 			lantern_light = OmniLight3D.new()

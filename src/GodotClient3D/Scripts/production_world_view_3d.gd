@@ -199,6 +199,7 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 	# child wipe below never freed it. A new realm with another seed kept the
 	# old quad and its stale fog mask, which covered the whole new map.
 	_free_camera_fog_screens()
+	ProductionBuildingView3D.vfx_density = float(quality.get("vfx_density", 1.0))
 	if get_child_count() > 0:
 		for child in get_children():
 			remove_child(child)
