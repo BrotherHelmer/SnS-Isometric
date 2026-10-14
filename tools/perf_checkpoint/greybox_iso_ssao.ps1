@@ -11,7 +11,7 @@ $runs+=,@("ssao_b1",@()); $runs+=,@("ssao_v1_off",@("--gate-iso-ssao=0")); $runs
 $runs+=,@("ssao_v3_msaa_ssao_off",@("--gate-iso-ssao=0","--gate-iso-msaa=0")); $runs+=,@("ssao_b4",@())
 function Run($n,$extra,$mode){
  $out="$Root\iso2\$n"; if (Test-Path "$out\run_done.txt") { return }
- if (Busy) { L "game running - stop before $n"; exit 1 } New-Item -ItemType Directory -Force $out,"$Root\appdata_iso2_$n" | Out-Null
+ if (Busy) { L "game running - stop before $n"; exit 1 }; New-Item -ItemType Directory -Force $out,"$Root\appdata_iso2_$n" | Out-Null
  $env:APPDATA="$Root\appdata_iso2_$n"; L "$n start"
  if ($mode -eq "gate") { $a=@("--fullscreen","--","--gate-autoplay=$($out.Replace('\','/'))","--gate-seconds=$Seconds","--gate-seed=$Seed")+$common+$extra; $lim=$Seconds+180 }
  else { $a=@("--fullscreen","--","--greybox-shots=$($out.Replace('\','/'))","--greybox-shots-quick","--gfx-seed=$Seed")+$common+$extra; $lim=240 }
