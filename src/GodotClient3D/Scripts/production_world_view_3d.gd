@@ -328,7 +328,7 @@ func _terrain_lookup_signature() -> int:
 	if simulation == null:
 		return 0
 	var parts: Array = [simulation.connected_roads.hash() if simulation.connected_roads != null else 0, map_size]
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var b: Dictionary = building_value
 		parts.append([b.get("id", 0), b.get("position", Vector2i.ZERO), b.get("construction", false), b.get("type", ""), b.get("planned_type", ""), b.get("footprint", null)])
 	return parts.hash()
@@ -1198,7 +1198,7 @@ func _refresh_terrain_lookups() -> void:
 		if simulation.connected_roads != null:
 			for key_value in simulation.connected_roads.keys():
 				_terrain_road_cache[String(key_value)] = true
-		for building_value in simulation.get_buildings():
+		for building_value in simulation.buildings:
 			var building: Dictionary = building_value
 			if String(building.get("type", "")) == Defs.BUILDING_ROAD:
 				_terrain_road_cache[_tile_key(Vector2i(building.get("position", Vector2i.ZERO)))] = true
@@ -1270,7 +1270,7 @@ func _calculate_chunk_occupation_hashes() -> Dictionary:
 			var parts := String(key_value).split(",")
 			if parts.size() == 2:
 				items.append([Vector2i(int(parts[0]), int(parts[1])), Vector2i.ONE, String(key_value).hash()])
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		var tile: Vector2i = building.get("position", Vector2i.ZERO)
 		var fp: Vector2i = simulation._building_footprint(building)
@@ -1817,7 +1817,7 @@ func _stamp_building_aprons(img: Image, min_xz: Vector2, size_xz: Vector2, visua
 	# Irregular worn earth around buildings so footprints are not boxes.
 	if simulation == null:
 		return
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		if String(building.get("type", "")) == Defs.BUILDING_ROAD:
 			continue
@@ -2130,7 +2130,7 @@ func _is_road_tile(tile: Vector2i) -> bool:
 		return false
 	if simulation.connected_roads.has(_tile_key(tile)):
 		return true
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		if String(building.get("type", "")) == Defs.BUILDING_ROAD and Vector2i(building.get("position", Vector2i.ZERO)) == tile:
 			return true
@@ -2157,7 +2157,7 @@ func _farm_field_tiles() -> Dictionary:
 	var fields: Dictionary = {}
 	if simulation == null:
 		return fields
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		var type_name := String(building.get("planned_type", "")) if bool(building.get("construction", false)) else String(building.get("type", ""))
 		if type_name != Defs.BUILDING_FARM:
@@ -2194,7 +2194,7 @@ func _calculate_occupation_signature() -> int:
 		road_keys.sort()
 		for key_value in road_keys:
 			value = int((value * 31 + String(key_value).hash()) & 0x7fffffff)
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		var tile: Vector2i = building.get("position", Vector2i.ZERO)
 		value = int((value * 31 + int(building.get("id", 0)) * 11 + tile.x * 13 + tile.y * 17 + int(bool(building.get("construction", false)))) & 0x7fffffff)
@@ -2241,7 +2241,7 @@ func _sync_nature(force: bool) -> void:
 
 func _calculate_nature_layout_signature() -> int:
 	var value := 23
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		var tile: Vector2i = building.get("position", Vector2i.ZERO)
 		value = int((value * 31 + int(building.get("id", 0)) * 7 + tile.x * 13 + tile.y * 17 + int(bool(building.get("construction", false)))) & 0x7fffffff)
@@ -2391,7 +2391,7 @@ func _rebuild_grass_multimeshes() -> void:
 
 func _structure_tiles() -> Dictionary:
 	var occupied: Dictionary = {}
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		var type_name := String(building.get("planned_type", "")) if bool(building.get("construction", false)) else String(building.get("type", ""))
 		var anchor: Vector2i = building.get("position", Vector2i.ZERO)
@@ -2404,7 +2404,7 @@ func _structure_tiles() -> Dictionary:
 
 func _yard_tiles(radius: int) -> Dictionary:
 	var yard: Dictionary = {}
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		var type_name := String(building.get("planned_type", "")) if bool(building.get("construction", false)) else String(building.get("type", ""))
 		if type_name == Defs.BUILDING_ROAD:
@@ -2657,7 +2657,7 @@ func _append_boundary_wilderness(groups: Dictionary) -> void:
 
 
 func _tile_occupied_by_structure(tile: Vector2i) -> bool:
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		var type_name := String(building.get("planned_type", "")) if bool(building.get("construction", false)) else String(building.get("type", ""))
 		var anchor: Vector2i = building.get("position", Vector2i.ZERO)
@@ -2762,7 +2762,7 @@ func _collect_non_inspectable_buildings(node: Node, hall: Vector2i, radius_tiles
 func _nature_suppressed_near_activity(tile: Vector2i) -> bool:
 	if _in_founding_yard(tile, 8.0):
 		return true
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		var type_name := String(building.get("planned_type", "")) if bool(building.get("construction", false)) else String(building.get("type", ""))
 		var anchor: Vector2i = building.get("position", Vector2i.ZERO)
@@ -3945,7 +3945,7 @@ func _fog_vision_signature(revealed_count: int) -> String:
 			continue
 		var tile: Vector2i = simulation._unit_tile(worker)
 		value = int((value * 31 + tile.x * 13 + tile.y * 17 + int(worker.get("id", 0))) & 0x7fffffff)
-	return "%d:%d" % [value, int(simulation.get_buildings().size())]
+	return "%d:%d" % [value, int(simulation.buildings.size())]
 
 
 func _paint_current_vision() -> Dictionary:
@@ -3956,7 +3956,7 @@ func _paint_current_vision() -> Dictionary:
 		var hall_fp := Defs.building_footprint(Defs.BUILDING_TOWN_HALL)
 		var hall_center: Vector2i = simulation._footprint_center(simulation.town_hall_position, hall_fp)
 		_paint_vision_disk(visible, hall_center, simulation.building_vision_radius(Defs.BUILDING_TOWN_HALL))
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		if bool(building.get("construction", false)):
 			continue
@@ -5820,7 +5820,7 @@ func _rebuild_building_halos(force: bool) -> void:
 	if simulation == null or halo_root == null:
 		return
 	var signature := "r%d" % int(simulation.connected_roads.size())
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		signature += ":%d:%s:%d:%d" % [
 			int(building.get("id", 0)),
@@ -6244,7 +6244,7 @@ func _paint_current_vision_mask(mask_size: Vector2i) -> PackedByteArray:
 		var hall_fp := Defs.building_footprint(Defs.BUILDING_TOWN_HALL)
 		var hall_center: Vector2i = simulation._footprint_center(simulation.town_hall_position, hall_fp)
 		_paint_vision_disk_mask(mask, mask_size, hall_center, simulation.building_vision_radius(Defs.BUILDING_TOWN_HALL))
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		if bool(building.get("construction", false)):
 			continue

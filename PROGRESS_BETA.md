@@ -18,3 +18,4 @@ Baseline: hotfix7 run7 (b4dab21, Low) 37.5 avg FPS, median 26.5 ms, GPU median 1
 - 01:12 R3 gate DONE (bae28e8, pck e8408491): no crash, avg 51.1 FPS, 1% low 33.0, median 19.5 ms, max 497 ms; per 2 min 57,59,58,54,56,51,45,44,45,46. PASS on Shard. Pre-release playtest-beta-r3-bae28e8 published (zip sha256 54d05b2d).
 - 01:13 R4 gate launched (a23c318 build, pck b3aa80b0).
 - Review set for Black: evidence r2/ r3/ (19 shots + sheet_rN.jpg + REPORT). NOTE: this executor has no SendToAgent; parent must forward to Black (a4223999-...).
+- 01:20 R5 (local, /tmp/beta_r5): box bench on r1 late save (119 bld, tools/beta_bench.gd): capture_frame 10.1 -> 6.8 ms by reading sim.buildings/workers/enemies directly instead of deep-copying via get_*() (each ~1.6 ms, also used 15x in world view incl. per-sync signatures, halos, fog vision) -> world view now reads simulation.buildings (read-only loops, no mutation). CI quick PASS (known smoke).
