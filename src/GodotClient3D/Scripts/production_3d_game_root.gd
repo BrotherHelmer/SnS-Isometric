@@ -1919,7 +1919,7 @@ func _set_build_category(index: int) -> void:
 				section.add_child(hint)
 			if hint != null:
 				hint.visible = card_count == 0
-		_build_panel_height = minf(640.0, 145.0 + float(maxi(card_count, 1)) * 61.0)  # beta: was 410 (Essentials scrolled)
+		_build_panel_height = minf(700.0, 145.0 + float(maxi(card_count, 1)) * 76.0)  # beta: was 410 (Essentials scrolled)
 		_layout_hud_console()
 
 
@@ -2484,11 +2484,17 @@ func _update_ui() -> void:
 	for building_type in build_buttons:
 		var button: Button = build_buttons[building_type]
 		var unlocked := is_build_unlocked(String(building_type))
-		button.visible = unlocked
+		# Beta: one catalog. Locked plans stay listed with their unlock rule;
+		# unaffordable plans say exactly what is missing.
+		button.visible = true
 		var reason := _build_unavailable_reason(String(building_type))
 		button.disabled = reason != ""
 		var recommend := _should_recommend_frontier(String(building_type))
 		var label := "%s  ·  %s\n%s" % [Defs.building_name(String(building_type)), Defs.formatted_cost(String(building_type)), String(BUILD_PURPOSES.get(building_type, "Settlement building."))]
+		if not unlocked:
+			label = "LOCKED  ·  %s\n%s" % [label, unlock_hint(String(building_type))]
+		elif reason != "":
+			label += "\n" + reason
 		if recommend:
 			label = "FRONTIER  ·  " + label
 		button.text = label
@@ -3376,13 +3382,29 @@ func raid_status() -> Dictionary:
 	var bearing := String(sim._bearing_from_town(nearest))
 	var eta_seconds := 0 if best_eta == INF else int(ceil(best_eta))
 	var at_gates := nearest_distance <= 4.0
-	var eta_text := "at the Town Hall" if at_gates else "ETA ~%d:%02d" % [eta_seconds / 60, eta_seconds % 60]
+	# Beta: name the structure the nearest raider is closing on, and switch
+	# from "approaching" to "attacking" once they arrive (no 0:0x countdown).
+	var target_name := "the Town Hall"
+	var target_distance := INF
+	for building_value in sim.buildings:
+		var building: Dictionary = building_value
+		if bool(building.get("construction", false)) or String(building.get("type", "")) == Defs.BUILDING_ROAD:
+			continue
+		var bpos := Vector2i(building.get("position", Vector2i.ZERO))
+		var d := float(maxi(absi(bpos.x - nearest.x), absi(bpos.y - nearest.y)))
+		if d < target_distance:
+			target_distance = d
+			target_name = Defs.building_name(String(building.get("type", "")))
+	var attacking := at_gates or target_distance <= 3.0 or eta_seconds <= 8
+	var eta_text := ("ATTACKING %s" % target_name) if attacking else ("approaching %s  ·  arrives in %d:%02d" % [target_name, eta_seconds / 60, eta_seconds % 60])
 	return {
 		"count": count,
 		"bearing": bearing,
 		"eta_seconds": eta_seconds,
 		"at_gates": at_gates,
-		"line": "%d raider%s  ·  from %s  ·  %s" % [count, "" if count == 1 else "s", bearing, eta_text],
+		"attacking": attacking,
+		"target": target_name,
+		"line": "%d raider%s from the %s  ·  %s" % [count, "" if count == 1 else "s", bearing.trim_prefix("the "), eta_text],
 	}
 
 
@@ -3404,7 +3426,10 @@ func _update_raid_banner() -> void:
 	if toast_title.text != "RAID" and toast_until > hud_clock and toast_severity == "critical" and last_toast_key != "":
 		return  # another critical notice (e.g. Town Hall under attack) is showing
 	toast_title.text = "RAID"
-	toast_body.text = "%d hostile%s coming from %s." % [int(status.get("count", 0)), " is" if int(status.get("count", 0)) == 1 else "s are", String(status.get("bearing", "the wilds"))]
+	if bool(status.get("attacking", false)):
+		toast_body.text = "%s is under attack. Send guards or build a Watchtower nearby." % String(status.get("target", "Your settlement"))
+	else:
+		toast_body.text = "%d hostile%s coming from %s toward %s." % [int(status.get("count", 0)), " is" if int(status.get("count", 0)) == 1 else "s are", String(status.get("bearing", "the wilds")), String(status.get("target", "your town"))]
 	toast_until = maxf(toast_until, hud_clock + 1.5)
 	toast_severity = "critical"
 	alert_panel.visible = startup_overlay == null or not startup_overlay.visible
@@ -3647,9 +3672,14 @@ func _build_unavailable_reason(building_type: String) -> String:
 		return ""
 	if building_type == Defs.BUILDING_ROAD and simulation_host.simulation.workers_free() <= 0:
 		return "No free worker can build the road"
+	var short: Array[String] = []
 	for resource_type in Defs.building_cost(building_type):
-		if simulation_host.simulation.get_available_resource(resource_type) < int(Defs.building_cost(building_type)[resource_type]):
-			return "Needs %s" % Defs.formatted_cost(building_type)
+		var have := int(simulation_host.simulation.get_available_resource(resource_type))
+		var need := int(Defs.building_cost(building_type)[resource_type])
+		if have < need:
+			short.append("%d more %s" % [need - have, Defs.resource_name(resource_type)])
+	if not short.is_empty():
+		return "Need " + ", ".join(short)
 	return ""
 
 
@@ -3690,7 +3720,7 @@ func unlock_hint(building_type: String) -> String:
 		Defs.BUILDING_STOREHOUSE:
 			return "Unlocks after a House"
 		Defs.BUILDING_WATCHTOWER, Defs.BUILDING_WALL, Defs.BUILDING_BARRACKS:
-			return "Available from the second minute"
+			return "Unlocks at minute 2, with the first raid warning"
 		Defs.BUILDING_LUMEN_PILLAR, Defs.BUILDING_OUTPOST:
 			return "Unlocks after you raise a Watchtower"
 		Defs.BUILDING_WYRD_HARVESTER, Defs.BUILDING_WYRD_REFINER:

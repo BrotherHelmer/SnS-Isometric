@@ -68,7 +68,7 @@ func _run() -> void:
 	_check(banner.visible and game.pressure_meter.visible, "raid shows the banner and the pressure chip")
 	_check(banner_rect.end.x >= 1280.0 - 12.0 and banner_rect.position.x > 640.0 and banner_rect.position.y < 150.0, "banner sits top-right, not centred")
 	var eta_re := RegEx.new()
-	eta_re.compile("^2 raiders  ·  from the [a-z-]+  ·  ETA ~\\d+:\\d\\d$")
+	eta_re.compile("^2 raiders from the [a-z-]+  ·  approaching .+  ·  arrives in \\d+:\\d\\d$")
 	_check(eta_re.search(eta_text) != null, "banner line has count, direction and numeric ETA")
 	_check(int(game.raid_status().get("eta_seconds", 0)) > 0, "ETA is a positive number of seconds")
 	_check(String(game.toast_title.text) == "RAID", "banner title is RAID")
