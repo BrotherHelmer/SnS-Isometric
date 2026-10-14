@@ -280,6 +280,8 @@ var master_slider: HSlider
 var music_slider: HSlider
 var sfx_slider: HSlider
 var fullscreen_check: CheckBox
+var ui_scale_select: OptionButton
+const UI_SCALES := [0.9, 1.0, 1.15, 1.3]
 var result_more_button: Button
 var result_more_stats := false
 var last_result_stats: Dictionary = {}
@@ -4063,6 +4065,25 @@ func _create_start_menu(root: Control) -> void:
 	)
 	quality_row.add_child(quality_select)
 	settings_box.add_child(quality_row)
+	# Beta: UI size (Windows 125-150 % displays, small laptop screens).
+	var ui_row := HBoxContainer.new()
+	var ui_label := Label.new()
+	ui_label.text = "Interface size"
+	ui_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	Identity.apply_label(ui_label, "caption")
+	ui_row.add_child(ui_label)
+	ui_scale_select = OptionButton.new()
+	ui_scale_select.name = "UiScale"
+	for pct in UI_SCALES:
+		ui_scale_select.add_item("%d %%" % int(round(float(pct) * 100.0)))
+		ui_scale_select.set_item_metadata(ui_scale_select.item_count - 1, float(pct))
+	ui_scale_select.select(1)
+	ui_scale_select.item_selected.connect(func(index: int) -> void:
+		_apply_ui_scale(float(ui_scale_select.get_item_metadata(index)))
+		_save_display_settings()
+	)
+	ui_row.add_child(ui_scale_select)
+	settings_box.add_child(ui_row)
 	fullscreen_check = CheckBox.new()
 	fullscreen_check.text = "Fullscreen"
 	fullscreen_check.button_pressed = DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN
@@ -5152,6 +5173,8 @@ func _save_display_settings() -> void:
 	var settings := ConfigFile.new()
 	settings.set_value("display", "fullscreen", fullscreen_check.button_pressed)
 	settings.set_value("display", "quality", String(quality_select.get_selected_metadata()))
+	if ui_scale_select != null:
+		settings.set_value("display", "ui_scale", float(ui_scale_select.get_selected_metadata()))
 	settings.save(DISPLAY_SETTINGS_PATH)
 
 
@@ -5198,6 +5221,12 @@ func _restore_display_settings() -> void:
 			break
 	quality_select.select(picked)
 	_apply_menu_quality()
+	var ui_scale := float(settings.get_value("display", "ui_scale", 1.0))
+	if ui_scale_select != null:
+		for i in ui_scale_select.item_count:
+			if is_equal_approx(float(ui_scale_select.get_item_metadata(i)), ui_scale):
+				ui_scale_select.select(i)
+	_apply_ui_scale(ui_scale)
 	fullscreen_check.set_pressed_no_signal(bool(settings.get_value("display", "fullscreen", false)))
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen_check.button_pressed else DisplayServer.WINDOW_MODE_WINDOWED)
 
@@ -6471,3 +6500,8 @@ func _apply_vsync_mode() -> void:
 			mode = DisplayServer.VSYNC_DISABLED
 	DisplayServer.window_set_vsync_mode(mode)
 	print("VSYNC requested=%d actual=%d" % [mode, DisplayServer.window_get_vsync_mode()])
+
+
+func _apply_ui_scale(factor: float) -> void:
+	get_window().content_scale_factor = clampf(factor, 0.75, 1.5)
+	_layout_hud_console()
