@@ -14,3 +14,4 @@
 - 12:16 Shard: runner (greybox_iso2.ps1, pid 8144) on iso_v6_atlas1024; b0-b5, v1-v5 done. Shots next.
 - 12:28 Isolation pass DONE; evidence /home/box/cos/evidence/2026-10-13-sns-vr-s1/greybox/isolation/INDEX.md. MSAA off -3.8 GPU ms, SSR +7.1 ms, glow/splits2/atlas1024 noise, SSAO inconclusive (b0 outlier).
 - 12:29 SSAO re-isolation started on Shard (greybox_iso_ssao.ps1): 300 s warm-up, b/ssao_off/b/ssao_off/b, msaa+ssao off, b.
+- 12:59 SSAO re-run DONE: SSAO off ~0 ms when warm; MSAA+SSAO off -5.8 GPU ms. Appended to isolation/INDEX.md + PR comment.
