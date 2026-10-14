@@ -125,6 +125,13 @@ func _process(_engine_delta: float) -> void:
 		# --gate-fps-cap=N, --gate-diag-cheap-ground, --gate-diag-cheap-foliage.
 		if frames % 60 == 0:
 			_checkpoint_overrides()
+			apply_iso_overrides(game)
+		if not _iso_written and t > 20.0:
+			_iso_written = true
+			apply_iso_overrides(game)
+			var st := FileAccess.open(dir.path_join("iso_state.txt"), FileAccess.WRITE)
+			st.store_line(iso_state(game))
+			st.close()
 		var cpu_r := RenderingServer.viewport_get_measured_render_time_cpu(d5_vp_rid) + RenderingServer.get_frame_setup_time_cpu()
 		var gpu_r := RenderingServer.viewport_get_measured_render_time_gpu(d5_vp_rid)
 		var proc := float(Performance.get_monitor(Performance.TIME_PROCESS)) * 1000.0
@@ -328,3 +335,56 @@ func _checkpoint_overrides() -> void:
 				std.shading_mode = BaseMaterial3D.SHADING_MODE_PER_VERTEX
 				_cheap_foliage_mats[key] = std
 			gi.material_override = _cheap_foliage_mats[key]
+
+
+## Isolation pass (measurement only, gate/shots flags; shipped defaults untouched):
+## --gate-iso-ssao=0|1 --gate-iso-msaa=0|2|4 --gate-iso-glow=0|1 --gate-iso-ssr=0|1
+## --gate-iso-splits=1|2|4 --gate-iso-shadow-atlas=<px>. Re-applied every 60 frames
+## because day/night lighting re-applies the quality features.
+static var _iso_atlas_applied := -1
+var _iso_written := false
+
+
+static func iso_args() -> Dictionary:
+	var out := {}
+	for a in OS.get_cmdline_user_args():
+		if String(a).begins_with("--gate-iso-"):
+			var kv := String(a).trim_prefix("--gate-iso-").split("=")
+			if kv.size() == 2:
+				out[kv[0]] = int(kv[1])
+	return out
+
+
+static func apply_iso_overrides(g: Node) -> void:
+	if g == null:
+		return
+	for a in OS.get_cmdline_user_args():
+		if String(a).begins_with("--gate-render-scale="):
+			g.get_viewport().scaling_3d_scale = float(String(a).trim_prefix("--gate-render-scale="))
+	var iso := iso_args()
+	if iso.is_empty():
+		return
+	var env: Environment = g.environment_resource
+	if env != null:
+		if iso.has("ssao"):
+			env.ssao_enabled = iso["ssao"] != 0
+		if iso.has("glow"):
+			env.glow_enabled = iso["glow"] != 0
+		if iso.has("ssr"):
+			env.ssr_enabled = iso["ssr"] != 0
+	if iso.has("msaa"):
+		var m: int = iso["msaa"]
+		g.get_viewport().msaa_3d = Viewport.MSAA_4X if m >= 4 else (Viewport.MSAA_2X if m == 2 else Viewport.MSAA_DISABLED)
+	var sun: DirectionalLight3D = g.sun_light
+	if sun != null and iso.has("splits"):
+		var sp: int = iso["splits"]
+		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS if sp >= 4 else (DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS if sp == 2 else DirectionalLight3D.SHADOW_ORTHOGONAL)
+	if iso.has("shadow-atlas") and _iso_atlas_applied != int(iso["shadow-atlas"]):
+		_iso_atlas_applied = int(iso["shadow-atlas"])
+		RenderingServer.directional_shadow_atlas_set_size(_iso_atlas_applied, true)
+
+
+static func iso_state(g: Node) -> String:
+	var env: Environment = g.environment_resource
+	var sun: DirectionalLight3D = g.sun_light
+	return "profile=%s scale=%.2f msaa=%d ssao=%s glow=%s ssr=%s shadows=%s split_mode=%d atlas=%s iso=%s" % [String(g.quality_profile.get("name", "?")), g.get_viewport().scaling_3d_scale, int(g.get_viewport().msaa_3d), str(env.ssao_enabled), str(env.glow_enabled), str(env.ssr_enabled), str(sun.shadow_enabled if sun else false), int(sun.directional_shadow_mode) if sun else -1, "profile-default" if _iso_atlas_applied < 0 else str(_iso_atlas_applied), str(iso_args())]
