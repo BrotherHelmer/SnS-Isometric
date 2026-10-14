@@ -425,10 +425,25 @@ func _process(delta: float) -> void:
 	var _pf_adv := FrameProfiler.t0()
 	var ticks := simulation_host.advance(delta)
 	FrameProfiler.add("root.sim_advance", _pf_adv)
-	if ticks > 0 or last_synced_tick < 0:
-		var _pf_sp := FrameProfiler.t0()
+	var _pf_sp := FrameProfiler.t0()
+	if last_synced_tick < 0:
+		_pending_presentation = {}
 		_sync_presentation()
-		FrameProfiler.add("root._sync_presentation", _pf_sp)
+	else:
+		# Beta: capture and 3D apply alternate frames (each ~10 ms late game),
+		# so they never land on the same frame. At most one half per frame.
+		if ticks > 0:
+			_capture_due = true
+		if not _pending_presentation.is_empty():
+			var pending := _pending_presentation
+			_pending_presentation = {}
+			_apply_presentation(pending)
+		elif _capture_due:
+			_capture_due = false
+			var _pf_cap := FrameProfiler.t0()
+			_pending_presentation = presentation_adapter.capture_frame(simulation_host.simulation, simulation_host.render_lead_seconds())
+			FrameProfiler.add("pres.capture_frame", _pf_cap)
+	FrameProfiler.add("root._sync_presentation", _pf_sp)
 	var _pf21 := FrameProfiler.t0()
 	_update_placement_ghost()
 	FrameProfiler.add("root._update_placement_ghost", _pf21)
@@ -856,6 +871,16 @@ func _sync_presentation() -> void:
 	var _pf_cap := FrameProfiler.t0()
 	var frame := presentation_adapter.capture_frame(simulation_host.simulation, simulation_host.render_lead_seconds())
 	FrameProfiler.add("pres.capture_frame", _pf_cap)
+	_pending_presentation = {}
+	_capture_due = false
+	_apply_presentation(frame)
+
+
+var _pending_presentation: Dictionary = {}
+var _capture_due := false
+
+
+func _apply_presentation(frame: Dictionary) -> void:
 	current_frame_snapshot = frame
 	var _pf30 := FrameProfiler.t0()
 	world_view.sync_frame(frame)
