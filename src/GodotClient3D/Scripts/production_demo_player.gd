@@ -48,6 +48,42 @@ func think(sim) -> Dictionary:
 	return _result()
 
 
+## Beta: frame-spread think. The harness calls think_step() once per frame;
+## each call runs one phase so no single frame pays the whole decision pass.
+const THINK_PHASES := 13
+var think_phase := 0
+
+func think_step(sim) -> bool:
+	if think_phase == 0:
+		last_actions.clear()
+		last_failures.clear()
+		last_idle_reason = ""
+	if sim == null or bool(sim.game_finished):
+		think_phase = 0
+		return true
+	match think_phase:
+		0: _defend(sim)
+		1: _defend_night(sim)
+		2: _pursue_economy(sim)
+		3: _pursue_crater_war(sim)
+		4: _try_wyrd_choice(sim)
+		5: _try_midgame_choice(sim)
+		6: _try_seal_choice(sim)
+		7: _try_channel(sim)
+		8: _scout(sim)
+		9: _expand_toward_shard(sim)
+		10: _contest_rivals(sim)
+		11: _try_seal(sim)
+		12:
+			if last_actions.is_empty() and last_idle_reason == "":
+				last_idle_reason = "waiting on workers, stock, or construction"
+	think_phase += 1
+	if think_phase >= THINK_PHASES:
+		think_phase = 0
+		return true
+	return false
+
+
 func _result() -> Dictionary:
 	return {
 		"actions": last_actions.duplicate(),

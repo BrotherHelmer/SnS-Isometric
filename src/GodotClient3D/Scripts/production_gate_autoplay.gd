@@ -184,11 +184,15 @@ func _process(_engine_delta: float) -> void:
 		return
 	if started and not bool(sim.game_finished):
 		think_t += delta
-		if think_t >= think_every:
-			think_t = 0.0
+		if think_t >= think_every or player.think_phase > 0:
+			if player.think_phase == 0:
+				think_t = 0.0
 			var think_start := Time.get_ticks_usec()
-			player.think(sim)
+			var phase_ran: int = player.think_phase
+			player.think_step(sim)
 			_think_ms_prev = int((Time.get_ticks_usec() - think_start) / 1000)
+			if _think_ms_prev >= 30:
+				_note("think_phase %d ms=%d t=%.0f" % [phase_ran, _think_ms_prev, t])
 	if bool(sim.is_night) and night_seen_at < 0.0 and started:
 		night_seen_at = t
 	if night_seen_at >= 0.0 and not night_shot and t - night_seen_at >= 25.0 and not busy:
