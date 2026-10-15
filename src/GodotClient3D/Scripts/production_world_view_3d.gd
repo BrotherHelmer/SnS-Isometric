@@ -1179,14 +1179,28 @@ func _build_chunk_rival_seat(host: Node3D, coord: Vector2i, lod: int) -> void:
 		var keep := MeshInstance3D.new()
 		keep.name = "RivalSeat_%d_%d" % [seat.x, seat.y]
 		var mesh := BoxMesh.new()
-		mesh.size = Vector3(7.2, 4.4 if lod == CHUNK_LOD_NEAR else 3.2, 7.2)
+		# Beta: the rival seat was one 7 m saturated red box (read as a flat
+		# red slab at the screen edge). Smaller stone keep + dark red roof.
+		var keep_h := 3.0 if lod == CHUNK_LOD_NEAR else 2.4
+		mesh.size = Vector3(4.6, keep_h, 4.6)
 		keep.mesh = mesh
 		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color("#7A2C36")
-		mat.roughness = 0.86
+		mat.albedo_color = Color("#5B504A") * _atmosphere_scale
+		mat.roughness = 0.9
 		keep.material_override = mat
-		keep.position = tile_to_world(Vector2(seat) + Vector2(1.5, 1.5)) + Vector3(0.0, 2.1, 0.0)
+		keep.position = tile_to_world(Vector2(seat) + Vector2(1.5, 1.5)) + Vector3(0.0, keep_h * 0.5, 0.0)
 		host.add_child(keep)
+		var roof := MeshInstance3D.new()
+		roof.name = "RivalSeatRoof"
+		var roof_mesh := PrismMesh.new()
+		roof_mesh.size = Vector3(5.2, 1.8, 5.2)
+		roof.mesh = roof_mesh
+		var roof_mat := StandardMaterial3D.new()
+		roof_mat.albedo_color = Color("#5E2A30") * _atmosphere_scale
+		roof_mat.roughness = 0.88
+		roof.material_override = roof_mat
+		roof.position = keep.position + Vector3(0.0, keep_h * 0.5 + 0.9, 0.0)
+		host.add_child(roof)
 
 
 func _refresh_terrain_lookups() -> void:
