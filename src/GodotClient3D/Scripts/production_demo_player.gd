@@ -440,12 +440,18 @@ func _try_build(sim, building_type: String, aim: Vector2i) -> bool:
 		return false
 	if _count_pending(sim, building_type) > 0:
 		return false
+	# R29 harness: a failed site search scans ~2000 tiles twice (~600 ms);
+	# r28a repeated it every 3 s. Gate-only: back off that type for 20 s.
+	if _gate_quarry_backoff and Time.get_ticks_msec() < int(_site_fail_until.get(building_type, 0)):
+		last_idle_reason = "no site for %s yet (retrying)" % Defs.building_name(building_type)
+		return false
 	var site := _best_site(sim, building_type, aim)
 	if site.x < 0:
 		_extend_roads(sim, aim, 2)
 		site = _best_site(sim, building_type, aim)
 	if site.x < 0:
 		last_failures.append("%s: no site near %s" % [building_type, str(aim)])
+		_site_fail_until[building_type] = Time.get_ticks_msec() + 20000
 		return false
 	var result: Dictionary = sim.request_build(building_type, site)
 	if bool(result.get("success", false)):
@@ -460,6 +466,7 @@ func _try_build(sim, building_type: String, aim: Vector2i) -> bool:
 ## pollute frame metrics. Off unless `--gate-bot-quarry-backoff`.
 var _gate_quarry_backoff := "--gate-bot-quarry-backoff" in OS.get_cmdline_user_args()
 var _quarry_retry_at_ms := 0
+var _site_fail_until := {}
 
 
 func _try_quarry(sim) -> bool:
@@ -597,27 +604,29 @@ func _extend_roads(sim, target: Vector2i, count: int) -> void:
 
 
 func _best_road_step(sim, target: Vector2i) -> Vector2i:
-	var best := Vector2i(-1, -1)
-	var best_score := 100000
+	# R29 harness: r28a spent ~600 ms every 3 s here validating every road
+	# neighbour. Collect candidates, sort by distance, validate until the
+	# first legal one (same choice as before: the nearest legal tile).
+	var candidates: Array = []
+	var seen := {}
 	for building_value in sim.get_buildings():
 		var building: Dictionary = building_value
 		var kind := String(building.get("type", ""))
 		var planned := String(building.get("planned_type", ""))
-		var is_road := kind == Defs.BUILDING_ROAD or planned == Defs.BUILDING_ROAD
-		if not is_road:
+		if kind != Defs.BUILDING_ROAD and planned != Defs.BUILDING_ROAD:
 			continue
 		var origin: Vector2i = building.get("position", Vector2i.ZERO)
 		for direction in [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]:
 			var tile: Vector2i = origin + direction
-			if not sim.is_inside_map(tile):
+			if seen.has(tile) or not sim.is_inside_map(tile):
 				continue
-			var score := absi(tile.x - target.x) + absi(tile.y - target.y)
-			if score >= best_score:
-				continue
-			if bool(sim.validate_placement(Defs.BUILDING_ROAD, tile).get("success", false)):
-				best = tile
-				best_score = score
-	return best
+			seen[tile] = true
+			candidates.append([absi(tile.x - target.x) + absi(tile.y - target.y), tile])
+	candidates.sort_custom(func(x, y) -> bool: return int(x[0]) < int(y[0]))
+	for c in candidates:
+		if bool(sim.validate_placement(Defs.BUILDING_ROAD, c[1]).get("success", false)):
+			return c[1]
+	return Vector2i(-1, -1)
 
 
 func _best_site(sim, building_type: String, target: Vector2i) -> Vector2i:
