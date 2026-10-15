@@ -6959,11 +6959,32 @@ func _construction_waiting_for_materials() -> bool:
 	return false
 
 
+## R27: unreachable (start, access) pairs are remembered for 3 s so a task
+## scan does not re-run the per-tile A* fallback for them every tick
+## (r26a ~1200 s: 48 ticks at 150-320 ms in output_task_discovery).
+var _access_fail_cache: Dictionary = {}
+
+
 func _path_to_access(start: Vector2i, access: Array) -> Array:
 	if access.is_empty():
 		return []
 	if access.has(start):
 		return []
+	var fail_key := _tile_key(start) + "@" + _tile_key(access[0]) + "#" + str(access.size())
+	var now := Time.get_ticks_msec()
+	if _access_fail_cache.has(fail_key):
+		if now - int(_access_fail_cache[fail_key]) < 3000:
+			return []
+		_access_fail_cache.erase(fail_key)
+	if _access_fail_cache.size() > 4096:
+		_access_fail_cache.clear()
+	var result := _path_to_access_uncached(start, access)
+	if result.is_empty():
+		_access_fail_cache[fail_key] = now
+	return result
+
+
+func _path_to_access_uncached(start: Vector2i, access: Array) -> Array:
 	var road_path := _find_road_path(start, access)
 	if not road_path.is_empty():
 		return road_path
@@ -9695,9 +9716,35 @@ func _write_last_run_snapshot() -> void:
 	}, "  "))
 
 
+## R27: road BFS results memoised per road-network signature. r26a spent
+## ~14 ms every tick for 6 minutes re-flooding the same road graph (patrols
+## and off-road workers whose road search always failed).
+var _road_path_cache: Dictionary = {}
+var _road_path_cache_sig: String = ""
+var _road_path_cache_age: float = 0.0
+
+
+func _road_path_signature() -> String:
+	return "%d|%d|%s" % [connected_roads.size(), connected_walls.size(), str(is_gate_closed())]
+
+
 func _find_road_path(start: Vector2i, goals: Array) -> Array:
 	var stamp := _profile_stamp()
-	var result := _find_road_path_unprofiled(start, goals)
+	var sig := _road_path_signature()
+	var now := Time.get_ticks_msec() / 1000.0
+	if sig != _road_path_cache_sig or now - _road_path_cache_age > 5.0 or _road_path_cache.size() > 4096:
+		_road_path_cache.clear()
+		_road_path_cache_sig = sig
+		_road_path_cache_age = now
+	var key := _tile_key(start)
+	for goal in goals:
+		key += ";" + _tile_key(goal)
+	var result: Array
+	if _road_path_cache.has(key):
+		result = (_road_path_cache[key] as Array).duplicate()
+	else:
+		result = _find_road_path_unprofiled(start, goals)
+		_road_path_cache[key] = result.duplicate()
 	_profile_finish("road_path_requests", stamp)
 	return result
 
