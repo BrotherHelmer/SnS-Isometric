@@ -314,6 +314,7 @@ func start_new_run(width: int = MAP_WIDTH, height: int = MAP_HEIGHT, seed_value:
 	path_grid = null
 	hostile_path_grid = null
 	path_grid_dirty = true
+	_terrain_solid_for = -1
 	log_entries.clear()
 	run_journal.clear()
 	_pending_diagnostic_lines.clear()
@@ -5225,6 +5226,30 @@ func _clear_corridor(start: Vector2i, finish: Vector2i, half_width: int) -> void
 		_clear_area(center, half_width)
 
 
+## Beta r17: Vector2i -> terrain for every shard/tree/rock tile, so a path
+## grid rebuild skips the 100k-cell String scan. Built lazily; _set_tile
+## keeps it current; -1 version forces a rebuild after load/new run.
+var _terrain_solid_tiles: Dictionary = {}
+var _terrain_solid_for: int = -1
+
+
+func _ensure_terrain_solid_tiles() -> void:
+	var stamp: int = map_tiles.size() * 100000 + (map_tiles[0].size() if map_tiles.size() > 0 else 0)
+	if _terrain_solid_for == stamp and is_same(_terrain_solid_map_ref, map_tiles):
+		return
+	_terrain_solid_tiles.clear()
+	for y in range(map_tiles.size()):
+		var row = map_tiles[y]
+		for x in range(row.size()):
+			var terrain := String(row[x])
+			if terrain == Defs.TILE_SHARD or terrain == Defs.TILE_TREE or terrain == Defs.TILE_ROCK:
+				_terrain_solid_tiles[Vector2i(x, y)] = terrain
+	_terrain_solid_for = stamp
+	_terrain_solid_map_ref = map_tiles
+
+var _terrain_solid_map_ref: Array = []
+
+
 func _set_tile(tile: Vector2i, tile_type: String) -> void:
 	if not is_inside_map(tile):
 		return
@@ -5237,7 +5262,17 @@ func _set_tile(tile: Vector2i, tile_type: String) -> void:
 		tree_deposits.erase(key)
 		rock_deposits.erase(key)
 	map_tiles[tile.y][tile.x] = tile_type
-	path_grid_dirty = true
+	if _terrain_solid_for >= 0:
+		if tile_type == Defs.TILE_SHARD or tile_type == Defs.TILE_TREE or tile_type == Defs.TILE_ROCK:
+			_terrain_solid_tiles[tile] = tile_type
+		else:
+			_terrain_solid_tiles.erase(tile)
+	# Beta r17: a terrain change (tree felled, rock mined) only affects one
+	# cell; patch both A* grids instead of a full 320x320 rebuild.
+	if path_grid != null and hostile_path_grid != null and not path_grid_dirty:
+		_refresh_path_cell(tile)
+	else:
+		path_grid_dirty = true
 
 
 func _sanitize_resource_deposits() -> void:
@@ -9742,18 +9777,15 @@ func _ensure_path_grid_unprofiled() -> void:
 			if special_tile.x >= 0 and special_tile.y >= 0 and special_tile.x < map_size.x and special_tile.y < map_size.y:
 				special[special_tile] = true
 	var gate_closed := is_gate_closed()
-	for y in range(map_size.y):
-		var row = map_tiles[y]
-		for x in range(map_size.x):
-			var terrain := String(row[x])
-			var tile := Vector2i(x, y)
-			if not special.has(tile):
-				if terrain == Defs.TILE_SHARD:
-					path_grid.set_point_solid(tile, true)
-					hostile_path_grid.set_point_solid(tile, true)
-				elif terrain == Defs.TILE_TREE or terrain == Defs.TILE_ROCK:
-					hostile_path_grid.set_point_solid(tile, true)
-				continue
+	_ensure_terrain_solid_tiles()
+	for solid_tile in _terrain_solid_tiles:
+		if special.has(solid_tile):
+			continue
+		if String(_terrain_solid_tiles[solid_tile]) == Defs.TILE_SHARD:
+			path_grid.set_point_solid(solid_tile, true)
+		hostile_path_grid.set_point_solid(solid_tile, true)
+	for tile in special:
+			var terrain := String(map_tiles[tile.y][tile.x])
 			var tile_key := _tile_key(tile)
 			var building_type := String(building_types_by_id.get(int(occupied_tiles.get(tile_key, 0)), ""))
 			var wet := is_water_tile(tile) and not connected_roads.has(tile_key)
@@ -9769,6 +9801,31 @@ func _ensure_path_grid_unprofiled() -> void:
 			hostile_path_grid.set_point_solid(tile, hostile_blocked)
 			hostile_path_grid.set_point_weight_scale(tile, move_weight)
 	path_grid_dirty = false
+
+
+func _refresh_path_cell(tile: Vector2i) -> void:
+	var base_weight := 1.0 / ROAD_MOVE_MULTIPLIER
+	var terrain := String(map_tiles[tile.y][tile.x])
+	var tile_key := _tile_key(tile)
+	var building_type := ""
+	var occupant_id := int(occupied_tiles.get(tile_key, 0))
+	if occupant_id != 0:
+		for building_value in buildings:
+			if int(building_value.get("id", 0)) == occupant_id:
+				building_type = String(building_value.get("type", ""))
+				break
+	var wet := is_water_tile(tile) and not connected_roads.has(tile_key)
+	var gate_shut := is_gate_closed() and building_type == Defs.BUILDING_ROAD and _is_gate_tile(tile)
+	var blocked := terrain == Defs.TILE_SHARD or wet or gate_shut
+	var hostile_blocked := terrain in [Defs.TILE_SHARD, Defs.TILE_TREE, Defs.TILE_ROCK] or wet or gate_shut
+	if building_type != "" and building_type != Defs.BUILDING_ROAD:
+		blocked = true
+		hostile_blocked = true
+	var move_weight := 1.0 if connected_walls.has(tile_key) or building_type == Defs.BUILDING_ROAD else base_weight
+	path_grid.set_point_solid(tile, blocked)
+	path_grid.set_point_weight_scale(tile, move_weight)
+	hostile_path_grid.set_point_solid(tile, hostile_blocked)
+	hostile_path_grid.set_point_weight_scale(tile, move_weight)
 
 
 func _reconstruct_path(start: Vector2i, destination: Vector2i, came_from: Dictionary) -> Array:
@@ -10737,6 +10794,7 @@ func _restore_state(data: Dictionary) -> void:
 	rng.seed = rng_seed
 	map_size = _vector_from_data(data.get("map_size", _vector_to_data(Vector2i(MAP_WIDTH, MAP_HEIGHT))), Vector2i(MAP_WIDTH, MAP_HEIGHT))
 	map_tiles = data.get("map_tiles", [])
+	_terrain_solid_for = -1
 	height_map = data.get("height_map", [])
 	revealed_tiles = data.get("revealed_tiles", {})
 	tree_deposits = data.get("tree_deposits", {})
