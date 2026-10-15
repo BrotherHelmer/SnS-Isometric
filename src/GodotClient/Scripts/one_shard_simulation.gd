@@ -6719,8 +6719,12 @@ func _find_worker_path(start: Vector2i, destination: Vector2i) -> Array:
 	return _find_weighted_path(start, [destination], false)
 
 
+var _shelter_entries_cache: Array = []
+
+
 func _send_workers_to_shelter() -> void:
 	var sent := 0
+	_shelter_entries_cache = _shelter_entries()
 	for worker in workers:
 		if String(worker.get("type", "")) == "guard":
 			if worker.has("scout_mission"):
@@ -6734,6 +6738,7 @@ func _send_workers_to_shelter() -> void:
 		_send_worker_to_shelter(worker)
 		if String(worker.get("state", "")) in ["Going to shelter", "Sheltered"]:
 			sent += 1
+	_shelter_entries_cache = []
 	_record_event("shelter_called", "%d workers head for shelter." % sent, {"workers": sent})
 
 
@@ -6743,7 +6748,15 @@ func _send_worker_to_shelter(worker: Dictionary) -> void:
 	var found := false
 	var start: Vector2i = worker["position"]
 	var is_carrier := String(worker.get("type", "")) == "carrier"
-	for entrance in _shelter_entries():
+	# Beta r21: every worker used to path-test every house entrance (workers x
+	# entrances A* queries, 200+ ms at the 30 s night warning). Test only the
+	# four nearest entrances by Manhattan distance.
+	var entries: Array = _shelter_entries_cache if not _shelter_entries_cache.is_empty() else _shelter_entries()
+	var ranked: Array = entries.duplicate()
+	ranked.sort_custom(func(a, b): return absi(a.x - start.x) + absi(a.y - start.y) < absi(b.x - start.x) + absi(b.y - start.y))
+	if ranked.size() > 4:
+		ranked.resize(4)
+	for entrance in ranked:
 		var candidate: Array = _path_to_access(start, [entrance]) if is_carrier else _find_worker_path(start, entrance)
 		if start != entrance and candidate.is_empty():
 			continue
@@ -6810,7 +6823,9 @@ func _wake_workers_at_dawn() -> void:
 		worker["arrival_state"] = "Working"
 		worker["move_elapsed"] = 0.0
 		worker["state"] = "Working" if worker["path"].is_empty() else "Returning to work"
+	var _pf_dawn_resume_jobs := _profile_stamp()
 	_resume_daytime_jobs()
+	_profile_finish("dawn_resume_jobs", _pf_dawn_resume_jobs)
 
 
 func _resume_daytime_jobs() -> void:
@@ -8154,7 +8169,9 @@ func _update_time(delta: float) -> void:
 	if not is_night and not night_final_warning_sent and remaining <= NIGHT_FINAL_WARNING_SECONDS:
 		night_final_warning_sent = true
 		path_grid_dirty = true
+		var _pf_dusk_shelter := _profile_stamp()
 		_send_workers_to_shelter()
+		_profile_finish("dusk_shelter", _pf_dusk_shelter)
 		_add_log("Final warning: night falls in 30 seconds. Civilians are returning home and gates are closing.")
 		last_message = "NIGHT IN 30 SECONDS — civilians are returning home."
 		_emit_audio("night")
@@ -8183,14 +8200,18 @@ func _start_night() -> void:
 	if not is_revealed(shard_position):
 		hidden_threat_level += 1
 	_serve_night_meal()
+	var _pf_dusk_shelter := _profile_stamp()
 	_send_workers_to_shelter()
+	_profile_finish("dusk_shelter", _pf_dusk_shelter)
 	_spawn_wave()
 	_emit_audio("night")
 	playtest_log.note(self, "night_started", "Night %d" % day_count)
 
 
 func _end_night() -> void:
+	var _pf_dawn_finish_raid := _profile_stamp()
 	_finish_raid("dawn")
+	_profile_finish("dawn_finish_raid", _pf_dawn_finish_raid)
 	is_night = false
 	phase_time = 0.0
 	night_warning_sent = false
@@ -8199,7 +8220,9 @@ func _end_night() -> void:
 	horn_warning_sent = false
 	day_count += 1
 	path_grid_dirty = true
+	var _pf_dawn_retreat := _profile_stamp()
 	_retreat_enemies_at_dawn()
+	_profile_finish("dawn_retreat", _pf_dawn_retreat)
 	if hungry_population > 0:
 		hunger_penalty_remaining = DAY_LENGTH_SECONDS * HUNGER_RECOVERY_FRACTION
 		_add_log("Hungry workers produce at half output until mid-morning.")
@@ -8207,13 +8230,17 @@ func _end_night() -> void:
 			"hungry": hungry_population,
 			"duration": hunger_penalty_remaining
 		})
+	var _pf_dawn_wake := _profile_stamp()
 	_wake_workers_at_dawn()
+	_profile_finish("dawn_wake", _pf_dawn_wake)
 	stats["days_survived"] = max(int(stats.get("days_survived", 0)), day_count - 1)
 	intention_flags["first_dawn"] = true
 	_add_log("Dawn breaks. Day %d begins." % day_count)
 	playtest_log.note(self, "dawn", "Day %d" % day_count)
 	last_message = "Hungry workers are recovering." if hungry_population > 0 else "Dawn breaks."
+	var _pf_dawn_summary := _profile_stamp()
 	_compose_dawn_summary()
+	_profile_finish("dawn_summary", _pf_dawn_summary)
 	if rivalry != null:
 		return
 	if claim_active:
