@@ -45,11 +45,9 @@ const STARTER_BUILDINGS := [
 	Defs.BUILDING_FARM,
 ]
 const BUILD_CATEGORIES := {
-	"ESSENTIALS": [Defs.BUILDING_ROAD, Defs.BUILDING_HOUSE, Defs.BUILDING_LUMBER_CAMP, Defs.BUILDING_FARM, Defs.BUILDING_WATCHTOWER, Defs.BUILDING_OUTPOST, Defs.BUILDING_WYRD_HARVESTER],
-	"INFRASTRUCTURE": [Defs.BUILDING_ROAD, Defs.TOOL_CLEAR_AREA],
-	"HOUSING": [Defs.BUILDING_HOUSE],
-	"FOOD": [Defs.BUILDING_FARM, Defs.BUILDING_BAKERY],
-	"INDUSTRY": [Defs.BUILDING_LUMBER_CAMP, Defs.BUILDING_QUARRY, Defs.BUILDING_SAWMILL, Defs.BUILDING_STOREHOUSE],
+	# Beta: four tabs, every plan in exactly one (r10 review: no duplicates).
+	"ESSENTIALS": [Defs.BUILDING_ROAD, Defs.BUILDING_HOUSE, Defs.BUILDING_LUMBER_CAMP, Defs.BUILDING_FARM, Defs.TOOL_CLEAR_AREA],
+	"INDUSTRY": [Defs.BUILDING_QUARRY, Defs.BUILDING_SAWMILL, Defs.BUILDING_BAKERY, Defs.BUILDING_STOREHOUSE],
 	"MILITARY": [Defs.BUILDING_WALL, Defs.BUILDING_WATCHTOWER, Defs.BUILDING_BARRACKS],
 	"SPECIAL": [Defs.BUILDING_LUMEN_PILLAR, Defs.BUILDING_OUTPOST, Defs.BUILDING_WYRD_HARVESTER, Defs.BUILDING_WYRD_REFINER],
 }
@@ -187,7 +185,7 @@ var console_collapsed := false
 var console_row_node: HBoxContainer
 var console_toggle_button: Button
 const CONSOLE_HEIGHT_EXPANDED := 156.0
-const MINIMAP_INNER := 132.0
+const MINIMAP_INNER := 160.0
 const MINIMAP_COLLAPSED := 44.0
 const BUILD_GRID_COLUMNS := 4
 const BUILD_SLOT_SIZE := Vector2(66, 52)
@@ -1590,6 +1588,9 @@ func _create_ui() -> void:
 			button.clip_text = true
 			button.custom_minimum_size.y = 48
 			button.add_theme_font_size_override("font_size", 13)
+			# Beta: locked/unaffordable cards were ~40 % grey on dark; keep them
+			# visibly secondary but readable.
+			button.add_theme_color_override("font_disabled_color", Color("#c9bfa6"))
 			button.tooltip_text = _building_tooltip(String(building_type))
 			button.pressed.connect(begin_placement.bind(building_type))
 			section.add_child(button)
@@ -3571,6 +3572,71 @@ func _toggle_objective_detail() -> void:
 var _objective_ping: Node3D = null
 
 
+func _objective_why(t: String) -> String:
+	if "lumen" in t:
+		return "Lumen light keeps Exposure down; a connected chain toward the Shard lets you claim it. Click the goal bar for a spot."
+	if "quarry" in t or "stone" in t:
+		return "Stone gates towers, storehouses and bakeries. Click the goal bar to find a deposit."
+	if "lumber" in t or "wood" in t:
+		return "Wood builds almost everything; place a Lumber Camp next to trees."
+	if "night" in t or "defens" in t or "watchtower" in t:
+		return "Raiders come at night; a Watchtower near homes shoots them before they reach walls."
+	if "house" in t or "housing" in t:
+		return "More homes mean more workers and shelter at night."
+	if "bread" in t or "farm" in t or "bak" in t:
+		return "Workers eat bread; a Farm feeds a Bakery."
+	if "outpost" in t or "rival" in t:
+		return "The rival Outpost pressures your border; capturing it removes that pressure."
+	return ""
+
+
+## Beta progression: the Lumen goal points at a spot where a Lumen Pillar
+## fits on the side of the settlement facing the Shard, and says why.
+func _jump_to_lumen_spot() -> void:
+	var sim = simulation_host.simulation
+	var origin: Vector2i = sim.town_hall_position
+	var shard: Vector2i = sim.shard_position
+	var best := Vector2i(-1, -1)
+	var best_score := INF
+	var checked := 0
+	for y in range(maxi(0, origin.y - 22), mini(sim.map_size.y, origin.y + 23), 2):
+		for x in range(maxi(0, origin.x - 22), mini(sim.map_size.x, origin.x + 23), 2):
+			var tile := Vector2i(x, y)
+			if not sim.is_revealed(tile):
+				continue
+			var score := Vector2(tile - shard).length() + Vector2(tile - origin).length() * 0.35
+			if score >= best_score:
+				continue
+			checked += 1
+			if checked > 600:
+				break
+			if bool(sim.validate_placement(Defs.BUILDING_LUMEN_PILLAR, tile).get("success", false)):
+				best = tile
+				best_score = score
+	if best.x < 0:
+		var why := _build_unavailable_reason(Defs.BUILDING_LUMEN_PILLAR)
+		_show_toast("Lumen", (why + ". " if why != "" else "") + "No revealed spot fits a Lumen Pillar yet: extend a road toward the Shard or scout.", "info", 5.0)
+		return
+	camera_rig.compose_view(world_view.tile_to_world(Vector2(best)), 38.0)
+	if _objective_ping != null and is_instance_valid(_objective_ping):
+		_objective_ping.queue_free()
+	_objective_ping = Node3D.new()
+	_objective_ping.name = "ObjectivePing"
+	_objective_ping.add_child(world_view._ping_mesh(Color("#9fe7ff"), 1.1))
+	var label := Label3D.new()
+	label.text = "Lumen Pillar here"
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.no_depth_test = true
+	label.font_size = 48
+	label.outline_size = 10
+	label.position = Vector3.UP * 3.0
+	_objective_ping.add_child(label)
+	world_view.add_child(_objective_ping)
+	_objective_ping.global_position = world_view.tile_to_world(Vector2(best))
+	var why2 := _build_unavailable_reason(Defs.BUILDING_LUMEN_PILLAR)
+	_show_toast("Lumen", "Build a Lumen Pillar here (Special tab). Its light must touch your road network to extend safe ground toward the Shard." + ("  Now: " + why2 if why2 != "" else ""), "info", 6.0)
+
+
 ## P1 beta: when a Quarry already exists, say exactly why it is not giving stone.
 func _quarry_advice() -> Dictionary:
 	var sim = simulation_host.simulation if simulation_host != null else null
@@ -3598,6 +3664,9 @@ func _jump_to_objective_target() -> void:
 	if sim == null or objective_button == null or camera_rig == null or world_view == null:
 		return
 	var text := objective_button.text.to_lower()
+	if "lumen" in text:
+		_jump_to_lumen_spot()
+		return
 	if not ("quarry" in text or "stone" in text):
 		return
 	var existing := _quarry_advice()
@@ -3701,6 +3770,10 @@ func _show_objective_detail(value: bool) -> void:
 		lines.append("")
 		active_found = true
 	var obj_text := objective_button.text.to_lower() if objective_button != null else ""
+	var why_line := _objective_why(obj_text)
+	if why_line != "":
+		lines.append("Why: " + why_line)
+		lines.append("")
 	if "quarry" in obj_text or "stone" in obj_text:
 		var adv := _quarry_advice()
 		lines.append("Tip: " + (String(adv["text"]) if not adv.is_empty() else "Click the goal bar to jump to a rock deposit where a Quarry fits (it needs a road link)."))

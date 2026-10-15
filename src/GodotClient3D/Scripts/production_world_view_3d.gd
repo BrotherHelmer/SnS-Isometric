@@ -3030,8 +3030,8 @@ func _create_shard_marker() -> void:
 	shard_crystal_material = StandardMaterial3D.new()
 	shard_crystal_material.albedo_color = Color(0.38, 0.50, 0.54, 0.90)
 	shard_crystal_material.emission_enabled = true
-	shard_crystal_material.emission = Color("#243e46")
-	shard_crystal_material.emission_energy_multiplier = 0.32
+	shard_crystal_material.emission = Color("#3f9fb8")
+	shard_crystal_material.emission_energy_multiplier = 0.9
 	shard_crystal_material.roughness = 0.48
 	shard_crystal_material.metallic = 0.14
 	var crystal_specs := [
@@ -3050,6 +3050,21 @@ func _create_shard_marker() -> void:
 		crystal.rotation_degrees = spec["rot"]
 		crystal.material_override = shard_crystal_material
 		shard_beacon.add_child(crystal)
+	# Beta world pass: the Shard is the realm's focal point. Taller crystal
+	# cluster and one cool glow light so it reads from the strategy camera.
+	for index in shard_beacon.get_child_count():
+		var c := shard_beacon.get_child(index)
+		if c is MeshInstance3D and String(c.name).begins_with("ShardCrystal_"):
+			(c as Node3D).scale = Vector3(1.9, 2.4, 1.9)
+			(c as Node3D).position *= 1.7
+	var shard_glow := OmniLight3D.new()
+	shard_glow.name = "ShardGlow"
+	shard_glow.light_color = Color("#7fd6ea")
+	shard_glow.light_energy = 1.1
+	shard_glow.omni_range = 10.0
+	shard_glow.shadow_enabled = false
+	shard_glow.position = Vector3(0.0, 2.6, 0.0)
+	shard_beacon.add_child(shard_glow)
 
 	shard_beacon_column = MeshInstance3D.new()
 	shard_beacon_column.name = "ShardColumn"
@@ -3111,7 +3126,7 @@ func _update_shard_beacon(wyrdfall: Dictionary) -> void:
 		if material != null:
 			material.emission_energy_multiplier = (0.55 if binding else 0.22) * pulse
 	if shard_crystal_material != null:
-		shard_crystal_material.emission_energy_multiplier = (0.70 if binding else 0.32) * pulse
+		shard_crystal_material.emission_energy_multiplier = (1.6 if binding else 0.9) * pulse
 
 
 func _update_seal_ceremony(wyrdfall: Dictionary) -> void:
