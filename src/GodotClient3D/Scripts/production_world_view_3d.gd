@@ -450,13 +450,22 @@ func focus_for_building(id: int) -> Vector3:
 	return Vector3.ZERO
 
 
+## R29: C&C group selection; every id in here shows the selection ring too.
+var group_worker_ids: Array = []
+
+
+func set_group_selection(ids: Array) -> void:
+	group_worker_ids = ids.duplicate()
+	set_selection(selected_building_id, selected_worker_id)
+
+
 func set_selection(building_id: int, worker_id: int) -> void:
 	selected_building_id = building_id
 	selected_worker_id = worker_id
 	for id_value in building_views:
 		(building_views[id_value] as ProductionBuildingView3D).set_selected(int(id_value) == building_id)
 	for id_value in character_views:
-		(character_views[id_value] as ProductionCharacterView3D).set_selected(int(id_value) == worker_id)
+		(character_views[id_value] as ProductionCharacterView3D).set_selected(int(id_value) == worker_id or group_worker_ids.has(int(id_value)))
 	for id_value in rivalry_structure_views:
 		(rivalry_structure_views[id_value] as ProductionBuildingView3D).set_selected(int(id_value) == building_id)
 	for id_value in combatant_views:

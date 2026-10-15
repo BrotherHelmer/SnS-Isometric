@@ -125,6 +125,12 @@ var scout_button: Button
 var scout_aiming := false
 ## R28: unit orders. "" | "move" | "attack"; right-click with a soldier selected also orders.
 var unit_order_mode := ""
+## R29: C&C group selection (patrol soldiers). Box-drag selects, Ctrl+click
+## toggles, plain click selects one, right-click orders the whole group.
+var selected_unit_ids: Array = []
+var box_select_active := false
+var box_select_origin := Vector2.ZERO
+var box_select_rect: Panel
 var _rmb_press_pos := Vector2(-1, -1)
 var move_button: Button
 var attack_button: Button
@@ -575,7 +581,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and map_drag_active:
 		if not map_drag_moved and event.position.distance_to(map_drag_origin) > 8.0:
 			map_drag_moved = true
-		if map_drag_moved and camera_rig != null:
+		if map_drag_moved and box_select_active:
+			_update_box_select_rect(box_select_origin, event.position)
+		elif map_drag_moved and camera_rig != null:
 			camera_rig.pan_from_mouse(event.relative)
 		get_viewport().set_input_as_handled()
 		return
@@ -596,6 +604,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				map_drag_active = true
 				map_drag_moved = false
 				map_drag_origin = event.position
+				box_select_active = not scout_aiming and unit_order_mode == ""
+				box_select_origin = event.position
 			get_viewport().set_input_as_handled()
 		else:
 			var consumed := road_dragging or wall_dragging or clear_dragging or map_drag_active
@@ -606,13 +616,20 @@ func _unhandled_input(event: InputEvent) -> void:
 			if clear_dragging:
 				_finish_clear_drag(event.position)
 			if map_drag_active:
-				if not map_drag_moved:
+				if map_drag_moved and box_select_active:
+					box_select_from_rect(Rect2(box_select_origin, Vector2.ZERO).expand(event.position), event.ctrl_pressed)
+				elif not map_drag_moved:
 					if scout_aiming:
 						_commit_scout_click(event.position)
 					elif unit_order_mode != "":
 						_commit_unit_order(event.position, unit_order_mode)
+					elif event.ctrl_pressed:
+						_toggle_unit_from_pointer(event.position)
 					else:
 						_select_from_pointer(event.position)
+				box_select_active = false
+				if box_select_rect != null:
+					box_select_rect.visible = false
 				map_drag_active = false
 				map_drag_moved = false
 			if consumed:
@@ -635,7 +652,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		else:
 			if camera_rig != null:
 				camera_rig.end_pointer_pan()
-			if _rmb_press_pos.x >= 0.0 and event.position.distance_to(_rmb_press_pos) < 8.0 and not _pointer_over_ui() and _selected_soldier().size() > 0:
+			if _rmb_press_pos.x >= 0.0 and event.position.distance_to(_rmb_press_pos) < 8.0 and not _pointer_over_ui() and (_selected_soldier().size() > 0 or not _group_ids().is_empty()):
 				_commit_unit_order(event.position, "auto")
 			_rmb_press_pos = Vector2(-1, -1)
 		return
@@ -693,6 +710,173 @@ func _begin_scout_aim() -> bool:
 	return true
 
 
+## R29: group panel text: count, unit types, health and what they are doing.
+func group_summary_lines(ids: Array) -> Array:
+	var sim = simulation_host.simulation
+	var types := {}
+	var states := {}
+	var hp := 0
+	var max_hp := 0
+	for id_value in ids:
+		var w: Dictionary = sim.get_worker_by_id(int(id_value))
+		if w.is_empty():
+			continue
+		var descriptor: Dictionary = presentation_adapter.worker_descriptor(w, sim)
+		var t := String(descriptor.get("profession", "Soldier"))
+		types[t] = int(types.get(t, 0)) + 1
+		var st := _worker_player_status(String(descriptor.get("simulation_state", "Idle")))
+		states[st] = int(states.get(st, 0)) + 1
+		hp += int(w.get("hp", 0))
+		max_hp += int(w.get("max_hp", 1))
+	var type_parts := []
+	for t in types:
+		type_parts.append("%d× %s" % [int(types[t]), t])
+	var state_parts := []
+	for st in states:
+		state_parts.append("%d %s" % [int(states[st]), st])
+	return [
+		"[font_size=22][color=#efcf8a]%d Soldiers selected[/color][/font_size]" % ids.size(),
+		"[color=#9fc6a5]%s[/color]" % ", ".join(type_parts),
+		"",
+		"HP  %d / %d" % [hp, max_hp],
+		"Doing  %s" % ", ".join(state_parts),
+		"Right-click: move or attack as a group · Ctrl+click adds/removes",
+	]
+
+
+func _is_patrol_soldier_id(id: int) -> bool:
+	if simulation_host == null or simulation_host.simulation == null or id <= 0:
+		return false
+	var w: Dictionary = simulation_host.simulation.get_worker_by_id(id)
+	return not w.is_empty() and String(w.get("type", "")) == "guard" and int(w.get("building_id", 0)) == 0 and int(w.get("hp", 0)) > 0
+
+
+func _group_ids() -> Array:
+	var alive: Array = []
+	for id in selected_unit_ids:
+		if _is_patrol_soldier_id(int(id)):
+			alive.append(int(id))
+	if alive.size() != selected_unit_ids.size():
+		_set_group(alive)
+	return alive
+
+
+func _set_group(ids: Array) -> void:
+	selected_unit_ids = ids.duplicate()
+	if world_view != null:
+		world_view.set_group_selection(selected_unit_ids)
+
+
+## Screen position of a worker (same projection as the character pick).
+func _worker_screen_position(snapshot: Dictionary) -> Vector2:
+	var logical := Vector2(snapshot.get("logical_position", Vector2.ZERO)) + Vector2(snapshot.get("presentation_offset", Vector2.ZERO))
+	var world_position := world_view.tile_to_world(logical) + Vector3.UP * 1.15
+	if camera_rig.camera.is_position_behind(world_position):
+		return Vector2(-99999, -99999)
+	return camera_rig.camera.unproject_position(world_position)
+
+
+func box_select_from_rect(rect: Rect2, additive: bool) -> int:
+	if camera_rig == null or camera_rig.camera == null:
+		return 0
+	var ids: Array = selected_unit_ids.duplicate() if additive else []
+	for snapshot_value in current_frame_snapshot.get("workers", []):
+		var snapshot: Dictionary = snapshot_value
+		if not bool(snapshot.get("visible", true)):
+			continue
+		var id := int(snapshot.get("id", 0))
+		if not _is_patrol_soldier_id(id) or ids.has(id):
+			continue
+		if rect.grow(6.0).has_point(_worker_screen_position(snapshot)):
+			ids.append(id)
+	if ids.is_empty():
+		if not additive:
+			_select_from_pointer(rect.get_center())
+		return 0
+	_apply_group_selection(ids)
+	return ids.size()
+
+
+func _apply_group_selection(ids: Array) -> void:
+	selected_building_id = 0
+	selected_entity_kind = "worker"
+	selected_worker_id = int(ids[0])
+	_set_group(ids)
+	world_view.set_selection(0, selected_worker_id)
+	world_view.set_watchtower_overlay(Vector2.ZERO, 0.0, false)
+	_update_inspector()
+
+
+func _toggle_unit_from_pointer(screen_position: Vector2) -> void:
+	var pick := _screen_space_character_pick(screen_position)
+	var id := int(pick.get("id", 0))
+	if String(pick.get("kind", "")) != "worker" or not _is_patrol_soldier_id(id):
+		_select_from_pointer(screen_position)
+		return
+	toggle_unit(id)
+
+
+func toggle_unit(id: int) -> void:
+	var ids := _group_ids()
+	if ids.has(id):
+		ids.erase(id)
+	else:
+		ids.append(id)
+	if ids.is_empty():
+		_set_group([])
+		selected_worker_id = 0
+		selected_entity_kind = ""
+		world_view.set_selection(0, 0)
+		_update_inspector()
+		return
+	_apply_group_selection(ids)
+
+
+## Orders every soldier in the group. Attack if a raider is at the tile,
+## otherwise a move with destinations spread in a ring so they do not stack.
+func order_group(ids: Array, tile: Vector2i, mode: String) -> Dictionary:
+	var sim = simulation_host.simulation
+	var enemy_id: int = sim.enemy_id_near_tile(tile, 2 if mode == "attack" else 1)
+	if mode == "attack" and enemy_id <= 0:
+		return {"success": false, "message": "No raider there — click on a raider."}
+	var ok := 0
+	var offsets := [Vector2i.ZERO, Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0), Vector2i(0, -1), Vector2i(1, 1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, -1), Vector2i(2, 0), Vector2i(0, 2), Vector2i(-2, 0), Vector2i(0, -2)]
+	var slot := 0
+	for id_value in ids:
+		var id := int(id_value)
+		var result: Dictionary
+		if enemy_id > 0:
+			result = sim.request_attack_order(id, enemy_id)
+		else:
+			result = {"success": false}
+			while slot < offsets.size() and not bool(result.get("success", false)):
+				result = sim.request_worker_order(id, tile + offsets[slot])
+				slot += 1
+			if not bool(result.get("success", false)):
+				result = sim.request_worker_order(id, tile)
+		if bool(result.get("success", false)):
+			ok += 1
+	var verb := "attack" if enemy_id > 0 else "move"
+	return {"success": ok > 0, "message": "Order accepted: %d of %d soldiers %s." % [ok, ids.size(), verb] if ok > 0 else "No soldier could reach that spot."}
+
+
+func _update_box_select_rect(a: Vector2, b: Vector2) -> void:
+	if box_select_rect == null:
+		box_select_rect = Panel.new()
+		box_select_rect.name = "BoxSelect"
+		box_select_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color(0.55, 0.85, 0.55, 0.12)
+		sb.border_color = Color(0.62, 0.95, 0.62, 0.9)
+		sb.set_border_width_all(1)
+		box_select_rect.add_theme_stylebox_override("panel", sb)
+		hud_root.add_child(box_select_rect)
+	var r := Rect2(a, Vector2.ZERO).expand(b)
+	box_select_rect.position = r.position
+	box_select_rect.size = r.size
+	box_select_rect.visible = true
+
+
 func _selected_soldier() -> Dictionary:
 	if simulation_host.simulation == null or selected_worker_id <= 0 or selected_entity_kind != "worker":
 		return {}
@@ -703,7 +887,7 @@ func _selected_soldier() -> Dictionary:
 
 
 func _begin_unit_order(mode: String) -> void:
-	if _selected_soldier().is_empty():
+	if _selected_soldier().is_empty() and _group_ids().is_empty():
 		_show_status("Select a patrol soldier first.")
 		return
 	scout_aiming = false
@@ -722,6 +906,10 @@ func _commit_unit_order(screen_position: Vector2, mode: String) -> void:
 		return
 	var tile := world_view.world_to_tile(hit.position)
 	var sim = simulation_host.simulation
+	var group := _group_ids()
+	if group.size() > 1:
+		_show_command_result(order_group(group, tile, mode))
+		return
 	if mode == "attack":
 		var enemy_id: int = sim.enemy_id_near_tile(tile, 2)
 		if enemy_id <= 0:
@@ -899,6 +1087,7 @@ func cancel_placement() -> void:
 
 
 func select_building(id: int) -> void:
+	_set_group([])
 	selected_building_id = id
 	selected_worker_id = 0
 	selected_entity_kind = "building"
@@ -912,6 +1101,7 @@ func select_building(id: int) -> void:
 
 
 func select_worker(id: int) -> void:
+	_set_group([id] if _is_patrol_soldier_id(id) else [])
 	selected_worker_id = id
 	selected_building_id = 0
 	selected_entity_kind = "worker"
@@ -2436,6 +2626,7 @@ func _road_route_score(route: Array[Vector2i]) -> int:
 
 
 func _select_from_pointer(screen_position: Vector2) -> void:
+	_set_group([])
 	var character_pick := _screen_space_character_pick(screen_position)
 	if not character_pick.is_empty():
 		var picked_kind := String(character_pick.get("kind", "worker"))
@@ -3040,6 +3231,14 @@ func _update_inspector_core() -> void:
 			inspector_label.text = "\n".join(lines)
 			inspector_panel.visible = true
 			return
+	var group_now := _group_ids()
+	if group_now.size() > 1 and selected_entity_kind == "worker":
+		inspector_label.text = "\n".join(group_summary_lines(group_now))
+		inspector_panel.visible = true
+		if move_button != null:
+			move_button.visible = true
+			attack_button.visible = true
+		return
 	if selected_worker_id > 0 and selected_entity_kind == "worker":
 		var worker: Dictionary = simulation_host.simulation.get_worker_by_id(selected_worker_id)
 		if worker.is_empty():

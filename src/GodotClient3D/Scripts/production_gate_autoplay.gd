@@ -302,6 +302,10 @@ func _shot_async(name: String, action: String) -> void:
 	_note("shot %s t=%.0f" % [name, t])
 	if name == "03_start" and OS.get_cmdline_user_args().has("--gate-diag-layers"):
 		await _diag_layer_shots(tree)
+	if name == "03_start" and OS.get_cmdline_user_args().has("--gate-group-probe"):
+		await _group_probe(tree)
+		game.get_tree().quit()
+		return
 	if name == "03_start" and OS.get_cmdline_user_args().has("--gate-unit-probe"):
 		await _unit_probe(tree)
 		game.get_tree().quit()
@@ -460,6 +464,91 @@ static func _loadtest_seconds() -> float:
 		if String(a).begins_with("--gate-loadtest="):
 			return float(String(a).trim_prefix("--gate-loadtest="))
 	return 0.0
+
+
+## R29 probe: C&C group selection. 4 soldiers; box-select, Ctrl toggle,
+## plain click, group move and group attack, with shots.
+func _group_probe(tree: SceneTree) -> void:
+	var sim = game.simulation_host.simulation
+	sim.soldiers_total += 4
+	sim._sync_production_workers()
+	var origin: Vector2i = sim._town_hall_entrance_tile()
+	var ids: Array = []
+	var k := 0
+	for w in sim.workers:
+		if String(w.get("type", "")) == "guard" and int(w.get("building_id", 0)) == 0:
+			w["position"] = origin + Vector2i(k % 2, 1 + k / 2)
+			w["path"] = []
+			ids.append(int(w.id))
+			k += 1
+	game.camera_rig.focus_world(game.world_view.tile_to_world(Vector2(origin) + Vector2(0.5, 3.0)))
+	await tree.create_timer(1.5).timeout
+	await RenderingServer.frame_post_draw
+	var checks := []
+	var vp: Rect2 = game.get_viewport().get_visible_rect()
+	# 1) box-drag over the whole world view selects all soldiers
+	var n: int = game.box_select_from_rect(Rect2(Vector2(0, 60), Vector2(vp.size.x, vp.size.y * 0.7)), false)
+	checks.append(["box_select", n == ids.size(), "selected %d of %d" % [n, ids.size()]])
+	game._update_box_select_rect(Vector2(vp.size.x * 0.2, 90), Vector2(vp.size.x * 0.8, vp.size.y * 0.65))
+	await tree.create_timer(0.6).timeout
+	await RenderingServer.frame_post_draw
+	game.get_viewport().get_texture().get_image().save_png(dir.path_join("group_select.png"))
+	game.box_select_rect.visible = false
+	var panel_text: String = game.inspector_label.text
+	checks.append(["panel", panel_text.contains("%d Soldiers selected" % ids.size()), panel_text.split("\n")[0].left(90)])
+	# 2) Ctrl+click toggles one out and back in
+	game.toggle_unit(int(ids[0]))
+	var after_out: int = game._group_ids().size()
+	game.toggle_unit(int(ids[0]))
+	checks.append(["ctrl_toggle", after_out == ids.size() - 1 and game._group_ids().size() == ids.size(), "%d -> %d -> %d" % [ids.size(), after_out, game._group_ids().size()]])
+	# 3) plain click selects only that unit
+	game.select_worker(int(ids[1]))
+	checks.append(["plain_click", game._group_ids().size() == 1, "group=%d" % game._group_ids().size()])
+	game.box_select_from_rect(Rect2(Vector2(0, 60), Vector2(vp.size.x, vp.size.y * 0.7)), false)
+	# 4) group move
+	var dest := origin + Vector2i(5, 4)
+	for r in range(4, 9):
+		var t := origin + Vector2i(r, r)
+		if sim.is_revealed(t) and String(sim.get_tile(t)) == "GRASS" and not sim.is_tile_occupied(t):
+			dest = t
+			break
+	var res: Dictionary = game.order_group(game._group_ids(), dest, "auto")
+	var moving := 0
+	for id in ids:
+		var w: Dictionary = sim._find_worker_by_id(int(id))
+		if String(w.get("state", "")) == "Moving by order":
+			moving += 1
+	checks.append(["group_move", moving == ids.size(), "%s moving=%d" % [String(res.get("message", "")), moving]])
+	await tree.create_timer(6.0).timeout
+	await RenderingServer.frame_post_draw
+	game.get_viewport().get_texture().get_image().save_png(dir.path_join("group_order_move.png"))
+	var spread := {}
+	for id in ids:
+		spread[str(sim._find_worker_by_id(int(id)).get("position"))] = true
+	checks.append(["no_stacking", spread.size() >= mini(ids.size(), 3), "%d distinct tiles" % spread.size()])
+	# 5) group attack on a raider holding position
+	var spot := dest + Vector2i(4, 0)
+	sim._spawn_enemy(spot, 80, 1, 0.0)
+	var enemy: Dictionary = sim.enemies[sim.enemies.size() - 1]
+	enemy["speed_multiplier"] = 100000.0
+	var hp0 := int(enemy.hp)
+	res = game.order_group(game._group_ids(), spot, "attack")
+	var waited := 0.0
+	while waited < 20.0 and int(enemy.hp) > hp0 - 8 and sim.enemies.has(enemy):
+		await tree.create_timer(0.5).timeout
+		waited += 0.5
+	await RenderingServer.frame_post_draw
+	game.get_viewport().get_texture().get_image().save_png(dir.path_join("group_order_attack.png"))
+	var fighters := 0
+	for id in ids:
+		if int(sim._find_worker_by_id(int(id)).get("manual_attack_id", 0)) == int(enemy.id) or String(sim._find_worker_by_id(int(id)).get("state", "")) == "Fighting":
+			fighters += 1
+	checks.append(["group_attack", int(enemy.hp) < hp0 and fighters >= 2, "%s hp %d->%d in %.1fs, %d engaged" % [String(res.get("message", "")), hp0, int(enemy.hp), waited, fighters]])
+	var all_ok := true
+	for c in checks:
+		all_ok = all_ok and bool(c[1])
+		_note("group_probe %s %s %s" % [String(c[0]), "PASS" if bool(c[1]) else "FAIL", String(c[2])])
+	_note("group_probe RESULT %s" % ("PASS" if all_ok else "FAIL"))
 
 
 ## R28 probe: a patrol soldier + a raider holding position; the soldier is
