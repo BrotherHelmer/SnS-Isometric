@@ -1170,7 +1170,7 @@ func _build_chunk_grass(host: Node3D, coord: Vector2i) -> void:
 				_append_nature_transform(transforms_by_path, String(Catalog.GRASS[_tile_hash(tile, 83) % Catalog.GRASS.size()]), tile, 1, 0.95, 1.20, 0.60)
 				if Catalog.FLOWERS.size() > 0 and clump_h % 3 == 0:
 					_append_nature_transform(transforms_by_path, String(Catalog.FLOWERS[clump_h % Catalog.FLOWERS.size()]), tile, 2, 0.70, 1.10, 0.45)
-				if Catalog.ROCKS.size() > 0 and clump_h % 7 == 0:
+				if Catalog.ROCKS.size() > 0 and clump_h % 4 == 0:
 					_append_nature_transform(transforms_by_path, String(Catalog.ROCKS[clump_h % Catalog.ROCKS.size()]), tile, 3, 0.55, 0.42, 0.25)
 				elif Catalog.UNDERSTORY.size() > 0 and clump_h % 5 == 0:
 					_append_nature_transform(transforms_by_path, String(Catalog.UNDERSTORY[clump_h % Catalog.UNDERSTORY.size()]), tile, 4, 0.55, 0.62, 0.30)
