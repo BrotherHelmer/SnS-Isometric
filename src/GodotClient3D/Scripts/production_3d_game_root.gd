@@ -123,6 +123,11 @@ var assault_button: Button
 var recall_button: Button
 var scout_button: Button
 var scout_aiming := false
+## R28: unit orders. "" | "move" | "attack"; right-click with a soldier selected also orders.
+var unit_order_mode := ""
+var _rmb_press_pos := Vector2(-1, -1)
+var move_button: Button
+var attack_button: Button
 var pause_button: Button
 var play_button: Button
 var speed_button: Button
@@ -514,6 +519,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			_set_build_palette_visible(false)
 			get_viewport().set_input_as_handled()
 			return
+		if event.keycode == KEY_ESCAPE and unit_order_mode != "":
+			unit_order_mode = ""
+			_show_status("Order cancelled.")
+			get_viewport().set_input_as_handled()
+			return
 		if event.keycode == KEY_ESCAPE and scout_aiming:
 			scout_aiming = false
 			_show_status("Scout cancelled.")
@@ -597,6 +607,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				if not map_drag_moved:
 					if scout_aiming:
 						_commit_scout_click(event.position)
+					elif unit_order_mode != "":
+						_commit_unit_order(event.position, unit_order_mode)
 					else:
 						_select_from_pointer(event.position)
 				map_drag_active = false
@@ -614,12 +626,16 @@ func _unhandled_input(event: InputEvent) -> void:
 				_set_build_palette_visible(false)
 				get_viewport().set_input_as_handled()
 				return
+			_rmb_press_pos = event.position
 			if not _pointer_over_ui() and camera_rig != null:
 				camera_rig.begin_pointer_pan()
 				get_viewport().set_input_as_handled()
 		else:
 			if camera_rig != null:
 				camera_rig.end_pointer_pan()
+			if _rmb_press_pos.x >= 0.0 and event.position.distance_to(_rmb_press_pos) < 8.0 and not _pointer_over_ui() and _selected_soldier().size() > 0:
+				_commit_unit_order(event.position, "auto")
+			_rmb_press_pos = Vector2(-1, -1)
 		return
 
 
@@ -673,6 +689,50 @@ func _begin_scout_aim() -> bool:
 	cancel_placement()
 	_show_status("Scout Direction — click into the fog. %s will walk there and return on his own." % String(worker.get("display_name", "The soldier")))
 	return true
+
+
+func _selected_soldier() -> Dictionary:
+	if simulation_host.simulation == null or selected_worker_id <= 0 or selected_entity_kind != "worker":
+		return {}
+	var worker: Dictionary = simulation_host.simulation.get_worker_by_id(selected_worker_id)
+	if worker.is_empty() or String(worker.get("type", "")) != "guard" or int(worker.get("building_id", 0)) != 0:
+		return {}
+	return worker
+
+
+func _begin_unit_order(mode: String) -> void:
+	if _selected_soldier().is_empty():
+		_show_status("Select a patrol soldier first.")
+		return
+	scout_aiming = false
+	cancel_placement()
+	unit_order_mode = mode
+	_show_status("Attack — click a raider." if mode == "attack" else "Move — click open ground.")
+
+
+func _commit_unit_order(screen_position: Vector2, mode: String) -> void:
+	unit_order_mode = ""
+	if simulation_host.simulation == null or world_view == null:
+		return
+	var hit: Dictionary = _raycast_terrain(screen_position)
+	if hit.is_empty():
+		_show_status("Click the land to give an order.")
+		return
+	var tile := world_view.world_to_tile(hit.position)
+	var sim = simulation_host.simulation
+	if mode == "attack":
+		var enemy_id: int = sim.enemy_id_near_tile(tile, 2)
+		if enemy_id <= 0:
+			_show_status("No raider there — click on a raider.")
+			return
+		_show_command_result(sim.request_attack_order(selected_worker_id, enemy_id))
+		return
+	if mode == "auto":
+		var near_id: int = sim.enemy_id_near_tile(tile, 1)
+		if near_id > 0:
+			_show_command_result(sim.request_attack_order(selected_worker_id, near_id))
+			return
+	_show_command_result(sim.request_worker_order(selected_worker_id, tile))
 
 
 func _commit_scout_click(screen_position: Vector2) -> void:
@@ -1876,6 +1936,22 @@ func _create_ui() -> void:
 	scout_button.pressed.connect(_begin_scout_aim)
 	action_row.add_child(scout_button)
 	scout_button.visible = false
+	move_button = Button.new()
+	move_button.name = "UnitMove"
+	move_button.text = "MOVE"
+	move_button.tooltip_text = "Move: click open ground (or right-click it with the soldier selected)."
+	Identity.apply_button(move_button)
+	move_button.pressed.connect(func() -> void: _begin_unit_order("move"))
+	action_row.add_child(move_button)
+	move_button.visible = false
+	attack_button = Button.new()
+	attack_button.name = "UnitAttack"
+	attack_button.text = "ATTACK"
+	attack_button.tooltip_text = "Attack: click a raider (or right-click it with the soldier selected). Soldiers also engage raiders near them on their own."
+	Identity.apply_button(attack_button)
+	attack_button.pressed.connect(func() -> void: _begin_unit_order("attack"))
+	action_row.add_child(attack_button)
+	attack_button.visible = false
 	inspector_panel.visible = false
 
 	placement_panel = PanelContainer.new()
@@ -2858,6 +2934,9 @@ func _update_inspector() -> void:
 
 
 func _update_inspector_core() -> void:
+	if move_button != null:
+		move_button.visible = false
+		attack_button.visible = false
 	assault_button.visible = false
 	recall_button.visible = false
 	if scout_button != null:
@@ -2983,6 +3062,10 @@ func _update_inspector_core() -> void:
 			inspector_panel.visible = true
 			if scout_button != null:
 				scout_button.visible = simulation_host.simulation.is_patrol_scout(worker) and not worker.has("scout_mission")
+			var soldier := String(worker.get("type", "")) == "guard" and int(worker.get("building_id", 0)) == 0
+			if move_button != null:
+				move_button.visible = soldier
+				attack_button.visible = soldier
 			return
 	if debug_visible:
 		var metrics := world_view.presentation_metrics()
@@ -2998,6 +3081,9 @@ func _update_inspector_core() -> void:
 		inspector_panel.visible = false
 		if scout_button != null:
 			scout_button.visible = false
+		if move_button != null:
+			move_button.visible = false
+			attack_button.visible = false
 
 
 ## Look lift: stat rows get an icon, a muted label and a bold value, laid out

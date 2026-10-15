@@ -58,6 +58,8 @@ const ENEMY_ATTACK_STRIKE_REMAINING := 0.28
 const GUARD_ATTACK_ANIMATION_SECONDS := 0.48
 const GUARD_ATTACK_STRIKE_REMAINING := 0.24
 const GUARD_DAMAGE := 4
+## R28 combat: patrol soldiers react to raiders inside this radius (tiles).
+const GUARD_DEFENCE_RADIUS := 10
 const TOWN_HALL_OVERFLOW := 20
 const AUTO_SPUR_MAX_STEPS := 2
 const NOTICE_LOG_LIMIT := 80
@@ -1907,6 +1909,13 @@ func request_worker_order(worker_id: int, tile: Vector2i) -> Dictionary:
 	var worker: Dictionary = _find_worker_by_id(worker_id)
 	if worker.is_empty():
 		return _failure("Worker", "That settler is no longer available.")
+	if String(worker.get("type", "")) == "guard":
+		var enemy_here := enemy_id_near_tile(tile, 1)
+		if enemy_here > 0:
+			return request_attack_order(worker_id, enemy_here)
+		worker.erase("manual_attack_id")
+		if int(worker.get("building_id", 0)) != 0:
+			return _failure("Order", "Tower sentries hold their tower.")
 	if String(worker.get("state", "")) == "Inside Town Hall":
 		return _failure("Intro", "Wait for the settler to step into the clearing.")
 	if int(worker.get("carried_amount", 0)) > 0:
@@ -1963,6 +1972,37 @@ func request_worker_order(worker_id: int, tile: Vector2i) -> Dictionary:
 		last_message = "Order accepted: move there."
 		return _success(last_message)
 	return _failure("Order", "Choose open ground, a tree, or a stone deposit.")
+
+
+## R28: manual attack order for a patrol soldier (right-click a raider).
+func request_attack_order(worker_id: int, enemy_id: int) -> Dictionary:
+	var worker: Dictionary = _find_worker_by_id(worker_id)
+	if worker.is_empty() or String(worker.get("type", "")) != "guard":
+		return _failure("Attack", "Only soldiers can attack.")
+	if int(worker.get("building_id", 0)) != 0:
+		return _failure("Attack", "Tower sentries hold their tower.")
+	var enemy := _find_enemy_by_id(enemy_id)
+	if enemy.is_empty() or int(enemy.get("hp", 0)) <= 0:
+		return _failure("Attack", "That target is gone.")
+	if worker.has("scout_mission"):
+		return _failure("Attack", "This soldier is scouting.")
+	worker["manual_attack_id"] = enemy_id
+	worker["manual_order"] = true
+	worker["path"] = []
+	worker["engage_timer"] = 0.0
+	worker["state"] = "Engaging raider"
+	worker["reaction"] = "!"
+	worker["reaction_until"] = elapsed_seconds + 0.8
+	last_message = "Order accepted: attack."
+	_emit_audio("soldier")
+	return _success(last_message)
+
+
+func enemy_id_near_tile(tile: Vector2i, radius: int = 1) -> int:
+	for enemy in enemies:
+		if int(enemy.get("hp", 0)) > 0 and _manhattan(enemy["position"], tile) <= radius:
+			return int(enemy.get("id", 0))
+	return 0
 
 
 func is_patrol_scout(worker: Dictionary) -> bool:
@@ -6487,6 +6527,8 @@ func _update_patrol_worker(worker: Dictionary, delta: float) -> void:
 	# Do not walk away during a committed strike, against a raider or Outpost.
 	if float(worker.get("attack_flash", 0.0)) > 0.0:
 		return
+	if _update_guard_engagement(worker, delta):
+		return
 	if int(worker.get("assault_target_id", 0)) > 0:
 		var target := _assault_outpost(int(worker.assault_target_id))
 		if target.is_empty():
@@ -6528,6 +6570,46 @@ func _update_patrol_worker(worker: Dictionary, delta: float) -> void:
 			worker["activity_timer"] = 1.2
 			return
 	worker["activity_timer"] = 1.0
+
+
+## R28 combat: Helmer saw raiders hit a building while soldiers stood by.
+## Patrols only struck enemies within 2 tiles and never moved toward them.
+## Now a soldier closes on a manual target, or on any raider inside
+## GUARD_DEFENCE_RADIUS (unless walking a manual move order); the strike
+## itself stays in _update_patrol_combat.
+func _update_guard_engagement(worker: Dictionary, delta: float) -> bool:
+	var manual_id := int(worker.get("manual_attack_id", 0))
+	var threat: Dictionary = {}
+	if manual_id > 0:
+		threat = _find_enemy_by_id(manual_id)
+		if threat.is_empty() or int(threat.get("hp", 0)) <= 0:
+			worker.erase("manual_attack_id")
+			threat = {}
+	if threat.is_empty():
+		if bool(worker.get("manual_order", false)) and not worker["path"].is_empty() and String(worker.get("state", "")) == "Moving by order":
+			return false
+		threat = _find_enemy_for_guard(worker, GUARD_DEFENCE_RADIUS)
+	if threat.is_empty():
+		return false
+	var pos: Vector2i = worker["position"]
+	var enemy_pos: Vector2i = threat["position"]
+	if _manhattan(pos, enemy_pos) <= 2:
+		worker["path"] = []
+		worker["state"] = "Fighting"
+		return true
+	worker["engage_timer"] = float(worker.get("engage_timer", 0.0)) - delta
+	if worker["path"].is_empty() or float(worker["engage_timer"]) <= 0.0:
+		worker["engage_timer"] = 0.8
+		var path := _find_worker_path(pos, enemy_pos)
+		if path.size() > 1:
+			path.pop_back()
+		worker["path"] = path
+		worker["state"] = "Engaging raider"
+		worker["arrival_state"] = "Fighting"
+		if path.is_empty():
+			return false
+	_advance_production_worker(worker, delta)
+	return true
 
 
 func _update_scout_worker(worker: Dictionary, delta: float) -> void:
@@ -9214,6 +9296,9 @@ func _update_patrol_combat(delta: float) -> void:
 		if float(guard["attack_timer"]) > 0.0:
 			continue
 		var enemy := _find_enemy_for_guard(guard, 2)
+		var manual_target := _find_enemy_by_id(int(guard.get("manual_attack_id", 0)))
+		if not manual_target.is_empty() and int(manual_target.get("hp", 0)) > 0 and _manhattan(guard["position"], manual_target["position"]) <= 2:
+			enemy = manual_target
 		if enemy.is_empty():
 			var outpost := _assault_outpost(int(guard.get("assault_target_id", 0)))
 			if not outpost.is_empty() and _outpost_distance(guard.position, outpost) <= 1:
