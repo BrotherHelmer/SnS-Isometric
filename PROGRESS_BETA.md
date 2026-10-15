@@ -41,3 +41,6 @@ Baseline: hotfix7 run7 (b4dab21, Low) 37.5 avg FPS, median 26.5 ms, GPU median 1
 - 03:52 r14 daf4ced gate: no crash, avg 55.7, raw 1% low 38.2 (FAIL vs 40), max spike 272 ms. Published playtest-beta-r14-daf4ced. The r11 orange cube is gone. Worst frames: 17 harness think, a late sim burst at ~985 s (sim_advance 85-155 ms over ~6 frames after the Wyrd Refiner/road placement), and 230-270 ms frames at dusk/dawn phase changes.
 - R15 359b244: bot think spread over 13 frames (one phase per frame; box max phase 57 ms).
 - R16: SSAO stays enabled at night with intensity 0.35 (the toggle reallocates buffers); grade LUTs prebuilt; the harness logs sim systems for every tick >15 ms (box: A* path generation + path cache rebuilds dominate).
+- 04:15 r15 359b244 gate: no crash, avg 51.7, raw 1% low 34.8 (FAIL), stalls>100 ms 62->23. The frame-spread alone was not enough: single bot phases (expand toward Shard x208, economy x49) cost 30-274 ms. Published playtest-beta-r15-359b244.
+- R17 b309aa0: path-grid rebuild uses a cached shard/tree/rock set (skips 100k-cell String scan); terrain edits patch one A* cell. Gate r17 running on Shard since 04:08 Shard time.
+- R18: harness bot phases >25 ms with no action cool down 2 think cycles (harness-only; bot expands slightly slower).
