@@ -4207,7 +4207,7 @@ func _free_camera_fog_screens() -> void:
 ## Gate isolation only (--gate-r32-hide=fog): keep the screen fog hidden even
 ## when a fog update re-shows it.
 var gate_hide_fog := false
-const R33_GROUND_CHEAP := 1.0
+const R33_GROUND_CHEAP := 0.0  # r33.2: reverted (no measurable gain, visible loss)
 
 
 func _hide_fog_screen() -> void:
