@@ -965,6 +965,10 @@ func _create_lighting() -> void:
 	environment.adjustment_saturation = 1.12
 	environment.adjustment_contrast = 1.12
 	environment.adjustment_brightness = 1.0
+	# Beta r16: build every grade LUT up front so dusk/night/dawn never
+	# create a texture mid-game.
+	for grade_key in Identity.GRADE.keys():
+		Identity.grade_lut_for(String(grade_key))
 	environment.adjustment_color_correction = Identity.grade_lut_for("day")
 	# GFX-I: Environment depth haze is off. World-space FOW shroud owns
 	# the unknown. Volumetrics stay off so the village is not veiled.
@@ -4918,9 +4922,12 @@ func _apply_quality_features() -> void:
 	var want_ssao := bool(quality_profile.get("ssao", quality_profile.get("shadows", true)))
 	# The Director: night drops SSAO. Very-Low still left lavapipe 1 ms
 	# over the +15% GFX-1 guard; windows/moon carry night form instead.
-	environment_resource.ssao_enabled = want_ssao and not night
+	# Beta r16: toggling SSAO at dusk/dawn reallocated its buffers and
+	# cost a 230-270 ms frame on Shard at every phase change. Keep it on
+	# and fade it instead; night uses a weak intensity.
+	environment_resource.ssao_enabled = want_ssao
 	environment_resource.ssao_radius = 0.55
-	environment_resource.ssao_intensity = 1.10
+	environment_resource.ssao_intensity = 0.35 if night else 1.10
 	environment_resource.ssao_power = 1.18
 	environment_resource.ssao_detail = 0.36
 	environment_resource.ssao_sharpness = 0.98

@@ -109,6 +109,10 @@ func _process(_engine_delta: float) -> void:
 	frames += 1
 	worst = maxf(worst, delta)
 	var sim = game.simulation_host.simulation
+	if sim != null and "performance_profile_enabled" in sim:
+		if not sim.performance_profile_enabled:
+			sim.performance_profile_enabled = true
+		_log_slow_ticks(sim, t)
 	if delta > 0.1 and started:
 		stall_log.store_line("%.1f,%.0f,%.1f,%d,%d,%d,%d,%d,%s" % [t, delta * 1000.0, float(sim.elapsed_seconds), game.world_view._rebake_queue.size(), game.simulation_host._autosave_task, sim.buildings.size(), _think_ms_prev, int(bool(sim.is_night)), _top_sections()])
 		stall_log.flush()
@@ -224,6 +228,23 @@ func _hall_hp(sim) -> int:
 		if String(b.get("type", "")) == "TOWN_HALL":
 			return int(b.get("hp", -1))
 	return -1
+
+
+## Beta: name the sim systems behind any tick slower than 15 ms.
+func _log_slow_ticks(sim, t_now: float) -> void:
+	var recs: Array = sim._profile_tick_records
+	for rec in recs:
+		var us := int(rec.get("tick_usec", 0))
+		if us < 15000:
+			continue
+		var systems: Dictionary = rec.get("systems_usec", {})
+		var keys := systems.keys()
+		keys.sort_custom(func(a, b): return int(systems[a]) > int(systems[b]))
+		var parts: Array[String] = []
+		for k in keys.slice(0, 4):
+			parts.append("%s=%d" % [k, int(systems[k]) / 1000])
+		_note("slow_tick t=%.1f ms=%d %s" % [t_now, us / 1000, " ".join(parts)])
+	recs.clear()
 
 
 func _note(text: String) -> void:
