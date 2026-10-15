@@ -731,16 +731,23 @@ func group_summary_lines(ids: Array) -> Array:
 	var type_parts := []
 	for t in types:
 		type_parts.append("%d× %s" % [int(types[t]), t])
+	# Most common activities first, at most two, so the line fits the panel.
+	var state_keys: Array = states.keys()
+	state_keys.sort_custom(func(a, b) -> bool: return int(states[a]) > int(states[b]))
 	var state_parts := []
-	for st in states:
-		state_parts.append("%d %s" % [int(states[st]), st])
+	for st in state_keys.slice(0, 2):
+		state_parts.append("%d %s" % [int(states[st]), String(st)])
+	if state_keys.size() > 2:
+		var rest := 0
+		for st in state_keys.slice(2):
+			rest += int(states[st])
+		state_parts.append("%d other" % rest)
 	return [
 		"[font_size=22][color=#efcf8a]%d Soldiers selected[/color][/font_size]" % ids.size(),
 		"[color=#9fc6a5]%s[/color]" % ", ".join(type_parts),
 		"",
 		"HP  %d / %d" % [hp, max_hp],
 		"Doing  %s" % ", ".join(state_parts),
-		"Right-click: move or attack as a group · Ctrl+click adds/removes",
 	]
 
 
@@ -3234,6 +3241,7 @@ func _update_inspector_core() -> void:
 	var group_now := _group_ids()
 	if group_now.size() > 1 and selected_entity_kind == "worker":
 		inspector_label.text = "\n".join(group_summary_lines(group_now))
+		inspector_label.tooltip_text = "Right-click: move or attack as a group. Ctrl+click adds or removes a soldier."
 		inspector_panel.visible = true
 		if move_button != null:
 			move_button.visible = true
