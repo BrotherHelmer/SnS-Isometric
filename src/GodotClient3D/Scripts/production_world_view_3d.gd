@@ -4207,6 +4207,7 @@ func _free_camera_fog_screens() -> void:
 ## Gate isolation only (--gate-r32-hide=fog): keep the screen fog hidden even
 ## when a fog update re-shows it.
 var gate_hide_fog := false
+const R33_GROUND_CHEAP := 1.0
 
 
 func _hide_fog_screen() -> void:
@@ -4427,7 +4428,9 @@ func apply_light_palette(palette: Dictionary) -> void:
 		ground_mat.set_shader_parameter("tint_floor", float(palette.get("ground_tint_floor", 0.0)))
 		ground_mat.set_shader_parameter("tint_wash_lo", float(palette.get("ground_wash_lo", 0.70)))
 		ground_mat.set_shader_parameter("tint_wash_hi", float(palette.get("ground_wash_hi", 0.94)))
-		ground_mat.set_shader_parameter("lod_cheap", float(palette.get("terrain_lod_cheap", 0.0)))
+		# R33 test build: cheap ground shading is the default (Helmer 19:30).
+		# Roads, water and lights keep following the palette.
+		ground_mat.set_shader_parameter("lod_cheap", maxf(float(palette.get("terrain_lod_cheap", 0.0)), R33_GROUND_CHEAP))
 	# Night/reckoning: hide road stamps. Clay reads as terrain at night
 	# and the extra MultiMeshes are wasted fill-rate on lavapipe.
 	if road_stamp_root != null:

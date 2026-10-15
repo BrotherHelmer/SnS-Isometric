@@ -493,6 +493,7 @@ static func _loadtest_seconds() -> float:
 ## Diagnostic only (removes things, obviously visible):
 ## --gate-r32-hide=fog,ground,foliage,water,smoke,mist,characters,buildings
 var _r32_noted := false
+var _r33_noted := false
 
 
 func _apply_r32_flags(wv, args: PackedStringArray) -> void:
@@ -504,10 +505,15 @@ func _apply_r32_flags(wv, args: PackedStringArray) -> void:
 		if String(a).begins_with("--gate-r32-hide="):
 			hide = String(a).trim_prefix("--gate-r32-hide=").split(",")
 	var ground_hash := "--gate-r32-ground-hash" in args
+	var ground_lite := "--gate-r33-ground-lite" in args
+	var ground_full := "--gate-r33-ground-full" in args
 	if not _r32_noted and (not hide.is_empty() or ground_hash or "--gate-r32-fog-lite" in args):
 		_r32_noted = true
 		_note("r32 flags applied t=%.0f hide=%s ground_hash=%s fog_lite=%s" % [t, str(hide), str(ground_hash), str("--gate-r32-fog-lite" in args)])
-	if hide.is_empty() and not ground_hash:
+	if not _r33_noted and (ground_lite or ground_full):
+		_r33_noted = true
+		_note("r33 flags applied t=%.0f ground_lite=%s ground_full=%s" % [t, str(ground_lite), str(ground_full)])
+	if hide.is_empty() and not ground_hash and not ground_lite and not ground_full:
 		return
 	if "fog" in hide:
 		wv.gate_hide_fog = true
@@ -545,6 +551,10 @@ func _apply_r32_flags(wv, args: PackedStringArray) -> void:
 		if shader_path.ends_with("settlement_ground.gdshader"):
 			if ground_hash:
 				(mat as ShaderMaterial).set_shader_parameter("fast_hash", 1.0)
+			if ground_lite:
+				(mat as ShaderMaterial).set_shader_parameter("ground_lite", 1.0)
+			if ground_full:
+				(mat as ShaderMaterial).set_shader_parameter("lod_cheap", 0.0)
 			if "ground" in hide:
 				gi.visible = false
 		elif "fog" in hide and shader_path.ends_with("production_fog_of_war.gdshader"):
