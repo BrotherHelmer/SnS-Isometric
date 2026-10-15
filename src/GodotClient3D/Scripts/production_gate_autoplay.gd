@@ -104,6 +104,35 @@ func setup(game_value, dir_value: String, duration_value: float) -> void:
 var _bot_log := OS.get_cmdline_user_args().has("--gate-bot-log")
 var _bot_log_next := 0.0
 var _last_us := 0
+var _start_t := 0.0
+var _next_think := 0.0
+var _det_next := 60.0
+var _think_ms_frame := 0
+
+
+func _on_sim_tick() -> void:
+	var sim = game.simulation_host.simulation
+	if sim == null or bool(sim.game_finished) or game.simulation_host.paused:
+		return
+	# R34 determinism probe: a state fingerprint every 60 game seconds.
+	if float(sim.elapsed_seconds) >= _det_next:
+		_det_next += 60.0
+		var types := []
+		for bv in sim.buildings:
+			types.append(String((bv as Dictionary).get("type", "?")) + str((bv as Dictionary).get("position", "")))
+		types.sort()
+		_note("detstate gs=%.0f bld=%d pop=%d hash=%d stock=%s" % [float(sim.elapsed_seconds), sim.buildings.size(), int(sim.population_current), hash(str(types)), str(sim.central_inventory)])
+	if player.think_phase == 0 and float(sim.elapsed_seconds) < _next_think:
+		return
+	if player.think_phase == 0:
+		_next_think = float(sim.elapsed_seconds) + think_every
+	var think_start := Time.get_ticks_usec()
+	var phase_ran: int = player.think_phase
+	player.think_step(sim)
+	var ms := int((Time.get_ticks_usec() - think_start) / 1000)
+	_think_ms_frame += ms
+	if ms >= 30:
+		_note("think_phase %d ms=%d t=%.0f" % [phase_ran, ms, t])
 
 
 func _process(_engine_delta: float) -> void:
@@ -200,17 +229,11 @@ func _process(_engine_delta: float) -> void:
 	if started and _bot_log and t >= _bot_log_next:
 		_bot_log_next = t + 30.0
 		_note("botlog t=%.0f game_s=%.0f buildings=%d pop=%d idle=%s fails=%s actions=%s" % [t, float(sim.elapsed_seconds), sim.buildings.size(), int(sim.population_current), player.last_idle_reason, str(player.last_failures), str(player.last_actions)])
-	if started and not bool(sim.game_finished):
-		think_t += delta
-		if think_t >= think_every or player.think_phase > 0:
-			if player.think_phase == 0:
-				think_t = 0.0
-			var think_start := Time.get_ticks_usec()
-			var phase_ran: int = player.think_phase
-			player.think_step(sim)
-			_think_ms_prev = int((Time.get_ticks_usec() - think_start) / 1000)
-			if _think_ms_prev >= 30:
-				_note("think_phase %d ms=%d t=%.0f" % [phase_ran, _think_ms_prev, t])
+	# R34: the test bot runs from the sim tick hook (deterministic game ticks).
+	if started and not game.simulation_host.tick_hook.is_valid():
+		game.simulation_host.tick_hook = _on_sim_tick
+	_think_ms_prev = _think_ms_frame
+	_think_ms_frame = 0
 	if bool(sim.is_night) and night_seen_at < 0.0 and started:
 		night_seen_at = t
 	if night_seen_at >= 0.0 and not night_shot and t - night_seen_at >= 25.0 and not busy:
@@ -221,7 +244,10 @@ func _process(_engine_delta: float) -> void:
 		_note("survived first night: day=%d hall_hp=%s t=%.0f" % [int(sim.day_count), str(_hall_hp(sim)), t])
 	if jump_night and shot_index > 2:
 		return
-	if shot_index < shots.size() and t >= float(shots[shot_index][0]) and not busy:
+	# R34: in-game shots are timed on game time (start + sim seconds), so the
+	# same seed gives the same views regardless of frame drops.
+	var shot_clock := t if not started else _start_t + float(sim.elapsed_seconds)
+	if shot_index < shots.size() and shot_clock >= float(shots[shot_index][0]) and not busy:
 		var s: Array = shots[shot_index]
 		shot_index += 1
 		_run_shot(String(s[1]), String(s[2]))
@@ -354,6 +380,7 @@ func _shot_async(name: String, action: String) -> void:
 			else:
 				game._start_from_menu()
 			started = true
+			_start_t = t
 			_note("NEW REALM -> BEGIN seed=%d" % int(game.simulation_host.simulation.rng_seed))
 		"log":
 			game._toggle_event_log()

@@ -7071,7 +7071,8 @@ func _path_to_access(start: Vector2i, access: Array) -> Array:
 	if access.has(start):
 		return []
 	var fail_key := _tile_key(start) + "@" + _tile_key(access[0]) + "#" + str(access.size())
-	var now := Time.get_ticks_msec()
+	# R34: game time, not wall time, so the same seed plays out the same at any FPS.
+	var now := int(elapsed_seconds * 1000.0)
 	if _access_fail_cache.has(fail_key):
 		if now - int(_access_fail_cache[fail_key]) < 3000:
 			return []
@@ -9854,7 +9855,7 @@ func _road_path_signature() -> String:
 func _find_road_path(start: Vector2i, goals: Array) -> Array:
 	var stamp := _profile_stamp()
 	var sig := _road_path_signature()
-	var now := Time.get_ticks_msec() / 1000.0
+	var now := float(elapsed_seconds)  # R34: game time (determinism)
 	if sig != _road_path_cache_sig or now - _road_path_cache_age > 5.0 or _road_path_cache.size() > 4096:
 		_road_path_cache.clear()
 		_road_path_cache_sig = sig

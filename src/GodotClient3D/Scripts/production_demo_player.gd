@@ -62,8 +62,8 @@ func think_step(sim) -> bool:
 	if sim == null or bool(sim.game_finished):
 		think_phase = 0
 		return true
-	var phase_t0 := Time.get_ticks_usec()
 	var actions_before := last_actions.size()
+	_phase_work = 0
 	var skip_left := int(_phase_skip.get(think_phase, 0))
 	if skip_left > 0 and think_phase not in [0, 1, 12]:
 		_phase_skip[think_phase] = skip_left - 1
@@ -90,7 +90,8 @@ func think_step(sim) -> bool:
 				last_idle_reason = "waiting on workers, stock, or construction"
 	# Harness budget: an expensive phase that changed nothing waits two
 	# think cycles (~6 s game time) before scanning again.
-	if Time.get_ticks_usec() - phase_t0 > 25000 and last_actions.size() == actions_before:
+	# R34: measured in placement validations (deterministic), not 25 ms of wall time.
+	if _phase_work > PHASE_SKIP_WORK and last_actions.size() == actions_before:
 		_phase_skip[think_phase] = 2
 	think_phase += 1
 	if think_phase >= THINK_PHASES:
@@ -419,13 +420,15 @@ func _try_frontier_outpost(sim) -> bool:
 			aims.append(marker + Vector2i(ox, radius))
 			aims.append(marker + Vector2i(-radius, ox))
 			aims.append(marker + Vector2i(radius, ox))
-	var _aim_t0 := Time.get_ticks_msec()
+	var _aims_tried := 0
 	for aim_value in aims:
 		var aim: Vector2i = aim_value
 		if absi(aim.x - hall.x) + absi(aim.y - hall.y) < 16:
 			continue
-		# Gate-only: cap the outpost aim scan at 150 ms per think (was up to 6 s).
-		if _gate_quarry_backoff and Time.get_ticks_msec() - _aim_t0 > 150:
+		# Gate-only: cap the outpost aim scan per think (R34: a count, not
+		# 150 ms of wall time, so decisions do not depend on frame rate).
+		_aims_tried += 1
+		if _gate_quarry_backoff and _aims_tried > 6:
 			break
 		if _try_build(sim, Defs.BUILDING_OUTPOST, aim):
 			return true
@@ -479,7 +482,7 @@ func _try_build(sim, building_type: String, aim: Vector2i) -> bool:
 ## and scan only the 12 nearest rocks, so the bot's 360-540 ms search does not
 ## pollute frame metrics. Off unless `--gate-bot-quarry-backoff`.
 var _gate_quarry_backoff := "--gate-bot-quarry-backoff" in OS.get_cmdline_user_args()
-var _quarry_retry_at_ms := 0
+var _quarry_retry_at_s := -1.0
 var _site_fail_until := {}
 
 
@@ -487,7 +490,7 @@ func _try_quarry(sim) -> bool:
 	if not _can_afford(sim, Defs.BUILDING_QUARRY):
 		last_idle_reason = "cannot afford Quarry"
 		return false
-	if _gate_quarry_backoff and Time.get_ticks_msec() < _quarry_retry_at_ms:
+	if _gate_quarry_backoff and float(sim.elapsed_seconds) < _quarry_retry_at_s:
 		last_idle_reason = "quarry backoff (gate)"
 		return false
 	var rocks := _revealed_kind(sim, sim.town_hall_position, Defs.TILE_ROCK, 32)
@@ -527,7 +530,7 @@ func _try_quarry(sim) -> bool:
 	_extend_roads(sim, road_aim, 2)
 	last_failures.append("QUARRY: %d rocks visible, none placeable yet %s" % [rocks.size(), str(reasons)])
 	if _gate_quarry_backoff:
-		_quarry_retry_at_ms = Time.get_ticks_msec() + 20000
+		_quarry_retry_at_s = float(sim.elapsed_seconds) + 20.0
 	print("DEMO_AI quarry_fail rocks=%d reasons=%s aim=%s" % [rocks.size(), str(reasons), str(road_aim)])
 	return false
 
@@ -653,7 +656,8 @@ var _site_scan: Dictionary = {}
 ## call burned its full budget (~570 ms per phase late game on Shard) and the
 ## bot stopped building. Also a wall-time cap per step.
 var _site_scans: Dictionary = {}
-const SITE_SCAN_MAX_USEC := 6000
+const PHASE_SKIP_WORK := 150
+var _phase_work := 0
 
 
 func _best_site_budgeted(sim, building_type: String, target: Vector2i) -> Vector2i:
@@ -670,7 +674,6 @@ func _best_site_budgeted(sim, building_type: String, target: Vector2i) -> Vector
 
 func _best_site_budgeted_inner(sim, building_type: String, target: Vector2i) -> Vector2i:
 	var budget := SITE_SCAN_BUDGET
-	var t0 := Time.get_ticks_usec()
 	var radius: int = _site_scan["radius"]
 	while radius <= SITE_RADIUS:
 		for ox in range(-radius, radius + 1):
@@ -681,8 +684,7 @@ func _best_site_budgeted_inner(sim, building_type: String, target: Vector2i) -> 
 				if not sim.is_inside_map(tile):
 					continue
 				budget -= 1
-				if Time.get_ticks_usec() - t0 > SITE_SCAN_MAX_USEC:
-					budget = mini(budget, 0)
+				_phase_work += 1
 				var validation: Dictionary = sim.validate_placement(building_type, tile)
 				if not bool(validation.get("success", false)):
 					continue
@@ -716,6 +718,7 @@ func _best_site(sim, building_type: String, target: Vector2i) -> Vector2i:
 				var tile := target + Vector2i(ox, oy)
 				if not sim.is_inside_map(tile):
 					continue
+				_phase_work += 1
 				var validation: Dictionary = sim.validate_placement(building_type, tile)
 				if not bool(validation.get("success", false)):
 					continue

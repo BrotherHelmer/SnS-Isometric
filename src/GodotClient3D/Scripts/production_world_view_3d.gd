@@ -4207,7 +4207,7 @@ func _free_camera_fog_screens() -> void:
 ## Gate isolation only (--gate-r32-hide=fog): keep the screen fog hidden even
 ## when a fog update re-shows it.
 var gate_hide_fog := false
-const R33_GROUND_CHEAP := 0.0  # r33.2: reverted (no measurable gain, visible loss)
+const R33_GROUND_CHEAP := 1.0  # r34: r33.1 shading is the default again (Black, 22:09)
 
 
 func _hide_fog_screen() -> void:
@@ -5357,6 +5357,64 @@ func _spawn_founding_crater_traces(ridge: Node3D, hall: Vector2i) -> void:
 		ridge.add_child(spoil)
 		index += 1
 	ridge.set_meta("wyrd_traces", index)
+	_spawn_impact_ejecta(ridge, hall, crater_dir, glass)
+
+
+## R34: restrained evidence of the meteor impact around the settlement:
+## scattered dark basalt ejecta and a few small Wyrd-glass splinters, thrown
+## out along the crater direction. Deterministic per map, static, shared
+## materials (two multimeshes, two draw calls).
+func _spawn_impact_ejecta(ridge: Node3D, hall: Vector2i, crater_dir: Vector2, glass: Material) -> void:
+	var basalt := _ridge_material(Color("#2f2c2a"), 0.92)
+	var rock_mm := MultiMesh.new()
+	rock_mm.transform_format = MultiMesh.TRANSFORM_3D
+	var rock_mesh := BoxMesh.new()
+	rock_mesh.size = Vector3(0.7, 0.42, 0.55)
+	rock_mm.mesh = rock_mesh
+	var glass_mm := MultiMesh.new()
+	glass_mm.transform_format = MultiMesh.TRANSFORM_3D
+	var glass_mesh := PrismMesh.new()
+	glass_mesh.size = Vector3(0.26, 0.62, 0.22)
+	glass_mm.mesh = glass_mesh
+	var rocks: Array[Transform3D] = []
+	var shards: Array[Transform3D] = []
+	var base_angle := atan2(crater_dir.y, crater_dir.x)
+	var occupied := {}
+	if simulation != null:
+		for b in simulation.buildings:
+			occupied[Vector2i((b as Dictionary).get("position", Vector2i(-99, -99)))] = true
+	for k in 46:
+		var h := absi(hall.x * 92821 + hall.y * 68917 + k * 2654435) % 100000
+		var spread := (float(h % 1000) / 1000.0 - 0.5) * 2.2
+		var dist := 9.0 + float((h / 1000) % 16)
+		var ang := base_angle + spread
+		var tile := hall + Vector2i(int(round(cos(ang) * dist)), int(round(sin(ang) * dist)))
+		if not simulation.is_inside_map(tile) or simulation.is_water_tile(tile) or occupied.has(tile):
+			continue
+		var origin := tile_to_world(Vector2(tile)) + Vector3(float(h % 7) * 0.08 - 0.24, 0.0, float(h % 5) * 0.09 - 0.18)
+		var basis := Basis(Vector3.UP, float(h % 360) * 0.0174533)
+		if k % 4 == 3:
+			basis = basis * Basis(Vector3(1, 0, 0), 0.35 + float(h % 3) * 0.12)
+			var sc := 0.7 + float(h % 4) * 0.15
+			shards.append(Transform3D(basis.scaled(Vector3(sc, sc, sc)), origin + Vector3(0.0, 0.2 * sc, 0.0)))
+		else:
+			var sc2 := 0.55 + float(h % 6) * 0.14
+			basis = basis * Basis(Vector3(0, 0, 1), float(h % 5) * 0.09)
+			rocks.append(Transform3D(basis.scaled(Vector3(sc2, sc2 * (0.7 + float(h % 3) * 0.15), sc2)), origin + Vector3(0.0, 0.12 * sc2, 0.0)))
+	for pair in [[rock_mm, rocks, basalt, "DressImpactEjecta"], [glass_mm, shards, glass, "DressImpactGlass"]]:
+		var mm: MultiMesh = pair[0]
+		var list: Array = pair[1]
+		if list.is_empty():
+			continue
+		mm.instance_count = list.size()
+		for i in list.size():
+			mm.set_instance_transform(i, list[i])
+		var mmi := MultiMeshInstance3D.new()
+		mmi.name = String(pair[3])
+		mmi.multimesh = mm
+		mmi.material_override = pair[2]
+		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		ridge.add_child(mmi)
 
 
 func _spawn_meandering_creek(ridge: Node3D, hall: Vector2i, road_w: float) -> void:
@@ -6222,31 +6280,100 @@ func _smoke_mesh() -> MeshInstance3D:
 
 
 func _caravan_mesh() -> Node3D:
+	# R34: a covered wagon (was two glowing boxes that read as placeholder art).
 	var group := Node3D.new()
-	var wagon := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = Vector3(2.6, 1.1, 1.4)
-	wagon.mesh = box
-	wagon.position = Vector3(0.0, 0.85, 0.0)
 	var wood := StandardMaterial3D.new()
-	wood.albedo_color = Color("#7a4a28")
-	wood.emission_enabled = true
-	wood.emission = Color("#c48a4a")
-	wood.emission_energy_multiplier = 0.55
-	wagon.material_override = wood
-	group.add_child(wagon)
-	var canvas := MeshInstance3D.new()
-	var cloth := BoxMesh.new()
-	cloth.size = Vector3(2.1, 0.85, 1.15)
-	canvas.mesh = cloth
-	canvas.position = Vector3(0.0, 1.7, 0.0)
-	var cloth_mat := StandardMaterial3D.new()
-	cloth_mat.albedo_color = Color("#d8c48a")
-	cloth_mat.emission_enabled = true
-	cloth_mat.emission = Color("#efcf8a")
-	cloth_mat.emission_energy_multiplier = 0.7
-	canvas.material_override = cloth_mat
-	group.add_child(canvas)
+	wood.albedo_color = Color("#6b4428")
+	wood.roughness = 0.9
+	var dark_wood := StandardMaterial3D.new()
+	dark_wood.albedo_color = Color("#3e2818")
+	dark_wood.roughness = 0.9
+	var iron := StandardMaterial3D.new()
+	iron.albedo_color = Color("#2c2a28")
+	iron.roughness = 0.6
+	var cloth := StandardMaterial3D.new()
+	cloth.albedo_color = Color("#b9a77a")
+	cloth.roughness = 0.95
+	cloth.cull_mode = BaseMaterial3D.CULL_DISABLED
+	# Faint warmth so the wagon still reads at night without glowing like a lamp.
+	cloth.emission_enabled = true
+	cloth.emission = Color("#efcf8a")
+	cloth.emission_energy_multiplier = 0.12
+	var add_box := func(size: Vector3, pos: Vector3, mat: Material, rot := Vector3.ZERO) -> void:
+		var mi := MeshInstance3D.new()
+		var b := BoxMesh.new()
+		b.size = size
+		mi.mesh = b
+		mi.position = pos
+		mi.rotation = rot
+		mi.material_override = mat
+		group.add_child(mi)
+	# Bed: floor, side boards and tail board.
+	add_box.call(Vector3(2.5, 0.12, 1.3), Vector3(0.0, 0.78, 0.0), wood)
+	add_box.call(Vector3(2.5, 0.34, 0.08), Vector3(0.0, 1.0, 0.62), wood)
+	add_box.call(Vector3(2.5, 0.34, 0.08), Vector3(0.0, 1.0, -0.62), wood)
+	add_box.call(Vector3(0.08, 0.34, 1.3), Vector3(-1.23, 1.0, 0.0), dark_wood)
+	add_box.call(Vector3(0.08, 0.34, 1.3), Vector3(1.23, 1.0, 0.0), dark_wood)
+	# Axles and wheels.
+	for x in [-0.85, 0.85]:
+		add_box.call(Vector3(0.1, 0.1, 1.6), Vector3(x, 0.45, 0.0), dark_wood)
+		for z in [-0.78, 0.78]:
+			var wheel := MeshInstance3D.new()
+			var cyl := CylinderMesh.new()
+			cyl.top_radius = 0.45
+			cyl.bottom_radius = 0.45
+			cyl.height = 0.1
+			cyl.radial_segments = 12
+			wheel.mesh = cyl
+			wheel.rotation = Vector3(PI * 0.5, 0.0, 0.0)
+			wheel.position = Vector3(x, 0.45, z)
+			wheel.material_override = dark_wood
+			group.add_child(wheel)
+			var hub := MeshInstance3D.new()
+			var hcyl := CylinderMesh.new()
+			hcyl.top_radius = 0.1
+			hcyl.bottom_radius = 0.1
+			hcyl.height = 0.14
+			hcyl.radial_segments = 8
+			hub.mesh = hcyl
+			hub.rotation = Vector3(PI * 0.5, 0.0, 0.0)
+			hub.position = Vector3(x, 0.45, z)
+			hub.material_override = iron
+			group.add_child(hub)
+	# Arched canvas hood: half of a cylinder lying along the wagon, on hoops.
+	var hood := MeshInstance3D.new()
+	var hood_mesh := CylinderMesh.new()
+	hood_mesh.top_radius = 0.66
+	hood_mesh.bottom_radius = 0.66
+	hood_mesh.height = 2.1
+	hood_mesh.radial_segments = 14
+	hood_mesh.cap_top = false
+	hood_mesh.cap_bottom = false
+	hood.mesh = hood_mesh
+	hood.rotation = Vector3(0.0, 0.0, PI * 0.5)
+	hood.position = Vector3(0.0, 1.2, 0.0)
+	hood.scale = Vector3(0.75, 1.0, 1.0)
+	hood.material_override = cloth
+	group.add_child(hood)
+	# Squashed so its lower half stays inside the bed boards; hoops at both ends.
+	for x in [-1.05, 1.05]:
+		var hoop := MeshInstance3D.new()
+		var torus := TorusMesh.new()
+		torus.inner_radius = 0.62
+		torus.outer_radius = 0.7
+		torus.rings = 12
+		torus.ring_segments = 6
+		hoop.mesh = torus
+		hoop.rotation = Vector3(0.0, 0.0, PI * 0.5)
+		hoop.position = Vector3(x, 1.2, 0.0)
+		hoop.scale = Vector3(0.75, 1.0, 1.0)
+		hoop.material_override = dark_wood
+		group.add_child(hoop)
+	# Shafts and a couple of crates by the tail.
+	add_box.call(Vector3(1.4, 0.07, 0.07), Vector3(1.9, 0.62, 0.36), dark_wood, Vector3(0.0, 0.0, -0.12))
+	add_box.call(Vector3(1.4, 0.07, 0.07), Vector3(1.9, 0.62, -0.36), dark_wood, Vector3(0.0, 0.0, -0.12))
+	add_box.call(Vector3(0.5, 0.42, 0.5), Vector3(-1.75, 0.21, 0.35), wood, Vector3(0.0, 0.3, 0.0))
+	add_box.call(Vector3(0.38, 0.34, 0.38), Vector3(-1.7, 0.17, -0.45), dark_wood, Vector3(0.0, -0.2, 0.0))
 	return group
 
 

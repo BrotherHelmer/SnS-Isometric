@@ -11,6 +11,9 @@ var tick_accumulator := 0.0
 var speed_multiplier := 1.0
 var paused := false
 var dropped_backlog_frames := 0
+## R34 (gate harness): called after every fixed sim tick, so a test bot can
+## act at deterministic game ticks regardless of frame rate.
+var tick_hook: Callable
 var autosave_elapsed := 0.0
 
 
@@ -67,6 +70,8 @@ func advance(delta: float) -> int:
 		tick_accumulator -= Simulation.TICK_SECONDS
 		simulation.advance_tick()
 		ticks += 1
+		if tick_hook.is_valid():
+			tick_hook.call()
 	# A rendered client must not enter an unbounded catch-up spiral after a slow
 	# frame. The simulation's fixed tick remains unchanged; only stale wall-clock
 	# backlog beyond this frame budget is discarded.

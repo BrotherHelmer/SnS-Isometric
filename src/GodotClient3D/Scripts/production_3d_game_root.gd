@@ -2056,8 +2056,8 @@ func _create_ui() -> void:
 	realm_overview.bbcode_enabled = true
 	realm_overview.scroll_active = false
 	realm_overview.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	realm_overview.add_theme_font_size_override("normal_font_size", 14)
-	realm_overview.add_theme_font_size_override("bold_font_size", 14)
+	realm_overview.add_theme_font_size_override("normal_font_size", 16)
+	realm_overview.add_theme_font_size_override("bold_font_size", 16)
 	selection_host.add_child(realm_overview)
 
 	inspector_panel = PanelContainer.new()
@@ -2113,7 +2113,9 @@ func _create_ui() -> void:
 	inspector_label.scroll_active = true
 	inspector_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	inspector_label.add_theme_color_override("default_color", Color("#e2dfcf"))
-	inspector_label.add_theme_font_size_override("normal_font_size", 14)
+	# R34 P2: larger inspector text (was 14).
+	inspector_label.add_theme_font_size_override("normal_font_size", 17)
+	inspector_label.add_theme_font_size_override("bold_font_size", 17)
 	inspector_box.add_child(inspector_label)
 	var action_row := HBoxContainer.new()
 	action_row.add_theme_constant_override("separation", 6)
@@ -3131,12 +3133,16 @@ func _update_inspector() -> void:
 	_update_inspector_core()
 	if inspector_panel.visible:
 		_decorate_inspector()
+	# R34 P2: with nothing selected, the right console panel shows a compact
+	# realm card (defence + economy state not in the top bar) instead of
+	# leaving the bottom strip empty. It sits right of the map in the same row.
+	var show_realm := realm_overview != null and not inspector_panel.visible and play_has_begun
 	if realm_overview != null:
-		# Hotfix 3: the realm summary lives in the top bar now; the right
-		# console panel only appears for a selection, so it never covers Map.
-		realm_overview.visible = false
+		realm_overview.visible = show_realm
+		if show_realm:
+			_update_realm_overview()
 	if selection_host != null:
-		selection_host.visible = inspector_panel.visible
+		selection_host.visible = inspector_panel.visible or show_realm
 
 
 func _update_inspector_core() -> void:
@@ -3481,16 +3487,33 @@ func _update_realm_overview() -> void:
 	var free_workers := int(sim.workers_free())
 	var food := int(settlement.get("food", 0))
 	var demand := int(settlement.get("next_food_demand", 0))
-	# First-screen: one compact glance until a selection opens the inspector.
-	realm_overview.text = "[font=%s][font_size=16][color=#f0c880]Realm[/color][/font_size][/font]  [color=#b9ab86]%s · %s[/color]\n[color=#e6dcc0]Pop %d/%d  ·  Workers %d  ·  Bread %s[/color]" % [
+	var towers := 0
+	var walls := 0
+	for b in sim.buildings:
+		var bt := String((b as Dictionary).get("type", ""))
+		if bool((b as Dictionary).get("construction", false)):
+			continue
+		if bt == Defs.BUILDING_WATCHTOWER:
+			towers += 1
+		elif bt == Defs.BUILDING_WALL:
+			walls += 1
+	var hostiles := int(sim.living_hostile_count())
+	var threat := "[color=#ff9a84]%d hostile%s in the realm[/color]" % [hostiles, "" if hostiles == 1 else "s"] if hostiles > 0 else "[color=#9fc79a]No hostiles in sight[/color]"
+	var realm_text := "[font=%s][font_size=18][color=#f0c880]Realm[/color][/font_size][/font]  [color=#b9ab86]%s · %s[/color]\n[color=#e6dcc0]Defence: %d soldier%s · %d watchtower%s · %d wall%s[/color]\n[color=#e6dcc0]Workers free %d · Housing %d/%d · Bread %s[/color]\n%s" % [
 		DISPLAY_FONT_PATH,
 		_clock_title(),
 		_phase_countdown_text(),
+		int(sim.soldiers_total), "" if int(sim.soldiers_total) == 1 else "s",
+		towers, "" if towers == 1 else "s",
+		walls, "" if walls == 1 else "s",
+		free_workers,
 		int(sim.population_current),
 		int(sim.housing_capacity),
-		free_workers,
-		("%d/%d" % [food, demand]) if demand > 0 else str(food)
+		("%d/%d" % [food, demand]) if demand > 0 else str(food),
+		threat,
 	]
+	if realm_overview.text != realm_text:
+		realm_overview.text = realm_text
 
 
 func _building_player_status(building: Dictionary, type_name: String) -> String:
@@ -3801,7 +3824,15 @@ func _update_raid_banner() -> void:
 	if raid_view_button != null:
 		raid_view_button.visible = raiding
 	if not raiding:
+		# R34 P0: a finished raid must not leave the "RAID" banner up.
+		if toast_title != null and toast_title.text == "RAID" and alert_panel.visible:
+			toast_until = 0.0
+			alert_panel.visible = false
+			toast_title.text = ""
 		return
+	# R34 P0: a live raid makes any earlier "RAID OVER" card stale; drop it so
+	# the HUD never says "RAID OVER" and "under attack" at the same time.
+	_drop_stale_raid_over_cards()
 	raid_eta_label.text = String(status.get("line", ""))
 	if raid_banner_dismissed:
 		return
@@ -3816,6 +3847,15 @@ func _update_raid_banner() -> void:
 	toast_severity = "critical"
 	alert_panel.visible = startup_overlay == null or not startup_overlay.visible
 	alert_panel.modulate.a = 1.0
+
+
+func _drop_stale_raid_over_cards() -> void:
+	for i in range(notice_feed_entries.size() - 1, -1, -1):
+		var e: Dictionary = notice_feed_entries[i]
+		if String(e.get("key", "")).begins_with("RAID OVER:"):
+			if is_instance_valid(e.get("node")):
+				(e["node"] as Node).queue_free()
+			notice_feed_entries.remove_at(i)
 
 
 func _view_raid_target() -> void:
