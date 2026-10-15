@@ -2068,8 +2068,12 @@ func _update_placement_ghost(force := false) -> void:
 		quality = simulation_host.simulation.evaluate_placement_quality(placement_type, placement_tile, placement_rotation)
 	var quality_text := String(quality.get("label", ""))
 	var prefix := "CLEARING REQUIRED" if needs_clearing else ("VALID" if valid else "INVALID")
-	if not valid and not placement_invalid_shown:
-		placement_label.text = "%s · click a valid tile · right-click cancels" % Defs.building_name(placement_type)
+	if not valid:
+		# Beta r19: say why, every time, before the click.
+		var why := String(placement_validation.get("message", "")).strip_edges()
+		if why == "":
+			why = "this tile is blocked"
+		placement_label.text = "Can't place %s: %s · right-click cancels" % [Defs.building_name(placement_type), why]
 	elif quality_text != "":
 		placement_label.text = "%s · %s" % [prefix, quality_text]
 	else:
