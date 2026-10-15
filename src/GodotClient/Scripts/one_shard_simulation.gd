@@ -6743,6 +6743,10 @@ func _send_workers_to_shelter() -> void:
 
 
 func _send_worker_to_shelter(worker: Dictionary) -> void:
+	# Beta r26: a worker with no reachable shelter retries every 3 s, not
+	# every tick (each retry is several full-map A* floods).
+	if String(worker.get("state", "")) == "No shelter" and elapsed_seconds < float(worker.get("shelter_retry_at", -1.0)):
+		return
 	var best_path: Array = []
 	var best_entrance := Vector2i(-1, -1)
 	var found := false
@@ -6764,8 +6768,30 @@ func _send_worker_to_shelter(worker: Dictionary) -> void:
 			found = true
 			best_path = candidate
 			best_entrance = entrance
+	if not found and entries.size() > ranked.size():
+		# Beta r26: the 4 nearest can all be unreachable (other side of a
+		# creek/wall). Falling straight to "No shelter" made laborers retry
+		# every tick at night with 4 failing full-map A* floods (r25a: 2 FPS
+		# from ~980 s). Fall back to the full list once, like before r21.
+		for entrance in entries:
+			if entrance in ranked:
+				continue
+			var candidate: Array = _path_to_access(start, [entrance]) if is_carrier else _find_worker_path(start, entrance)
+			if start != entrance and candidate.is_empty():
+				continue
+			if not found or candidate.size() < best_path.size():
+				found = true
+				best_path = candidate
+				best_entrance = entrance
 	if not found:
-		worker["state"] = "No shelter"
+		# Beta r26: no reachable shelter -> shelter in place for the night.
+		# "No shelter" was retried by the night labor loop every tick, and
+		# each retry is several full-map A* floods (r25a fell to 2 FPS).
+		worker["state"] = "Sheltered"
+		worker["arrival_state"] = "Sheltered"
+		worker["shelter_position"] = start
+		worker["path"] = []
+		worker["sheltered_in_place"] = true
 		return
 	worker["shelter_position"] = best_entrance
 	worker["path"] = best_path
