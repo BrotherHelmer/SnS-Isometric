@@ -373,6 +373,10 @@ func _ready() -> void:
 			var gate = GateAutoplay.new()
 			gate.name = "GateAutoplay"
 			add_child(gate)
+			# R31.1: unattended gate runs must not edge-pan. A cursor parked at a
+			# screen edge (e.g. after Shard wakes from standby) panned the camera
+			# into empty sea for whole runs (r29c, r29b2, r31a).
+			gate_no_edge_pan = true
 			# Beta r23: analysis drops the first 90 s (menus, shots); run 1300 s so the
 			# measured window is a full 1200+ s of play.
 			var gate_secs := 1300.0
@@ -4019,7 +4023,12 @@ func _jump_to_objective_target() -> void:
 	_show_toast("Quarry", "Rock deposit marked. Press 5 (Quarry) and place it on the marked rock, then link it with a Road.", "info", 5.0)
 
 
+var gate_no_edge_pan := false
+
+
 func _tick_edge_pan(delta: float) -> void:
+	if gate_no_edge_pan:
+		return
 	if camera_rig == null or not camera_rig.input_enabled or not play_has_begun:
 		return
 	if camera_rig.dragging or map_drag_active:
