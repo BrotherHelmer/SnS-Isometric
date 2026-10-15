@@ -360,7 +360,9 @@ func _ready() -> void:
 			var gate = GateAutoplay.new()
 			gate.name = "GateAutoplay"
 			add_child(gate)
-			var gate_secs := 1200.0
+			# Beta r23: analysis drops the first 90 s (menus, shots); run 1300 s so the
+			# measured window is a full 1200+ s of play.
+			var gate_secs := 1300.0
 			for a2 in OS.get_cmdline_user_args():
 				if a2.begins_with("--gate-seconds="):
 					gate_secs = float(a2.trim_prefix("--gate-seconds="))

@@ -52,7 +52,10 @@ void fragment() {
 	albedo *= mix(0.90, 1.08, noise2(world_pos.xz * 3.2)) * light_tint * (1.0 + value_lift);
 	// Beta r19: worn earth, less orange.
 	float road_luma = dot(albedo, vec3(0.2126, 0.7152, 0.0722));
-	albedo = mix(albedo, vec3(road_luma) * vec3(1.04, 0.98, 0.88), 0.22);
+	albedo = mix(albedo, vec3(road_luma) * vec3(1.04, 0.98, 0.88), 0.32);
+	// Beta r23: darker trodden-dirt shoulder before the feather.
+	float shoulder_band = 1.0 - smoothstep(0.06, 0.32, min(UV.x, 1.0 - UV.x));
+	albedo = mix(albedo, dirt_edge * 0.92 * light_tint, shoulder_band * 0.55);
 	float rim = min(UV.x, 1.0 - UV.x);
 	float alpha = max(road_color.a, 0.92);
 	// Beta r19: wider, noisy feather so the road sinks into the meadow

@@ -5102,49 +5102,88 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 	crater_dir = crater_dir.normalized()
 	var crater_side := Vector2(-crater_dir.y, crater_dir.x)
 	var crater_yaw := atan2(crater_dir.x, -crater_dir.y)
-	var formation := MeshInstance3D.new()
+	# Beta r23: the crater rim was three huge formation meshes plus box
+	# ledges (read as one angular slab, r22 review 6.3). Now an irregular
+	# continuous arc of low weathered lumps with slope, rubble and scrub,
+	# held back 10-13 tiles toward the crater so it frames the settlement
+	# instead of sitting in it. Cosmetic only (no collision, no sim tiles).
+	var formation := Node3D.new()
 	formation.name = "RidgeFormation"
-	formation.mesh = _back_ridge_formation_mesh(b * 1.72, b * 0.52)
-	var anchor := tiles[2] if tiles.size() > 2 else hall + Vector2i(roundi(crater_dir.x * 7.0), roundi(crater_dir.y * 7.0))
-	formation.position = tile_to_world(Vector2(anchor)) + Vector3(crater_dir.x * 0.8, 0.0, crater_dir.y * 0.8)
-	formation.rotation.y = crater_yaw + 0.18
-	# Beta r22: the crater rim was a flat grass-green polygon that read as a
-	# dark blob. Weathered stone so it reads as the crater silhouette.
-	var rim_stone := StandardMaterial3D.new()
-	rim_stone.albedo_color = Color("#5f5e52")
-	rim_stone.roughness = 0.95
-	var rim_shade := StandardMaterial3D.new()
-	rim_shade.albedo_color = Color("#4d4c44")
-	rim_shade.roughness = 0.95
-	formation.material_override = rim_stone
 	ridge.add_child(formation)
-	var peak_a := MeshInstance3D.new()
-	peak_a.name = "RidgeFormationCap"
-	peak_a.mesh = _back_ridge_formation_mesh(b * 0.72, b * 0.46)
-	peak_a.position = formation.position + Vector3(-crater_side.x * 2.4 - crater_dir.x * 1.6, 0.0, -crater_side.y * 2.4 - crater_dir.y * 1.6)
-	peak_a.rotation.y = crater_yaw - 0.38
-	peak_a.material_override = rim_shade
-	ridge.add_child(peak_a)
-	var peak_b := MeshInstance3D.new()
-	peak_b.name = "RidgeFormationShade"
-	peak_b.mesh = _back_ridge_formation_mesh(b * 0.58, b * 0.28)
-	peak_b.position = formation.position + Vector3(crater_side.x * 2.8 - crater_dir.x * 0.9, 0.0, crater_side.y * 2.8 - crater_dir.y * 0.9)
-	peak_b.rotation.y = crater_yaw + 0.62
-	peak_b.material_override = rim_stone
-	ridge.add_child(peak_b)
-	for ledge_i in 6:
-		var ledge := MeshInstance3D.new()
-		ledge.name = "RidgeLedge_%d" % ledge_i
-		var ledge_mesh := BoxMesh.new()
-		ledge_mesh.size = Vector3(1.55 + float(ledge_i) * 0.28, 0.34, 0.62)
-		ledge.mesh = ledge_mesh
-		var along := -2.6 + float(ledge_i) * 1.05
-		var out := 0.85 - float(ledge_i) * 0.12
-		ledge.position = formation.position + Vector3(crater_side.x * along + crater_dir.x * out, 0.12 + float(ledge_i % 3) * 0.18, crater_side.y * along + crater_dir.y * out)
-		ledge.rotation.y = crater_yaw + 0.18 + float(ledge_i) * 0.22
-		ledge.material_override = rock_lo if ledge_i % 2 == 0 else rock_hi
-		ledge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		ridge.add_child(ledge)
+	var lump_mesh := SphereMesh.new()
+	lump_mesh.radial_segments = 9
+	lump_mesh.rings = 5
+	lump_mesh.radius = 1.0
+	lump_mesh.height = 2.0
+	var stone_tones: Array = [
+		_ridge_material(Color("#6b675a"), 0.95),
+		_ridge_material(Color("#5c5a4f"), 0.95),
+		_ridge_material(Color("#76705f"), 0.95),
+	]
+	var moss_tones: Array = [
+		_ridge_material(Color("#45532f"), 0.97),
+		_ridge_material(Color("#4d5934"), 0.97),
+	]
+	var scrub_tones: Array = [
+		_ridge_material(Color("#3f5a32"), 0.96),
+		_ridge_material(Color("#4c6a36"), 0.96),
+	]
+	var cell := ScaleProfile.LOGICAL_CELL_METRES
+	var seed_i := absi(hall.x * 73856093 ^ hall.y * 19349663)
+	var count := 0
+	var step := -9.0
+	while step <= 9.0:
+		var h := float((seed_i + count * 2654435761) % 1000) / 1000.0
+		var h2 := float((seed_i / 7 + count * 40503) % 1000) / 1000.0
+		var bulge := 12.0 + sin(step * 0.45 + h * 2.0) * 1.4 + (h2 - 0.5) * 1.2 + absf(step) * 0.12
+		var tile_f := Vector2(hall) + crater_dir * bulge + crater_side * step
+		var tile := Vector2i(roundi(tile_f.x), roundi(tile_f.y))
+		step += 0.9 + h * 0.6
+		count += 1
+		if not simulation.is_inside_map(tile) or _in_founding_yard(tile) or _is_road_tile(tile):
+			continue
+		if simulation.occupied_tiles.has(_tile_key(tile)):
+			continue
+		var base := tile_to_world(tile_f)
+		# Core lump: wide, low, sunk into the ground.
+		var lump := MeshInstance3D.new()
+		lump.name = "RimLump_%d" % count
+		lump.mesh = lump_mesh
+		var wide := cell * (0.85 + h * 0.65)
+		var tall := cell * (0.55 + h2 * 0.6)
+		lump.scale = Vector3(wide, tall, cell * (0.7 + h2 * 0.5))
+		lump.position = base + Vector3(0.0, -tall * 0.35, 0.0)
+		lump.rotation.y = crater_yaw + (h - 0.5) * 1.2
+		lump.material_override = stone_tones[count % stone_tones.size()]
+		formation.add_child(lump)
+		# Settlement-side slope: a lower, mossy apron.
+		var apron := MeshInstance3D.new()
+		apron.name = "RimSlope_%d" % count
+		apron.mesh = lump_mesh
+		apron.scale = Vector3(wide * 1.25, tall * 0.42, cell * 1.1)
+		apron.position = base - Vector3(crater_dir.x, 0.0, crater_dir.y) * cell * 1.1 + Vector3(0.0, -tall * 0.18, 0.0)
+		apron.rotation.y = lump.rotation.y
+		apron.material_override = moss_tones[count % moss_tones.size()]
+		apron.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		formation.add_child(apron)
+		# Rubble at the foot and scrub on the crest.
+		for k in 2:
+			var rub := MeshInstance3D.new()
+			rub.mesh = lump_mesh
+			var rs := cell * (0.14 + float((count + k) % 4) * 0.05)
+			rub.scale = Vector3(rs * 1.3, rs * 0.8, rs)
+			rub.position = base - Vector3(crater_dir.x, 0.0, crater_dir.y) * cell * (1.9 + float(k) * 0.5) + Vector3(crater_side.x, 0.0, crater_side.y) * cell * (float(k) - 0.5) * 0.9
+			rub.material_override = stone_tones[(count + k + 1) % stone_tones.size()]
+			rub.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			formation.add_child(rub)
+		if h > 0.35:
+			var scrub := MeshInstance3D.new()
+			scrub.mesh = lump_mesh
+			var ss := cell * (0.30 + h2 * 0.22)
+			scrub.scale = Vector3(ss * 1.2, ss * 0.85, ss)
+			scrub.position = base + Vector3(crater_side.x, 0.0, crater_side.y) * cell * (h - 0.5) + Vector3(0.0, tall * 0.55, 0.0)
+			scrub.material_override = scrub_tones[count % scrub_tones.size()]
+			formation.add_child(scrub)
 	var trees: Dictionary = {}
 	var forest_dir := Vector2(-0.8, -0.4)
 	if simulation != null and simulation.founding_site is Dictionary:
@@ -5273,12 +5312,14 @@ func _spawn_meandering_creek(ridge: Node3D, hall: Vector2i, road_w: float) -> vo
 		var pond: MeshInstance3D = ridge.get_node_or_null("DressPond")
 		if pond != null:
 			pond.position = mid + Vector3(0.0, 0.02, 0.0)
-	var bank := _ridge_material(Color("#786C50"), 0.92)
-	var wet := _ridge_material(Color("#3D5552"), 0.55)
-	var shallow := _ridge_material(Color("#5AA0A0"), 0.28)
+	# Beta r23: the creek read as bright turquoise patches. Muted peat
+	# water, mossy-mud banks that fade into the meadow.
+	var bank := _ridge_material(Color("#5f5a42"), 0.94)
+	var wet := _ridge_material(Color("#37443a"), 0.6)
+	var shallow := _ridge_material(Color("#3e5c55"), 0.35)
 	var water := StandardMaterial3D.new()
 	water.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
-	water.albedo_color = Color("#2F7A7E")
+	water.albedo_color = Color("#284a4a")
 	water.roughness = 0.22
 	water.metallic = 0.08
 	water.specular_mode = BaseMaterial3D.SPECULAR_SCHLICK_GGX
@@ -6146,10 +6187,10 @@ func _palisade_mesh() -> Node3D:
 func _tent_mesh() -> Node3D:
 	var group := Node3D.new()
 	var cloth := StandardMaterial3D.new()
-	cloth.albedo_color = Color("#c9a86a")
-	cloth.emission_enabled = true
-	cloth.emission = Color("#efcf8a")
-	cloth.emission_energy_multiplier = 0.55
+	# Beta r23: the self-lit cream canvas was the brightest thing at night.
+	# Weathered canvas, lit only by the scene (moonlight / campfire).
+	cloth.albedo_color = Color("#9c8a68")
+	cloth.roughness = 0.95
 	var canvas := MeshInstance3D.new()
 	var prism := PrismMesh.new()
 	prism.size = Vector3(2.4, 1.6, 2.1)
