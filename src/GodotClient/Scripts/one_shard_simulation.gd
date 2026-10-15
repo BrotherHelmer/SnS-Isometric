@@ -704,7 +704,9 @@ func advance_tick() -> void:
 		return
 	var stamp := _profile_stamp()
 	_update_time(TICK_SECONDS)
+	var _pfu_demo_beats := _profile_stamp()
 	_update_demo_beats()
+	_profile_finish("demo_beats", _pfu_demo_beats)
 	_profile_finish("time_day_night", stamp)
 	if rivalry != null:
 		stamp = _profile_stamp()
@@ -748,8 +750,12 @@ func advance_tick() -> void:
 	_profile_finish("production_worker_updates", stamp)
 	stamp = _profile_stamp()
 	_update_production(TICK_SECONDS)
+	var _pfu_economy_stalls := _profile_stamp()
 	_refresh_economy_stalls()
+	_profile_finish("economy_stalls", _pfu_economy_stalls)
+	var _pfu_routine_notices := _profile_stamp()
 	_emit_routine_notices()
+	_profile_finish("routine_notices", _pfu_routine_notices)
 	_profile_finish("building_production_updates", stamp)
 	stamp = _profile_stamp()
 	_update_barracks(TICK_SECONDS)
@@ -759,14 +765,18 @@ func advance_tick() -> void:
 	_profile_finish("carrier_updates", stamp)
 	stamp = _profile_stamp()
 	_process_laborers(TICK_SECONDS)
+	var _pfu_idle_settlers := _profile_stamp()
 	_account_idle_settlers(TICK_SECONDS)
+	_profile_finish("idle_settlers", _pfu_idle_settlers)
 	_profile_finish("laborer_updates", stamp)
 	stamp = _profile_stamp()
 	_update_unit_vision()
 	_profile_finish("unit_vision", stamp)
 	_profile_finish("worker_update_total", worker_stamp)
 	stamp = _profile_stamp()
+	var _pfu_camp_activate := _profile_stamp()
 	_activate_revealed_enemy_camps()
+	_profile_finish("camp_activate", _pfu_camp_activate)
 	_profile_finish("scouting_camp_updates", stamp)
 	stamp = _profile_stamp()
 	var combat_stamp := stamp
@@ -782,14 +792,20 @@ func advance_tick() -> void:
 	stamp = _profile_stamp()
 	_update_projectiles(TICK_SECONDS)
 	_profile_finish("projectiles", stamp)
+	var _pfu_combat_log := _profile_stamp()
 	_flush_combat_log(false)
+	_profile_finish("combat_log", _pfu_combat_log)
+	var _pfu_finish_raid_check := _profile_stamp()
 	_maybe_finish_raid()
+	_profile_finish("finish_raid_check", _pfu_finish_raid_check)
 	stamp = _profile_stamp()
 	_update_objectives()
 	Intentions.evaluate(self)
 	_profile_finish("objective_updates", stamp)
 	stamp = _profile_stamp()
+	var _pfu_diag_snapshot := _profile_stamp()
 	_update_diagnostic_snapshot(TICK_SECONDS)
+	_profile_finish("diag_snapshot", _pfu_diag_snapshot)
 	_profile_finish("diagnostic_snapshot", stamp)
 	stamp = _profile_stamp()
 	_flush_diagnostic_events()
@@ -3274,7 +3290,9 @@ func run_economy_smoke_test() -> Dictionary:
 	central_inventory[Defs.RESOURCE_BREAD] = 999
 	is_night = true
 	phase_time = 0.0
+	var _pfw_spawn_wave_0 := _profile_stamp()
 	_spawn_wave()
+	_profile_finish("spawn_wave", _pfw_spawn_wave_0)
 	_simulate_seconds_for_test(NIGHT_LENGTH_SECONDS + 0.25)
 	var town_hall := _find_town_hall()
 	passed = _record_smoke(report, "an undefended realm survives the first night", not game_finished and day_count == 2 and not town_hall.is_empty() and int(town_hall.get("hp", 0)) > 0) and passed
@@ -8255,20 +8273,28 @@ func _update_time(delta: float) -> void:
 		dusk_warning_sent = true
 		if dusk_forecast.is_empty():
 			dusk_forecast = Wyrdfall.night_forecast(float(get_wyrd_pressure().get("value", 0.0)), day_count <= 1)
+		var _pfw_raid_plan_0 := _profile_stamp()
 		_prepare_raid_plan()
+		_profile_finish("raid_plan", _pfw_raid_plan_0)
 		last_message = RaidIntents.dusk_message()
 		_add_log("Dusk approaches.")
+		var _pfw_playtest_note_0 := _profile_stamp()
 		playtest_log.note(self, "dusk_warning", last_message)
+		_profile_finish("playtest_note", _pfw_playtest_note_0)
 	if not is_night and not horn_warning_sent and remaining <= RaidIntents.RAID_WARNING_SECONDS:
 		horn_warning_sent = true
 		if raid_plan.is_empty():
+			var _pfw_raid_plan_1 := _profile_stamp()
 			_prepare_raid_plan()
+			_profile_finish("raid_plan", _pfw_raid_plan_1)
 		var origin: Vector2i = raid_plan.get("origin", shard_position)
 		add_map_marker("raid", origin, "RAID", elapsed_seconds + 90.0)
 		last_message = RaidIntents.raid_warning_message(String(raid_plan.get("bearing", "the woods")), 60, String(raid_plan.get("target_name", "")))
 		_add_log(last_message)
 		push_notice("danger", "RAID WARNING", last_message, "critical")
+		var _pfw_playtest_note2_0 := _profile_stamp()
 		playtest_log.note(self, "horn_warning", last_message)
+		_profile_finish("playtest_note2", _pfw_playtest_note2_0)
 		_record_event("raid_warning", last_message, {"origin": origin, "bearing": String(raid_plan.get("bearing", "")), "target": String(raid_plan.get("target_name", ""))})
 	if not is_night and not night_warning_sent and remaining <= NIGHT_WARNING_SECONDS:
 		night_warning_sent = true
@@ -8328,13 +8354,19 @@ func _start_night() -> void:
 	last_message = "Night %d begins." % day_count
 	if not is_revealed(shard_position):
 		hidden_threat_level += 1
+	var _pfw_night_meal_0 := _profile_stamp()
 	_serve_night_meal()
+	_profile_finish("night_meal", _pfw_night_meal_0)
 	var _pf_dusk_shelter := _profile_stamp()
 	_send_workers_to_shelter()
 	_profile_finish("dusk_shelter", _pf_dusk_shelter)
+	var _pfw_spawn_wave_1 := _profile_stamp()
 	_spawn_wave()
+	_profile_finish("spawn_wave", _pfw_spawn_wave_1)
 	_emit_audio("night")
+	var _pfw_playtest_note3_0 := _profile_stamp()
 	playtest_log.note(self, "night_started", "Night %d" % day_count)
+	_profile_finish("playtest_note3", _pfw_playtest_note3_0)
 
 
 func _end_night() -> void:
@@ -8396,7 +8428,9 @@ func _spawn_wave() -> void:
 		last_message = "QUIET NIGHT - no raiders emerged from the fog."
 		return
 	if raid_plan.is_empty():
+		var _pfw_raid_plan_2 := _profile_stamp()
 		_prepare_raid_plan()
+		_profile_finish("raid_plan", _pfw_raid_plan_2)
 	var spawn_origins := _night_spawn_origins()
 	for i in range(wave_size):
 		var origin: Vector2i = shard_position if spawn_origins.is_empty() else spawn_origins[i % spawn_origins.size()]
@@ -8420,12 +8454,16 @@ func _spawn_wave() -> void:
 func _night_spawn_origins() -> Array[Vector2i]:
 	var candidates: Array[Vector2i] = []
 	var town_center := _footprint_center(town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
-	for y in range(map_size.y):
-		for x in range(map_size.x):
+	# R30: only the 11-16 ring can qualify; scan its bounding box, not the
+	# whole map (r29a: ~245 ms at nightfall). Same candidates, same order.
+	for y in range(maxi(0, town_center.y - 16), mini(map_size.y, town_center.y + 17)):
+		for x in range(maxi(0, town_center.x - 16), mini(map_size.x, town_center.x + 17)):
 			var tile := Vector2i(x, y)
+			if _manhattan(town_center, tile) < 11 or _manhattan(town_center, tile) > 16:
+				continue
 			if is_revealed(tile) or is_tile_occupied(tile) or String(get_tile(tile)) != Defs.TILE_GRASS:
 				continue
-			if _manhattan(town_center, tile) < 11 or _manhattan(town_center, tile) > 16:
+			if false:
 				continue
 			if is_tile_protected(tile) or _tile_in_any_tower_range(tile):
 				continue
@@ -8444,12 +8482,12 @@ func _night_spawn_origins() -> Array[Vector2i]:
 		return first_distance < second_distance
 	)
 	if candidates.is_empty():
-		for y in range(map_size.y):
-			for x in range(map_size.x):
+		for y in range(maxi(0, town_center.y - 18), mini(map_size.y, town_center.y + 19)):
+			for x in range(maxi(0, town_center.x - 18), mini(map_size.x, town_center.x + 19)):
 				var tile := Vector2i(x, y)
-				if is_revealed(tile) or is_tile_occupied(tile) or String(get_tile(tile)) != Defs.TILE_GRASS:
-					continue
 				if _manhattan(town_center, tile) < 10 or _manhattan(town_center, tile) > 18:
+					continue
+				if is_revealed(tile) or is_tile_occupied(tile) or String(get_tile(tile)) != Defs.TILE_GRASS:
 					continue
 				candidates.append(tile)
 		candidates.sort_custom(func(first: Vector2i, second: Vector2i) -> bool:
@@ -10655,7 +10693,9 @@ func _update_wyrdfall(delta: float) -> void:
 		var claim: Dictionary = rivalry.get_claim_status(RivalryTuning.PLAYER_REALM)
 		var progress := float(claim.get("binding_progress", 0.0))
 		if reckoning_waves_spawned < 2 and progress >= Wyrdfall.BINDING_DURATION_SECONDS * 0.5:
+			var _pfw_spawn_wave_2 := _profile_stamp()
 			_spawn_wave()
+			_profile_finish("spawn_wave", _pfw_spawn_wave_2)
 	_notice_shard_contact()
 
 
@@ -10665,7 +10705,9 @@ func _on_binding_started(realm_id: String) -> void:
 		reckoning_waves_spawned = 0
 		_add_log("THE RECKONING begins. The Wyrd reacts violently.")
 		last_message = "THE RECKONING — hold the Shard until Binding completes."
+		var _pfw_spawn_wave_3 := _profile_stamp()
 		_spawn_wave()
+		_profile_finish("spawn_wave", _pfw_spawn_wave_3)
 		_emit_audio("enemy")
 	else:
 		_add_log("The rival has begun Binding the Shard.")
