@@ -275,6 +275,8 @@ func _shot_async(name: String, action: String) -> void:
 	var shot_path: String = dir.path_join(name + ".png")
 	WorkerThreadPool.add_task(func(): shot_image.save_png(shot_path))
 	_note("shot %s t=%.0f" % [name, t])
+	if name == "03_start" and OS.get_cmdline_user_args().has("--gate-diag-layers"):
+		await _diag_layer_shots(tree)
 	match action:
 		"new_realm":
 			for a in OS.get_cmdline_user_args():
@@ -429,3 +431,26 @@ static func _loadtest_seconds() -> float:
 		if String(a).begins_with("--gate-loadtest="):
 			return float(String(a).trim_prefix("--gate-loadtest="))
 	return 0.0
+
+
+## Diagnostic only: re-shoot the start view with one world layer hidden at a
+## time to identify which node draws a given shape.
+func _diag_layer_shots(tree: SceneTree) -> void:
+	var wv: Node = game.world_view
+	var groups := {}
+	for n in wv.find_children("*", "GeometryInstance3D", true, false):
+		var key := String(n.name).split("_")[0]
+		var parent_key := String(n.get_parent().name).split("_")[0]
+		var k := parent_key + "." + key
+		if not groups.has(k):
+			groups[k] = []
+		groups[k].append(n)
+	_note("diag groups %s" % [str(groups.keys())])
+	for k in groups:
+		for n in groups[k]:
+			n.visible = false
+		await tree.process_frame
+		await RenderingServer.frame_post_draw
+		game.get_viewport().get_texture().get_image().save_png(dir.path_join("diag_%s.png" % String(k).replace("/", "_")))
+		for n in groups[k]:
+			n.visible = true

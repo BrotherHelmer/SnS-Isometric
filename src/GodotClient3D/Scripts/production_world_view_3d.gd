@@ -1060,7 +1060,7 @@ func _fast_chunk_color(tile: Vector2i) -> Color:
 		return Color(0.682, 0.565, 0.427, 0.98)
 	var tile_type := String(simulation.get_tile(tile))
 	if tile_type == Defs.TILE_TREE:
-		return Color(0.220, 0.275, 0.145, 0.40)
+		return Color(0.320, 0.360, 0.195, 0.30)
 	if tile_type == Defs.TILE_ROCK:
 		return Color(0.522, 0.514, 0.451, 0.32)
 	if tile_type == Defs.TILE_SHARD:
@@ -1160,6 +1160,21 @@ func _build_chunk_grass(host: Node3D, coord: Vector2i) -> void:
 			if _in_founding_yard(tile):
 				continue
 			var forest_edge := _same_type_neighbors(tile, Defs.TILE_TREE)
+			# Beta world pass: organic 3x3 clumps (tufts + flowers + a stone or
+			# shrub) so the open meadow is not one bare colour field. Chunked
+			# MultiMesh like the rest, built once per chunk.
+			var clump_cell := Vector2i(int(floor(float(tile.x) / 3.0)), int(floor(float(tile.y) / 3.0)))
+			var in_clump := _tile_hash(clump_cell, 17) % 3 == 0 and _tile_hash(tile, 23) % 4 != 0
+			if in_clump:
+				var clump_h := _tile_hash(tile, 31)
+				_append_nature_transform(transforms_by_path, String(Catalog.GRASS[_tile_hash(tile, 83) % Catalog.GRASS.size()]), tile, 1, 0.95, 1.20, 0.60)
+				if Catalog.FLOWERS.size() > 0 and clump_h % 3 == 0:
+					_append_nature_transform(transforms_by_path, String(Catalog.FLOWERS[clump_h % Catalog.FLOWERS.size()]), tile, 2, 0.70, 1.10, 0.45)
+				if Catalog.ROCKS.size() > 0 and clump_h % 7 == 0:
+					_append_nature_transform(transforms_by_path, String(Catalog.ROCKS[clump_h % Catalog.ROCKS.size()]), tile, 3, 0.55, 0.42, 0.25)
+				elif Catalog.UNDERSTORY.size() > 0 and clump_h % 5 == 0:
+					_append_nature_transform(transforms_by_path, String(Catalog.UNDERSTORY[clump_h % Catalog.UNDERSTORY.size()]), tile, 4, 0.55, 0.62, 0.30)
+				continue
 			if forest_edge < 1 and _tile_hash(tile, 19) % 7 != 0:
 				continue
 			var grass_path := String(Catalog.GRASS[_tile_hash(tile, 83) % Catalog.GRASS.size()])
@@ -2068,7 +2083,12 @@ func _compute_terrain_color(tile: Vector2i) -> Color:
 	var base := Color(0.408, 0.455, 0.227, 0.0)
 	var litter := clampf(float(tree_weight) / 16.0, 0.0, 0.70)
 	if litter > 0.12:
-		base = base.lerp(Color(0.220, 0.275, 0.145, 0.40), litter * 0.78)
+		# Beta world pass: forest floor was a 78 % blend to near-black green,
+		# which printed as a flat dark mass wherever trees were thinned
+		# (LOD, near buildings, fog edge). Moss/needle tone, lighter blend,
+		# per-tile variation so the edge breaks up.
+		var moss := Color(0.300, 0.350, 0.190, 0.30).lerp(Color(0.380, 0.330, 0.200, 0.30), float(_tile_hash(tile, 61) % 100) / 100.0)
+		base = base.lerp(moss, litter * 0.50)
 	var scree := clampf(float(rock_weight) / 16.0, 0.0, 0.55)
 	if scree > 0.12:
 		base = base.lerp(Color(0.522, 0.514, 0.451, 0.32), scree * 0.50)
