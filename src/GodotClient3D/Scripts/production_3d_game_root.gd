@@ -193,6 +193,8 @@ const CONSOLE_HEIGHT_EXPANDED := 156.0
 const MINIMAP_INNER := 220.0
 const MINIMAP_COLLAPSED := 44.0
 const BUILD_GRID_COLUMNS := 4
+## R28: the unit/building panel never gets narrower than this (logical px).
+const SELECTION_MIN_WIDTH := 420.0
 const BUILD_SLOT_SIZE := Vector2(66, 52)
 const RIVAL_BANNER_DELAY := 24.0
 const BUILD_HOTKEYS := [KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9, KEY_0, KEY_Z, KEY_X, KEY_C, KEY_V]
@@ -291,7 +293,7 @@ var music_slider: HSlider
 var sfx_slider: HSlider
 var fullscreen_check: CheckBox
 var ui_scale_select: OptionButton
-const UI_SCALES := [0.9, 1.0, 1.15, 1.3]
+const UI_SCALES := [0.9, 1.0, 1.15, 1.25, 1.3, 1.5]
 var result_more_button: Button
 var result_more_stats := false
 var last_result_stats: Dictionary = {}
@@ -1844,6 +1846,8 @@ func _create_ui() -> void:
 	selection_host = PanelContainer.new()
 	selection_host.name = "SelectionPanel"
 	selection_host.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	selection_host.custom_minimum_size = Vector2(SELECTION_MIN_WIDTH, 0)
+	selection_host.clip_contents = true
 	selection_host.add_theme_stylebox_override("panel", HudSkin.frame("slot", 8.0))
 	console_row.add_child(selection_host)
 	realm_overview = RichTextLabel.new()
@@ -4030,7 +4034,13 @@ func _build_unavailable_reason(building_type: String) -> String:
 	return ""
 
 
+## Harness only (unit probe): show every plan, as late in a run.
+var debug_unlock_all := false
+
+
 func is_build_unlocked(building_type: String) -> bool:
+	if debug_unlock_all:
+		return true
 	if building_type in STARTER_BUILDINGS:
 		return true
 	var sim = simulation_host.simulation if simulation_host != null else null
@@ -4198,9 +4208,24 @@ func _layout_hud_console() -> void:
 	if get_viewport().get_visible_rect().size.x >= 1200.0:
 		columns = clampi(unlocked, BUILD_GRID_COLUMNS, 16)
 	var grid := hud_root.find_child("BuildGrid", true, false) if hud_root != null else null
+	# R28: Helmer (1920x1200, UI 125 %) could not reach the unit panel: the
+	# build strip took its columns from the window width alone and pushed the
+	# selection panel off the right edge. Fit the columns to what is left
+	# after the minimap and a minimum-width selection panel.
+	if grid is GridContainer and (grid as GridContainer).get_child_count() > 0:
+		var g := grid as GridContainer
+		var cell_w := 0.0
+		for child in g.get_children():
+			if child is Control and (child as Control).visible:
+				cell_w = maxf(cell_w, (child as Control).get_combined_minimum_size().x)
+		cell_w += float(g.get_theme_constant("h_separation"))
+		var map_w := MINIMAP_INNER + 12.0 if minimap_expanded else MINIMAP_COLLAPSED + 8.0
+		var free_w := get_viewport().get_visible_rect().size.x - SELECTION_MIN_WIDTH - map_w - 72.0
+		if cell_w > 1.0:
+			columns = clampi(columns, 2, maxi(2, floori(free_w / cell_w)))
 	if grid is GridContainer:
 		(grid as GridContainer).columns = columns
-	var rows := 1 if unlocked <= columns else 2
+	var rows := ceili(float(unlocked) / float(maxi(1, columns)))
 	var height := CONSOLE_HEIGHT if rows == 1 else CONSOLE_HEIGHT_EXPANDED
 	if minimap_expanded:
 		height = maxf(height, MINIMAP_INNER + 40.0)

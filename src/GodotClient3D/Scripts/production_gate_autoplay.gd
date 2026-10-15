@@ -302,6 +302,10 @@ func _shot_async(name: String, action: String) -> void:
 	_note("shot %s t=%.0f" % [name, t])
 	if name == "03_start" and OS.get_cmdline_user_args().has("--gate-diag-layers"):
 		await _diag_layer_shots(tree)
+	if name == "03_start" and OS.get_cmdline_user_args().has("--gate-unit-probe"):
+		await _unit_probe(tree)
+		game.get_tree().quit()
+		return
 	match action:
 		"new_realm":
 			for a in OS.get_cmdline_user_args():
@@ -456,6 +460,72 @@ static func _loadtest_seconds() -> float:
 		if String(a).begins_with("--gate-loadtest="):
 			return float(String(a).trim_prefix("--gate-loadtest="))
 	return 0.0
+
+
+## R28 probe: a patrol soldier + a raider holding position; the soldier is
+## selected and the unit panel captured at UI 100/125/150 %, with every
+## visible command button checked to lie fully inside the window.
+func _unit_probe(tree: SceneTree) -> void:
+	var sim = game.simulation_host.simulation
+	sim.soldiers_total += 1
+	sim._sync_production_workers()
+	var guard: Dictionary = {}
+	for w in sim.workers:
+		if String(w.get("type", "")) == "guard" and int(w.get("building_id", 0)) == 0:
+			guard = w
+	if guard.is_empty():
+		_note("unit_probe FAIL no soldier")
+		return
+	var origin: Vector2i = sim._town_hall_entrance_tile()
+	guard["position"] = origin
+	guard["path"] = []
+	var spot := Vector2i(-1, -1)
+	for r in range(6, 12):
+		for dx in range(-r, r + 1):
+			var t := origin + Vector2i(dx, r)
+			if spot.x < 0 and sim.is_inside_map(t) and sim.is_revealed(t) and String(sim.get_tile(t)) == "GRASS" and not sim.is_tile_occupied(t):
+				spot = t
+	game.select_worker(int(guard.id))
+	game.selected_entity_kind = "worker"
+	game.camera_rig.focus_world(game.world_view.tile_to_world(Vector2(origin) + Vector2(0.5, 3.0)))
+	var all_ok := true
+	# Late-run state: every build plan unlocked (the widest build strip).
+	game.debug_unlock_all = true
+	game._refresh_build_strip_state()
+	for f in [1.0, 1.25, 1.5]:
+		game._apply_ui_scale(f)
+		await tree.process_frame
+		game._layout_hud_console()
+		await tree.create_timer(1.0).timeout
+		await RenderingServer.frame_post_draw
+		var vp: Rect2 = game.get_viewport().get_visible_rect()
+		var report := []
+		var ok := true
+		for b in [game.move_button, game.attack_button, game.scout_button, game.inspector_panel, game.selection_host]:
+			if b == null or not b.is_visible_in_tree():
+				continue
+			var r: Rect2 = b.get_global_rect()
+			var inside := vp.grow(0.5).encloses(r)
+			ok = ok and inside
+			report.append("%s=%s%s" % [b.name, str(r), "" if inside else "!OUT"])
+		all_ok = all_ok and ok and game.move_button.is_visible_in_tree() and game.attack_button.is_visible_in_tree()
+		_note("unit_probe scale=%.2f vp=%s ok=%s %s" % [f, str(vp.size), str(ok), " ".join(report)])
+		game.get_viewport().get_texture().get_image().save_png(dir.path_join("unit_panel_%d.png" % int(round(f * 100.0))))
+	game._apply_ui_scale(1.25)
+	sim._spawn_enemy(spot, 60, 1, 0.0)
+	var enemy: Dictionary = sim.enemies[sim.enemies.size() - 1]
+	enemy["speed_multiplier"] = 100000.0
+	var hp0 := int(enemy.hp)
+	var waited := 0.0
+	while waited < 20.0 and int(enemy.hp) >= hp0:
+		await tree.create_timer(0.5).timeout
+		waited += 0.5
+	await tree.create_timer(0.6).timeout
+	await RenderingServer.frame_post_draw
+	game.get_viewport().get_texture().get_image().save_png(dir.path_join("raid_engage.png"))
+	var engaged := int(enemy.hp) < hp0
+	_note("raid_probe engaged=%s hp %d->%d after %.1fs guard=%s" % [str(engaged), hp0, int(enemy.hp), waited, String(guard.get("state", ""))])
+	_note("unit_probe RESULT %s" % ("PASS" if all_ok and engaged else "FAIL"))
 
 
 ## Diagnostic only: re-shoot the start view with one world layer hidden at a
