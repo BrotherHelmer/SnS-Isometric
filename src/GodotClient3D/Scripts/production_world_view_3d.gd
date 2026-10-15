@@ -5108,21 +5108,29 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 	var anchor := tiles[2] if tiles.size() > 2 else hall + Vector2i(roundi(crater_dir.x * 7.0), roundi(crater_dir.y * 7.0))
 	formation.position = tile_to_world(Vector2(anchor)) + Vector3(crater_dir.x * 0.8, 0.0, crater_dir.y * 0.8)
 	formation.rotation.y = crater_yaw + 0.18
-	formation.material_override = grass_b
+	# Beta r22: the crater rim was a flat grass-green polygon that read as a
+	# dark blob. Weathered stone so it reads as the crater silhouette.
+	var rim_stone := StandardMaterial3D.new()
+	rim_stone.albedo_color = Color("#5f5e52")
+	rim_stone.roughness = 0.95
+	var rim_shade := StandardMaterial3D.new()
+	rim_shade.albedo_color = Color("#4d4c44")
+	rim_shade.roughness = 0.95
+	formation.material_override = rim_stone
 	ridge.add_child(formation)
 	var peak_a := MeshInstance3D.new()
 	peak_a.name = "RidgeFormationCap"
 	peak_a.mesh = _back_ridge_formation_mesh(b * 0.72, b * 0.46)
 	peak_a.position = formation.position + Vector3(-crater_side.x * 2.4 - crater_dir.x * 1.6, 0.0, -crater_side.y * 2.4 - crater_dir.y * 1.6)
 	peak_a.rotation.y = crater_yaw - 0.38
-	peak_a.material_override = grass_c
+	peak_a.material_override = rim_shade
 	ridge.add_child(peak_a)
 	var peak_b := MeshInstance3D.new()
 	peak_b.name = "RidgeFormationShade"
 	peak_b.mesh = _back_ridge_formation_mesh(b * 0.58, b * 0.28)
 	peak_b.position = formation.position + Vector3(crater_side.x * 2.8 - crater_dir.x * 0.9, 0.0, crater_side.y * 2.8 - crater_dir.y * 0.9)
 	peak_b.rotation.y = crater_yaw + 0.62
-	peak_b.material_override = grass_a
+	peak_b.material_override = rim_stone
 	ridge.add_child(peak_b)
 	for ledge_i in 6:
 		var ledge := MeshInstance3D.new()

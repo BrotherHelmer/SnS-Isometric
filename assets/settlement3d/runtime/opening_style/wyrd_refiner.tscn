@@ -4,12 +4,9 @@
 size = Vector3(1.55, 1.35, 1.25)
 
 [sub_resource type="StandardMaterial3D" id="Mat_kiln"]
-albedo_color = Color(0.28, 0.18, 0.14, 1)
-metallic = 0.18
-roughness = 0.55
-emission_enabled = true
-emission = Color(0.72, 0.32, 0.1, 1)
-emission_energy_multiplier = 0.45
+albedo_color = Color(0.36, 0.33, 0.3, 1)
+metallic = 0.0
+roughness = 0.9
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_stack"]
 top_radius = 0.14
@@ -29,12 +26,12 @@ rings = 10
 ring_segments = 8
 
 [sub_resource type="StandardMaterial3D" id="Mat_coil"]
-albedo_color = Color(0.85, 0.55, 0.18, 1)
-metallic = 0.55
-roughness = 0.28
+albedo_color = Color(0.25, 0.55, 0.62, 1)
+metallic = 0.2
+roughness = 0.5
 emission_enabled = true
-emission = Color(1, 0.55, 0.15, 1)
-emission_energy_multiplier = 1.15
+emission = Color(0.42, 0.81, 0.88, 1)
+emission_energy_multiplier = 0.55
 
 [node name="WyrdRefiner" type="Node3D"]
 
