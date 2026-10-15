@@ -445,10 +445,22 @@ func _try_build(sim, building_type: String, aim: Vector2i) -> bool:
 	if _gate_quarry_backoff and Time.get_ticks_msec() < int(_site_fail_until.get(building_type, 0)):
 		last_idle_reason = "no site for %s yet (retrying)" % Defs.building_name(building_type)
 		return false
-	var site := _best_site(sim, building_type, aim)
-	if site.x < 0:
-		_extend_roads(sim, aim, 2)
+	var site: Vector2i
+	if _gate_quarry_backoff:
+		# R30 harness: resumable search, at most SITE_SCAN_BUDGET validations
+		# per think step, so a failed ~2000-tile search no longer lands in one
+		# frame. -2 means "still searching": try again next think.
+		site = _best_site_budgeted(sim, building_type, aim)
+		if site.x == -2:
+			last_idle_reason = "searching a site for %s" % Defs.building_name(building_type)
+			return false
+		if site.x < 0:
+			_extend_roads(sim, aim, 2)
+	else:
 		site = _best_site(sim, building_type, aim)
+		if site.x < 0:
+			_extend_roads(sim, aim, 2)
+			site = _best_site(sim, building_type, aim)
 	if site.x < 0:
 		last_failures.append("%s: no site near %s" % [building_type, str(aim)])
 		_site_fail_until[building_type] = Time.get_ticks_msec() + 20000
@@ -626,6 +638,47 @@ func _best_road_step(sim, target: Vector2i) -> Vector2i:
 	for c in candidates:
 		if bool(sim.validate_placement(Defs.BUILDING_ROAD, c[1]).get("success", false)):
 			return c[1]
+	return Vector2i(-1, -1)
+
+
+const SITE_SCAN_BUDGET := 200
+var _site_scan: Dictionary = {}
+
+
+func _best_site_budgeted(sim, building_type: String, target: Vector2i) -> Vector2i:
+	var key := "%s@%s" % [building_type, str(target)]
+	if String(_site_scan.get("key", "")) != key:
+		_site_scan = {"key": key, "radius": 0, "best": Vector2i(-1, -1), "best_score": 100000}
+	var budget := SITE_SCAN_BUDGET
+	var radius: int = _site_scan["radius"]
+	while radius <= SITE_RADIUS:
+		for ox in range(-radius, radius + 1):
+			for oy in range(-radius, radius + 1):
+				if maxi(absi(ox), absi(oy)) != radius:
+					continue
+				var tile := target + Vector2i(ox, oy)
+				if not sim.is_inside_map(tile):
+					continue
+				budget -= 1
+				var validation: Dictionary = sim.validate_placement(building_type, tile)
+				if not bool(validation.get("success", false)):
+					continue
+				var score := absi(tile.x - target.x) + absi(tile.y - target.y)
+				if building_type != Defs.BUILDING_QUARRY and String(validation.get("message", "")).contains("CLEARING"):
+					score += 8
+				if score < int(_site_scan["best_score"]):
+					_site_scan["best"] = tile
+					_site_scan["best_score"] = score
+		# A ring is always finished once started (same choice as _best_site).
+		var best: Vector2i = _site_scan["best"]
+		if best.x >= 0:
+			_site_scan = {}
+			return best
+		radius += 1
+		_site_scan["radius"] = radius
+		if budget <= 0 and radius <= SITE_RADIUS:
+			return Vector2i(-2, -2)
+	_site_scan = {}
 	return Vector2i(-1, -1)
 
 
