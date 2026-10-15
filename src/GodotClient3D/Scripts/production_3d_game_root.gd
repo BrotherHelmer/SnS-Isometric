@@ -222,6 +222,8 @@ var menu_backdrop: TextureRect
 var seed_edit: LineEdit
 var quality_select: OptionButton
 var build_buttons: Dictionary = {}
+var _plans_were_open := false
+var _plans_next_refresh := 0.0
 var fixture_stage := ""
 var fixture_requested := false
 var fixture_result: Dictionary = {}
@@ -2511,7 +2513,14 @@ func _update_ui() -> void:
 	_update_loop_hud()
 	FrameProfiler.add("ui.loophud", _pu_loophud)
 	var _pu_btn := FrameProfiler.t0()
-	for building_type in build_buttons:
+	# Beta perf: the plans list is a popup; refresh its ~20 cards only while
+	# it is open (and once on open), not every UI tick (~6 ms late game).
+	var plans_open := build_panel != null and build_panel.visible
+	var refresh_plans := plans_open and not _plans_were_open or (plans_open and hud_clock >= _plans_next_refresh)
+	_plans_were_open = plans_open
+	if refresh_plans:
+		_plans_next_refresh = hud_clock + 0.25
+	for building_type in (build_buttons if refresh_plans else {}):
 		var unlocked := is_build_unlocked(String(building_type))
 		# Beta: one catalog. Locked plans stay listed with their unlock rule;
 		# unaffordable plans say exactly what is missing.
@@ -3906,16 +3915,25 @@ func visible_build_types() -> Array[String]:
 	return unlocked
 
 
+var _owned_types_frame := -1
+var _owned_types: Dictionary = {}
+
+
 func _player_has_building(building_type: String) -> bool:
 	var sim = simulation_host.simulation if simulation_host != null else null
 	if sim == null:
 		return false
-	for building_value in sim.buildings:
-		var building: Dictionary = building_value
-		var kind := String(building.get("planned_type", "")) if bool(building.get("construction", false)) else String(building.get("type", ""))
-		if kind == building_type:
-			return true
-	return false
+	# Beta perf: called ~4x per plan per UI tick (unlock checks); scan the
+	# building list once per frame instead of per call.
+	var frame := Engine.get_process_frames()
+	if frame != _owned_types_frame:
+		_owned_types_frame = frame
+		_owned_types.clear()
+		for building_value in sim.buildings:
+			var building: Dictionary = building_value
+			var kind := String(building.get("planned_type", "")) if bool(building.get("construction", false)) else String(building.get("type", ""))
+			_owned_types[kind] = true
+	return _owned_types.has(building_type)
 
 
 func _rival_banner_should_show() -> bool:

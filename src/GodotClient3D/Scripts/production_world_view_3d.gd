@@ -2082,11 +2082,13 @@ func _compute_terrain_color(tile: Vector2i) -> Color:
 	if _is_farm_field_tile(tile):
 		base = Color(0.788, 0.635, 0.290, 0.94)
 	if _is_road_tile(tile):
-		base = Color(0.682, 0.565, 0.427, 0.98)
+		# Beta: packed earth that keeps a trace of the ground under it and
+		# varies per tile, so roads read worn-in instead of pasted beige strips.
+		var wear := float(_tile_hash(tile, 57) % 9) / 100.0
+		base = base.lerp(Color(0.640 - wear, 0.525 - wear, 0.395 - wear * 0.6, 0.96), 0.86)
 	elif _is_road_shoulder(tile):
-		# 20–35% of the road width, not a hard beige stripe.
-		var shoulder := 0.20 + float(_tile_hash(tile, 41) % 16) / 100.0
-		base = base.lerp(Color(0.520, 0.410, 0.275, 0.55), clampf(shoulder, 0.20, 0.35))
+		var shoulder := 0.30 + float(_tile_hash(tile, 41) % 16) / 100.0
+		base = base.lerp(Color(0.540, 0.430, 0.290, 0.60), clampf(shoulder, 0.30, 0.45))
 	if _terrain_occupied_cache.has(_tile_key(tile)) and not _is_farm_field_tile(tile):
 		base = base.lerp(Color(0.573, 0.443, 0.306, 0.62), 0.64)
 	elif _terrain_yard_cache.has(_tile_key(tile)) and not _is_farm_field_tile(tile):

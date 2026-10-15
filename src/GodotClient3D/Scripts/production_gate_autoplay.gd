@@ -269,7 +269,11 @@ func _shot_async(name: String, action: String) -> void:
 						game._set_build_category(i)
 	await tree.create_timer(1.2).timeout
 	await RenderingServer.frame_post_draw
-	game.get_viewport().get_texture().get_image().save_png(dir.path_join(name + ".png"))
+	# Beta: PNG encoding of a 1920x1200 frame took ~300-400 ms on the main
+	# thread and was 6 of the 15 lowest seconds in r10. Encode off-thread.
+	var shot_image: Image = game.get_viewport().get_texture().get_image()
+	var shot_path: String = dir.path_join(name + ".png")
+	WorkerThreadPool.add_task(func(): shot_image.save_png(shot_path))
 	_note("shot %s t=%.0f" % [name, t])
 	match action:
 		"new_realm":
