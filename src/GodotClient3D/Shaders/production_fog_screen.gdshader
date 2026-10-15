@@ -26,6 +26,7 @@ uniform float noise_strength : hint_range(0.0, 1.0) = 0.12;
 uniform float ground_height = 0.04;
 uniform vec3 camera_world_position = vec3(0.0, 32.0, 32.0);
 uniform float camera_near = 0.2;
+uniform float haze_light = 1.0;
 
 float hash21(vec2 p) {
 	p = fract(p * vec2(123.34, 456.21));
@@ -94,8 +95,14 @@ void fragment() {
 	float shroud = mix(1.0, texture(visibility_texture, sample_uv).r, has_mask);
 	float explored = mix(0.0, explored_opacity, smoothstep(0.04, 0.42, shroud));
 	float unknown = mix(explored, unknown_opacity, smoothstep(0.58, 0.92, shroud));
-	ALBEDO = unknown_color;
+	// Beta: drifting cloud tone so the explored shroud reads as haze over the
+	// land, not one flat dark-green mass with lobed edges.
+	float cloud = value_noise(world_xz * 0.045 + vec2(TIME * 0.012, TIME * 0.007)) * 0.65
+		+ value_noise(world_xz * 0.11 - vec2(TIME * 0.01, 0.0)) * 0.35;
+	vec3 haze = mix(unknown_color, vec3(0.34, 0.42, 0.44) * max(haze_light, 0.3), 0.30 + 0.35 * cloud);
+	float explored_zone = 1.0 - smoothstep(0.58, 0.92, shroud);
+	ALBEDO = mix(unknown_color, haze, explored_zone * inside);
 	// Off-map is fully unknown so a zoomed viewport never shows a
 	// triangular sky / water / AABB cut.
-	ALPHA = max(unknown * inside, 1.0 - inside);
+	ALPHA = max(unknown * inside * mix(1.0, 0.82 + 0.3 * cloud, explored_zone), 1.0 - inside);
 }

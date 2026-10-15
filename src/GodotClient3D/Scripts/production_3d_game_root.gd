@@ -187,7 +187,7 @@ var console_collapsed := false
 var console_row_node: HBoxContainer
 var console_toggle_button: Button
 const CONSOLE_HEIGHT_EXPANDED := 156.0
-const MINIMAP_INNER := 72.0
+const MINIMAP_INNER := 132.0
 const MINIMAP_COLLAPSED := 44.0
 const BUILD_GRID_COLUMNS := 4
 const BUILD_SLOT_SIZE := Vector2(66, 52)
@@ -1457,8 +1457,8 @@ func _create_ui() -> void:
 	objective_detail_panel.offset_left = 8.0
 	objective_detail_panel.offset_top = TOP_BAR_HEIGHT + 44.0
 	objective_detail_panel.offset_right = 334.0
-	objective_detail_panel.offset_bottom = TOP_BAR_HEIGHT + 200.0
-	objective_detail_panel.custom_minimum_size = Vector2(320, 156)
+	objective_detail_panel.offset_bottom = TOP_BAR_HEIGHT + 300.0
+	objective_detail_panel.custom_minimum_size = Vector2(320, 230)
 	objective_detail_panel.clip_contents = true
 	objective_detail_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	objective_detail_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.04, 0.05, 0.055, 0.92), Color("#efcf8a")))
@@ -3961,6 +3961,14 @@ func first_screen_banner_count() -> int:
 
 func _toggle_minimap() -> void:
 	minimap_expanded = not minimap_expanded
+	# Beta: the minimap's _ready() runs after apply_console_layout() (the HUD
+	# is built before it enters the tree) and reset it to its 168 px window
+	# size, so the expanded map hung below the screen. Re-apply here.
+	if minimap != null:
+		minimap.apply_console_layout(MINIMAP_INNER, HudSkin.frame("slot", 6.0))
+	_layout_hud_console()
+	# The holder's new minimum size is applied at the end of the first pass;
+	# lay out again so the console height includes the expanded map.
 	_layout_hud_console()
 
 
@@ -4009,6 +4017,9 @@ func _layout_hud_console() -> void:
 	var height := CONSOLE_HEIGHT if rows == 1 else CONSOLE_HEIGHT_EXPANDED
 	if minimap_expanded:
 		height = maxf(height, MINIMAP_INNER + 40.0)
+		# Beta: the province map frame is taller than MINIMAP_INNER (title +
+		# frame), so it used to hang below the window; size from its real need.
+		height = maxf(height, MINIMAP_INNER + 48.0)
 	# The console's children need more than CONSOLE_HEIGHT; with only
 	# offset_top set, the panel grew downward past the window bottom and the
 	# build row was clipped at every resolution. Anchor to the bottom edge.

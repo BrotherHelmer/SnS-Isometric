@@ -3887,14 +3887,14 @@ func _sync_fog(force: bool) -> void:
 		fog_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
 		fog_material.render_priority = 20
 	fog_material.set_shader_parameter("unknown_opacity", 1.0)
-	fog_material.set_shader_parameter("explored_opacity", 0.55)
+	fog_material.set_shader_parameter("explored_opacity", 0.38)
 	fog_material.set_shader_parameter("cell_metres", ScaleProfile.LOGICAL_CELL_METRES)
 	fog_material.set_shader_parameter("feather_cells", 1.25)
 	fog_material.set_shader_parameter("noise_strength", 0.12)
 	fog_material.set_shader_parameter("shore_fade_metres", SHORE_FADE_METRES)
 	if fog_screen_material != null:
 		fog_screen_material.set_shader_parameter("unknown_opacity", 1.0)
-		fog_screen_material.set_shader_parameter("explored_opacity", 0.55)
+		fog_screen_material.set_shader_parameter("explored_opacity", 0.38)
 		fog_screen_material.set_shader_parameter("cell_metres", ScaleProfile.LOGICAL_CELL_METRES)
 		fog_screen_material.set_shader_parameter("feather_cells", 1.25)
 		fog_screen_material.set_shader_parameter("noise_strength", 0.12)
@@ -4102,7 +4102,7 @@ func _ensure_fog_screen() -> void:
 	fog_screen_material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
 	fog_screen_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
 	fog_screen_material.set_shader_parameter("unknown_opacity", 1.0)
-	fog_screen_material.set_shader_parameter("explored_opacity", 0.55)
+	fog_screen_material.set_shader_parameter("explored_opacity", 0.38)
 	fog_screen_material.set_shader_parameter("cell_metres", ScaleProfile.LOGICAL_CELL_METRES)
 	fog_screen_material.set_shader_parameter("feather_cells", 1.25)
 	fog_screen_material.set_shader_parameter("noise_strength", 0.12)
@@ -4270,6 +4270,7 @@ func apply_light_palette(palette: Dictionary) -> void:
 	if fog_screen_material != null:
 		fog_screen_material.set_shader_parameter("unknown_color", FOG_UNKNOWN_BASE)
 		fog_screen_material.set_shader_parameter("mist_color", FOG_MIST_BASE)
+		fog_screen_material.set_shader_parameter("haze_light", atmosphere)
 	if boundary_mist_material != null:
 		boundary_mist_material.set_shader_parameter("color_scale", atmosphere)
 	if water_material != null:

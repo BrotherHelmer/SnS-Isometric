@@ -50,6 +50,9 @@ func _ready() -> void:
 func apply_console_layout(inner: float, style: StyleBox) -> void:
 	custom_minimum_size = Vector2(inner + 12.0, inner + 28.0)
 	if map_image != null:
+		# Beta: without IGNORE_SIZE the texture's own pixel size (256+) became
+		# the minimum and the console grew to ~280 px.
+		map_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		map_image.custom_minimum_size = Vector2(inner, inner)
 	add_theme_stylebox_override("panel", style)
 
