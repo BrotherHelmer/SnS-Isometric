@@ -50,13 +50,18 @@ void fragment() {
 	float ruts = (1.0 - smoothstep(0.0, 0.035, min(rut_l, rut_r))) * (1.0 - edge);
 	albedo = mix(albedo, dirt_edge, ruts * 0.55);
 	albedo *= mix(0.90, 1.08, noise2(world_pos.xz * 3.2)) * light_tint * (1.0 + value_lift);
+	// Beta r19: worn earth, less orange.
+	float road_luma = dot(albedo, vec3(0.2126, 0.7152, 0.0722));
+	albedo = mix(albedo, vec3(road_luma) * vec3(1.04, 0.98, 0.88), 0.22);
 	float rim = min(UV.x, 1.0 - UV.x);
 	float alpha = max(road_color.a, 0.92);
-	if (rim < 0.10) {
-		alpha *= mix(0.35, 1.0, smoothstep(0.02, 0.10, rim + (chew - 0.5) * edge_noise * 0.10));
-		if (alpha < 0.18) {
-			discard;
-		}
+	// Beta r19: wider, noisy feather so the road sinks into the meadow
+	// instead of reading as a pasted strip with a hard outline.
+	float bite = noise2(world_pos.xz * 0.9 + vec2(1.3, 6.1));
+	float feather = smoothstep(0.0, 0.26, rim + (bite - 0.5) * 0.16 + (chew - 0.5) * edge_noise * 0.08);
+	alpha *= mix(0.0, 1.0, feather);
+	if (alpha < 0.10) {
+		discard;
 	}
 	ALBEDO = albedo;
 	NORMAL = normalize((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);

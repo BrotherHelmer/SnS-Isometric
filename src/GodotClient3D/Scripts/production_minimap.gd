@@ -89,15 +89,37 @@ func redraw(frame_snapshot: Dictionary) -> void:
 	last_signature = signature
 
 
+## Beta r19: terrain layer is cached and only rebuilt when the revealed
+## set changes (was a 25k-cell GDScript loop every 0.16 s). The visible
+## rect is cropped to the explored area so the expanded map is not 90 %
+## black.
+var _base_image: Image
+var _base_sig := ""
+var _view_rect := Rect2i()
+
+
 func _render_map(map_size: Vector2i, frame_snapshot: Dictionary) -> Image:
+	var sig := "%d:%d:%d:%s" % [map_size.x, map_size.y, int(simulation.revealed_tiles.size()), str(overview_mode)]
+	if _base_image == null or sig != _base_sig:
+		_base_image = _render_terrain(map_size)
+		_base_sig = sig
+	var image: Image = _base_image.duplicate()
+	return _render_overlays(image, map_size, frame_snapshot)
+
+
+func _render_terrain(map_size: Vector2i) -> Image:
 	var image := Image.create(map_size.x, map_size.y, false, Image.FORMAT_RGB8)
 	image.fill(Color("#0a1210"))
+	var lo := Vector2i(map_size.x, map_size.y)
+	var hi := Vector2i(-1, -1)
 	var step := 1 if map_size.x <= 120 or overview_mode else 2
 	for y in range(0, map_size.y, step):
 		for x in range(0, map_size.x, step):
 			var tile := Vector2i(x, y)
 			if not overview_mode and not simulation.is_revealed(tile):
 				continue
+			lo = Vector2i(mini(lo.x, x), mini(lo.y, y))
+			hi = Vector2i(maxi(hi.x, x), maxi(hi.y, y))
 			var tile_type := String(simulation.get_tile(tile))
 			var color := Color("#4d8a3e")
 			if simulation.has_method("is_water_tile") and simulation.is_water_tile(tile):
@@ -117,6 +139,22 @@ func _render_map(map_size: Vector2i, frame_snapshot: Dictionary) -> Image:
 					for ox in range(step):
 						if x + ox < map_size.x and y + oy < map_size.y:
 							image.set_pixel(x + ox, y + oy, color)
+	for keep_value in [simulation.shard_position, simulation.town_hall_position]:
+		var keep := Vector2i(keep_value)
+		if keep.x >= 0 and hi.x >= 0:
+			lo = Vector2i(mini(lo.x, keep.x), mini(lo.y, keep.y))
+			hi = Vector2i(maxi(hi.x, keep.x), maxi(hi.y, keep.y))
+	if overview_mode or hi.x < 0:
+		_view_rect = Rect2i(Vector2i.ZERO, map_size)
+	else:
+		var center := (lo + hi) / 2
+		var side := clampi(maxi(hi.x - lo.x, hi.y - lo.y) + 24, 56, mini(map_size.x, map_size.y))
+		var origin := Vector2i(clampi(center.x - side / 2, 0, map_size.x - side), clampi(center.y - side / 2, 0, map_size.y - side))
+		_view_rect = Rect2i(origin, Vector2i(side, side))
+	return image
+
+
+func _render_overlays(image: Image, map_size: Vector2i, frame_snapshot: Dictionary) -> Image:
 	for road_value in frame_snapshot.get("roads", []):
 		var road: Dictionary = road_value
 		var anchor := Vector2i(road.get("anchor", Vector2i.ZERO))
@@ -189,10 +227,12 @@ func _render_map(map_size: Vector2i, frame_snapshot: Dictionary) -> Image:
 
 func _paint(map_size: Vector2i, frame_snapshot: Dictionary) -> void:
 	var image := _render_map(map_size, frame_snapshot)
+	if _view_rect.size.x > 0 and _view_rect.size != map_size:
+		image = image.get_region(_view_rect)
 	if texture == null:
 		texture = ImageTexture.create_from_image(image)
 	else:
-		if texture.get_width() != map_size.x or texture.get_height() != map_size.y:
+		if texture.get_width() != image.get_width() or texture.get_height() != image.get_height():
 			texture = ImageTexture.create_from_image(image)
 		else:
 			texture.update(image)
@@ -255,9 +295,10 @@ func _on_map_gui_input(event: InputEvent) -> void:
 	var local: Vector2 = event.position
 	if map_image.size.x < 1.0 or map_image.size.y < 1.0:
 		return
+	var rect := _view_rect if _view_rect.size.x > 0 else Rect2i(Vector2i.ZERO, map_size)
 	var tile := Vector2i(
-		clampi(int(local.x / map_image.size.x * float(map_size.x)), 0, map_size.x - 1),
-		clampi(int(local.y / map_image.size.y * float(map_size.y)), 0, map_size.y - 1)
+		clampi(rect.position.x + int(local.x / map_image.size.x * float(rect.size.x)), 0, map_size.x - 1),
+		clampi(rect.position.y + int(local.y / map_image.size.y * float(rect.size.y)), 0, map_size.y - 1)
 	)
 	focus_requested.emit(world_view.tile_to_world(Vector2(tile)))
 	accept_event()

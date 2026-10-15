@@ -1592,7 +1592,7 @@ func _apply_ground_material(host: MeshInstance3D) -> void:
 	material.set_shader_parameter("macro_metres", maxf(8.0, 4.0 * road_w))
 	material.set_shader_parameter("patch_metres", maxf(1.94, 0.8 * road_w))
 	material.set_shader_parameter("detail_metres", 1.10)
-	material.set_shader_parameter("macro_amount", 0.12)
+	material.set_shader_parameter("macro_amount", 0.20)
 	material.set_shader_parameter("detail_amount", 0.08)
 	material.set_shader_parameter("dirt_amount", 0.56)
 	material.set_shader_parameter("flower_amount", 0.22)
@@ -1626,7 +1626,7 @@ func _bind_terrain_textures(material: ShaderMaterial) -> void:
 		material.set_shader_parameter("dirt_tex", dirt)
 	if rock != null:
 		material.set_shader_parameter("rock_tex", rock)
-	material.set_shader_parameter("tex_mix", 0.16)
+	material.set_shader_parameter("tex_mix", 0.24)
 	material.set_shader_parameter("tex_repeat_meadow", 1.5 * ScaleProfile.road_width_metres())
 	material.set_shader_parameter("tex_repeat_forest", 1.2 * ScaleProfile.road_width_metres())
 	if road_control_texture != null:
