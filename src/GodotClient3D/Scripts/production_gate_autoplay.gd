@@ -100,6 +100,9 @@ func setup(game_value, dir_value: String, duration_value: float) -> void:
 		shots.sort_custom(func(a, b) -> bool: return float(a[0]) < float(b[0]))
 
 
+## R31.2 diagnostic (flag --gate-bot-log): every 30 s, what the test bot is blocked on.
+var _bot_log := OS.get_cmdline_user_args().has("--gate-bot-log")
+var _bot_log_next := 0.0
 var _last_us := 0
 
 
@@ -194,6 +197,9 @@ func _process(_engine_delta: float) -> void:
 		_note("night jump shot vp=%s night=%s" % [str(sz), str(sim.is_night)])
 		game.get_tree().quit()
 		return
+	if started and _bot_log and t >= _bot_log_next:
+		_bot_log_next = t + 30.0
+		_note("botlog t=%.0f game_s=%.0f buildings=%d pop=%d idle=%s fails=%s actions=%s" % [t, float(sim.elapsed_seconds), sim.buildings.size(), int(sim.population_current), player.last_idle_reason, str(player.last_failures), str(player.last_actions)])
 	if started and not bool(sim.game_finished):
 		think_t += delta
 		if think_t >= think_every or player.think_phase > 0:
