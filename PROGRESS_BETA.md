@@ -83,3 +83,5 @@ Baseline: hotfix7 run7 (b4dab21, Low) 37.5 avg FPS, median 26.5 ms, GPU median 1
 - 17:05 r29b2 published INVALID-CAMERA; r29c release re-labelled INVALID-CAMERA; r31a published INVALID-CAMERA. r31.1 (8d0ee1e, hash 8838c49f) deployed; r31a2 (seed 1792061458) launched ~17:01 Shard time on AC, renders the world (421 draws / 350k prims at t=50). Bot issue: the bot is sim-only (no camera dependence); r29c build count flat at 44 from t=400 (r26c same seed resumed at t=700); headless soak builds 135-138; still open.
 
 - 17:10 Removed tools/beta/sim_soak_live.gd (wrong: _simulate_seconds_for_test advances a fixed minimum per call, so sim time ran ~10x fast). Added --gate-bot-log (harness only): every 30 s notes buildings, idle reason, failures, actions.
+
+- 17:35 r31a2 (r31.1, seed 1792061458, scale 1.00, AC, world rendered) published FAIL: raw 1% low 32.4 / adjusted 32.4, avg 46.8, max spike 182 ms (r29a 598), 11 stalls (r29a 17). Draw calls -16% but GPU time unchanged at 16.9 ms: GPU is fill/shading bound. r31.2 (7c1049d, harness bot-log flag only) deployed; r31b (seed 11, --gate-bot-log) launched.
