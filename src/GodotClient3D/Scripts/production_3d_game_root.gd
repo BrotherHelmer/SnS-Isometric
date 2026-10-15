@@ -185,7 +185,7 @@ var console_collapsed := false
 var console_row_node: HBoxContainer
 var console_toggle_button: Button
 const CONSOLE_HEIGHT_EXPANDED := 156.0
-const MINIMAP_INNER := 160.0
+const MINIMAP_INNER := 220.0
 const MINIMAP_COLLAPSED := 44.0
 const BUILD_GRID_COLUMNS := 4
 const BUILD_SLOT_SIZE := Vector2(66, 52)

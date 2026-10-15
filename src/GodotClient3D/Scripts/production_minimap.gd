@@ -116,10 +116,10 @@ func _render_terrain(map_size: Vector2i) -> Image:
 	for y in range(0, map_size.y, step):
 		for x in range(0, map_size.x, step):
 			var tile := Vector2i(x, y)
-			if not overview_mode and not simulation.is_revealed(tile):
-				continue
-			lo = Vector2i(mini(lo.x, x), mini(lo.y, y))
-			hi = Vector2i(maxi(hi.x, x), maxi(hi.y, y))
+			var seen: bool = simulation.is_revealed(tile)
+			if seen:
+				lo = Vector2i(mini(lo.x, x), mini(lo.y, y))
+				hi = Vector2i(maxi(hi.x, x), maxi(hi.y, y))
 			var tile_type := String(simulation.get_tile(tile))
 			var color := Color("#4d8a3e")
 			if simulation.has_method("is_water_tile") and simulation.is_water_tile(tile):
@@ -130,8 +130,10 @@ func _render_terrain(map_size: Vector2i) -> Image:
 				color = Color("#8a8678")
 			elif tile_type == Defs.TILE_SHARD:
 				color = Color("#6bcfe0")
-			if not simulation.is_revealed(tile) and overview_mode:
-				color = color.darkened(0.22)
+			if not seen:
+				# Beta r23: unexplored land as a dim silhouette, not black,
+				# so the province reads as a map (5.5 review: "sparse").
+				color = color.darkened(0.22 if overview_mode else 0.62)
 			if step == 1:
 				image.set_pixel(x, y, color)
 			else:
