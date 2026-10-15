@@ -277,6 +277,8 @@ func _run_shot(name: String, action: String) -> void:
 
 func _shot_async(name: String, action: String) -> void:
 	var tree: SceneTree = game.get_tree()
+	if started:
+		_checkpoint_overrides()
 	if action == "census":
 		_draw_census()
 	match action:
@@ -398,6 +400,7 @@ func _checkpoint_overrides() -> void:
 	var wv = game.world_view
 	if wv == null or wv.chunk_root == null:
 		return
+	_apply_r32_flags(wv, args)
 	var cheap_ground := "--gate-diag-cheap-ground" in args
 	var cheap_foliage := "--gate-diag-cheap-foliage" in args
 	if not cheap_ground and not cheap_foliage:
@@ -482,6 +485,58 @@ static func _loadtest_seconds() -> float:
 		if String(a).begins_with("--gate-loadtest="):
 			return float(String(a).trim_prefix("--gate-loadtest="))
 	return 0.0
+
+
+## R32 shading isolation (gate flags only; shipped defaults untouched).
+## Candidates: --gate-r32-fog-lite (lossless), --gate-r32-ground-hash (visible:
+## different noise pattern). Existing: --gate-diag-cheap-ground / -foliage.
+## Diagnostic only (removes things, obviously visible):
+## --gate-r32-hide=fog,ground,foliage,water,smoke,mist,characters,buildings
+var _r32_noted := false
+
+
+func _apply_r32_flags(wv, args: PackedStringArray) -> void:
+	if "--gate-r32-fog-lite" in args and wv.fog_screen_material != null:
+		wv.fog_screen_material.set_shader_parameter("lite", 1.0)
+	var hide: PackedStringArray = []
+	for a in args:
+		if String(a).begins_with("--gate-r32-hide="):
+			hide = String(a).trim_prefix("--gate-r32-hide=").split(",")
+	var ground_hash := "--gate-r32-ground-hash" in args
+	if not _r32_noted and (not hide.is_empty() or ground_hash or "--gate-r32-fog-lite" in args):
+		_r32_noted = true
+		_note("r32 flags applied t=%.0f hide=%s ground_hash=%s fog_lite=%s" % [t, str(hide), str(ground_hash), str("--gate-r32-fog-lite" in args)])
+	if hide.is_empty() and not ground_hash:
+		return
+	if "fog" in hide and wv.fog_screen != null:
+		wv.fog_screen.visible = false
+	if "water" in hide and wv.water_mesh_instance != null:
+		wv.water_mesh_instance.visible = false
+	if "characters" in hide and wv.characters_root != null:
+		wv.characters_root.visible = false
+	if "buildings" in hide and wv.buildings_root != null:
+		wv.buildings_root.visible = false
+	for node in wv.find_children("*", "GeometryInstance3D", true, false):
+		var gi := node as GeometryInstance3D
+		var mat := gi.material_override
+		var shader_path := ""
+		if mat is ShaderMaterial and (mat as ShaderMaterial).shader != null:
+			shader_path = (mat as ShaderMaterial).shader.resource_path
+		if shader_path.ends_with("settlement_ground.gdshader"):
+			if ground_hash:
+				(mat as ShaderMaterial).set_shader_parameter("fast_hash", 1.0)
+			if "ground" in hide:
+				gi.visible = false
+		elif "fog" in hide and shader_path.ends_with("production_fog_of_war.gdshader"):
+			gi.visible = false
+		elif "foliage" in hide and shader_path.ends_with("settlement_foliage.gdshader"):
+			gi.visible = false
+		elif "mist" in hide and shader_path.ends_with("production_boundary_mist.gdshader"):
+			gi.visible = false
+		elif "smoke" in hide and gi is CPUParticles3D:
+			gi.visible = false
+		elif "mist" in hide and gi is CPUParticles3D and String(gi.name).to_lower().contains("mist"):
+			gi.visible = false
 
 
 ## R31 diagnostic: which nodes the camera actually draws. Counts visible

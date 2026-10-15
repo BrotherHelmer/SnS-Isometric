@@ -78,7 +78,15 @@ float island_land(vec2 world_xz) {
 	return -sd + jut;
 }
 
+// R32 candidate (gate flag --gate-r32-ground-hash): arithmetic hash instead of
+// sin(). Same statistics, DIFFERENT noise pattern (visible change).
+uniform float fast_hash = 0.0;
 float hash21(vec2 p) {
+	if (fast_hash > 0.5) {
+		vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+		p3 += dot(p3, p3.yzx + 33.33);
+		return fract((p3.x + p3.y) * p3.z);
+	}
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
 }
 

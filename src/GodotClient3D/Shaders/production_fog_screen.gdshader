@@ -27,6 +27,10 @@ uniform float ground_height = 0.04;
 uniform vec3 camera_world_position = vec3(0.0, 32.0, 32.0);
 uniform float camera_near = 0.2;
 uniform float haze_light = 1.0;
+// R32 candidate (gate flag --gate-r32-fog-lite): identical output, less work.
+// Skips the cloud noise where it cannot affect the result and discards
+// fully transparent (visible-area) pixels instead of blending alpha 0.
+uniform float lite = 0.0;
 
 float hash21(vec2 p) {
 	p = fract(p * vec2(123.34, 456.21));
@@ -95,6 +99,23 @@ void fragment() {
 	float shroud = mix(1.0, texture(visibility_texture, sample_uv).r, has_mask);
 	float explored = mix(0.0, explored_opacity, smoothstep(0.04, 0.42, shroud));
 	float unknown = mix(explored, unknown_opacity, smoothstep(0.58, 0.92, shroud));
+	if (lite > 0.5) {
+		float ez = (1.0 - smoothstep(0.58, 0.92, shroud)) * inside;
+		if (inside > 0.5 && unknown <= 0.0) {
+			discard;
+		}
+		if (ez <= 0.0) {
+			ALBEDO = unknown_color;
+			ALPHA = max(unknown * inside, 1.0 - inside);
+		} else {
+			float cl = value_noise(world_xz * 0.045 + vec2(TIME * 0.012, TIME * 0.007)) * 0.65
+				+ value_noise(world_xz * 0.11 - vec2(TIME * 0.01, 0.0)) * 0.35;
+			vec3 hz = mix(unknown_color, vec3(0.34, 0.42, 0.44) * max(haze_light, 0.3), 0.30 + 0.35 * cl);
+			float ezn = 1.0 - smoothstep(0.58, 0.92, shroud);
+			ALBEDO = mix(unknown_color, hz, ezn * inside);
+			ALPHA = max(unknown * inside * mix(1.0, 0.82 + 0.3 * cl, ezn), 1.0 - inside);
+		}
+	} else {
 	// Beta: drifting cloud tone so the explored shroud reads as haze over the
 	// land, not one flat dark-green mass with lobed edges.
 	float cloud = value_noise(world_xz * 0.045 + vec2(TIME * 0.012, TIME * 0.007)) * 0.65
@@ -105,4 +126,5 @@ void fragment() {
 	// Off-map is fully unknown so a zoomed viewport never shows a
 	// triangular sky / water / AABB cut.
 	ALPHA = max(unknown * inside * mix(1.0, 0.82 + 0.3 * cloud, explored_zone), 1.0 - inside);
+	}
 }
