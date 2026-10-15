@@ -259,6 +259,8 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 		_building_snapshot_hashes.clear()
 		character_views.clear()
 		road_views.clear()
+		_road_merged.clear()
+		_road_merge_dirty.clear()
 		road_signatures.clear()
 		road_stamp_signature = ""
 		rival_road_views.clear()
@@ -3503,6 +3505,7 @@ func _sync_roads(road_snapshots: Array) -> void:
 	for key_value in road_views.keys():
 		if desired.has(key_value):
 			continue
+		_road_merge_dirty[_road_chunk((road_views[key_value] as ProductionRoadView3D).tile)] = true
 		(road_views[key_value] as Node).queue_free()
 		road_views.erase(key_value)
 		road_signatures.erase(key_value)
@@ -3523,10 +3526,74 @@ func _sync_roads(road_snapshots: Array) -> void:
 			roads_root.add_child(view)
 			road_views[key_value] = view
 			road_signatures[key_value] = next_signature
+			_road_merge_dirty[_road_chunk(tile)] = true
 		elif String(road_signatures.get(key_value, "")) != next_signature:
 			(road_views[key_value] as ProductionRoadView3D).configure(int(snapshot.get("id", 0)), tile, mask, planned)
 			road_signatures[key_value] = next_signature
+			_road_merge_dirty[_road_chunk(tile)] = true
+	_merge_dirty_road_chunks()
 	_rebuild_road_stamps(desired)
+
+
+## R31 draw calls: each road tile used to be two MeshInstance3Ds (edge + dirt),
+## i.e. two draw calls per tile. Static batching: per 16-tile chunk, the tile
+## meshes are baked into one mesh per shared material and the per-tile meshes
+## are hidden (their decals stay). Same vertices, same materials, same
+## transforms, so the picture is unchanged; only the draw count drops.
+const ROAD_MERGE_CHUNK := 16
+var _road_merge_dirty: Dictionary = {}
+var _road_merged: Dictionary = {}
+
+
+func _road_chunk(t: Vector2i) -> Vector2i:
+	return Vector2i(int(floor(float(t.x) / ROAD_MERGE_CHUNK)), int(floor(float(t.y) / ROAD_MERGE_CHUNK)))
+
+
+func _merge_dirty_road_chunks() -> void:
+	if _road_merge_dirty.is_empty() or roads_root == null:
+		return
+	var dirty := _road_merge_dirty
+	_road_merge_dirty = {}
+	var tools := {}
+	var mats := {}
+	for view_value in road_views.values():
+		var view := view_value as ProductionRoadView3D
+		if view == null or not is_instance_valid(view) or view.is_queued_for_deletion():
+			continue
+		var chunk := _road_chunk(view.tile)
+		if not dirty.has(chunk):
+			continue
+		for child in view.get_children():
+			var mi := child as MeshInstance3D
+			if mi == null or mi.mesh == null or mi.is_queued_for_deletion():
+				continue
+			var mat: Material = mi.material_override
+			var key := "%d,%d|%d" % [chunk.x, chunk.y, mat.get_instance_id() if mat != null else 0]
+			if not tools.has(key):
+				var st := SurfaceTool.new()
+				st.begin(Mesh.PRIMITIVE_TRIANGLES)
+				tools[key] = st
+				mats[key] = mat
+			(tools[key] as SurfaceTool).append_from(mi.mesh, 0, view.transform * mi.transform)
+			mi.visible = false
+	for chunk in dirty:
+		var old: Array = _road_merged.get(chunk, [])
+		for n in old:
+			if is_instance_valid(n):
+				(n as Node).queue_free()
+		_road_merged.erase(chunk)
+	for key in tools:
+		var chunk_key := String(key).split("|")[0].split(",")
+		var chunk := Vector2i(int(chunk_key[0]), int(chunk_key[1]))
+		var inst := MeshInstance3D.new()
+		inst.name = "RoadMerged_%d_%d" % [chunk.x, chunk.y]
+		inst.mesh = (tools[key] as SurfaceTool).commit()
+		inst.material_override = mats[key]
+		inst.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		roads_root.add_child(inst)
+		if not _road_merged.has(chunk):
+			_road_merged[chunk] = []
+		(_road_merged[chunk] as Array).append(inst)
 
 
 func _rebuild_road_stamps(desired: Dictionary) -> void:

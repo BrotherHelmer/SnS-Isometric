@@ -73,3 +73,5 @@ Baseline: hotfix7 run7 (b4dab21, Low) 37.5 avg FPS, median 26.5 ms, GPU median 1
 
 - 14:40 r29b DONE but INVALID: Shard ran on battery from 14:03 (Kernel-Power 105) and later went into modern standby. Raw 1% low 14.0 published for the record as INVALID-POWER; will be rerun. r29c (seed 4242) launched 14:36 on AC. beta_gate.ps1 now logs Kernel-Power 105/506/507 events during each run.
 - r31: draw-call census harness (--gate-census, --gate-census-at) committed; t=100 counts: ResourceVisuals 137, Buildings 109, Characters 43, Roads 30, TerrainChunks 15.
+
+- 14:55 r31 step 1 (box): late-game census on the r28b Shard autosave: 1271 draw calls (Buildings 548, ResourceVisuals 136, Characters 119, Roads 102, TerrainChunks 55, MapMarkers 41). Static batching of road tiles (per 16-tile chunk and material), building Trim* boxes (per material) and farm wheat (MultiMesh): 1271 -> 1070 draw calls, Roads 102 -> 4. Pixel diff on the same save: only moving characters, smoke and foliage sway differ. r29c running on Shard on AC power.

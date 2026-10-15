@@ -152,6 +152,44 @@ func _rebuild() -> void:
 		_create_building_identity_markers()
 	_create_ownership_banner()
 	_create_contact_ao()
+	_merge_static_trim()
+
+
+## R31 draw calls: the principal trim is 10-25 small BoxMesh nodes per
+## building, each its own draw call (and shadow draw). They never move, are
+## never toggled and nothing looks them up, so bake them into one mesh per
+## material. Same boxes, same transforms, same materials: identical picture.
+func _merge_static_trim() -> void:
+	var tools := {}
+	var mats := {}
+	var shadows := {}
+	for child in get_children():
+		var mi := child as MeshInstance3D
+		if mi == null or mi.mesh == null or not String(mi.name).begins_with("Trim"):
+			continue
+		if mi.get_child_count() > 0 or mi.mesh.get_surface_count() != 1:
+			continue
+		var mat: Material = mi.material_override
+		var key := "%d|%d" % [mat.get_instance_id() if mat != null else 0, int(mi.cast_shadow)]
+		if not tools.has(key):
+			var st := SurfaceTool.new()
+			st.begin(Mesh.PRIMITIVE_TRIANGLES)
+			tools[key] = st
+			mats[key] = mat
+			shadows[key] = mi.cast_shadow
+		(tools[key] as SurfaceTool).append_from(mi.mesh, 0, mi.transform)
+		remove_child(mi)
+		mi.queue_free()
+	_merge_wheat_props()
+	var index := 0
+	for key in tools:
+		var inst := MeshInstance3D.new()
+		inst.name = "MergedTrim_%d" % index
+		index += 1
+		inst.mesh = (tools[key] as SurfaceTool).commit()
+		inst.material_override = mats[key]
+		inst.cast_shadow = shadows[key]
+		add_child(inst)
 
 
 func _create_completed_model() -> void:
@@ -1121,6 +1159,61 @@ func _update_inventory_indicators(inventory: Dictionary) -> void:
 		var base_scale: Vector3 = indicator.get_meta("base_scale", indicator.scale)
 		var pile := clampf(0.88 + float(mini(amount, 14)) * 0.045, 0.88, 1.42)
 		indicator.scale = base_scale * pile
+
+
+## R31 draw calls: a farm is 33 wheat prop scenes (one draw call each, plus
+## shadows). They are static and identical, so draw them as one MultiMesh per
+## mesh part with the same tint material and the same per-plant transforms.
+func _merge_wheat_props() -> void:
+	if workyard_root == null:
+		return
+	var groups := {}
+	var group_mat := {}
+	var group_shadow := {}
+	var props: Array = []
+	for prop in workyard_root.get_children():
+		var pn := String(prop.name)
+		if not (pn.begins_with("WheatCrop") or pn.begins_with("WheatApron")) or not (prop is Node3D):
+			continue
+		props.append(prop)
+		for child in (prop as Node).find_children("*", "MeshInstance3D", true, false):
+			var mi := child as MeshInstance3D
+			if mi.mesh == null:
+				continue
+			var xf: Transform3D = mi.transform
+			var p: Node = mi.get_parent()
+			while p != null and p != self:
+				if p is Node3D:
+					xf = (p as Node3D).transform * xf
+				p = p.get_parent()
+			var mat: Material = mi.material_override
+			var key := "%d|%s|%d" % [mi.mesh.get_instance_id(), str((mat as StandardMaterial3D).albedo_color) if mat is StandardMaterial3D else str(mat), int(mi.cast_shadow)]
+			if not groups.has(key):
+				groups[key] = []
+				group_mat[key] = mat
+				group_shadow[key] = mi.cast_shadow
+			(groups[key] as Array).append([mi.mesh, xf])
+	if groups.is_empty():
+		return
+	var index := 0
+	for key in groups:
+		var items: Array = groups[key]
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = items[0][0]
+		mm.instance_count = items.size()
+		for i in items.size():
+			mm.set_instance_transform(i, items[i][1])
+		var inst := MultiMeshInstance3D.new()
+		inst.name = "MergedWheat_%d" % index
+		index += 1
+		inst.multimesh = mm
+		inst.material_override = group_mat[key]
+		inst.cast_shadow = group_shadow[key]
+		add_child(inst)
+	for prop in props:
+		workyard_root.remove_child(prop)
+		prop.queue_free()
 
 
 func _tint_wheat(prop: Node) -> void:

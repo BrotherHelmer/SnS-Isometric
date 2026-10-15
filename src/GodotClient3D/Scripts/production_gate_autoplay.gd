@@ -336,6 +336,8 @@ func _shot_async(name: String, action: String) -> void:
 					late.append([t + 6.0 + k, "late_" + String(sh[1]), sh[2]])
 					k += 3.0
 				late.append([t + 6.0 + k, "late_town", "focus"])
+				if OS.get_cmdline_user_args().has("--gate-census"):
+					late.append([t + 9.0 + k, "late_census_town", "census"])
 				shots = late
 				shot_index = 0
 				duration = t + lt
@@ -482,6 +484,7 @@ func _draw_census() -> void:
 	var cam: Camera3D = game.get_viewport().get_camera_3d()
 	var counts := {}
 	var surfaces := {}
+	var detail := {}
 	for n in game.world_view.find_children("*", "GeometryInstance3D", true, false):
 		var gi := n as GeometryInstance3D
 		if gi == null or not gi.is_visible_in_tree():
@@ -500,6 +503,13 @@ func _draw_census() -> void:
 			surf = (gi as MeshInstance3D).mesh.get_surface_count()
 		elif gi is MultiMeshInstance3D and (gi as MultiMeshInstance3D).multimesh != null and (gi as MultiMeshInstance3D).multimesh.mesh != null:
 			surf = (gi as MultiMeshInstance3D).multimesh.mesh.get_surface_count()
+		if cat in ["Buildings", "Roads", "MapMarkers", "Characters"]:
+			var mk := "?"
+			if gi is MeshInstance3D and (gi as MeshInstance3D).mesh != null:
+				var m: Mesh = (gi as MeshInstance3D).mesh
+				mk = m.resource_path.get_file() if m.resource_path != "" else "%s:%s" % [m.get_class(), String(gi.name)]
+			var dk := cat + "|" + mk
+			detail[dk] = int(detail.get(dk, 0)) + surf
 		counts[cat] = int(counts.get(cat, 0)) + 1
 		surfaces[cat] = int(surfaces.get(cat, 0)) + surf
 	var keys: Array = surfaces.keys()
@@ -507,6 +517,10 @@ func _draw_census() -> void:
 	var parts := []
 	for k in keys:
 		parts.append("%s=%d/%d" % [k, int(counts[k]), int(surfaces[k])])
+	var dkeys: Array = detail.keys()
+	dkeys.sort_custom(func(a, b) -> bool: return int(detail[a]) > int(detail[b]))
+	for dk in dkeys.slice(0, 40):
+		_note("census_detail %s %d" % [dk, int(detail[dk])])
 	_note("census t=%.0f draw_calls=%d instances/surfaces %s" % [t, int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)), " ".join(parts)])
 
 
