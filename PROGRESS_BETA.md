@@ -70,3 +70,6 @@ Baseline: hotfix7 run7 (b4dab21, Low) 37.5 avg FPS, median 26.5 ms, GPU median 1
 - 14:15 R30 harness: the test bot's site search is resumable, 200 validations per think step (gate flag only), so a failed ~2000-tile search is spread over ~10 think steps instead of one frame. Soak worst tick: seed 1792061458 615 -> 250 ms (slow 2), seed 11 409 (6), seed 4242 563 (6). Folded into r30.
 
 - 14:28 Shard unreachable (desktop app offline) since ~14:23; r29b state unknown, r29c not launched. Box: r31 draw-call census run (seed 1792061458, --gate-census, harness-only, uncommitted) in progress.
+
+- 14:40 r29b DONE but INVALID: Shard ran on battery from 14:03 (Kernel-Power 105) and later went into modern standby. Raw 1% low 14.0 published for the record as INVALID-POWER; will be rerun. r29c (seed 4242) launched 14:36 on AC. beta_gate.ps1 now logs Kernel-Power 105/506/507 events during each run.
+- r31: draw-call census harness (--gate-census, --gate-census-at) committed; t=100 counts: ResourceVisuals 137, Buildings 109, Characters 43, Roads 30, TerrainChunks 15.

@@ -90,6 +90,14 @@ func setup(game_value, dir_value: String, duration_value: float) -> void:
 		[1170.0, "20_console_collapsed", "collapse"],
 		[1190.0, "18_town_20min", "focus"],
 	]
+	if OS.get_cmdline_user_args().has("--gate-census"):
+		var cts := [600.0, 960.0, 1180.0]
+		for a in OS.get_cmdline_user_args():
+			if a.begins_with("--gate-census-at="):
+				cts = [float(a.trim_prefix("--gate-census-at="))]
+		for ct in cts:
+			shots.append([ct, "census_%d" % int(ct), "census"])
+		shots.sort_custom(func(a, b) -> bool: return float(a[0]) < float(b[0]))
 
 
 var _last_us := 0
@@ -263,6 +271,8 @@ func _run_shot(name: String, action: String) -> void:
 
 func _shot_async(name: String, action: String) -> void:
 	var tree: SceneTree = game.get_tree()
+	if action == "census":
+		_draw_census()
 	match action:
 		"new_realm":
 			game._show_new_realm_card()
@@ -464,6 +474,40 @@ static func _loadtest_seconds() -> float:
 		if String(a).begins_with("--gate-loadtest="):
 			return float(String(a).trim_prefix("--gate-loadtest="))
 	return 0.0
+
+
+## R31 diagnostic: which nodes the camera actually draws. Counts visible
+## MeshInstance3D / MultiMeshInstance3D surfaces by top-level owner category.
+func _draw_census() -> void:
+	var cam: Camera3D = game.get_viewport().get_camera_3d()
+	var counts := {}
+	var surfaces := {}
+	for n in game.world_view.find_children("*", "GeometryInstance3D", true, false):
+		var gi := n as GeometryInstance3D
+		if gi == null or not gi.is_visible_in_tree():
+			continue
+		var aabb: AABB = gi.get_aabb()
+		var center: Vector3 = gi.global_transform * aabb.get_center()
+		if cam != null and (cam.is_position_behind(center) or not game.get_viewport().get_visible_rect().grow(200).has_point(cam.unproject_position(center))):
+			continue
+		var cat := "?"
+		var p: Node = gi
+		while p != null and p != game.world_view:
+			cat = String(p.name).split("_")[0].rstrip("0123456789@")
+			p = p.get_parent()
+		var surf := 1
+		if gi is MeshInstance3D and (gi as MeshInstance3D).mesh != null:
+			surf = (gi as MeshInstance3D).mesh.get_surface_count()
+		elif gi is MultiMeshInstance3D and (gi as MultiMeshInstance3D).multimesh != null and (gi as MultiMeshInstance3D).multimesh.mesh != null:
+			surf = (gi as MultiMeshInstance3D).multimesh.mesh.get_surface_count()
+		counts[cat] = int(counts.get(cat, 0)) + 1
+		surfaces[cat] = int(surfaces.get(cat, 0)) + surf
+	var keys: Array = surfaces.keys()
+	keys.sort_custom(func(a, b) -> bool: return int(surfaces[a]) > int(surfaces[b]))
+	var parts := []
+	for k in keys:
+		parts.append("%s=%d/%d" % [k, int(counts[k]), int(surfaces[k])])
+	_note("census t=%.0f draw_calls=%d instances/surfaces %s" % [t, int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)), " ".join(parts)])
 
 
 ## R29 probe: C&C group selection. 4 soldiers; box-select, Ctrl toggle,
