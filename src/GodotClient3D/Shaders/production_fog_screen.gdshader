@@ -30,7 +30,8 @@ uniform float haze_light = 1.0;
 // R32 candidate (gate flag --gate-r32-fog-lite): identical output, less work.
 // Skips the cloud noise where it cannot affect the result and discards
 // fully transparent (visible-area) pixels instead of blending alpha 0.
-uniform float lite = 0.0;
+// R33: lite path is the default (lossless on Shard: -0.75 ms GPU, no visible change).
+uniform float lite = 1.0;
 
 float hash21(vec2 p) {
 	p = fract(p * vec2(123.34, 456.21));

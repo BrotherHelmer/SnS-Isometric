@@ -4204,6 +4204,11 @@ func _free_camera_fog_screens() -> void:
 				child.free()
 
 
+## Gate isolation only (--gate-r32-hide=fog): keep the screen fog hidden even
+## when a fog update re-shows it.
+var gate_hide_fog := false
+
+
 func _hide_fog_screen() -> void:
 	if fog_screen != null and is_instance_valid(fog_screen):
 		fog_screen.visible = false
@@ -4249,7 +4254,7 @@ func _ensure_fog_screen() -> void:
 		fog_overlay_camera.add_child(fog_screen)
 	else:
 		fog_screen.material_override = fog_screen_material
-	fog_screen.visible = true
+	fog_screen.visible = not gate_hide_fog
 
 
 func _upsample_fog_mask(source: PackedByteArray, size: Vector2i, scale: int) -> PackedByteArray:

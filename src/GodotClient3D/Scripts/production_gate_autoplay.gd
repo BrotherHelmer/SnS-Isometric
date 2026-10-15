@@ -496,8 +496,9 @@ var _r32_noted := false
 
 
 func _apply_r32_flags(wv, args: PackedStringArray) -> void:
-	if "--gate-r32-fog-lite" in args and wv.fog_screen_material != null:
-		wv.fog_screen_material.set_shader_parameter("lite", 1.0)
+	# R33: fog-lite is the default; --gate-r32-fog-full restores the old path for A/B.
+	if "--gate-r32-fog-full" in args and wv.fog_screen_material != null:
+		wv.fog_screen_material.set_shader_parameter("lite", 0.0)
 	var hide: PackedStringArray = []
 	for a in args:
 		if String(a).begins_with("--gate-r32-hide="):
@@ -508,8 +509,27 @@ func _apply_r32_flags(wv, args: PackedStringArray) -> void:
 		_note("r32 flags applied t=%.0f hide=%s ground_hash=%s fog_lite=%s" % [t, str(hide), str(ground_hash), str("--gate-r32-fog-lite" in args)])
 	if hide.is_empty() and not ground_hash:
 		return
-	if "fog" in hide and wv.fog_screen != null:
-		wv.fog_screen.visible = false
+	if "fog" in hide:
+		wv.gate_hide_fog = true
+		if wv.fog_screen != null:
+			wv.fog_screen.visible = false
+	if "ui" in hide and game.ui_layer != null:
+		game.ui_layer.visible = false
+	var env: Environment = null
+	var we: Array = game.find_children("*", "WorldEnvironment", true, false)
+	if not we.is_empty():
+		env = (we[0] as WorldEnvironment).environment
+	if "post" in hide and env != null:
+		env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
+		env.adjustment_enabled = false
+		env.glow_enabled = false
+		env.ssao_enabled = false
+	if "lights" in hide:
+		for l in game.find_children("*", "Light3D", true, false):
+			if not (l is DirectionalLight3D):
+				(l as Light3D).visible = false
+	if "matfeat" in hide and wv.buildings_root != null:
+		_r33_flatten_building_materials(wv.buildings_root)
 	if "water" in hide and wv.water_mesh_instance != null:
 		wv.water_mesh_instance.visible = false
 	if "characters" in hide and wv.characters_root != null:
@@ -537,6 +557,34 @@ func _apply_r32_flags(wv, args: PackedStringArray) -> void:
 			gi.visible = false
 		elif "mist" in hide and gi is CPUParticles3D and String(gi.name).to_lower().contains("mist"):
 			gi.visible = false
+
+
+var _r33_mat_cache := {}
+
+
+## Isolation only: building surfaces keep their colour/texture but drop normal
+## maps, AO, rim, clearcoat, detail, heightmap and use per-vertex shading.
+func _r33_flatten_building_materials(root: Node) -> void:
+	for n in root.find_children("*", "GeometryInstance3D", true, false):
+		var mi := n as MeshInstance3D
+		if mi == null or mi.mesh == null or mi.has_meta("r33_flat"):
+			continue
+		mi.set_meta("r33_flat", true)
+		for i in mi.mesh.get_surface_count():
+			var m: Material = mi.get_active_material(i)
+			if not (m is BaseMaterial3D):
+				continue
+			if not _r33_mat_cache.has(m):
+				var d := (m as BaseMaterial3D).duplicate() as BaseMaterial3D
+				d.normal_enabled = false
+				d.ao_enabled = false
+				d.rim_enabled = false
+				d.clearcoat_enabled = false
+				d.detail_enabled = false
+				d.heightmap_enabled = false
+				d.shading_mode = BaseMaterial3D.SHADING_MODE_PER_VERTEX
+				_r33_mat_cache[m] = d
+			mi.set_surface_override_material(i, _r33_mat_cache[m])
 
 
 ## R31 diagnostic: which nodes the camera actually draws. Counts visible
