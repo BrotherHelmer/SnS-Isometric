@@ -942,7 +942,7 @@ func apply_light_palette(window_color: Color, torch_color: Color, torch_range: f
 	if window_light != null:
 		window_light.light_color = window_color
 		window_light.omni_range = clampf(torch_range, 3.2, 9.0)
-		window_light.light_energy = 1.20 if building_type != "TOWN_HALL" else 1.65
+		window_light.light_energy = 0.85 if building_type != "TOWN_HALL" else 1.25
 	if window_emission != null and window_emission.material_override is StandardMaterial3D:
 		var glow_material := window_emission.material_override as StandardMaterial3D
 		glow_material.emission = window_color
@@ -951,7 +951,7 @@ func apply_light_palette(window_color: Color, torch_color: Color, torch_range: f
 	if lantern_light != null:
 		lantern_light.light_color = torch_color
 		lantern_light.omni_range = clampf(torch_range, 3.2, 8.0)
-		lantern_light.light_energy = 1.05
+		lantern_light.light_energy = 0.75
 
 
 func _update_night_presentation(night: bool, occupants: int) -> void:
@@ -965,7 +965,7 @@ func _update_night_presentation(night: bool, occupants: int) -> void:
 		window_light.name = "InhabitedWindowGlow"
 		window_light.position = sockets["entrance"].position + Vector3(0.0, 1.05, -0.28)
 		window_light.light_color = Color("#F5B36B")
-		window_light.light_energy = 1.20 if building_type != "TOWN_HALL" else 1.65
+		window_light.light_energy = 0.85 if building_type != "TOWN_HALL" else 1.25
 		window_light.omni_range = 7.2 if building_type != "TOWN_HALL" else 8.4
 		window_light.shadow_enabled = false
 		window_light.distance_fade_enabled = true
@@ -985,7 +985,7 @@ func _update_night_presentation(night: bool, occupants: int) -> void:
 		window_emission.material_override = glow_material
 		add_child(window_emission)
 	window_light.visible = inhabited
-	window_light.light_energy = (1.20 if building_type != "TOWN_HALL" else 1.65) if night else 0.42
+	window_light.light_energy = (0.85 if building_type != "TOWN_HALL" else 1.25) if night else 0.42
 	if window_emission != null:
 		window_emission.visible = inhabited
 		if window_emission.material_override is StandardMaterial3D:

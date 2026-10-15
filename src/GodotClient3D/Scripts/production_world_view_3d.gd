@@ -5810,7 +5810,7 @@ func _edge_forest_material() -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
 	# The Director: firs take scene light and the period scale (1.0 / 0.55 / 0.35).
-	material.albedo_color = Color("#2A4024") * _atmosphere_scale
+	material.albedo_color = Color("#3B5A33") * _atmosphere_scale
 	material.roughness = 0.94
 	material.metallic = 0.0
 	material.emission_enabled = false

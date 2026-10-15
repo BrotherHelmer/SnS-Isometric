@@ -134,6 +134,7 @@ var raid_eta_row: HBoxContainer
 var raid_eta_label: Label
 var raid_banner_dismissed := false
 var raid_banner_active := false
+var raid_view_button: Button
 const RAID_BANNER_WIDTH := 372.0
 var alert_label: Label
 var alert_panel: PanelContainer
@@ -1411,6 +1412,15 @@ func _create_ui() -> void:
 	dismiss.tooltip_text = "Dismiss (the raid stays in the feed and the Log)"
 	HudSkin.set_font(dismiss, HudSkin.ui_font(700), HudSkin.SIZE_TITLE, Color("#ffd3c0"))
 	dismiss.pressed.connect(_dismiss_toast)
+	raid_view_button = Button.new()
+	raid_view_button.name = "RaidView"
+	raid_view_button.text = "View"
+	raid_view_button.focus_mode = Control.FOCUS_NONE
+	raid_view_button.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	raid_view_button.tooltip_text = "Jump to the threatened building"
+	raid_view_button.visible = false
+	raid_view_button.pressed.connect(_view_raid_target)
+	alert_row.add_child(raid_view_button)
 	alert_row.add_child(dismiss)
 	alert_panel.visible = false
 
@@ -1446,9 +1456,9 @@ func _create_ui() -> void:
 	objective_detail_panel.anchor_bottom = 0.0
 	objective_detail_panel.offset_left = 8.0
 	objective_detail_panel.offset_top = TOP_BAR_HEIGHT + 44.0
-	objective_detail_panel.offset_right = 300.0
+	objective_detail_panel.offset_right = 334.0
 	objective_detail_panel.offset_bottom = TOP_BAR_HEIGHT + 200.0
-	objective_detail_panel.custom_minimum_size = Vector2(286, 156)
+	objective_detail_panel.custom_minimum_size = Vector2(320, 156)
 	objective_detail_panel.clip_contents = true
 	objective_detail_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	objective_detail_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.04, 0.05, 0.055, 0.92), Color("#efcf8a")))
@@ -1581,7 +1591,11 @@ func _create_ui() -> void:
 			button.tooltip_text = _building_tooltip(String(building_type))
 			button.pressed.connect(begin_placement.bind(building_type))
 			section.add_child(button)
-			build_buttons[building_type] = button
+			# P0 beta: a plan can sit in several tabs (Essentials + Military...).
+			# Keep every button so all tabs share one unlock/affordability state.
+			if not build_buttons.has(building_type):
+				build_buttons[building_type] = []
+			(build_buttons[building_type] as Array).append(button)
 	var utility_row := HBoxContainer.new()
 	utility_row.add_theme_constant_override("separation", 8)
 	build_box.add_child(utility_row)
@@ -2498,13 +2512,10 @@ func _update_ui() -> void:
 	FrameProfiler.add("ui.loophud", _pu_loophud)
 	var _pu_btn := FrameProfiler.t0()
 	for building_type in build_buttons:
-		var button: Button = build_buttons[building_type]
 		var unlocked := is_build_unlocked(String(building_type))
 		# Beta: one catalog. Locked plans stay listed with their unlock rule;
 		# unaffordable plans say exactly what is missing.
-		button.visible = true
 		var reason := _build_unavailable_reason(String(building_type))
-		button.disabled = reason != ""
 		var recommend := _should_recommend_frontier(String(building_type))
 		var label := "%s  ·  %s\n%s" % [Defs.building_name(String(building_type)), Defs.formatted_cost(String(building_type)), String(BUILD_PURPOSES.get(building_type, "Settlement building."))]
 		if not unlocked:
@@ -2513,8 +2524,15 @@ func _update_ui() -> void:
 			label += "\n" + reason
 		if recommend:
 			label = "FRONTIER  ·  " + label
-		button.text = label
-		button.tooltip_text = _building_tooltip(String(building_type)) + ("\n\nUnavailable: %s" % reason if reason != "" else "")
+		var tip := _building_tooltip(String(building_type)) + ("\n\nUnavailable: %s" % reason if reason != "" else "")
+		for button_value in build_buttons[building_type]:
+			var button: Button = button_value
+			button.visible = true
+			button.disabled = reason != ""
+			if button.text != label:
+				button.text = label
+			if button.tooltip_text != tip:
+				button.tooltip_text = tip
 	FrameProfiler.add("ui.build_buttons", _pu_btn)
 	var _pu_strip := FrameProfiler.t0()
 	_refresh_build_strip_state()
@@ -3401,6 +3419,7 @@ func raid_status() -> Dictionary:
 	# Beta: name the structure the nearest raider is closing on, and switch
 	# from "approaching" to "attacking" once they arrive (no 0:0x countdown).
 	var target_name := "the Town Hall"
+	var target_pos: Vector2i = sim.town_hall_position
 	var target_distance := INF
 	for building_value in sim.buildings:
 		var building: Dictionary = building_value
@@ -3411,6 +3430,28 @@ func raid_status() -> Dictionary:
 		if d < target_distance:
 			target_distance = d
 			target_name = Defs.building_name(String(building.get("type", "")))
+			target_pos = bpos
+	# Defenses that can actually help at the target.
+	var towers := 0
+	for building_value in sim.buildings:
+		var tb: Dictionary = building_value
+		if String(tb.get("type", "")) == Defs.BUILDING_WATCHTOWER and not bool(tb.get("construction", false)):
+			var tp := Vector2i(tb.get("position", Vector2i.ZERO))
+			if maxi(absi(tp.x - target_pos.x), absi(tp.y - target_pos.y)) <= 8:
+				towers += 1
+	var guards := 0
+	for worker_value in sim.workers:
+		if String((worker_value as Dictionary).get("type", "")) == "guard":
+			guards += 1
+	var advice := ""
+	if towers == 0 and guards == 0:
+		advice = "No defenses near the %s. Build a Watchtower beside it (Military)." % target_name
+	elif towers == 0:
+		advice = "%d guard%s will respond. A Watchtower beside the %s adds ranged cover." % [guards, "" if guards == 1 else "s", target_name]
+	elif guards == 0:
+		advice = "%d Watchtower%s cover the %s. Train guards at a Barracks to finish raiders." % [towers, "" if towers == 1 else "s", target_name]
+	else:
+		advice = "%d Watchtower%s and %d guard%s defend the %s. Keep workers inside." % [towers, "" if towers == 1 else "s", guards, "" if guards == 1 else "s", target_name]
 	var attacking := at_gates or target_distance <= 3.0 or eta_seconds <= 8
 	var eta_text := ("ATTACKING %s" % target_name) if attacking else ("approaching %s  ·  arrives in %d:%02d" % [target_name, eta_seconds / 60, eta_seconds % 60])
 	return {
@@ -3420,6 +3461,8 @@ func raid_status() -> Dictionary:
 		"at_gates": at_gates,
 		"attacking": attacking,
 		"target": target_name,
+		"target_pos": target_pos,
+		"advice": advice,
 		"line": "%d raider%s from the %s  ·  %s" % [count, "" if count == 1 else "s", bearing.trim_prefix("the "), eta_text],
 	}
 
@@ -3434,6 +3477,8 @@ func _update_raid_banner() -> void:
 	raid_banner_active = raiding
 	if raid_eta_row != null:
 		raid_eta_row.visible = raiding
+	if raid_view_button != null:
+		raid_view_button.visible = raiding
 	if not raiding:
 		return
 	raid_eta_label.text = String(status.get("line", ""))
@@ -3443,13 +3488,20 @@ func _update_raid_banner() -> void:
 		return  # another critical notice (e.g. Town Hall under attack) is showing
 	toast_title.text = "RAID"
 	if bool(status.get("attacking", false)):
-		toast_body.text = "%s is under attack. Send guards or build a Watchtower nearby." % String(status.get("target", "Your settlement"))
+		toast_body.text = "%s is under attack. %s" % [String(status.get("target", "Your settlement")), String(status.get("advice", ""))]
 	else:
-		toast_body.text = "%d hostile%s coming from %s toward %s." % [int(status.get("count", 0)), " is" if int(status.get("count", 0)) == 1 else "s are", String(status.get("bearing", "the wilds")), String(status.get("target", "your town"))]
+		toast_body.text = "%d hostile%s heading for the %s. %s" % [int(status.get("count", 0)), " is" if int(status.get("count", 0)) == 1 else "s are", String(status.get("target", "town")).trim_prefix("the "), String(status.get("advice", ""))]
 	toast_until = maxf(toast_until, hud_clock + 1.5)
 	toast_severity = "critical"
 	alert_panel.visible = startup_overlay == null or not startup_overlay.visible
 	alert_panel.modulate.a = 1.0
+
+
+func _view_raid_target() -> void:
+	var status := raid_status()
+	if camera_rig == null or world_view == null or not status.has("target_pos"):
+		return
+	camera_rig.compose_view(world_view.tile_to_world(Vector2(status["target_pos"])), 34.0)
 
 
 func _dismiss_toast() -> void:
@@ -3510,12 +3562,39 @@ func _toggle_objective_detail() -> void:
 var _objective_ping: Node3D = null
 
 
+## P1 beta: when a Quarry already exists, say exactly why it is not giving stone.
+func _quarry_advice() -> Dictionary:
+	var sim = simulation_host.simulation if simulation_host != null else null
+	if sim == null:
+		return {}
+	for building_value in sim.buildings:
+		var b: Dictionary = building_value
+		var is_quarry := String(b.get("planned_type", "")) == Defs.BUILDING_QUARRY if bool(b.get("construction", false)) else String(b.get("type", "")) == Defs.BUILDING_QUARRY
+		if not is_quarry:
+			continue
+		var text := ""
+		if bool(b.get("construction", false)):
+			text = "Your Quarry is still under construction. Keep a worker free and enough wood in stock so the builders can finish it."
+		elif int(b.get("assigned_staff", 0)) <= 0:
+			text = "Your Quarry has no workers. Build a House for more people, or pause a less urgent job so someone can staff it."
+		else:
+			var st := String(b.get("status", ""))
+			text = "Your Quarry is staffed (%d). %s Stone goes to the Town Hall or a Storehouse; a road link and a nearby Storehouse speed delivery." % [int(b.get("assigned_staff", 0)), st]
+		return {"position": b["position"], "text": text}
+	return {}
+
+
 func _jump_to_objective_target() -> void:
 	var sim = simulation_host.simulation if simulation_host != null else null
 	if sim == null or objective_button == null or camera_rig == null or world_view == null:
 		return
 	var text := objective_button.text.to_lower()
 	if not ("quarry" in text or "stone" in text):
+		return
+	var existing := _quarry_advice()
+	if not existing.is_empty():
+		camera_rig.compose_view(world_view.tile_to_world(Vector2(existing["position"])), 34.0)
+		_show_toast("Quarry", String(existing["text"]), "info", 5.0)
 		return
 	var origin: Vector2i = sim.town_hall_position
 	var best := Vector2i(-1, -1)
@@ -3589,16 +3668,36 @@ func _show_objective_detail(value: bool) -> void:
 	objective_detail_panel.visible = value
 	if not value:
 		return
-	objective_detail_panel.size = Vector2(286, 156)
+	objective_detail_panel.size = Vector2(320, 0)
 	var intentions: Array = simulation_host.simulation.get_settlement_intentions()
 	var sim_objectives: Array = simulation_host.simulation.get_objectives()
-	var lines: Array[String] = ["What matters next", ""]
+	# P1 beta: open on the active goal, fold finished ones into one line,
+	# and end with concrete advice for the active goal.
+	var lines: Array[String] = []
+	var done_titles: Array[String] = []
+	var active_found := false
 	for intention_value in intentions:
 		var intention: Dictionary = intention_value
-		lines.append(String(intention.get("title", "")))
-		for row in intention.get("criteria", []):
+		var rows: Array = intention.get("criteria", [])
+		var all_done := not rows.is_empty()
+		for row in rows:
+			if not bool(row.get("done", false)):
+				all_done = false
+		if all_done:
+			done_titles.append(String(intention.get("title", "")))
+			continue
+		lines.append(("NOW: " if not active_found else "NEXT: ") + String(intention.get("title", "")))
+		for row in rows:
 			lines.append("%s %s" % ["[✓]" if bool(row.get("done", false)) else "[ ]", String(row.get("label", ""))])
 		lines.append("")
+		active_found = true
+	var obj_text := objective_button.text.to_lower() if objective_button != null else ""
+	if "quarry" in obj_text or "stone" in obj_text:
+		var adv := _quarry_advice()
+		lines.append("Tip: " + (String(adv["text"]) if not adv.is_empty() else "Click the goal bar to jump to a rock deposit where a Quarry fits (it needs a road link)."))
+		lines.append("")
+	if not done_titles.is_empty():
+		lines.append("Done (%d): %s" % [done_titles.size(), ", ".join(done_titles)])
 	if intentions.is_empty():
 		if sim_objectives.is_empty():
 			var objective: Dictionary = simulation_host.simulation.get_macro_objective()

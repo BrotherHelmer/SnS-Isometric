@@ -13,9 +13,13 @@ uniform float atmosphere = 1.0;
 uniform float canopy_lift = 1.45;
 
 varying float world_h;
+varying float inst_var;
 
 void vertex() {
 	world_h = VERTEX.y;
+	// Beta: per-tree tone variation so dense forest is not one flat dark mass.
+	vec3 o = MODEL_MATRIX[3].xyz;
+	inst_var = fract(sin(dot(o.xz, vec2(12.9898, 78.233))) * 43758.5453);
 	float h = VERTEX.y;
 	float gust = sin(TIME * 0.65 + NODE_POSITION_WORLD.x * 0.13 + NODE_POSITION_WORLD.z * 0.09);
 	float w = gust * wind * smoothstep(0.45, 1.8, h);
@@ -26,7 +30,10 @@ void vertex() {
 void fragment() {
 	vec3 tex = has_texture > 0.5 ? texture(albedo_tex, UV).rgb : vec3(1.0);
 	float canopy = smoothstep(0.55, 1.55, world_h);
-	vec3 leaf = albedo_color * canopy_lift;
+	vec3 leaf = albedo_color * canopy_lift * mix(0.88, 1.28, inst_var);
+	leaf = mix(leaf, leaf * vec3(1.12, 1.06, 0.82), step(0.62, inst_var) * 0.6);
+	// Sun-catching crown top.
+	leaf *= 1.0 + 0.22 * smoothstep(1.2, 2.6, world_h);
 	vec3 shade = mix(trunk_color, leaf, canopy);
 	ALBEDO = tex * shade * atmosphere;
 	ROUGHNESS = mix(0.86, 0.92, canopy);
