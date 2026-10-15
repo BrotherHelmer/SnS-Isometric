@@ -87,6 +87,7 @@ func setup(game_value, dir_value: String, duration_value: float) -> void:
 		[720.0, "15_town_12min", "focus"],
 		[960.0, "16_town_16min", "focus"],
 		[1150.0, "17_bottom_strip_late", "focus"],
+		[1170.0, "20_console_collapsed", "collapse"],
 		[1190.0, "18_town_20min", "focus"],
 	]
 
@@ -256,6 +257,8 @@ func _shot_async(name: String, action: String) -> void:
 		"focus":
 			game._select_town_hall()
 			game.select_building(0)
+		"collapse":
+			game._toggle_console_collapsed()
 		_:
 			if action.begins_with("palette:"):
 				game._set_build_palette_visible(true)
@@ -295,6 +298,8 @@ func _shot_async(name: String, action: String) -> void:
 			_note("NEW REALM -> BEGIN seed=%d" % int(game.simulation_host.simulation.rng_seed))
 		"log":
 			game._toggle_event_log()
+		"collapse":
+			game._toggle_console_collapsed()
 		"objective":
 			game._show_objective_detail(false)
 		"minimap":

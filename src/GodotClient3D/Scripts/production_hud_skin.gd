@@ -222,10 +222,14 @@ static func frame(kind: String = "panel", content: float = -1.0) -> StyleBoxText
 			margin = 8.0
 			pad = 6.0
 		"alert":
-			tex = TEX_ALERT
-			margin = 14.0
+			# Beta: the solid red alert plate read as an alarm overlay at night;
+			# use the dark toast plate tinted slightly warm instead.
+			tex = TEX_TOAST
+			margin = 12.0
 			pad = 10.0
 	var style := StyleBoxTexture.new()
+	if kind == "alert":
+		style.modulate_color = Color(1.0, 0.86, 0.82)
 	style.texture = tex
 	style.texture_margin_left = margin
 	style.texture_margin_top = margin

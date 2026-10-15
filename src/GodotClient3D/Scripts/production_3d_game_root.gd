@@ -181,6 +181,10 @@ const TOP_BAR_HEIGHT := 46.0
 # 25% HUD wall plus three banners. Keep the console one compact row
 # until later plans unlock.
 const CONSOLE_HEIGHT := 92.0
+## Beta: the bottom console can collapse to its header row.
+var console_collapsed := false
+var console_row_node: HBoxContainer
+var console_toggle_button: Button
 const CONSOLE_HEIGHT_EXPANDED := 156.0
 const MINIMAP_INNER := 72.0
 const MINIMAP_COLLAPSED := 44.0
@@ -1606,6 +1610,7 @@ func _create_ui() -> void:
 	var console_row := HBoxContainer.new()
 	console_row.add_theme_constant_override("separation", 8)
 	hud_console.add_child(console_row)
+	console_row_node = console_row
 
 	build_strip = PanelContainer.new()
 	build_strip.name = "BuildStrip"
@@ -1622,6 +1627,15 @@ func _create_ui() -> void:
 	strip_hint.name = "BuildHint"
 	strip_hint.add_theme_color_override("font_color", Color("#8f8a76"))
 	strip_header.add_child(strip_hint)
+	console_toggle_button = Button.new()
+	console_toggle_button.name = "ConsoleToggle"
+	console_toggle_button.text = "Hide ▾"
+	console_toggle_button.tooltip_text = "Collapse or expand the bottom panel"
+	console_toggle_button.focus_mode = Control.FOCUS_NONE
+	console_toggle_button.flat = true
+	HudSkin.set_font(console_toggle_button, HudSkin.ui_font(600), HudSkin.SIZE_MIN, HudSkin.COLOR_GOLD)
+	console_toggle_button.pressed.connect(_toggle_console_collapsed)
+	strip_header.add_child(console_toggle_button)
 	var strip_grid := GridContainer.new()
 	strip_grid.name = "BuildGrid"
 	strip_grid.columns = BUILD_GRID_COLUMNS
@@ -3851,8 +3865,35 @@ func _toggle_minimap() -> void:
 	_layout_hud_console()
 
 
+func _toggle_console_collapsed() -> void:
+	console_collapsed = not console_collapsed
+	if console_toggle_button != null:
+		console_toggle_button.text = "Show ▴" if console_collapsed else "Hide ▾"
+	if console_row_node != null:
+		for child in console_row_node.get_children():
+			if child != build_strip and child is Control:
+				(child as Control).visible = not console_collapsed
+	var grid_node := hud_root.find_child("BuildGrid", true, false) if hud_root != null else null
+	if grid_node is Control:
+		(grid_node as Control).visible = not console_collapsed
+	hud_console.reset_size()
+	_layout_hud_console()
+
+
 func _layout_hud_console() -> void:
 	if hud_console == null:
+		return
+	if console_collapsed:
+		var collapsed_h := hud_console.get_combined_minimum_size().y
+		hud_console.offset_bottom = 0.0
+		hud_console.offset_top = -collapsed_h
+		if build_panel != null:
+			var avail_c := get_viewport().get_visible_rect().size.y - collapsed_h - TOP_BAR_HEIGHT - 56.0
+			build_panel.offset_bottom = -collapsed_h - 8.0
+			build_panel.offset_top = -collapsed_h - 8.0 - clampf(_build_panel_height, 200.0, maxf(200.0, avail_c))
+		if placement_panel != null:
+			placement_panel.offset_top = -collapsed_h - 70.0
+			placement_panel.offset_bottom = -collapsed_h - 8.0
 		return
 	var unlocked := visible_build_types().size()
 	# Hotfix 5: at most two rows; the strip widens (up to 8 columns) so all
@@ -6491,10 +6532,15 @@ func _evidence_log(line: String) -> void:
 ## frame takes 17-20 ms on a 60 Hz iGPU laptop). Falls back to the driver's
 ## FIFO if mailbox is unsupported. `--vsync=fifo|off|mailbox` overrides.
 func _apply_vsync_mode() -> void:
-	var mode := DisplayServer.VSYNC_MAILBOX
+	# Shard (AMD iGPU, fullscreen) has no mailbox; adaptive (FIFO_RELAXED)
+	# only tears when a frame misses the 16.7 ms refresh instead of waiting
+	# a whole extra refresh, which is what pulled late-game seconds to ~33 FPS.
+	var mode := DisplayServer.VSYNC_ADAPTIVE
 	for a in OS.get_cmdline_user_args():
 		var s := String(a)
-		if s == "--vsync=fifo":
+		if s == "--vsync=mailbox":
+			mode = DisplayServer.VSYNC_MAILBOX
+		elif s == "--vsync=fifo":
 			mode = DisplayServer.VSYNC_ENABLED
 		elif s == "--vsync=off":
 			mode = DisplayServer.VSYNC_DISABLED
