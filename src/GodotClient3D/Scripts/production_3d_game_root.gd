@@ -4786,8 +4786,8 @@ func _apply_menu_quality() -> void:
 func apply_quality_profile(profile_name: String) -> void:
 	quality_profile = QualityProfile.get_profile(profile_name)
 	var low := String(quality_profile.get("name", "")) == "scalable_low"
-	get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR if low else Viewport.SCALING_3D_MODE_BILINEAR
-	get_viewport().scaling_3d_scale = float(quality_profile.get("render_scale", 0.85)) if low else 1.0
+	get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
+	get_viewport().scaling_3d_scale = float(quality_profile.get("render_scale", 1.0)) if low else 1.0
 	get_viewport().msaa_3d = Viewport.MSAA_2X if bool(quality_profile.get("msaa", true)) else Viewport.MSAA_DISABLED
 	if sun_light != null:
 		sun_light.shadow_enabled = bool(quality_profile.get("shadows", true))
