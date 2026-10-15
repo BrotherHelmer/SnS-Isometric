@@ -52,6 +52,7 @@ func think(sim) -> Dictionary:
 ## each call runs one phase so no single frame pays the whole decision pass.
 const THINK_PHASES := 13
 var think_phase := 0
+var _phase_skip: Dictionary = {}
 
 func think_step(sim) -> bool:
 	if think_phase == 0:
@@ -61,6 +62,16 @@ func think_step(sim) -> bool:
 	if sim == null or bool(sim.game_finished):
 		think_phase = 0
 		return true
+	var phase_t0 := Time.get_ticks_usec()
+	var actions_before := last_actions.size()
+	var skip_left := int(_phase_skip.get(think_phase, 0))
+	if skip_left > 0 and think_phase not in [0, 1, 12]:
+		_phase_skip[think_phase] = skip_left - 1
+		think_phase += 1
+		if think_phase >= THINK_PHASES:
+			think_phase = 0
+			return true
+		return false
 	match think_phase:
 		0: _defend(sim)
 		1: _defend_night(sim)
@@ -77,6 +88,10 @@ func think_step(sim) -> bool:
 		12:
 			if last_actions.is_empty() and last_idle_reason == "":
 				last_idle_reason = "waiting on workers, stock, or construction"
+	# Harness budget: an expensive phase that changed nothing waits two
+	# think cycles (~6 s game time) before scanning again.
+	if Time.get_ticks_usec() - phase_t0 > 25000 and last_actions.size() == actions_before:
+		_phase_skip[think_phase] = 2
 	think_phase += 1
 	if think_phase >= THINK_PHASES:
 		think_phase = 0
