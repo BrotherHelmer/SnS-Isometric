@@ -442,7 +442,7 @@ func _try_build(sim, building_type: String, aim: Vector2i) -> bool:
 		return false
 	# R29 harness: a failed site search scans ~2000 tiles twice (~600 ms);
 	# r28a repeated it every 3 s. Gate-only: back off that type for 20 s.
-	if _gate_quarry_backoff and Time.get_ticks_msec() < int(_site_fail_until.get(building_type, 0)):
+	if _gate_quarry_backoff and float(sim.elapsed_seconds) < float(_site_fail_until.get(building_type, -1.0)):
 		last_idle_reason = "no site for %s yet (retrying)" % Defs.building_name(building_type)
 		return false
 	var site: Vector2i
@@ -463,13 +463,15 @@ func _try_build(sim, building_type: String, aim: Vector2i) -> bool:
 			site = _best_site(sim, building_type, aim)
 	if site.x < 0:
 		last_failures.append("%s: no site near %s" % [building_type, str(aim)])
-		_site_fail_until[building_type] = Time.get_ticks_msec() + 20000
+		_site_fail_until[building_type] = float(sim.elapsed_seconds) + 20.0
 		return false
 	var result: Dictionary = sim.request_build(building_type, site)
 	if bool(result.get("success", false)):
 		_note(sim, building_type, site, String(result.get("message", "")))
 		return true
 	last_failures.append("%s@%s: %s" % [building_type, str(site), String(result.get("message", ""))])
+	if _gate_quarry_backoff:
+		_site_fail_until[building_type] = float(sim.elapsed_seconds) + 20.0
 	return false
 
 
@@ -645,11 +647,30 @@ const SITE_SCAN_BUDGET := 200
 var _site_scan: Dictionary = {}
 
 
+## R31.4 harness fix: one resumable scan per building type. A single shared
+## scan made alternating requests (e.g. Wyrd Refiner + Farm in the same think
+## phase) reset each other to radius 0 forever: no site was ever found, every
+## call burned its full budget (~570 ms per phase late game on Shard) and the
+## bot stopped building. Also a wall-time cap per step.
+var _site_scans: Dictionary = {}
+const SITE_SCAN_MAX_USEC := 6000
+
+
 func _best_site_budgeted(sim, building_type: String, target: Vector2i) -> Vector2i:
 	var key := "%s@%s" % [building_type, str(target)]
+	_site_scan = _site_scans.get(building_type, {})
 	if String(_site_scan.get("key", "")) != key:
 		_site_scan = {"key": key, "radius": 0, "best": Vector2i(-1, -1), "best_score": 100000}
+	_site_scans[building_type] = _site_scan
+	var result := _best_site_budgeted_inner(sim, building_type, target)
+	if result.x != -2:
+		_site_scans.erase(building_type)
+	return result
+
+
+func _best_site_budgeted_inner(sim, building_type: String, target: Vector2i) -> Vector2i:
 	var budget := SITE_SCAN_BUDGET
+	var t0 := Time.get_ticks_usec()
 	var radius: int = _site_scan["radius"]
 	while radius <= SITE_RADIUS:
 		for ox in range(-radius, radius + 1):
@@ -660,6 +681,8 @@ func _best_site_budgeted(sim, building_type: String, target: Vector2i) -> Vector
 				if not sim.is_inside_map(tile):
 					continue
 				budget -= 1
+				if Time.get_ticks_usec() - t0 > SITE_SCAN_MAX_USEC:
+					budget = mini(budget, 0)
 				var validation: Dictionary = sim.validate_placement(building_type, tile)
 				if not bool(validation.get("success", false)):
 					continue
