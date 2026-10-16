@@ -5505,29 +5505,102 @@ func _spawn_founding_bridges(ridge: Node3D, width: float) -> void:
 		return
 	var wood := _ridge_material(Color("#6B4E32"), 0.86)
 	var rail := _ridge_material(Color("#4A3826"), 0.90)
+	var creek_tiles: Array = simulation.founding_site.get("creek_tiles", [])
+	# R38: a crossing is several bridge tiles along the road; give them one
+	# shared span direction (the road line) so the decks join into one bridge.
+	var bridge_list: Array = []
+	for tv in simulation.founding_site.get("bridge_tiles", []):
+		if not simulation.has_method("is_founding_creek_tile") or bool(simulation.is_founding_creek_tile(Vector2i(tv))):
+			bridge_list.append(Vector2i(tv))
+	var shared_across := Vector3.ZERO
+	if bridge_list.size() >= 2:
+		var d: Vector2i = bridge_list[bridge_list.size() - 1] - bridge_list[0]
+		if d != Vector2i.ZERO:
+			shared_across = Vector3(float(d.x), 0.0, float(d.y)).normalized()
 	var index := 0
 	for tile_value in simulation.founding_site.get("bridge_tiles", []):
 		var tile := Vector2i(tile_value)
 		if simulation.has_method("is_founding_creek_tile") and not bool(simulation.is_founding_creek_tile(tile)):
 			continue
+		# R38: the deck was axis-aligned, so on a diagonal creek it sat askew
+		# and its end rails floated mid-stream. Span it across the local creek
+		# direction and run the rails along the deck sides.
+		var across := shared_across if shared_across != Vector3.ZERO else _creek_across_at(tile, creek_tiles)
+		var span := maxf(width + 0.70, 3.1) * 1.18
+		var deck_w := maxf(width * 0.42, 1.25)
+		var basis := Basis(across, Vector3.UP, across.cross(Vector3.UP).normalized())
 		var deck := MeshInstance3D.new()
 		deck.name = "DressBridge_%d" % index
 		var deck_mesh := BoxMesh.new()
-		deck_mesh.size = Vector3(maxf(width + 0.70, 3.1), 0.16, maxf(width * 0.42, 1.25))
+		deck_mesh.size = Vector3(span, 0.16, deck_w)
 		deck.mesh = deck_mesh
-		deck.position = tile_to_world(Vector2(tile)) + Vector3(0.0, 0.14, 0.0)
+		var centre := tile_to_world(Vector2(tile))
+		var bank_y := maxf(_creek_bank_height(centre + across * span * 0.5), _creek_bank_height(centre - across * span * 0.5))
+		deck.transform = Transform3D(basis, Vector3(centre.x, maxf(centre.y + 0.14, bank_y + 0.06), centre.z))
 		deck.material_override = wood
 		ridge.add_child(deck)
 		for side in [-1.0, 1.0]:
 			var post := MeshInstance3D.new()
 			post.name = "DressBridgeRail_%d_%d" % [index, int(side)]
 			var post_mesh := BoxMesh.new()
-			post_mesh.size = Vector3(0.10, 0.52, maxf(width * 0.38, 1.15))
+			post_mesh.size = Vector3(span * 0.92, 0.10, 0.10)
 			post.mesh = post_mesh
-			post.position = deck.position + Vector3(side * (width * 0.42 + 0.22), 0.30, 0.0)
+			post.transform = Transform3D(basis, deck.position + basis.z * side * (deck_w * 0.5 - 0.05) + Vector3(0.0, 0.42, 0.0))
 			post.material_override = rail
 			ridge.add_child(post)
+			for end in [-1.0, 1.0]:
+				var stake := MeshInstance3D.new()
+				stake.name = "DressBridgePost_%d_%d_%d" % [index, int(side), int(end)]
+				var stake_mesh := BoxMesh.new()
+				stake_mesh.size = Vector3(0.12, 0.52, 0.12)
+				stake.mesh = stake_mesh
+				stake.transform = Transform3D(basis, deck.position + basis.z * side * (deck_w * 0.5 - 0.05) + basis.x * end * span * 0.44 + Vector3(0.0, 0.20, 0.0))
+				stake.material_override = rail
+				ridge.add_child(stake)
 		index += 1
+
+
+## R38: terrain-mesh height at a world point (chunk vertices sit on tile
+## centres and the triangles interpolate between them).
+func _terrain_y_at(xz: Vector2) -> float:
+	if simulation == null or map_size == Vector2i.ZERO:
+		return 0.0
+	var half := Vector2(map_size - Vector2i.ONE) * 0.5
+	var fx := xz.x / ScaleProfile.LOGICAL_CELL_METRES + half.x
+	var fz := xz.y / ScaleProfile.LOGICAL_CELL_METRES + half.y
+	var x0 := floori(fx)
+	var z0 := floori(fz)
+	var tx := fx - float(x0)
+	var tz := fz - float(z0)
+	var h00 := height_at_logical(Vector2(x0, z0))
+	var h10 := height_at_logical(Vector2(x0 + 1, z0))
+	var h01 := height_at_logical(Vector2(x0, z0 + 1))
+	var h11 := height_at_logical(Vector2(x0 + 1, z0 + 1))
+	return lerpf(lerpf(h00, h10, tx), lerpf(h01, h11, tx), tz)
+
+
+## R38: unit vector across the creek (perpendicular to its flow) at a tile.
+func _creek_across_at(tile: Vector2i, creek_tiles: Array) -> Vector3:
+	var best := -1
+	var best_d := 1 << 30
+	for i in creek_tiles.size():
+		var d := (Vector2i(creek_tiles[i]) - tile).length_squared()
+		if d < best_d:
+			best_d = d
+			best = i
+	if best < 0 or creek_tiles.size() < 2:
+		return Vector3.RIGHT
+	var a := Vector2i(creek_tiles[maxi(0, best - 1)])
+	var b := Vector2i(creek_tiles[mini(creek_tiles.size() - 1, best + 1)])
+	var flow := Vector3(float(b.x - a.x), 0.0, float(b.y - a.y))
+	if flow.length() < 0.01:
+		return Vector3.RIGHT
+	flow = flow.normalized()
+	return Vector3(-flow.z, 0.0, flow.x)
+
+
+func _creek_bank_height(world_position: Vector3) -> float:
+	return _terrain_y_at(Vector2(world_position.x, world_position.z)) + 0.04
 
 
 func _dress_creek_shoreline(ridge: Node3D, points: Array[Vector3]) -> void:
@@ -5584,6 +5657,11 @@ func _creek_ribbon_mesh(points: Array[Vector3], width: float, road_w: float = 2.
 		var side := Vector3(-tangent.z, 0.0, tangent.x).normalized() * (width * 0.5 * wobble)
 		var left := pos + side
 		var right := pos - side
+		# R38: drape onto the terrain. The curve only knew the heights at the
+		# creek tiles, so between them the ribbon floated over lower ground and
+		# showed a dark hovering bank edge at night (Helmer r37).
+		left.y = _terrain_y_at(Vector2(left.x, left.z)) + 0.04
+		right.y = _terrain_y_at(Vector2(right.x, right.z)) + 0.04
 		if i > 0:
 			_ridge_tri(tool, prev_left, prev_right, right)
 			_ridge_tri(tool, prev_left, right, left)
