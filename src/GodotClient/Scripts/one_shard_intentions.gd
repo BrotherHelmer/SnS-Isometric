@@ -12,6 +12,10 @@ const ID_SCOUT := "scout_frontier"
 const ID_STONE := "stone_shortage"
 
 const FOOD_NIGHTFALL := 8
+## R36: the stone objective is shown only when stone is actually short.
+const STONE_LOW := 30
+const STONE_QUARRIES_ENOUGH := 2
+const DEPOSIT_QUARRY_RADIUS := 10
 
 
 static func evaluate(sim) -> Array:
@@ -38,7 +42,7 @@ static func evaluate(sim) -> Array:
 		active.append({
 			"id": intention_id,
 			"title": String(spec["title"]),
-			"detail": String(spec["detail"]),
+			"detail": String(spec["detail"]) if not spec.has("detail_fmt") else String(spec["detail_fmt"]) % [int(sim.central_inventory.get("stone", 0)), _count_completed(sim, "QUARRY")],
 			"criteria": criteria,
 			"reward": String(spec.get("reward", ""))
 		})
@@ -61,6 +65,12 @@ static func _unlocked(sim, spec: Dictionary) -> bool:
 	var flag := String(spec.get("require_flag", ""))
 	if flag != "" and not bool(sim.intention_flags.get(flag, false)):
 		return false
+	# R36: need-based objectives ("Stone Shortage" showed with 55 Stone stored).
+	if String(spec.get("need", "")) == "stone":
+		if int(sim.central_inventory.get("stone", 0)) >= STONE_LOW:
+			return false
+		if _count_completed(sim, "QUARRY") >= STONE_QUARRIES_ENOUGH:
+			return false
 	return true
 
 
@@ -83,6 +93,8 @@ static func _evaluate_criteria(sim, spec: Dictionary) -> Array:
 				done = bool(sim.intention_flags.get("scouted_frontier", false)) or _revealed_beyond(sim, int(criterion.get("radius", 16)))
 			"flag":
 				done = bool(sim.intention_flags.get(String(criterion.get("flag", "")), false))
+			"quarry_near_deposit":
+				done = _quarry_near_deposit(sim)
 		rows.append({"label": label, "done": done})
 	return rows
 
@@ -92,6 +104,27 @@ static func _has_completed_building(sim, building_type: String) -> bool:
 		if bool(building.get("construction", false)):
 			continue
 		if String(building.get("type", "")) == building_type:
+			return true
+	return false
+
+
+static func _count_completed(sim, building_type: String) -> int:
+	var n := 0
+	for building in sim.buildings:
+		if not bool(building.get("construction", false)) and String(building.get("type", "")) == building_type:
+			n += 1
+	return n
+
+
+static func _quarry_near_deposit(sim) -> bool:
+	if not sim.intention_flags.has("stone_deposit_x"):
+		return false
+	var deposit := Vector2i(int(sim.intention_flags["stone_deposit_x"]), int(sim.intention_flags["stone_deposit_y"]))
+	for building in sim.buildings:
+		if bool(building.get("construction", false)) or String(building.get("type", "")) != "QUARRY":
+			continue
+		var pos: Vector2i = building.get("position", Vector2i.ZERO)
+		if absi(pos.x - deposit.x) + absi(pos.y - deposit.y) <= DEPOSIT_QUARRY_RADIUS:
 			return true
 	return false
 
@@ -152,12 +185,14 @@ static func _catalog() -> Array:
 		},
 		{
 			"id": ID_STONE,
-			"title": "Stone Shortage",
-			"detail": "A richer deposit waits beyond the first hills.",
+			"title": "Stone Running Low",
+			"detail": "A richer stone deposit lies beyond the first hills.",
+			"detail_fmt": "Only %d Stone stored and %d Quarry working. A Quarry at the richer deposit beyond the hills keeps walls and towers supplied.",
 			"requires": [ID_ESTABLISH],
 			"require_flag": "stone_deposit_found",
+			"need": "stone",
 			"criteria": [
-				{"kind": "flag", "flag": "quarry_near_deposit", "label": "Establish a quarry near the deposit"}
+				{"kind": "quarry_near_deposit", "label": "Build a Quarry within 10 tiles of the stone deposit"}
 			]
 		}
 	]

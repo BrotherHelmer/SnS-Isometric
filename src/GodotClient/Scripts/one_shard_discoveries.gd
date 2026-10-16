@@ -49,6 +49,10 @@ static func apply(sim, feature: Dictionary) -> Dictionary:
 		lore = LORE[posmod(int(sim.rng_seed) + int(feature.get("position", Vector2i.ZERO).y), LORE.size())]
 	if kind in [KIND_DEPOSIT, "stone_region"]:
 		sim.intention_flags["stone_deposit_found"] = true
+		# R36: remember where, so the quarry objective can actually complete.
+		var deposit_tile: Vector2i = feature.get("position", Vector2i.ZERO)
+		sim.intention_flags["stone_deposit_x"] = deposit_tile.x
+		sim.intention_flags["stone_deposit_y"] = deposit_tile.y
 	var title := title_for(kind)
 	var body := String(feature.get("message", ""))
 	if lore != "":
