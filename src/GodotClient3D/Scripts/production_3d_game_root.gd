@@ -119,6 +119,10 @@ var resource_label: Label
 var placement_label: Label
 var placement_legend_label: Label
 var inspector_label: RichTextLabel
+var objective_goals_scroll: ScrollContainer
+var objective_history_button: Button
+var objective_history_label: Label
+var _objective_history_count := 0
 var assault_button: Button
 var recall_button: Button
 var scout_button: Button
@@ -1744,8 +1748,8 @@ func _create_ui() -> void:
 	objective_detail_panel.offset_left = 8.0
 	objective_detail_panel.offset_top = TOP_BAR_HEIGHT + 44.0
 	objective_detail_panel.offset_right = 334.0
-	objective_detail_panel.offset_bottom = TOP_BAR_HEIGHT + 300.0
-	objective_detail_panel.custom_minimum_size = Vector2(320, 230)
+	objective_detail_panel.offset_bottom = TOP_BAR_HEIGHT + 360.0
+	objective_detail_panel.custom_minimum_size = Vector2(320, 290)
 	objective_detail_panel.clip_contents = true
 	objective_detail_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	objective_detail_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.04, 0.05, 0.055, 0.92), Color("#efcf8a")))
@@ -1775,11 +1779,33 @@ func _create_ui() -> void:
 	objective_scroll.custom_minimum_size = Vector2(0, 96)
 	objective_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	objective_box.add_child(objective_scroll)
+	objective_goals_scroll = objective_scroll
+	var goals_column := VBoxContainer.new()
+	goals_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	goals_column.add_theme_constant_override("separation", 4)
+	objective_scroll.add_child(goals_column)
 	objective_detail_body = Label.new()
 	objective_detail_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	objective_detail_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	Identity.apply_label(objective_detail_body, "body")
-	objective_scroll.add_child(objective_detail_body)
+	goals_column.add_child(objective_detail_body)
+	# R37: completed goals fold into a collapsed History section.
+	objective_history_button = Button.new()
+	objective_history_button.name = "GoalsHistory"
+	objective_history_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	objective_history_button.flat = true
+	objective_history_button.pressed.connect(func() -> void:
+		objective_history_label.visible = not objective_history_label.visible
+		_refresh_history_button())
+	Identity.apply_button(objective_history_button)
+	goals_column.add_child(objective_history_button)
+	objective_history_label = Label.new()
+	objective_history_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	objective_history_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	objective_history_label.modulate = Color(1, 1, 1, 0.72)
+	Identity.apply_label(objective_history_label, "body")
+	objective_history_label.visible = false
+	goals_column.add_child(objective_history_label)
 
 	shard_compass = Label.new()
 	shard_compass.name = "ShardCompass"
@@ -3956,6 +3982,8 @@ func _objective_why(t: String) -> String:
 		return "Workers eat bread; a Farm feeds a Bakery."
 	if "outpost" in t or "rival" in t:
 		return "The rival Outpost pressures your border; capturing it removes that pressure."
+	if "seal" in t or "fissure" in t or "wyrd" in t:
+		return "Sealing the Fissure is the realm's final goal. A Wyrd Refiner turns Wyrd from a Harvester into Stabilized Wyrd."
 	return ""
 
 
@@ -4121,29 +4149,55 @@ func _show_objective_detail(value: bool) -> void:
 	if not value:
 		return
 	objective_detail_panel.size = Vector2(320, 0)
-	var intentions: Array = simulation_host.simulation.get_settlement_intentions()
-	var sim_objectives: Array = simulation_host.simulation.get_objectives()
-	# P1 beta: open on the active goal, fold finished ones into one line,
-	# and end with concrete advice for the active goal.
+	var sim = simulation_host.simulation
+	var intentions: Array = sim.get_settlement_intentions()
+	var sim_objectives: Array = sim.get_objectives()
+	# R37: the active objective first (the same one the goal bar shows), its
+	# remaining requirements and Why; finished goals fold into History.
 	var lines: Array[String] = []
-	var done_titles: Array[String] = []
-	var active_found := false
+	var history: Array[String] = []
+	var active_text := objective_button.text if objective_button != null else ""
+	lines.append("NOW: " + active_text)
+	var shown_rows := false
+	var nexts: Array[String] = []
 	for intention_value in intentions:
 		var intention: Dictionary = intention_value
 		var rows: Array = intention.get("criteria", [])
-		var all_done := not rows.is_empty()
-		for row in rows:
-			if not bool(row.get("done", false)):
-				all_done = false
-		if all_done:
-			done_titles.append(String(intention.get("title", "")))
-			continue
-		lines.append(("NOW: " if not active_found else "NEXT: ") + String(intention.get("title", "")))
-		for row in rows:
-			lines.append("%s %s" % ["[✓]" if bool(row.get("done", false)) else "[ ]", String(row.get("label", ""))])
-		lines.append("")
-		active_found = true
-	var obj_text := objective_button.text.to_lower() if objective_button != null else ""
+		if not shown_rows:
+			if String(intention.get("detail", "")) != "":
+				lines.append(String(intention.get("detail", "")))
+			for row in rows:
+				if not bool(row.get("done", false)):
+					lines.append("[ ] " + String(row.get("label", "")))
+			shown_rows = true
+		else:
+			nexts.append(String(intention.get("title", "")))
+	if not shown_rows:
+		var wyrdfall: Dictionary = sim.get_wyrdfall_presentation() if sim.has_method("get_wyrdfall_presentation") else {}
+		var wobj: Dictionary = wyrdfall.get("objective", {})
+		var steps: Array = wobj.get("steps", [])
+		var first_open := true
+		for obj in sim_objectives:
+			if bool(obj.get("complete", false)):
+				continue
+			var text := String(obj.get("text", ""))
+			if first_open and text == active_text:
+				first_open = false
+				lines.append_array(_objective_requirement_rows(text))
+				continue
+			if first_open:
+				lines.append("[ ] " + text)
+				first_open = false
+			else:
+				nexts.append(text)
+		if first_open:
+			if String(wobj.get("detail", wobj.get("summary", ""))) != "":
+				lines.append(String(wobj.get("detail", wobj.get("summary", ""))))
+			for step in steps:
+				if String(step) != active_text:
+					lines.append("• " + String(step))
+	lines.append("")
+	var obj_text := active_text.to_lower()
 	var why_line := _objective_why(obj_text)
 	if why_line != "":
 		lines.append("Why: " + why_line)
@@ -4152,24 +4206,57 @@ func _show_objective_detail(value: bool) -> void:
 		var adv := _quarry_advice()
 		lines.append("Tip: " + (String(adv["text"]) if not adv.is_empty() else "Click the goal bar to jump to a rock deposit where a Quarry fits (it needs a road link)."))
 		lines.append("")
-	if not done_titles.is_empty():
-		lines.append("Done (%d): %s" % [done_titles.size(), ", ".join(done_titles)])
-	if intentions.is_empty():
-		if sim_objectives.is_empty():
-			var objective: Dictionary = simulation_host.simulation.get_macro_objective()
-			lines.append(String(objective.get("title", "FEED THE SETTLEMENT")))
-			lines.append(String(objective.get("summary", objective.get("detail", ""))))
-			lines.append("")
-			var steps: Array = objective.get("steps", [])
-			for step in steps:
-				lines.append("• %s" % String(step))
-		else:
-			for obj in sim_objectives:
-				var complete := bool(obj.get("complete", false))
-				var mark := "[✓]" if complete else "[ ]"
-				var text := String(obj.get("text", ""))
-				lines.append("%s %s" % [mark, text])
-	objective_detail_body.text = "\n".join(lines)
+	if not nexts.is_empty():
+		lines.append("Next: " + ", ".join(nexts.slice(0, 3)))
+	for intention_value in sim.intention_completed.keys():
+		history.append("✓ " + _intention_title(String(intention_value)))
+	for obj in sim_objectives:
+		if bool(obj.get("complete", false)):
+			history.append("✓ " + String(obj.get("text", "")))
+	objective_detail_body.text = "\n".join(lines).strip_edges()
+	objective_history_label.text = "\n".join(history)
+	_objective_history_count = history.size()
+	# Reset to the active section every time Goals opens.
+	objective_history_label.visible = false
+	_refresh_history_button()
+	if objective_goals_scroll != null:
+		objective_goals_scroll.scroll_vertical = 0
+		objective_goals_scroll.set_deferred("scroll_vertical", 0)
+
+
+## R37: concrete remaining requirements for sentence-style objectives,
+## e.g. "Seal the Fissure with 12 Stabilized Wyrd and hold the ceremony".
+func _objective_requirement_rows(text: String) -> Array[String]:
+	var rows: Array[String] = []
+	var re := RegEx.new()
+	re.compile("(\\d+) (Stabilized Wyrd|Wyrd|Stone|Wood|Planks|Bread|Wheat)")
+	var m := re.search(text)
+	if m != null:
+		var need := int(m.get_string(1))
+		var res := m.get_string(2)
+		var key := res.to_lower().replace(" ", "_")
+		var have := int(simulation_host.simulation.central_inventory.get(key, 0))
+		rows.append("%s Have %d %s (stored: %d)" % ["[✓]" if have >= need else "[ ]", need, res, have])
+	if "ceremony" in text.to_lower():
+		rows.append("[ ] Then hold the ceremony at the Fissure")
+	return rows
+
+
+func _refresh_history_button() -> void:
+	if objective_history_button == null:
+		return
+	objective_history_button.visible = _objective_history_count > 0
+	objective_history_button.text = "History (%d) %s" % [_objective_history_count, "▾" if objective_history_label.visible else "▸"]
+
+
+func _intention_title(intention_id: String) -> String:
+	match intention_id:
+		"establish": return "A Settlement Begins"
+		"feed": return "Feed the Settlement"
+		"nightfall": return "Prepare for Nightfall"
+		"scout_frontier": return "Where Did They Come From?"
+		"stone_shortage": return "Stone Running Low"
+	return intention_id.capitalize()
 
 
 func _glance_at_seal() -> void:

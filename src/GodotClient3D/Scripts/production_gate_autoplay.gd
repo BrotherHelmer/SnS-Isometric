@@ -381,6 +381,12 @@ func _shot_async(name: String, action: String) -> void:
 		await _group_probe(tree)
 		game.get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("--gate-goals-probe") and name.begins_with("late_05"):
+		await _goals_probe(tree)
+		game.get_tree().quit()
+		return
+	if OS.get_cmdline_user_args().has("--gate-diag-outpost") and name.begins_with("late_10"):
+		_pick_diag(Rect2(0.72, 0.17, 0.13, 0.17))
 	if name == "11_town_hall_inspector" and OS.get_cmdline_user_args().has("--gate-inspector-probe"):
 		await _inspector_probe(tree)
 		game.get_tree().quit()
@@ -910,3 +916,87 @@ func _inspector_probe(tree: SceneTree) -> void:
 			n = n.get_parent()
 		_note("inspector_chain " + " < ".join(chain) + " text_len=%d lines=%d" % [lab.get_parsed_text().length(), lab.get_line_count()])
 		game.get_viewport().get_texture().get_image().save_png(dir.path_join("inspector_%d.png" % int(round(f * 100.0))))
+
+
+## R37 diag: what is the bright surface at the (captured) rival outpost?
+## Lists meshes near every outpost view with their material colour, then a shot.
+func _outpost_diag(tree: SceneTree) -> void:
+	var wv = game.world_view
+	var views: Array = []
+	for v in wv.find_children("*", "Node3D", true, false):
+		if v is ProductionBuildingView3D and "OUTPOST" in String((v as ProductionBuildingView3D).building_type):
+			views.append(v)
+	_note("outpost_diag views=%d" % views.size())
+	for v in views:
+		var bv: ProductionBuildingView3D = v
+		var c: Vector3 = bv.global_position
+		_note("outpost view type=%s faction=%s pos=%s parent=%s" % [bv.building_type, bv.faction, str(c), bv.get_parent().name])
+		for m in wv.find_children("*", "MeshInstance3D", true, false):
+			var mi: MeshInstance3D = m
+			if not mi.is_visible_in_tree() or mi.global_position.distance_to(c) > 7.0:
+				continue
+			var mat: Material = mi.material_override
+			if mat == null and mi.mesh != null and mi.mesh.get_surface_count() > 0:
+				mat = mi.get_active_material(0)
+			var col := "?"
+			if mat is BaseMaterial3D:
+				col = "%s tex=%s unshaded=%s" % [(mat as BaseMaterial3D).albedo_color.to_html(false), str((mat as BaseMaterial3D).albedo_texture != null), str((mat as BaseMaterial3D).shading_mode == BaseMaterial3D.SHADING_MODE_UNSHADED)]
+			elif mat is ShaderMaterial:
+				col = "shader:" + String((mat as ShaderMaterial).shader.resource_path)
+			_note("  mesh %s aabb=%s col=%s" % [str(mi.get_path()).replace(str(wv.get_path()), ""), str(mi.get_aabb().size * mi.global_transform.basis.get_scale()), col])
+		game.camera_rig.focus_world(c)
+		for i in 20:
+			await tree.process_frame
+		await RenderingServer.frame_post_draw
+		game.get_viewport().get_texture().get_image().save_png(dir.path_join("outpost_%s.png" % bv.building_type))
+
+
+## R37 diag: visible meshes whose screen position falls in a viewport-fraction rect.
+func _pick_diag(frac: Rect2) -> void:
+	var cam: Camera3D = game.get_viewport().get_camera_3d()
+	var vs: Vector2 = game.get_viewport().get_visible_rect().size
+	var rect := Rect2(frac.position * vs, frac.size * vs)
+	var n := 0
+	for m in game.world_view.find_children("*", "MeshInstance3D", true, false):
+		var mi: MeshInstance3D = m
+		if not mi.is_visible_in_tree() or mi.mesh == null:
+			continue
+		var centre: Vector3 = mi.global_transform * mi.get_aabb().get_center()
+		if cam.is_position_behind(centre) or not rect.has_point(cam.unproject_position(centre)):
+			continue
+		var mat: Material = mi.material_override if mi.material_override != null else mi.get_active_material(0)
+		var col := "?"
+		if mat is BaseMaterial3D:
+			col = "%s tex=%s emis=%s" % [(mat as BaseMaterial3D).albedo_color.to_html(false), str((mat as BaseMaterial3D).albedo_texture != null), str((mat as BaseMaterial3D).emission_enabled)]
+		elif mat is ShaderMaterial:
+			col = "shader:" + String((mat as ShaderMaterial).shader.resource_path).get_file()
+		_note("pick %s size=%s col=%s" % [str(mi.get_path()).get_slice("WorldView", 1), str((mi.get_aabb().size * mi.global_transform.basis.get_scale()).snapped(Vector3.ONE * 0.01)), col])
+		n += 1
+		if n > 80:
+			break
+	game.get_viewport().get_texture().get_image().save_png(dir.path_join("pick_diag.png"))
+
+
+## R37: Goals opens on the active objective; History is collapsed and the
+## scroll is back at the top every time it opens.
+func _goals_probe(tree: SceneTree) -> void:
+	game._set_build_palette_visible(false)
+	game._show_objective_detail(true)
+	for i in 10:
+		await tree.process_frame
+	await RenderingServer.frame_post_draw
+	game.get_viewport().get_texture().get_image().save_png(dir.path_join("goals_open.png"))
+	_note("goals_probe open: first_line=%s history_visible=%s history_btn=%s" % [game.objective_detail_body.text.get_slice("\n", 0), str(game.objective_history_label.visible), game.objective_history_button.text])
+	game.objective_history_button.emit_signal("pressed")
+	game.objective_goals_scroll.scroll_vertical = 9999
+	for i in 10:
+		await tree.process_frame
+	await RenderingServer.frame_post_draw
+	game.get_viewport().get_texture().get_image().save_png(dir.path_join("goals_history.png"))
+	_note("goals_probe expanded: history_visible=%s scroll=%d" % [str(game.objective_history_label.visible), game.objective_goals_scroll.scroll_vertical])
+	game._show_objective_detail(false)
+	game._show_objective_detail(true)
+	for i in 10:
+		await tree.process_frame
+	_note("goals_probe reopened: history_visible=%s scroll=%d RESET=%s" % [str(game.objective_history_label.visible), game.objective_goals_scroll.scroll_vertical, "PASS" if not game.objective_history_label.visible and game.objective_goals_scroll.scroll_vertical == 0 else "FAIL"])
+	_note("goals_body " + game.objective_detail_body.text.replace("\n", " | "))
