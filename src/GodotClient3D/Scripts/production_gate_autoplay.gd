@@ -385,6 +385,10 @@ func _shot_async(name: String, action: String) -> void:
 		await _goals_probe(tree)
 		game.get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("--gate-r38-probe") and name.begins_with("late_10"):
+		await _r38_probe(tree)
+		game.get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("--gate-day-water") and name.begins_with("late_10"):
 		var guard := 0
 		while bool(game.simulation_host.simulation.is_night) and guard < 400:
@@ -1025,3 +1029,76 @@ func _goals_probe(tree: SceneTree) -> void:
 		await tree.process_frame
 	_note("goals_probe reopened: history_visible=%s scroll=%d RESET=%s" % [str(game.objective_history_label.visible), game.objective_goals_scroll.scroll_vertical, "PASS" if not game.objective_history_label.visible and game.objective_goals_scroll.scroll_vertical == 0 else "FAIL"])
 	_note("goals_body " + game.objective_detail_body.text.replace("\n", " | "))
+
+
+## R38 (gate flag only): close-ups of Helmer's r37 playtest bugs at night
+## (Wyrd Refiner, castle/walls, creek + bridge) and the Realm card / Map
+## button at 100/125/150 % UI scale.
+func _r38_shot(tree: SceneTree, file: String) -> void:
+	for i in 8:
+		await tree.process_frame
+	await tree.create_timer(0.6).timeout
+	await RenderingServer.frame_post_draw
+	game.get_viewport().get_texture().get_image().save_png(dir.path_join(file))
+	_note("r38 shot " + file)
+
+
+func _r38_probe(tree: SceneTree) -> void:
+	var sim = game.simulation_host.simulation
+	var guard := 0
+	while not bool(sim.is_night) and guard < 400:
+		sim._simulate_seconds_for_test(3.0)
+		guard += 1
+	game.simulation_host.paused = true
+	game._set_build_palette_visible(false)
+	game.selected_building_id = 0
+	game.selected_worker_id = 0
+	game.selected_entity_kind = ""
+	game.world_view.set_selection(0, 0)
+	game._update_inspector()
+	await tree.create_timer(1.5).timeout
+	var rig = game.camera_rig
+	var wv = game.world_view
+	if game.hud_root != null:
+		game.hud_root.visible = false
+	var targets := {}
+	for id in wv.building_views:
+		var v = wv.building_views[id]
+		var bt := String(v.building_type)
+		if bt in ["WYRD_REFINER", "CASTLE", "TOWN_HALL", "WALL"] and not targets.has(bt):
+			targets[bt] = v.global_position
+	_note("r38 targets %s night=%s" % [str(targets.keys()), str(sim.is_night)])
+	if targets.has("WYRD_REFINER"):
+		rig.compose_view(targets["WYRD_REFINER"], 9.0)
+		await _r38_shot(tree, "r38_1_refiner.png")
+	for key in ["CASTLE", "TOWN_HALL"]:
+		if targets.has(key):
+			rig.compose_view(targets[key], 12.0)
+			await _r38_shot(tree, "r38_3_castle.png")
+			rig.compose_view(targets[key] + Vector3(0.0, 0.0, 3.0), 7.0)
+			await _r38_shot(tree, "r38_3_castle_front.png")
+			break
+	if targets.has("WALL"):
+		rig.compose_view(targets["WALL"], 10.0)
+		await _r38_shot(tree, "r38_3_wall.png")
+	var bridge: Node3D = wv.find_child("DressBridge_0", true, false)
+	if bridge == null:
+		bridge = wv.find_child("DressCreek", true, false)
+	if bridge != null:
+		rig.compose_view(bridge.global_position, 10.0)
+		await _r38_shot(tree, "r38_4_creek.png")
+		rig.compose_view(bridge.global_position, 6.0)
+		await _r38_shot(tree, "r38_4_bridge_close.png")
+		var creek: Node3D = wv.find_child("DressCreek", true, false)
+		if creek != null and creek is MeshInstance3D:
+			var aabb: AABB = (creek as MeshInstance3D).get_aabb()
+			rig.compose_view(creek.global_transform * aabb.get_center(), maxf(aabb.size.x, aabb.size.z) * 0.8)
+			await _r38_shot(tree, "r38_4_creek_wide.png")
+	if game.hud_root != null:
+		game.hud_root.visible = true
+	if game.minimap_expanded:
+		game._toggle_minimap()
+	for sc in [1.0, 1.25, 1.5]:
+		game._apply_ui_scale(sc)
+		await _r38_shot(tree, "r38_2_hud_%d.png" % int(round(sc * 100.0)))
+	game._apply_ui_scale(1.0)
