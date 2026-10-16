@@ -385,6 +385,17 @@ func _shot_async(name: String, action: String) -> void:
 		await _goals_probe(tree)
 		game.get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().has("--gate-day-water") and name.begins_with("late_10"):
+		var guard := 0
+		while bool(game.simulation_host.simulation.is_night) and guard < 400:
+			game.simulation_host.simulation._simulate_seconds_for_test(3.0)
+			guard += 1
+		await tree.create_timer(2.5).timeout
+		await RenderingServer.frame_post_draw
+		game.get_viewport().get_texture().get_image().save_png(dir.path_join("day_water.png"))
+		_note("day_water shot night=%s guard=%d" % [str(game.simulation_host.simulation.is_night), guard])
+		game.get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("--gate-diag-outpost") and name.begins_with("late_10"):
 		_pick_diag(Rect2(0.72, 0.17, 0.13, 0.17))
 	if name == "11_town_hall_inspector" and OS.get_cmdline_user_args().has("--gate-inspector-probe"):
@@ -988,12 +999,26 @@ func _goals_probe(tree: SceneTree) -> void:
 	game.get_viewport().get_texture().get_image().save_png(dir.path_join("goals_open.png"))
 	_note("goals_probe open: first_line=%s history_visible=%s history_btn=%s" % [game.objective_detail_body.text.get_slice("\n", 0), str(game.objective_history_label.visible), game.objective_history_button.text])
 	game.objective_history_button.emit_signal("pressed")
-	game.objective_goals_scroll.scroll_vertical = 9999
+	# R37b: let the expanded History lay out first, then scroll (a scroll set
+	# before layout is clamped to the old, shorter content).
 	for i in 10:
+		await tree.process_frame
+	var hl: Label = game.objective_history_label
+	var sc: ScrollContainer = game.objective_goals_scroll
+	var entries := hl.text.split("\n", false).size()
+	for i in 5:
 		await tree.process_frame
 	await RenderingServer.frame_post_draw
 	game.get_viewport().get_texture().get_image().save_png(dir.path_join("goals_history.png"))
-	_note("goals_probe expanded: history_visible=%s scroll=%d" % [str(game.objective_history_label.visible), game.objective_goals_scroll.scroll_vertical])
+	var vmax := int(sc.get_v_scroll_bar().max_value - sc.get_v_scroll_bar().page)
+	_note("goals_probe expanded: history_visible=%s entries=%d label_h=%.0f lines=%d scroll=%d vmax=%d" % [str(hl.visible), entries, hl.size.y, hl.get_line_count(), sc.scroll_vertical, vmax])
+	sc.scroll_vertical = vmax
+	for i in 5:
+		await tree.process_frame
+	await RenderingServer.frame_post_draw
+	game.get_viewport().get_texture().get_image().save_png(dir.path_join("goals_history_end.png"))
+	_note("goals_probe history_end: scroll=%d vmax=%d SCROLL=%s" % [sc.scroll_vertical, vmax, "PASS" if vmax > 0 and sc.scroll_vertical >= vmax - 2 else "CHECK"])
+	_note("goals_history " + hl.text.replace("\n", " | "))
 	game._show_objective_detail(false)
 	game._show_objective_detail(true)
 	for i in 10:

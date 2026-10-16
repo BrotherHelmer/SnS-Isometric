@@ -1796,7 +1796,11 @@ func _create_ui() -> void:
 	objective_history_button.flat = true
 	objective_history_button.pressed.connect(func() -> void:
 		objective_history_label.visible = not objective_history_label.visible
-		_refresh_history_button())
+		_refresh_history_button()
+		# R37b: opening History scrolls it into view (it used to expand below
+		# the fold, so the click looked like it did nothing).
+		if objective_history_label.visible:
+			_scroll_goals_to_history.call_deferred())
 	Identity.apply_button(objective_history_button)
 	goals_column.add_child(objective_history_button)
 	objective_history_label = Label.new()
@@ -4222,6 +4226,13 @@ func _show_objective_detail(value: bool) -> void:
 	if objective_goals_scroll != null:
 		objective_goals_scroll.scroll_vertical = 0
 		objective_goals_scroll.set_deferred("scroll_vertical", 0)
+
+
+func _scroll_goals_to_history() -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if objective_goals_scroll != null and objective_history_button != null:
+		objective_goals_scroll.scroll_vertical = int(objective_history_button.position.y)
 
 
 ## R37: concrete remaining requirements for sentence-style objectives,
