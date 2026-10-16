@@ -129,3 +129,9 @@ Baseline: hotfix7 run7 (b4dab21, Low) 37.5 avg FPS, median 26.5 ms, GPU median 1
 - Daytime water (--gate-day-water): matte dark teal under the bridges, no white sheet. Correction to r37: the late_10 save is already daytime, so the white sheet was sky/sun reflection, not moonlight. Same cause (glossy water), same fix.
 - Gate package for r37 (cfa551c) built on the box: /workspace/gate_r37 (zip + SHA256SUMS + precheck_r37.ps1 + beta_r37_chain.ps1; seeds 1792061458/11/4242, scale 1.0, 1300 s). NOT copied to Shard.
 - Evidence: evidence/2026-10-15-sns-beta/r37b_box/, r37_gate_package/.
+
+## r37 MONSTERET gate (2026-10-16 13:27-14:33): stability only, NOT the iGPU target
+- r37 cfa551c on MONSTERET (RTX 4070, VSync ~165 Hz cap), 3 seeds × 1300 s, scale 1.0, recreated runner, pre-checks before each run.
+- MONSTERET raw/adjusted 1% low: 1792061458 116.9/116.9; 11 119.7/119.7; 4242 110.5/110.5. Avg 154.3/154.7/143.6. 0 crashes, all reached gate end.
+- Max spikes 428/406/348 ms (harness think_phase 2 / end-of-run quit / one unknown). First frame 820-932 ms.
+- Evidence: evidence/2026-10-15-sns-beta/r37_monsteret/. Nothing published, no merge. The iGPU gate (Shard) is still open.
