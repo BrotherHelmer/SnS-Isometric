@@ -85,15 +85,19 @@ func _add_path_mesh(width: float, height: float, material: Material, node_name: 
 	var junction := width * 0.52
 	# Shared a,d,c,b vertex order. Lighting uses a world-up normal in the
 	# shader, so winding no longer decides which way the lane faces.
-	# R34: rounded junction (12-sided disc) instead of a square, so bends and
-	# crossings no longer read as stacked tiles.
+	# R36: r34 put a disc wider than the road on every tile, so straight
+	# roads beaded and junctions read as joined blobs. Straight pass-through
+	# tiles get no disc; bends, junctions and ends get a disc exactly the
+	# road width, which fills the joint without bulging.
 	var flat := Vector2(0.5, 0.5)
 	var centre := Vector3(0.0, height, 0.0)
-	var disc_r := junction * 1.04
-	for k in 12:
-		var a0 := TAU * float(k) / 12.0
-		var a1 := TAU * float(k + 1) / 12.0
-		_add_triangle(surface, centre, Vector3(cos(a1) * disc_r, height, sin(a1) * disc_r), Vector3(cos(a0) * disc_r, height, sin(a0) * disc_r), flat, flat, flat)
+	var straight := connection_mask == 0b0101 or connection_mask == 0b1010
+	var disc_r := width * 0.5
+	if not straight:
+		for k in 16:
+			var a0 := TAU * float(k) / 16.0
+			var a1 := TAU * float(k + 1) / 16.0
+			_add_triangle(surface, centre, Vector3(cos(a1) * disc_r, height, sin(a1) * disc_r), Vector3(cos(a0) * disc_r, height, sin(a0) * disc_r), flat, flat, flat)
 	var directions := [Vector2(0.0, -1.0), Vector2(1.0, 0.0), Vector2(0.0, 1.0), Vector2(-1.0, 0.0)]
 	for index in directions.size():
 		if connection_mask & (1 << index) == 0:
@@ -101,13 +105,13 @@ func _add_path_mesh(width: float, height: float, material: Material, node_name: 
 		var direction: Vector2 = directions[index]
 		var perpendicular := Vector2(-direction.y, direction.x)
 		var half_width := width * 0.5
-		var start := direction * junction * 0.38
+		var start := Vector2.ZERO
 		var finish := direction * half_cell
 		# R34: gentle per-tile wobble at the arm's midpoint; the tile-border end
 		# stays fixed so neighbouring tiles still meet exactly.
-		var wob := (float(absi(tile.x * 73 + tile.y * 151 + index * 37) % 9) - 4.0) / 4.0 * width * 0.07
+		var wob := (float(absi(tile.x * 73 + tile.y * 151 + index * 37) % 9) - 4.0) / 4.0 * width * 0.035
 		var mid := (start + finish) * 0.5 + perpendicular * wob
-		var mid_width := half_width * (0.94 + float(absi(tile.x * 41 + tile.y * 23 + index) % 5) * 0.03)
+		var mid_width := half_width * (0.97 + float(absi(tile.x * 41 + tile.y * 23 + index) % 5) * 0.015)
 		var pts := [[start, half_width], [mid, mid_width], [finish, half_width]]
 		for seg in 2:
 			var p0: Vector2 = pts[seg][0]
