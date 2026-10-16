@@ -115,3 +115,10 @@ Baseline: hotfix7 run7 (b4dab21, Low) 37.5 avg FPS, median 26.5 ms, GPU median 1
 - 08:36 FPS table (evidence/r35_fps_table.md) and Black report (evidence/r35_report_for_black.md) written. r35 done.
 - 08:52 r36 (on r35 ee093ad, Black 08:29, review 7.8). 0b2495a stone objective need-based + completable (flag was never set; title 'Stone Running Low', names the real requirement: Quarry within 10 tiles of the found deposit; hidden when stone >=30 or 2+ quarries). fd9fa22 inspector: console grows to fit inspector text (cap 196 px, scroll beyond); box probe fits at 100/125/150% (evidence/r36_box). Roads: no disc on straight tiles, road-width disc at joints, half wobble. P2 Shard landmark skipped (not cheap: off-screen at the normal ortho view).
 - 09:35 r36 box-only (Shard stopped for today, Helmer 08:52): stone test 5/5 OK (5f381c7); box before/after r35 vs r36 (late save, 10 files) in evidence/r36_before_after_box; status text evidence/r36_status_for_black.md. Not gated/published; r36 pck staged on box only (/workspace/stage/r36.pck, a7d3b67). Next: Shard gates 3 seeds when allowed.
+
+## r37 (box-only, 2026-10-16) — no Shard, no gate
+- P1 Goals panel: active objective on top ("NOW", remaining requirements, Why/Tip), completed goals collapsed into "History (N)", panel resets to active section on every open (probe RESET=PASS).
+- Stone objective headless boundary test (tools/r36_stone_test.gd): 29 shown / 30 hidden, 1 quarry shown / 2 hidden -> BOUNDARY PASS.
+- P2 minimap white surface: NOT the rival outpost/marker/selection. Pick-diag hit opening-area creek/pond under the footbridges; glossy water (pond rough 0.10 metal 0.28, creek rough 0.22) mirrored moonlight as a white sheet. Material bug -> matte (rough 0.8/0.6, metal 0). No new shader, no cost.
+- CI quick build /tmp/beta_r37 OK (known smoke error only). Box before/after r36 vs r37 (export, late save): evidence/2026-10-15-sns-beta/r37_before_after_box/ (12 files).
+- Not gated (Shard offline today). Daytime water look not yet checked.
