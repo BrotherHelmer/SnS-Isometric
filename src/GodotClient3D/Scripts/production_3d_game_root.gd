@@ -201,6 +201,10 @@ const MINIMAP_COLLAPSED := 44.0
 const BUILD_GRID_COLUMNS := 4
 ## R28: the unit/building panel never gets narrower than this (logical px).
 const SELECTION_MIN_WIDTH := 420.0
+const INSPECTOR_CHROME := 40.0
+const INSPECTOR_MAX_CONSOLE := 196.0
+var _insp_layout_h := -1.0
+var _insp_layout_vis := false
 const BUILD_SLOT_SIZE := Vector2(66, 52)
 const RIVAL_BANNER_DELAY := 24.0
 const BUILD_HOTKEYS := [KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9, KEY_0, KEY_Z, KEY_X, KEY_C, KEY_V]
@@ -451,6 +455,14 @@ func _process(delta: float) -> void:
 		_pipelines_warmed_play = true
 		world_view.warm_up_pipelines(get_viewport().get_camera_3d(), true)
 	hud_clock += delta
+	# R36: re-fit the console when the inspector's text height changes.
+	if inspector_panel != null and inspector_label != null and hud_console != null:
+		var vis := inspector_panel.visible
+		var h := float(inspector_label.get_content_height()) if vis else 0.0
+		if vis != _insp_layout_vis or absf(h - _insp_layout_h) > 1.0:
+			_insp_layout_vis = vis
+			_insp_layout_h = h
+			_layout_hud_console()
 	var _pf20 := FrameProfiler.t0()
 	_tick_fps_overlay(delta)
 	FrameProfiler.add("root._tick_fps_overlay", _pf20)
@@ -4498,6 +4510,16 @@ func _layout_hud_console() -> void:
 	# offset_top set, the panel grew downward past the window bottom and the
 	# build row was clipped at every resolution. Anchor to the bottom edge.
 	height = maxf(height, hud_console.get_combined_minimum_size().y)
+	# R36: the inspector text has no minimum height, so at 125%+ UI scale its
+	# last lines sat under the console frame. Grow the console to fit the
+	# text (capped; beyond the cap it scrolls).
+	if inspector_panel != null and inspector_panel.visible and inspector_label != null:
+		var text_need := float(inspector_label.get_content_height()) + INSPECTOR_CHROME
+		var row_need := 0.0
+		for child in inspector_label.get_parent().get_children():
+			if child != inspector_label and child is Control and (child as Control).visible:
+				row_need += (child as Control).get_combined_minimum_size().y + 4.0
+		height = maxf(height, minf(text_need + row_need, INSPECTOR_MAX_CONSOLE))
 	hud_console.offset_bottom = 0.0
 	hud_console.offset_top = -height
 	if build_panel != null:

@@ -381,6 +381,10 @@ func _shot_async(name: String, action: String) -> void:
 		await _group_probe(tree)
 		game.get_tree().quit()
 		return
+	if name == "11_town_hall_inspector" and OS.get_cmdline_user_args().has("--gate-inspector-probe"):
+		await _inspector_probe(tree)
+		game.get_tree().quit()
+		return
 	if name == "03_start" and OS.get_cmdline_user_args().has("--gate-unit-probe"):
 		await _unit_probe(tree)
 		game.get_tree().quit()
@@ -412,6 +416,11 @@ func _shot_async(name: String, action: String) -> void:
 				game._start_from_menu()
 			started = true
 			_start_t = t
+			# R36: --gate-ui-scale=1.25 applies the in-game UI scale setting.
+			for arg in OS.get_cmdline_user_args():
+				if arg.begins_with("--gate-ui-scale="):
+					game._apply_ui_scale(float(arg.substr(16)))
+					_note("ui scale %s" % arg.substr(16))
 			_start_gs = float(game.simulation_host.simulation.elapsed_seconds)
 			_note("NEW REALM -> BEGIN seed=%d" % int(game.simulation_host.simulation.rng_seed))
 		"log":
@@ -874,3 +883,30 @@ func _diag_layer_shots(tree: SceneTree) -> void:
 		game.get_viewport().get_texture().get_image().save_png(dir.path_join("diag_%s.png" % String(k).replace("/", "_")))
 		for n in groups[k]:
 			n.visible = true
+
+
+## R36: Town Hall inspector at 100/125/150 % UI scale: the text box must lie
+## inside the visible console and its content must fit (or be scrollable).
+func _inspector_probe(tree: SceneTree) -> void:
+	game._select_town_hall()
+	for f in [1.0, 1.25, 1.5]:
+		game._apply_ui_scale(f)
+		for i in 30:
+			await tree.process_frame
+		await RenderingServer.frame_post_draw
+		var vp: Rect2 = game.get_viewport().get_visible_rect()
+		var lab: RichTextLabel = game.inspector_label
+		var host: Control = game.selection_host
+		var lr := lab.get_global_rect()
+		var hr := host.get_global_rect()
+		var inside := vp.grow(0.5).encloses(lr) and hr.grow(0.5).encloses(lr)
+		var fits := float(lab.get_content_height()) <= lr.size.y + 1.0
+		_note("inspector_probe scale=%.2f vp=%s label=%s host=%s content_h=%d inside=%s fits=%s scroll=%s" % [f, str(vp.size), str(lr), str(hr), lab.get_content_height(), str(inside), str(fits), str(lab.get_v_scroll_bar().visible)])
+		var chain := []
+		var n: Node = lab
+		while n != null and n != game.hud_console.get_parent():
+			if n is Control:
+				chain.append("%s:%s/min%s" % [n.name, str((n as Control).size), str((n as Control).get_combined_minimum_size())])
+			n = n.get_parent()
+		_note("inspector_chain " + " < ".join(chain) + " text_len=%d lines=%d" % [lab.get_parsed_text().length(), lab.get_line_count()])
+		game.get_viewport().get_texture().get_image().save_png(dir.path_join("inspector_%d.png" % int(round(f * 100.0))))
