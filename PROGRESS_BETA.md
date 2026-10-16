@@ -122,3 +122,10 @@ Baseline: hotfix7 run7 (b4dab21, Low) 37.5 avg FPS, median 26.5 ms, GPU median 1
 - P2 minimap white surface: NOT the rival outpost/marker/selection. Pick-diag hit opening-area creek/pond under the footbridges; glossy water (pond rough 0.10 metal 0.28, creek rough 0.22) mirrored moonlight as a white sheet. Material bug -> matte (rough 0.8/0.6, metal 0). No new shader, no cost.
 - CI quick build /tmp/beta_r37 OK (known smoke error only). Box before/after r36 vs r37 (export, late save): evidence/2026-10-15-sns-beta/r37_before_after_box/ (12 files).
 - Not gated (Shard offline today). Daytime water look not yet checked.
+
+## r37b (box-only, 2026-10-16 ~10:15) — scope frozen, no art changes
+- History check: all 14 completed goals are listed, scrolling reaches the end (SCROLL=PASS), reopen goes back to NOW with History closed (RESET=PASS).
+- Real display bug fixed: History used to expand below the fold, so the click looked like it did nothing. Opening it now scrolls History into view. The old probe also scrolled before layout had grown, so the value was clamped; fixed.
+- Daytime water (--gate-day-water): matte dark teal under the bridges, no white sheet. Correction to r37: the late_10 save is already daytime, so the white sheet was sky/sun reflection, not moonlight. Same cause (glossy water), same fix.
+- Gate package for r37 (cfa551c) built on the box: /workspace/gate_r37 (zip + SHA256SUMS + precheck_r37.ps1 + beta_r37_chain.ps1; seeds 1792061458/11/4242, scale 1.0, 1300 s). NOT copied to Shard.
+- Evidence: evidence/2026-10-15-sns-beta/r37b_box/, r37_gate_package/.
