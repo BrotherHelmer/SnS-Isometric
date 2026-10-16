@@ -6298,7 +6298,8 @@ func _caravan_mesh() -> Node3D:
 	var cloth := StandardMaterial3D.new()
 	cloth.albedo_color = Color("#b9a77a")
 	cloth.roughness = 0.95
-	cloth.cull_mode = BaseMaterial3D.CULL_DISABLED
+	# R35: no CULL_DISABLED; that was the only new pipeline state in r34 and
+	# compiled mid-game on first sight (r34b hitch). Hood ends are capped instead.
 	# Faint warmth so the wagon still reads at night without glowing like a lamp.
 	cloth.emission_enabled = true
 	cloth.emission = Color("#efcf8a")
@@ -6351,8 +6352,8 @@ func _caravan_mesh() -> Node3D:
 	hood_mesh.bottom_radius = 0.66
 	hood_mesh.height = 2.1
 	hood_mesh.radial_segments = 14
-	hood_mesh.cap_top = false
-	hood_mesh.cap_bottom = false
+	hood_mesh.cap_top = true
+	hood_mesh.cap_bottom = true
 	hood.mesh = hood_mesh
 	hood.rotation = Vector3(0.0, 0.0, PI * 0.5)
 	hood.position = Vector3(0.0, 1.2, 0.0)
