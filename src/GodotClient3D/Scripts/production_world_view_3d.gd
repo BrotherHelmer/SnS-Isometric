@@ -5459,12 +5459,15 @@ func _spawn_meandering_creek(ridge: Node3D, hall: Vector2i, road_w: float) -> vo
 	# water, mossy-mud banks that fade into the meadow.
 	var bank := _ridge_material(Color("#5f5a42"), 0.94)
 	var wet := _ridge_material(Color("#37443a"), 0.6)
-	var shallow := _ridge_material(Color("#3e5c55"), 0.35)
+	# R37: glossy creek/pond mirrored the moon from the high ortho camera and
+	# read as a flat white sheet at night (review: "white surface by the
+	# outpost"). Matte water keeps the colour; value-only, no new cost.
+	var shallow := _ridge_material(Color("#3e5c55"), 0.6)
 	var water := StandardMaterial3D.new()
 	water.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
 	water.albedo_color = Color("#284a4a")
-	water.roughness = 0.22
-	water.metallic = 0.08
+	water.roughness = 0.8
+	water.metallic = 0.0
 	water.specular_mode = BaseMaterial3D.SPECULAR_SCHLICK_GGX
 	var mud := MeshInstance3D.new()
 	mud.name = "DressCreekBank"
@@ -5705,8 +5708,8 @@ func _spawn_dress_pond(host: Node3D, tile: Vector2i, size: Vector2, node_name: S
 	var water := StandardMaterial3D.new()
 	water.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
 	water.albedo_color = Color(0.16, 0.30, 0.34, 0.90)
-	water.roughness = 0.10
-	water.metallic = 0.28
+	water.roughness = 0.8
+	water.metallic = 0.0
 	water.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	water.emission_enabled = true
 	water.emission = Color(0.08, 0.16, 0.20)
