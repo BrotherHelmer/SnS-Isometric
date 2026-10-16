@@ -1263,6 +1263,12 @@ func _apply_principal_trim() -> void:
 	# with a low fitted foundation and modular stone / plaster façades.
 	if building_type != "TOWN_HALL" and building_type != "CASTLE" and building_type != "HOUSE" and building_type != "BAKERY" and building_type != "LUMBER_CAMP" and building_type != "SAWMILL":
 		return
+	# R38: the authored civic keep already has its own curtain, gatehouse,
+	# buttresses and plinth. The generic box trim (facade panels, corner posts,
+	# fascia beam, foundation skirts) was wrapped around it a second time and
+	# read as a broken grey gate wall with see-through gaps (Helmer r37).
+	if building_type == "CASTLE" and String(Catalog.building_path("CASTLE")).contains("civic_"):
+		return
 	var plaster := _material(BuildingMaterials.WARM_PLASTER, 0.0)
 	var timber := _material(BuildingMaterials.DARK_TIMBER, 0.0)
 	var roof := _material(BuildingMaterials.HALL_SLATE if building_type == "TOWN_HALL" or building_type == "CASTLE" else BuildingMaterials.CLAY_ROOF, 0.0)
