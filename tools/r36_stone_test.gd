@@ -37,4 +37,24 @@ func _init():
 	q["position"] = Vector2i(40, 40)
 	var q2 := q.duplicate(true); q2["position"] = Vector2i(44, 44); sim.buildings.append(q2)
 	print("E two quarries far, stone=12 -> shown=", not _stone(sim).is_empty())
+	# R37 boundaries: Stone 29 vs 30 (no quarry), quarries 1 vs 2 (Stone 12, none near deposit).
+	var far_only: Array = []
+	for b in sim.buildings:
+		if String(b.get("type", "")) != "QUARRY": far_only.append(b)
+	sim.buildings = far_only
+	sim.intention_completed.erase(Intent.ID_STONE)
+	sim.central_inventory["stone"] = 29
+	var f := not _stone(sim).is_empty()
+	sim.central_inventory["stone"] = 30
+	var g := not _stone(sim).is_empty()
+	print("F stone=29 -> shown=", f, " (want true)")
+	print("G stone=30 -> shown=", g, " (want false)")
+	sim.central_inventory["stone"] = 12
+	var q1 := q.duplicate(true); q1["position"] = Vector2i(40, 40); sim.buildings.append(q1)
+	var h := not _stone(sim).is_empty()
+	var q3 := q.duplicate(true); q3["position"] = Vector2i(44, 44); sim.buildings.append(q3)
+	var i2 := not _stone(sim).is_empty()
+	print("H 1 quarry -> shown=", h, " (want true)")
+	print("I 2 quarries -> shown=", i2, " (want false)")
+	print("BOUNDARY ", "PASS" if f and not g and h and not i2 else "FAIL")
 	quit()
