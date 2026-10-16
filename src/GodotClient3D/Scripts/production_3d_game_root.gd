@@ -202,6 +202,8 @@ var console_toggle_button: Button
 const CONSOLE_HEIGHT_EXPANDED := 156.0
 const MINIMAP_INNER := 220.0
 const MINIMAP_COLLAPSED := 44.0
+## r38: collapsed "Map" button width; the holder reserves it so the button never spills into the Realm card.
+const MAP_TOGGLE_WIDTH := 64.0
 const BUILD_GRID_COLUMNS := 4
 ## R28: the unit/building panel never gets narrower than this (logical px).
 const SELECTION_MIN_WIDTH := 420.0
@@ -2070,7 +2072,7 @@ func _create_ui() -> void:
 	# minimap itself is hidden (menu), so layout never collapses.
 	var map_holder := Control.new()
 	map_holder.name = "MinimapHolder"
-	map_holder.custom_minimum_size = Vector2(MINIMAP_COLLAPSED + 8.0, MINIMAP_COLLAPSED + 16.0)
+	map_holder.custom_minimum_size = Vector2(MAP_TOGGLE_WIDTH + 8.0, MINIMAP_COLLAPSED + 16.0)
 	map_holder.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	map_holder.mouse_filter = Control.MOUSE_FILTER_STOP
 	console_row.add_child(map_holder)
@@ -2078,8 +2080,15 @@ func _create_ui() -> void:
 	map_toggle.name = "MapToggle"
 	map_toggle.text = "Map"
 	map_toggle.tooltip_text = "Show the province map"
-	map_toggle.custom_minimum_size = Vector2(MINIMAP_COLLAPSED, MINIMAP_COLLAPSED)
-	map_toggle.set_anchors_preset(Control.PRESET_CENTER)
+	map_toggle.custom_minimum_size = Vector2(MAP_TOGGLE_WIDTH, MINIMAP_COLLAPSED)
+	# r38: fill the holder (4 px inset) instead of hanging off its centre point,
+	# which pushed the button's right half under the Realm card.
+	map_toggle.clip_text = true
+	map_toggle.set_anchors_preset(Control.PRESET_FULL_RECT)
+	map_toggle.offset_left = 4.0
+	map_toggle.offset_top = 8.0
+	map_toggle.offset_right = -4.0
+	map_toggle.offset_bottom = -8.0
 	map_toggle.pressed.connect(_toggle_minimap)
 	HudSkin.apply_button(map_toggle)
 	map_holder.add_child(map_toggle)
@@ -4634,7 +4643,7 @@ func _layout_hud_console() -> void:
 		if minimap_expanded:
 			(map_holder as Control).custom_minimum_size = Vector2(MINIMAP_INNER + 12.0, MINIMAP_INNER + 28.0)
 		else:
-			(map_holder as Control).custom_minimum_size = Vector2(MINIMAP_COLLAPSED + 8.0, MINIMAP_COLLAPSED + 16.0)
+			(map_holder as Control).custom_minimum_size = Vector2(MAP_TOGGLE_WIDTH + 8.0, MINIMAP_COLLAPSED + 16.0)
 
 
 func _format_inventory(inventory_value) -> String:
