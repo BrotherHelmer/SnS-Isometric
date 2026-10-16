@@ -4207,6 +4207,7 @@ func _free_camera_fog_screens() -> void:
 ## Gate isolation only (--gate-r32-hide=fog): keep the screen fog hidden even
 ## when a fog update re-shows it.
 var gate_hide_fog := false
+const WARMUP_MARKER_KINDS := ["raid", "rival", "rival_banner", "rival_threat", "rival_route", "rival_smoke", "seal_choice", "caravan", "caravan_camp", "tent", "refugee", "channel", "palisade", "victory_banner", "skull", "other"]
 const R33_GROUND_CHEAP := 1.0  # r34: r33.1 shading is the default again (Black, 22:09)
 
 
@@ -6152,69 +6153,72 @@ func _sync_map_markers() -> void:
 	for child in host.get_children():
 		child.queue_free()
 	for marker_value in markers:
-		var marker: Dictionary = marker_value
-		var tile: Vector2i = marker.get("position", Vector2i.ZERO)
-		var kind := String(marker.get("kind", ""))
-		var title := String(marker.get("title", "?"))
-		var world := tile_to_world(Vector2(tile))
-		var root := Node3D.new()
-		root.position = world
-		host.add_child(root)
-		var label := Label3D.new()
-		label.text = title
-		label.font_size = 54 if kind in ["rival_threat", "seal_choice", "caravan", "victory_banner"] else 42
-		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		label.no_depth_test = true
-		label.outline_size = 10
-		label.outline_modulate = Color(0.05, 0.03, 0.02, 1.0)
-		label.position = Vector3.UP * (5.4 if kind == "rival_banner" else 3.6)
-		if kind == "raid":
-			label.modulate = Color("#f05a4a")
-		elif kind in ["rival", "rival_banner", "rival_threat"]:
-			label.modulate = Color("#d46a3a")
-		elif kind == "rival_route":
-			label.modulate = Color("#f0a06e")
-		elif kind == "rival_smoke":
-			label.modulate = Color("#9a8a7a")
-		elif kind == "seal_choice":
-			label.modulate = Color("#7ec8d4")
-		elif kind in ["caravan", "caravan_camp"]:
-			label.modulate = Color("#efcf8a")
-		elif kind in ["tent", "refugee"]:
-			label.modulate = Color("#efcf8a")
-		elif kind == "channel":
-			label.modulate = Color("#7ee0d4")
-		elif kind == "palisade":
-			label.modulate = Color("#d4782a")
-		elif kind == "victory_banner":
-			label.modulate = Color("#f0c44a")
-		elif kind == "skull":
-			label.modulate = Color("#f0a06e")
-		else:
-			label.modulate = Color("#efcf8a")
-		root.add_child(label)
-		if kind == "rival_banner":
-			root.add_child(_banner_mesh(Color("#c84a4a")))
-		elif kind == "rival_route":
-			root.add_child(_ping_mesh(Color("#f0a06e")))
-		elif kind == "rival_smoke":
-			root.add_child(_smoke_mesh())
-		elif kind == "rival_threat":
-			root.add_child(_ping_mesh(Color("#f05a4a"), 0.55))
-		elif kind == "seal_choice":
-			root.add_child(_ping_mesh(Color("#7ec8d4"), 0.42))
-		elif kind == "caravan":
-			root.add_child(_caravan_mesh())
-		elif kind in ["tent", "caravan_camp"]:
-			root.add_child(_tent_mesh())
-		elif kind == "refugee":
-			root.add_child(_settler_mesh())
-		elif kind == "channel":
-			root.add_child(_channel_flash_mesh())
-		elif kind == "palisade":
-			root.add_child(_palisade_mesh())
-		elif kind == "victory_banner":
-			root.add_child(_banner_mesh(Color("#f0c44a")))
+		host.add_child(_build_marker_node(marker_value))
+
+
+func _build_marker_node(marker: Dictionary) -> Node3D:
+	var tile: Vector2i = marker.get("position", Vector2i.ZERO)
+	var kind := String(marker.get("kind", ""))
+	var title := String(marker.get("title", "?"))
+	var world := tile_to_world(Vector2(tile))
+	var root := Node3D.new()
+	root.position = world
+	var label := Label3D.new()
+	label.text = title
+	label.font_size = 54 if kind in ["rival_threat", "seal_choice", "caravan", "victory_banner"] else 42
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.no_depth_test = true
+	label.outline_size = 10
+	label.outline_modulate = Color(0.05, 0.03, 0.02, 1.0)
+	label.position = Vector3.UP * (5.4 if kind == "rival_banner" else 3.6)
+	if kind == "raid":
+		label.modulate = Color("#f05a4a")
+	elif kind in ["rival", "rival_banner", "rival_threat"]:
+		label.modulate = Color("#d46a3a")
+	elif kind == "rival_route":
+		label.modulate = Color("#f0a06e")
+	elif kind == "rival_smoke":
+		label.modulate = Color("#9a8a7a")
+	elif kind == "seal_choice":
+		label.modulate = Color("#7ec8d4")
+	elif kind in ["caravan", "caravan_camp"]:
+		label.modulate = Color("#efcf8a")
+	elif kind in ["tent", "refugee"]:
+		label.modulate = Color("#efcf8a")
+	elif kind == "channel":
+		label.modulate = Color("#7ee0d4")
+	elif kind == "palisade":
+		label.modulate = Color("#d4782a")
+	elif kind == "victory_banner":
+		label.modulate = Color("#f0c44a")
+	elif kind == "skull":
+		label.modulate = Color("#f0a06e")
+	else:
+		label.modulate = Color("#efcf8a")
+	root.add_child(label)
+	if kind == "rival_banner":
+		root.add_child(_banner_mesh(Color("#c84a4a")))
+	elif kind == "rival_route":
+		root.add_child(_ping_mesh(Color("#f0a06e")))
+	elif kind == "rival_smoke":
+		root.add_child(_smoke_mesh())
+	elif kind == "rival_threat":
+		root.add_child(_ping_mesh(Color("#f05a4a"), 0.55))
+	elif kind == "seal_choice":
+		root.add_child(_ping_mesh(Color("#7ec8d4"), 0.42))
+	elif kind == "caravan":
+		root.add_child(_caravan_mesh())
+	elif kind in ["tent", "caravan_camp"]:
+		root.add_child(_tent_mesh())
+	elif kind == "refugee":
+		root.add_child(_settler_mesh())
+	elif kind == "channel":
+		root.add_child(_channel_flash_mesh())
+	elif kind == "palisade":
+		root.add_child(_palisade_mesh())
+	elif kind == "victory_banner":
+		root.add_child(_banner_mesh(Color("#f0c44a")))
+	return root
 
 
 func _banner_mesh(color: Color) -> Node3D:
@@ -6527,7 +6531,7 @@ var _warmup_root: Node3D
 var _warmup_frames := 0
 
 
-func warm_up_pipelines(camera: Camera3D) -> void:
+func warm_up_pipelines(camera: Camera3D, in_play := false) -> void:
 	if camera == null or _warmup_root != null:
 		return
 	_warmup_root = Node3D.new()
@@ -6540,9 +6544,34 @@ func warm_up_pipelines(camera: Camera3D) -> void:
 			view.configure({"id": -90000 - index, "type": String(type_value), "construction": construction, "construction_fraction": 0.5, "rotation": 0, "faction": "player"})
 			_warmup_root.add_child(view)
 			index += 1
+	# R35: map markers (palisade, caravan wagon, tents, banners, pings, smoke,
+	# channel flash, Label3D) were never warmed. Their first appearance
+	# mid-game compiled shaders on the spot: r34b hitched 1183 ms (+6
+	# compiles) at "CARAVAN YARD FORTIFIED". Warm one of every kind here.
+	# R35: rival-faction structures use their own tints/materials; warm them too.
+	for type_value in WarmupCatalog.BUILDINGS.keys():
+		var rview := BuildingView.new()
+		rview.configure({"id": -95000 - index, "type": String(type_value), "construction": false, "construction_fraction": 1.0, "rotation": 0, "faction": "rival"})
+		_warmup_root.add_child(rview)
+		index += 1
+	var skip_marker_warm := "--gate-diag-no-marker-warm" in OS.get_cmdline_user_args()
+	for kind in ([] if skip_marker_warm else WARMUP_MARKER_KINDS):
+		var marker_node := _build_marker_node({"kind": kind, "title": "Warm", "position": Vector2i.ZERO})
+		marker_node.position = Vector3.ZERO
+		_warmup_root.add_child(marker_node)
+	# R35: r34 dressing (impact ejecta / Wyrd glass) is often off-screen at
+	# load; warm copies so first sight does not compile mid-game.
+	for dress_name in ["DressImpactEjecta", "DressImpactGlass"]:
+		var dress := find_child(dress_name, true, false)
+		if dress is MultiMeshInstance3D:
+			var copy := MultiMeshInstance3D.new()
+			copy.multimesh = (dress as MultiMeshInstance3D).multimesh
+			copy.material_override = (dress as MultiMeshInstance3D).material_override
+			_warmup_root.add_child(copy)
 	_warmup_root.global_transform = camera.global_transform.translated_local(Vector3(0.0, 0.0, -maxf(camera.near, 0.05) * 3.0))
 	_warmup_root.scale = Vector3.ONE * 0.001
 	_warmup_frames = 6
+	print("R35 warm_up_pipelines in_play=%s children=%d" % [in_play, _warmup_root.get_child_count()])
 
 
 

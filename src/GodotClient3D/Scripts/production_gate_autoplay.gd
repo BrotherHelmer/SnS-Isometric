@@ -105,6 +105,16 @@ var _bot_log := OS.get_cmdline_user_args().has("--gate-bot-log")
 var _bot_log_next := 0.0
 var _last_us := 0
 var _start_t := 0.0
+var _start_gs := 0.0
+var _spawn_markers := "--gate-diag-spawn-markers" in OS.get_cmdline_user_args()
+var _markers_spawned := false
+var _spawn_c0 := 0
+var _spawn_watch := 0
+var _spawn_worst := 0.0
+var _spawn_k := 0
+var _spawn_gap := 1.0 if not "--gate-diag-spawn-slow" in OS.get_cmdline_user_args() else 15.0
+var _spawn_next := 0.0
+var _spawn_round := 1
 var _next_think := 0.0
 var _det_next := 60.0
 var _think_ms_frame := 0
@@ -226,6 +236,27 @@ func _process(_engine_delta: float) -> void:
 		_note("night jump shot vp=%s night=%s" % [str(sz), str(sim.is_night)])
 		game.get_tree().quit()
 		return
+	# R35 box check (--gate-diag-spawn-markers): from 20 s after start, add one
+	# map marker kind per second (twice through the list) and log the worst
+	# frame after each, so first-sight costs can be told from rebuild costs.
+	if started and _spawn_markers and t >= _start_t + 20.0:
+		var kinds: Array = game.world_view.WARMUP_MARKER_KINDS
+		for arg in OS.get_cmdline_user_args():
+			if arg.begins_with("--gate-diag-spawn-kinds="):
+				kinds = arg.substr(24).split(",")
+		if _spawn_k > 0 and _spawn_k <= kinds.size() * 2:
+			_spawn_worst = maxf(_spawn_worst, delta)
+		if t >= _spawn_next and _spawn_k <= kinds.size() * 2:
+			if _spawn_k > 0:
+				_note("marker spawn %d %s worst_frame_ms=%.0f compiles=%d" % [_spawn_k, kinds[(_spawn_k - 1) % kinds.size()], _spawn_worst * 1000.0, _d5_compiles() - _spawn_c0])
+			_spawn_worst = 0.0
+			_spawn_c0 = _d5_compiles()
+			if _spawn_k < kinds.size() * 2:
+				var hall: Vector2i = sim.town_hall_position
+				var k := _spawn_k
+				sim.add_map_marker(kinds[k % kinds.size()], hall + Vector2i(-6 + (k % 8) * 2, 4 + (k / 8) * 2), "Test %d" % k, 0.0)
+			_spawn_k += 1
+			_spawn_next = t + _spawn_gap
 	if started and _bot_log and t >= _bot_log_next:
 		_bot_log_next = t + 30.0
 		_note("botlog t=%.0f game_s=%.0f buildings=%d pop=%d idle=%s fails=%s actions=%s" % [t, float(sim.elapsed_seconds), sim.buildings.size(), int(sim.population_current), player.last_idle_reason, str(player.last_failures), str(player.last_actions)])
@@ -246,7 +277,7 @@ func _process(_engine_delta: float) -> void:
 		return
 	# R34: in-game shots are timed on game time (start + sim seconds), so the
 	# same seed gives the same views regardless of frame drops.
-	var shot_clock := t if not started else _start_t + float(sim.elapsed_seconds)
+	var shot_clock := t if not started else _start_t + float(sim.elapsed_seconds) - _start_gs
 	if shot_index < shots.size() and shot_clock >= float(shots[shot_index][0]) and not busy:
 		var s: Array = shots[shot_index]
 		shot_index += 1
@@ -381,6 +412,7 @@ func _shot_async(name: String, action: String) -> void:
 				game._start_from_menu()
 			started = true
 			_start_t = t
+			_start_gs = float(game.simulation_host.simulation.elapsed_seconds)
 			_note("NEW REALM -> BEGIN seed=%d" % int(game.simulation_host.simulation.rng_seed))
 		"log":
 			game._toggle_event_log()

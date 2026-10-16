@@ -437,6 +437,7 @@ func _tick_fps_overlay(delta: float) -> void:
 
 
 var _pipelines_warmed := false
+var _pipelines_warmed_play := "--gate-diag-no-play-warm" in OS.get_cmdline_user_args()
 
 
 func _process(delta: float) -> void:
@@ -444,6 +445,11 @@ func _process(delta: float) -> void:
 	if not _pipelines_warmed and world_view != null and get_viewport().get_camera_3d() != null:
 		_pipelines_warmed = true
 		world_view.warm_up_pipelines(get_viewport().get_camera_3d())
+	# R35: the menu warm-up runs under menu lighting; in-game lighting needs
+	# its own shader variants. Warm again once play has begun.
+	elif _pipelines_warmed and not _pipelines_warmed_play and play_has_begun and world_view != null and get_viewport().get_camera_3d() != null:
+		_pipelines_warmed_play = true
+		world_view.warm_up_pipelines(get_viewport().get_camera_3d(), true)
 	hud_clock += delta
 	var _pf20 := FrameProfiler.t0()
 	_tick_fps_overlay(delta)
