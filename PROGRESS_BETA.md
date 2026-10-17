@@ -142,3 +142,9 @@ Baseline: hotfix7 run7 (b4dab21, Low) 37.5 avg FPS, median 26.5 ms, GPU median 1
 - Shard (Spawn) not connected to the box. No runs, nothing copied, no pre-releases. beta_gate.ps1 run length and unpack layout still to confirm on Shard.
 - Plan: seeds 1792061458/11/4242, scale 1.0, 1300 s, --gate-noextra, pass at raw 1% low >30, first 90 s dropped, raw and adjusted side by side; pre-checks (AC, no game, no other runner) before each run; early draw-call check; edge-scroll off in gate mode. Evidence: r38_gate/, r38_gate_status_for_black.md.
 - No merge, no deploy.
+
+## r38 Shard gate (2026-10-17): GATE FAIL all 3 seeds (raw 1% low >30)
+- Shard, scale 1.0, 1300 s, AC, no power events, 0 crashes. Raw/adj 1% low: 1792061458 = 20.4/20.4, 11 = 20.1/20.4, 4242 = 28.5/29.0. Avg 40.4/38.8/47.2. First frame ~1.4 s, worst spikes 243/451/735 ms.
+- Stalls are mostly game-side (root._sync_presentation leads); real regression vs r35 (raw 31.7-32.8). Likely r38 visual changes raised sync cost; not diagnosed here.
+- First r38b (785 s, runner killed) and first r38c (1147 s, 09:37 stop) were partial, preserved and rerun in full; only complete runs counted.
+- Published as pre-releases playtest-beta-r38a/b/c-7ce594b (GATE FAIL). Evidence: evidence/2026-10-15-sns-beta/r38_gate/. beta_gate.ps1 confirmed: 1300 s is the game default, deploy is pck-only into x\beta. No merge/deploy/Steam.
