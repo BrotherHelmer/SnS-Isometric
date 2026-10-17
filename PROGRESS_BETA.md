@@ -148,3 +148,7 @@ Baseline: hotfix7 run7 (b4dab21, Low) 37.5 avg FPS, median 26.5 ms, GPU median 1
 - Stalls are mostly game-side (root._sync_presentation leads); real regression vs r35 (raw 31.7-32.8). Likely r38 visual changes raised sync cost; not diagnosed here.
 - First r38b (785 s, runner killed) and first r38c (1147 s, 09:37 stop) were partial, preserved and rerun in full; only complete runs counted.
 - Published as pre-releases playtest-beta-r38a/b/c-7ce594b (GATE FAIL). Evidence: evidence/2026-10-15-sns-beta/r38_gate/. beta_gate.ps1 confirmed: 1300 s is the game default, deploy is pck-only into x\beta. No merge/deploy/Steam.
+
+## r38 gate regression diagnosis (2026-10-17, in progress)
+- Short 500 s A/B on Shard (seed 11): r38 faster than r35 (avg 52.9 vs 49.9). Full-length r38 rerun still FAILS (raw 18.7): collapse after ~690 s as town grows. Same scene counts as r35 late, +2.6 ms root / +3.2 ms GPU per frame.
+- Decisive test running: full seed-11 gate with the r35 pck today. Notes: evidence/2026-10-15-sns-beta/r38_diag/notes.md.
