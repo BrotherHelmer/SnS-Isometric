@@ -152,3 +152,8 @@ Baseline: hotfix7 run7 (b4dab21, Low) 37.5 avg FPS, median 26.5 ms, GPU median 1
 ## r38 gate regression diagnosis (2026-10-17, in progress)
 - Short 500 s A/B on Shard (seed 11): r38 faster than r35 (avg 52.9 vs 49.9). Full-length r38 rerun still FAILS (raw 18.7): collapse after ~690 s as town grows. Same scene counts as r35 late, +2.6 ms root / +3.2 ms GPU per frame.
 - Decisive test running: full seed-11 gate with the r35 pck today. Notes: evidence/2026-10-15-sns-beta/r38_diag/notes.md.
+
+## r38 diagnosis (2026-10-17): NOT a code regression - Shard is slower today
+- Head-to-head today on Shard: full seed-11 r35 raw 21.4 FAIL (avg 38.2), r38 raw 18.7 (avg 41.1); 500 s A/B r38 39.9 vs r35 35.7. r38 >= r35 in both. Identical late scene stats, all profile sections inflated together vs Oct 16.
+- Shard cycled Modern Standby hourly today (none during the Oct 16 night gates); post-wake/Balanced-plan behaviour is the likely mechanism. r35a stays fallback.
+- r39 proposal: clean-environment re-gate (awake+idle, standby off for the session, 500 s canary first). No game-code change. Evidence: r38_diag/DIAGNOSIS.md.
