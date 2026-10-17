@@ -162,3 +162,8 @@ Baseline: hotfix7 run7 (b4dab21, Low) 37.5 avg FPS, median 26.5 ms, GPU median 1
 - Standby recorded (AC 18000 s / DC 1200 s), disabled for the session, machine idle, canary seed 11 (500 s): avg 52.6, raw 1% low 32.4 (< ~35). Full gates not run, nothing published.
 - Standby restored and verified (AC 0x4650 / DC 0x4b0), safety restore task removed.
 - Clean environment alone does not restore Oct 16 performance on Shard today. Next: investigate Shard itself before more gates. Evidence: r39_gate/.
+
+## Shard investigation (2026-10-17): heat/power soak on the iGPU laptop, not code or plan
+- Diagnostic 500 s runs: after idle GPU render 14.3 ms (raw 32.8); back-to-back GPU 24.1 ms (raw 18.4). High Performance pinned CPU 2901 MHz, no gain (raw 23.1, GPU 23.7) - CPU freq is not the limiter. No updates/drivers changed; RAM/disk fine; AC throughout.
+- Best explanation: thermal/power throttling of the shared CPU+iGPU package under sustained load; Oct 16 gates started cool overnight. Temp counters not exposed on this Windows.
+- Next gate: overnight, cool+idle machine, standby off during session, sampler logging + canary first. All test settings restored. Evidence: r39_gate/SHARD_INVESTIGATION.md.
