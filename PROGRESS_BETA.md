@@ -157,3 +157,8 @@ Baseline: hotfix7 run7 (b4dab21, Low) 37.5 avg FPS, median 26.5 ms, GPU median 1
 - Head-to-head today on Shard: full seed-11 r35 raw 21.4 FAIL (avg 38.2), r38 raw 18.7 (avg 41.1); 500 s A/B r38 39.9 vs r35 35.7. r38 >= r35 in both. Identical late scene stats, all profile sections inflated together vs Oct 16.
 - Shard cycled Modern Standby hourly today (none during the Oct 16 night gates); post-wake/Balanced-plan behaviour is the likely mechanism. r35a stays fallback.
 - r39 proposal: clean-environment re-gate (awake+idle, standby off for the session, 500 s canary first). No game-code change. Evidence: r38_diag/DIAGNOSIS.md.
+
+## r39 clean re-gate (2026-10-17): canary below threshold, STOPPED, standby restored
+- Standby recorded (AC 18000 s / DC 1200 s), disabled for the session, machine idle, canary seed 11 (500 s): avg 52.6, raw 1% low 32.4 (< ~35). Full gates not run, nothing published.
+- Standby restored and verified (AC 0x4650 / DC 0x4b0), safety restore task removed.
+- Clean environment alone does not restore Oct 16 performance on Shard today. Next: investigate Shard itself before more gates. Evidence: r39_gate/.
