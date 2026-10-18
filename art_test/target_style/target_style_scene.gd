@@ -657,19 +657,35 @@ func _top_band() -> void:
 		var ssy: float = (_h(ssa.x,ssa.y) + _h(ssb.x,ssb.y))*0.5 + 0.22
 		var ssperp := Vector2(-ssdir.normalized().y, ssdir.normalized().x)
 		if ssperp.y < 0.0: ssperp = -ssperp
-		box(Vector3(ssmid.x, ssy, ssmid.y), Vector3(1.55,0.22,ssdir.length()+0.7), Color("dcc08a"), atan2(ssdir.x, ssdir.y), 0, 0, "dirt")
-		box(Vector3(ssmid.x+ssperp.x*0.78, ssy-0.28, ssmid.y+ssperp.y*0.78), Vector3(0.32,0.55,ssdir.length()+0.6), Color("6e665c"), atan2(ssdir.x, ssdir.y), 0, 0, "rock")
+		box(Vector3(ssmid.x, ssy, ssmid.y), Vector3(1.9,0.22,ssdir.length()+0.7), Color("b99a68"), atan2(ssdir.x, ssdir.y), 0, 0, "dirt")
+		box(Vector3(ssmid.x+ssperp.x*0.95, ssy-0.28, ssmid.y+ssperp.y*0.95), Vector3(0.32,0.55,ssdir.length()+0.6), Color("6e665c"), atan2(ssdir.x, ssdir.y), 0, 0, "rock")
 	for smw in [[Vector3(22.0,0,2.0), Color("d43a2a")], [Vector3(24.0,0,-3.0), Color("2f62b8")]]:
 		var smp: Vector3 = smw[0]; smp.y = _h(smp.x, smp.z) + 0.25; _mini(smp, smw[1])
+	# UPPER third breaks: plateau-edge ribs/ledges (z<-4)
+	for uri in 3:
+		var urx: float = [23.0, 25.5, 24.0][uri]; var urz: float = [-7.0, -10.0, -13.0][uri]
+		for ust in 2:
+			var urs: float = [1.9, 1.5][ust]
+			add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(-0.25, float(uri)*1.8+float(ust), 0.3)).scaled(Vector3(urs, urs*0.85, urs)), Vector3(urx+float(ust)*1.2, _h(urx+float(ust)*1.2,urz)+0.15, urz)), Color("6e665c"), "rock"); tri_total += 128
+	for uli in 2:
+		var ulx: float = [24.0, 26.0][uli]; var ulz: float = [-8.0, -12.0][uli]
+		box(Vector3(ulx, _h(ulx,ulz)+0.2, ulz), Vector3(5.0,0.6,1.7), Color("6e665c"), 0.12, 0.06, 0, "rock")
+	# wall-foot blend: climbing fields + base trees between village and wall
+	for bfi in 3:
+		var bfx: float = [15.0, 16.0, 14.0][bfi]; var bfz: float = [-1.0, 2.0, 4.0][bfi]; var bfy := _h(bfx,bfz)+0.06
+		box(Vector3(bfx, bfy, bfz), Vector3(3.4,0.13,1.3), Color("86b83e") if bfi%2==0 else Color("b08d55"), 0.18, 0, 0, "dirt" if bfi%2==1 else "")
+		for bcr in 4: box(Vector3(bfx-1.15+float(bcr)*0.75, bfy+0.09, bfz), Vector3(0.42,0.08,1.05), Color("3f7020") if bfi%2==0 else Color("96683c"), 0.18)
+	for btp in [Vector3(16.5,0,-3.5), Vector3(18.0,0,0.5)]:
+		_build_tree(btp, Color("79c24d"), Color("a9dd77"))
 	# switchback path ON the face + workers
 	var swp := [Vector2(15.5,-0.5), Vector2(18.0,-2.8), Vector2(16.2,-5.2), Vector2(19.0,-7.2), Vector2(17.2,-9.8), Vector2(19.8,-12.0)]
 	for swi in swp.size()-1:
 		var sa: Vector2 = swp[swi]; var sb: Vector2 = swp[swi+1]; var smid := (sa+sb)*0.5; var sdir := sb-sa
 		var sy: float = (_h(sa.x,sa.y) + _h(sb.x,sb.y))*0.5 + 0.22
 		var sang := atan2(sdir.x, sdir.y)
-		box(Vector3(smid.x, sy, smid.y), Vector3(1.55,0.22,sdir.length()+0.7), Color("dcc08a"), sang, 0, 0, "dirt")
+		box(Vector3(smid.x, sy, smid.y), Vector3(1.9,0.22,sdir.length()+0.7), Color("b99a68"), sang, 0, 0, "dirt")
 		var sperp2 := Vector2(-sdir.normalized().y, sdir.normalized().x)
-		box(Vector3(smid.x+sperp2.x*0.78, sy-0.28, smid.y+sperp2.y*0.78), Vector3(0.32,0.55,sdir.length()+0.6), Color("6e665c"), sang, 0, 0, "rock")
+		box(Vector3(smid.x+sperp2.x*0.95, sy-0.28, smid.y+sperp2.y*0.95), Vector3(0.32,0.55,sdir.length()+0.6), Color("6e665c"), sang, 0, 0, "rock")
 		blob(Vector3(sa.x, _h(sa.x,sa.y)+0.3, sa.y), Vector3(0.2,0.13,0.17), Color("9a968c")); blob(Vector3(sb.x, _h(sb.x,sb.y)+0.3, sb.y), Vector3(0.2,0.13,0.17), Color("9a968c"))
 	for fmw in [[Vector3(17.6,0,-4.0), Color("d43a2a")], [Vector3(18.8,0,-8.0), Color("2f62b8")], [Vector3(17.8,0,-11.0), Color("3f7d3a")], [Vector3(16.4,0,-2.0), Color("2f62b8")], [Vector3(19.4,0,-12.6), Color("d43a2a")]]:
 		var fmp: Vector3 = fmw[0]; fmp.y = _h(fmp.x, fmp.z) + 0.05; _mini(fmp, fmw[1])
