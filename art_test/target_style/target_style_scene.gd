@@ -1,6 +1,8 @@
 extends Node3D
 ## Phase2 target-style test. NOT gameplay. Merged-by-colour low-poly, ortho iso camera.
 var surf := {}
+var house_xf := Transform3D.IDENTITY
+var house_mode := false
 var roof_instances := []
 var round_no := 1
 var out_path := "/home/box/cos/evidence/2026-10-18-sns-visual-target/phase2/round1.png"
@@ -39,13 +41,19 @@ func add_mesh(mesh: Mesh, xf: Transform3D, c: Color, tx := "") -> void:
 	(surf[key] as SurfaceTool).append_from(mesh, 0, xf)
 func box(p: Vector3, s: Vector3, c: Color, ry := 0.0, rz := 0.0, rx := 0.0, tx := "") -> void:
 	var m := BoxMesh.new(); m.size = s; tri_total += 12
-	add_mesh(m, Transform3D(Basis.from_euler(Vector3(rx, ry, rz)), p), c, tx)
+	var xf := Transform3D(Basis.from_euler(Vector3(rx, ry, rz)), p)
+	if house_mode: xf = house_xf * xf
+	add_mesh(m, xf, c, tx)
 func cyl(p: Vector3, br: float, tr: float, h: float, c: Color, sides := 10, tx := "") -> void:
 	var m := CylinderMesh.new(); m.bottom_radius = br; m.top_radius = tr; m.height = h; m.radial_segments = sides; m.rings = 1; tri_total += sides * 4
-	add_mesh(m, Transform3D(Basis.IDENTITY, p), c, tx)
+	var xf2 := Transform3D(Basis.IDENTITY, p)
+	if house_mode: xf2 = house_xf * xf2
+	add_mesh(m, xf2, c, tx)
 func blob(p: Vector3, s: Vector3, c: Color, tx := "") -> void:
 	var m := SphereMesh.new(); m.radial_segments = 8; m.rings = 4; m.radius = 1.0; m.height = 2.0; tri_total += 64
-	add_mesh(m, Transform3D(Basis.IDENTITY.scaled(s), p), c, tx)
+	var xf3 := Transform3D(Basis.IDENTITY.scaled(s), p)
+	if house_mode: xf3 = house_xf * xf3
+	add_mesh(m, xf3, c, tx)
 func roof2(p: Vector3, w: float, d: float, h: float, thick: float, c: Color) -> void:
 	# STANDALONE ArrayMesh prism, explicit arrays. v: 0 at eave -> 1 at ridge (10 shingle rows in texture)
 	var hw := w/2.0
@@ -61,12 +69,12 @@ func roof2(p: Vector3, w: float, d: float, h: float, thick: float, c: Color) -> 
 	var prism := ArrayMesh.new(); prism.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	var chk: Array = prism.surface_get_arrays(0); var uvchk: PackedVector2Array = chk[Mesh.ARRAY_TEX_UV]
 	assert(uvchk.size() == verts.size())
-	roof_instances.append([prism, p]); tri_total += 4
+	roof_instances.append([prism, house_xf * Transform3D(Basis.IDENTITY, p) if house_mode else Transform3D(Basis.IDENTITY, p)]); tri_total += 4
 	var gs := SurfaceTool.new(); gs.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for tri in [[A,E,C],[B,D,F]]:
 		var n2: Vector3 = (tri[1]-tri[0]).cross(tri[2]-tri[0]).normalized()
 		for idx in 3: gs.set_normal(n2); gs.set_uv(Vector2(0.5,0.5)); gs.add_vertex(tri[idx])
-	add_mesh(gs.commit(), Transform3D(Basis.IDENTITY, p), Color("e8d9b8"), "plaster"); tri_total += 2
+	add_mesh(gs.commit(), house_xf * Transform3D(Basis.IDENTITY, p) if house_mode else Transform3D(Basis.IDENTITY, p), Color("e8d9b8"), "plaster"); tri_total += 2
 	# eave shadow line
 	box(p+Vector3(0,0.02,0), Vector3(w+0.15,0.09,d+0.15), c.darkened(0.35))
 func flat_mesh(mesh: Mesh) -> ArrayMesh:
@@ -253,6 +261,8 @@ func _setup() -> void:
 	_build_house(Vector3(9.6,0,1.8), roof, stone)
 	_build_house(Vector3(-11.5,0,-6.5), roof, stone)
 	_build_house(Vector3(11.8,0,7.5), roof, stone)
+	_build_house(Vector3(-5.5,0,10.8), roof, stone)
+	_build_house(Vector3(13.5,0,4.5), roof, stone)
 	for tp in [Vector3(-14,0,-8),Vector3(-15,0,2),Vector3(-13,0,9),Vector3(13,0,10),Vector3(15,0,-4),Vector3(11,0,-12),Vector3(-11,0,-11),Vector3(4,0,11),Vector3(-4,0,12),Vector3(14,0,5)]:
 		_build_tree(tp, leaf, leaf2)
 	for bs in [Vector3(-5,0,-7),Vector3(6,0,8),Vector3(-10,0,-3),Vector3(9,0,-8)]:
@@ -266,14 +276,14 @@ func _setup() -> void:
 		var st: SurfaceTool = surf[key]; var mesh := st.commit()
 		var mi := MeshInstance3D.new(); mi.mesh = mesh; mi.material_override = mat_for(key, Color.html(key.split("|")[0])); mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(mi)
 	for ri2 in roof_instances:
-		var rmi := MeshInstance3D.new(); rmi.mesh = ri2[0]; rmi.position = ri2[1]; var rmat := StandardMaterial3D.new(); rmat.albedo_texture = load(TEX["roofp"]); var rv := absi(int(ri2[1].x*5.0 + ri2[1].z*3.0)) % 3; rmat.albedo_color = [Color(0.88,0.88,0.88), Color(0.80,0.74,0.70), Color(0.92,0.84,0.74)][rv]; rmat.roughness = 0.92; rmat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; rmi.material_override = rmat; rmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(rmi)
+		var rmi := MeshInstance3D.new(); rmi.mesh = ri2[0]; rmi.transform = ri2[1]; var rmat := StandardMaterial3D.new(); rmat.albedo_texture = load(TEX["roofp"]); var rv := absi(int(ri2[1].origin.x*5.0 + ri2[1].origin.z*3.0)) % 3; rmat.albedo_color = [Color(0.88,0.88,0.88), Color(0.80,0.74,0.70), Color(0.92,0.84,0.74)][rv]; rmat.roughness = 0.92; rmat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; rmi.material_override = rmat; rmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(rmi)
 	if canopy_st != null:
 		var cmi := MeshInstance3D.new(); cmi.mesh = canopy_st.commit(); var cm := StandardMaterial3D.new(); cm.albedo_texture = load(TEX["leafp"]); cm.vertex_color_use_as_albedo = true; cm.albedo_color = Color(1.0,1.0,0.98); cm.roughness = 1.0; cm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; cmi.material_override = cm; cmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(cmi)
 	_spawn_tufts()
 	_spawn_carriers(); _spawn_statics()
 func _spawn_carriers() -> void:
 	var chars := ["Farmer_B", "Farmer_A", "Rogue_Hooded", "Rogue"]
-	var cps := [Vector3(0.6,0.05,2.8), Vector3(-2.6,0.05,0.8), Vector3(5.2,0.05,1.6), Vector3(-6.4,0.05,-1.4), Vector3(-8.8,0.05,5.6), Vector3(8.6,0.05,4.6)]
+	var cps := [Vector3(0.6,0.05,2.8), Vector3(-2.6,0.05,0.8), Vector3(5.2,0.05,1.6), Vector3(-6.4,0.05,-1.4), Vector3(-8.8,0.05,5.6), Vector3(8.6,0.05,4.6), Vector3(3.8,0.05,-4.2), Vector3(-9.5,0.05,1.5)]
 	for ci2 in cps.size():
 		var cp: Vector3 = cps[ci2]; var ps: PackedScene = load("res://assets/settlement3d/runtime/characters/" + chars[ci2 % chars.size()] + ".glb")
 		if ps == null: _build_carrier(cp); continue
@@ -292,7 +302,7 @@ func _spawn_carriers() -> void:
 		ap.advance(0.65)
 		var logm := MeshInstance3D.new(); var cm := CylinderMesh.new(); cm.bottom_radius=0.09; cm.top_radius=0.09; cm.height=1.0; cm.radial_segments=8; logm.mesh=cm; logm.rotation.z=PI/2.0; logm.position=cp+Vector3(0,1.5,0.12); logm.material_override=mat_col(Color("8a5f36")); add_child(logm)
 func _spawn_statics() -> void:
-	var defs := [["Farmer_A", Vector3(-7.6,0.05,3.2), "Tools_/Chopping"], ["Knight", Vector3(2.2,0.05,-5.4), "General_/Idle_A"], ["Farmer_B", Vector3(-4.0,0.05,5.2), "Tools_/Hammering"]]
+	var defs := [["Farmer_A", Vector3(-7.6,0.05,3.2), "Tools_/Chopping"], ["Knight", Vector3(2.2,0.05,-5.4), "General_/Idle_A"], ["Farmer_B", Vector3(-4.0,0.05,5.2), "Tools_/Hammering"], ["Farmer_A", Vector3(9.6,_h(9.6,-7.0)+0.05,-7.0), "Tools_/Hammering"], ["Rogue_Hooded", Vector3(-5.0,0.05,4.4), "General_/Idle_A"]]
 	for df in defs:
 		var ps2: PackedScene = load("res://assets/settlement3d/runtime/characters/" + String(df[0]) + ".glb")
 		if ps2 == null: continue
@@ -364,9 +374,9 @@ func _hill_content() -> void:
 	for ti in 4:
 		var tx2 := 4.2+float(ti)*2.0; var tz2 := -6.2-float(ti)*0.6
 		var ty2 := _h(tx2,tz2)+0.05
-		box(Vector3(tx2, ty2, tz2), Vector3(4.4,0.16,1.5), Color("7fae4a") if ti%2==0 else Color("a8895a"), 0.15, 0, 0, "dirt" if ti%2==1 else "")
+		box(Vector3(tx2, ty2, tz2), Vector3(4.4,0.16,1.5), Color("86b83e") if ti%2==0 else Color("b08d55"), 0.15, 0, 0, "dirt" if ti%2==1 else "")
 		box(Vector3(tx2, ty2-0.06, tz2+0.82), Vector3(4.5,0.22,0.18), Color("8a7a5c"), 0.15)
-		for cr in 4: box(Vector3(tx2-1.5+float(cr)*0.95, ty2+0.10, tz2), Vector3(0.55,0.09,1.25), Color("4e7d26") if ti%2==0 else Color("8a6c42"), 0.15)
+		for cr in 5: box(Vector3(tx2-1.5+float(cr)*0.75, ty2+0.10, tz2), Vector3(0.5,0.09,1.25), Color("3f7020") if ti%2==0 else Color("96683c"), 0.15)
 	for stp in [Vector3(8,0,-9.5), Vector3(13.5,0,-7.2), Vector3(19,0,-8.5), Vector3(15,0,-13.5)]:
 		_build_tree(stp, Color("79c24d"), Color("a9dd77"))
 func _props2() -> void:
@@ -461,34 +471,38 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	var wh: float = 2.45 if vi == 2 else 1.7
 	var cy := 0.15 + wh/2.0; var top := 0.15 + wh
 	var lean := 1.0 if vi == 1 else -1.0
-	box(p+Vector3(0,0.15,0), Vector3(2.5*wf,0.3,2.0), Color("9a968c"))
-	box(p+Vector3(0,cy,0), Vector3(2.3*wf,wh,1.9), Color("e8d9b8"), 0,0,0, "plaster")
+	wf *= 0.92; wh *= 0.94
+	var hang: float = [0.0, PI/2.0, PI, -PI/2.0][absi(int(p.x*7.0 + p.z*13.0)) % 4]
+	house_xf = Transform3D(Basis.from_euler(Vector3(0, hang, 0)), p); house_mode = true
+	box(Vector3(0,0.15,0), Vector3(2.5*wf,0.3,2.0), Color("9a968c"))
+	box(Vector3(0,cy,0), Vector3(2.3*wf,wh,1.9), Color("e8d9b8"), 0,0,0, "plaster")
 	for sx in [-1.09, 1.09]:
-		box(p+Vector3(sx*wf,cy,0.96), Vector3(0.17,wh+0.05,0.09), Color("7a5a36"))
-		box(p+Vector3(sx*wf,cy,-0.96), Vector3(0.17,wh+0.05,0.09), Color("7a5a36"))
-	box(p+Vector3(0,top-0.05,0.97), Vector3(2.32*wf,0.15,0.07), Color("7a5a36")); box(p+Vector3(0,0.24,0.97), Vector3(2.32*wf,0.15,0.07), Color("7a5a36"))
-	box(p+Vector3(1.16*wf,cy,0), Vector3(0.07,wh+0.05,0.17), Color("7a5a36")); box(p+Vector3(-1.16*wf,cy,0), Vector3(0.07,wh+0.05,0.17), Color("7a5a36"))
-	box(p+Vector3(0,0.82,0.99), Vector3(0.78,1.42,0.06), Color("8a6742"))
-	box(p+Vector3(0,0.80,1.01), Vector3(0.62,1.28,0.06), Color("6e4a2c"))
-	box(p+Vector3(-0.68*wf,1.22,0.98), Vector3(0.48,0.54,0.06), Color("ffd98a")); box(p+Vector3(0.68*wf,1.22,0.98), Vector3(0.48,0.54,0.06), Color("ffd98a"))
+		box(Vector3(sx*wf,cy,0.96), Vector3(0.17,wh+0.05,0.09), Color("7a5a36"))
+		box(Vector3(sx*wf,cy,-0.96), Vector3(0.17,wh+0.05,0.09), Color("7a5a36"))
+	box(Vector3(0,top-0.05,0.97), Vector3(2.32*wf,0.15,0.07), Color("7a5a36")); box(Vector3(0,0.24,0.97), Vector3(2.32*wf,0.15,0.07), Color("7a5a36"))
+	box(Vector3(1.16*wf,cy,0), Vector3(0.07,wh+0.05,0.17), Color("7a5a36")); box(Vector3(-1.16*wf,cy,0), Vector3(0.07,wh+0.05,0.17), Color("7a5a36"))
+	box(Vector3(0,0.82,0.99), Vector3(0.78,1.42,0.06), Color("8a6742"))
+	box(Vector3(0,0.80,1.01), Vector3(0.62,1.28,0.06), Color("6e4a2c"))
+	box(Vector3(-0.68*wf,1.22,0.98), Vector3(0.48,0.54,0.06), Color("ffd98a")); box(Vector3(0.68*wf,1.22,0.98), Vector3(0.48,0.54,0.06), Color("ffd98a"))
 	if vi == 2:
-		box(p+Vector3(-0.68*wf,2.05,0.98), Vector3(0.48,0.54,0.06), Color("ffd98a")); box(p+Vector3(0.68*wf,2.05,0.98), Vector3(0.48,0.54,0.06), Color("ffd98a"))
-	box(p+Vector3(-0.68*wf,0.90,1.0), Vector3(0.56,0.12,0.10), Color("5d7a34"))
-	for fx3 in 3: blob(p+Vector3(-0.82*wf+float(fx3)*0.14,0.99,1.02), Vector3(0.07,0.06,0.07), Color("e2543e") if fx3%2==0 else Color("f2f0e6"))
-	box(p+Vector3(1.18*wf,1.22,0.25), Vector3(0.06,0.5,0.44), Color("ffd98a"))
+		box(Vector3(-0.68*wf,2.05,0.98), Vector3(0.48,0.54,0.06), Color("ffd98a")); box(Vector3(0.68*wf,2.05,0.98), Vector3(0.48,0.54,0.06), Color("ffd98a"))
+	box(Vector3(-0.68*wf,0.90,1.0), Vector3(0.56,0.12,0.10), Color("5d7a34"))
+	for fx3 in 3: blob(Vector3(-0.82*wf+float(fx3)*0.14,0.99,1.02), Vector3(0.07,0.06,0.07), Color("e2543e") if fx3%2==0 else Color("f2f0e6"))
+	box(Vector3(1.18*wf,1.22,0.25), Vector3(0.06,0.5,0.44), Color("ffd98a"))
 	# porch
-	box(p+Vector3(-0.55,0.75,1.32), Vector3(0.12,1.5,0.12), Color("7a5a36")); box(p+Vector3(0.55,0.75,1.32), Vector3(0.12,1.5,0.12), Color("7a5a36"))
-	box(p+Vector3(0,1.58,1.22), Vector3(1.5,0.09,0.95), Color("8a6742"), 0, 0, 0.22)
+	box(Vector3(-0.55,0.75,1.32), Vector3(0.12,1.5,0.12), Color("7a5a36")); box(Vector3(0.55,0.75,1.32), Vector3(0.12,1.5,0.12), Color("7a5a36"))
+	box(Vector3(0,1.58,1.22), Vector3(1.5,0.09,0.95), Color("8a6742"), 0, 0, 0.22)
 	# lean-to (side alternates by variant; vi==1 also reads L-shaped)
-	box(p+Vector3(lean*(1.16*wf+0.42),0.55,0), Vector3(0.95,1.1,1.6), Color("e0cfa8"), 0,0,0, "plaster")
-	box(p+Vector3(lean*(1.16*wf+0.42),1.2,0), Vector3(1.15,0.09,1.85), Color("9c4a34"), 0, lean*0.20, 0)
-	roof2(p+Vector3(0,top,0), 3.0*wf, 2.5, [1.15, 0.95, 1.35][vi], 0.18, roof)
-	box(p+Vector3(-0.62*wf,top+0.67,0.68), Vector3(0.52,0.52,0.42), Color("e8d9b8"), 0,0,0, "plaster")
-	box(p+Vector3(-0.62*wf,top+0.77,0.90), Vector3(0.34,0.3,0.05), Color("ffd98a"))
-	box(p+Vector3(-0.62*wf,top+1.01,0.68), Vector3(0.68,0.1,0.56), roof)
-	box(p+Vector3(0.8,top+0.75,-0.3), Vector3(0.45,1.0,0.45), stone)
-	if vi != 1: box(p+Vector3(-0.78,top+0.6,-0.25), Vector3(0.34,0.75,0.34), stone)
-	blob(p+Vector3(0.8,top+1.5,-0.3), Vector3(0.22,0.18,0.22), Color(1,1,1,0.35)); blob(p+Vector3(0.95,top+1.75,-0.3), Vector3(0.32,0.24,0.32), Color(1,1,1,0.22))
+	box(Vector3(lean*(1.16*wf+0.42),0.55,0), Vector3(0.95,1.1,1.6), Color("e0cfa8"), 0,0,0, "plaster")
+	box(Vector3(lean*(1.16*wf+0.42),1.2,0), Vector3(1.15,0.09,1.85), Color("9c4a34"), 0, lean*0.20, 0)
+	roof2(Vector3(0,top,0), 3.0*wf, 2.5, [1.15, 0.95, 1.35][vi], 0.18, roof)
+	box(Vector3(-0.62*wf,top+0.67,0.68), Vector3(0.52,0.52,0.42), Color("e8d9b8"), 0,0,0, "plaster")
+	box(Vector3(-0.62*wf,top+0.77,0.90), Vector3(0.34,0.3,0.05), Color("ffd98a"))
+	box(Vector3(-0.62*wf,top+1.01,0.68), Vector3(0.68,0.1,0.56), roof)
+	box(Vector3(0.8,top+0.75,-0.3), Vector3(0.45,1.0,0.45), stone)
+	if vi != 1: box(Vector3(-0.78,top+0.6,-0.25), Vector3(0.34,0.75,0.34), stone)
+	blob(Vector3(0.8,top+1.5,-0.3), Vector3(0.22,0.18,0.22), Color(1,1,1,0.35)); blob(Vector3(0.95,top+1.75,-0.3), Vector3(0.32,0.24,0.32), Color(1,1,1,0.22))
+	house_mode = false
 func _build_hut(p: Vector3, stone: Color) -> void:
 	box(p+Vector3(0,0.7,0), Vector3(2.0,1.4,1.8), Color("cbb489"))
 	box(p+Vector3(0,0.65,0.92), Vector3(0.65,1.1,0.08), Color("3d2b18"))
