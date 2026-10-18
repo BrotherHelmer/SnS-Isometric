@@ -223,6 +223,7 @@ func _build_terrain() -> void:
 			if h > 4.2 and slope <= 0.55:
 				var sf := clampf((snowpatch-0.34)*4.0, 0.0, 1.0) * clampf((h-2.7)*2.5, 0.0, 1.0)
 				c = c.lerp(Color("9fb2c2"), sf)
+			if v.x > 20.5 and h > 5.0: c = c.lerp(rock, 0.62)
 			verts[vi] = Vector3(v.x, h, v.y); cols[vi] = c
 			uvs[vi] = Vector2(v.x*0.15, h*0.15) if slope > 0.55 else v*0.07
 	var idx := PackedInt32Array()
@@ -626,14 +627,25 @@ func _top_band() -> void:
 		var ocx: float = [19.5, 20.5, 19.8, 21.0, 20.2][oci]; var ocz: float = [-4.0, -6.5, -9.0, -11.0, -13.0][oci]
 		var ocs: float = [1.0, 1.3, 0.9, 1.2, 1.0][oci]
 		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.4, float(oci)*1.7, -0.2)).scaled(Vector3(ocs, ocs*0.8, ocs*0.9)), Vector3(ocx, _h(ocx,ocz)+0.1, ocz)), Color("6e665c"), "rock"); tri_total += 128
+	for oci2 in 6:
+		var ocx2: float = [19.8, 20.8, 19.5, 21.0, 20.0, 21.5][oci2]; var ocz2: float = [-3.0, -5.5, -7.0, -9.5, -12.0, -13.5][oci2]
+		var ocs2: float = [0.85, 1.15, 0.95, 1.25, 1.0, 1.1][oci2]
+		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(-0.3, float(oci2)*2.1, 0.35)).scaled(Vector3(ocs2, ocs2*0.85, ocs2)), Vector3(ocx2, _h(ocx2,ocz2)+0.08, ocz2)), Color("6e665c"), "rock"); tri_total += 128
+	for ldi2 in 3:
+		var ldx2: float = [20.0, 20.5, 19.8][ldi2]; var ldz2: float = [-6.0, -9.0, -12.0][ldi2]
+		box(Vector3(ldx2, _h(ldx2,ldz2)+0.15, ldz2), Vector3(3.8,0.5,1.1), Color("6e665c"), 0.3*float(ldi2), 0.10, 0, "rock")
 	# switchback path ON the face + workers
 	var swp := [Vector2(15.5,-0.5), Vector2(18.0,-2.8), Vector2(16.2,-5.2), Vector2(19.0,-7.2), Vector2(17.2,-9.8), Vector2(19.8,-12.0)]
 	for swi in swp.size()-1:
 		var sa: Vector2 = swp[swi]; var sb: Vector2 = swp[swi+1]; var ssteps := int(sa.distance_to(sb) / 0.55)
+		var sperp := Vector2(-(sb-sa).normalized().y, (sb-sa).normalized().x)
 		for ss in ssteps+1:
 			var sp := sa.lerp(sb, float(ss)/float(maxi(ssteps,1)))
-			cyl(Vector3(sp.x, _h(sp.x,sp.y)+0.05, sp.y), 0.55,0.55,0.05, Color("c9ab72"), 8, "dirt")
-	for fmw in [[Vector3(17.6,0,-4.0), Color("d43a2a")], [Vector3(18.8,0,-8.0), Color("2f62b8")], [Vector3(17.8,0,-11.0), Color("3f7d3a")]]:
+			cyl(Vector3(sp.x, _h(sp.x,sp.y)+0.05, sp.y), 0.88,0.88,0.05, Color("dcc08a"), 8, "dirt")
+			if ss % 3 == 0:
+				blob(Vector3(sp.x+sperp.x*0.85, _h(sp.x,sp.y)+0.07, sp.y+sperp.y*0.85), Vector3(0.17,0.10,0.15), Color("9a968c"))
+				blob(Vector3(sp.x-sperp.x*0.85, _h(sp.x,sp.y)+0.07, sp.y-sperp.y*0.85), Vector3(0.15,0.09,0.13), Color("9a968c"))
+	for fmw in [[Vector3(17.6,0,-4.0), Color("d43a2a")], [Vector3(18.8,0,-8.0), Color("2f62b8")], [Vector3(17.8,0,-11.0), Color("3f7d3a")], [Vector3(16.4,0,-2.0), Color("2f62b8")], [Vector3(19.4,0,-12.6), Color("d43a2a")]]:
 		var fmp: Vector3 = fmw[0]; fmp.y = _h(fmp.x, fmp.z) + 0.05; _mini(fmp, fmw[1])
 	# corner rock mass covering far-plane transition bottom-right
 	add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.3,0.7,0.2)).scaled(Vector3(1.9,1.05,1.6)), Vector3(26, _h(26,-1)+0.25, -1)), Color("6e665c"), "rock"); tri_total += 128
