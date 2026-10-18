@@ -1,5 +1,5 @@
 extends Node3D
-# Painted 2.5D prototype P1: painted sprites on a smooth painted ground slope.
+# Painted 2.5D prototype P2 (hero house + mountain backdrop, palette calibrated down): painted sprites on a smooth painted ground slope.
 # R68 low-poly scene untouched; fixed iso camera identical to R68; no post/FX.
 func gy(x: float, z: float) -> float:
 	var e: float = clampf((x - 4.0) / 18.0, 0.0, 1.0)
@@ -22,6 +22,7 @@ func _ready() -> void:
 	sun.shadow_enabled = true
 	add_child(sun)
 	_build_ground()
+	_sprite("mountain.png", Vector3(13.5, 0, -13), 12.0, 920.0, 950.0, false, Color.WHITE) # painted landform backdrop, behind/right
 	# --- painted sprites: tex, ground pos, world height, contact row px, canvas h, flip, tint ---
 	_sprite("castle.png", Vector3(0, 0, -5.5), 8.6, 780.0, 820.0, false, Color.WHITE)
 	_sprite("house.png", Vector3(-5.5, 0, 1.8), 4.0, 520.0, 560.0, false, Color.WHITE)
