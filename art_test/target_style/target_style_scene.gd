@@ -12,7 +12,7 @@ func _ready() -> void:
 	_setup()
 	var cl := CanvasLayer.new(); add_child(cl); var vr := TextureRect.new(); vr.texture = load(PT + "vignette.png"); vr.set_anchors_preset(Control.PRESET_FULL_RECT); vr.mouse_filter = Control.MOUSE_FILTER_IGNORE; cl.add_child(vr)
 	for pp in [Vector3(-4,3,3), Vector3(5,3,-2)]:
-		var o := OmniLight3D.new(); o.position = pp; o.light_color = Color("ffcf96"); o.light_energy = 0.85; o.omni_range = 9.0; o.shadow_enabled = false; add_child(o)
+		var o := OmniLight3D.new(); o.position = pp; o.light_color = Color("ffcf96"); o.light_energy = 0.55; o.omni_range = 9.0; o.shadow_enabled = false; add_child(o)
 	await get_tree().process_frame; await get_tree().create_timer(0.9).timeout
 	var img := get_viewport().get_texture().get_image()
 	img.save_png(out_path)
@@ -117,7 +117,7 @@ func flat_sphere() -> ArrayMesh:
 	_flat_sphere = st.commit(); return _flat_sphere
 func _build_terrain() -> void:
 	var size := 64.0; var steps := 88; var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var g1 := Color("2f6b1f"); var g2 := Color("478c2e"); var dirt := Color("9c7f52"); var rock := Color("8d8172"); var snow := Color("f4f6f2")
+	var g1 := Color("27631d"); var g2 := Color("3f842c"); var dirt := Color("9c7f52"); var rock := Color("8d8172"); var snow := Color("f4f6f2")
 	for iz in steps:
 		for ix in steps:
 			var x0 := -size/2 + size*float(ix)/steps; var x1 := -size/2 + size*float(ix+1)/steps
@@ -128,8 +128,9 @@ func _build_terrain() -> void:
 				var h := _h(v.x, v.y); var slope := absf(_h(v.x+0.8, v.y)-h) + absf(_h(v.x, v.y+0.8)-h)
 				var n := 0.5 + 0.28*sin(v.x*1.31 + sin(v.y*1.73)*2.1) + 0.22*sin(v.x*3.7 - v.y*2.9)
 				var patch := 0.5 + 0.5*sin(v.x*0.31+2.0) * sin(v.y*0.27-1.1)
-				var c: Color = g1.lerp(g2, n).lerp(Color("6f9a38"), patch * 0.38)
-				if patch > 0.72: c = c.lerp(Color("a8895a"), (patch-0.72) * 0.9)
+				var c: Color = g1.lerp(g2, n).lerp(Color("69a83a"), patch * 0.42)
+				if patch > 0.70: c = c.lerp(Color("b08d55"), (patch-0.70) * 1.3)
+				if patch < 0.26: c = c.lerp(Color("7fae4a"), (0.26-patch) * 1.2)
 				if slope > 0.30: c = dirt.lerp(rock, clampf((slope-0.30)*1.3,0,1))
 				if slope > 0.55:
 					c = rock.lerp(Color("6b5f50"), clampf((slope-0.55)*0.9,0,1))
@@ -140,6 +141,10 @@ func _build_terrain() -> void:
 					c = c.lerp(Color("c9bda6"), mot * 0.30)
 					var cf := 0.74 + 0.56 * chunk
 					c = Color(clampf(c.r*cf,0,1), clampf(c.g*cf,0,1), clampf(c.b*cf,0,1))
+					var crack := clampf(1.0 - absf(sin(v.x*5.3 + v.y*3.9 + sin(v.y*7.0))) / 0.22, 0.0, 1.0)
+					c = c.darkened(crack * 0.30)
+					var lich := 0.5 + 0.5*sin(v.x*2.2-0.5) * sin(v.y*1.8+2.1)
+					if lich > 0.62: c = c.lerp(Color("7d8f4e"), clampf((lich-0.62)*1.2,0,0.6))
 				var snowpatch := 0.5 + 0.5*sin(v.x*1.9+1.3) * sin(v.y*1.4-0.7)
 				if h > 2.7 and slope <= 1.65:
 					var sf := clampf((snowpatch-0.34)*4.0, 0.0, 1.0) * clampf((h-2.7)*2.5, 0.0, 1.0)
@@ -163,10 +168,17 @@ func _setup() -> void:
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY; env.ambient_light_energy = amb * 0.55; env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	env.fog_enabled = true; env.fog_light_color = Color("f2e3c2"); env.fog_density = 0.0028; env.tonemap_mode = Environment.TONE_MAPPER_ACES; env.adjustment_enabled = true; env.adjustment_saturation = 1.24; env.adjustment_contrast = 1.02; env.adjustment_brightness = 1.02; env.glow_enabled = true; env.glow_bloom = 0.04; env.glow_strength = 0.5; env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT;
 	we.environment = env; add_child(we)
-	var pool := OmniLight3D.new(); pool.position = Vector3(0,4.5,1); pool.light_color = Color("ffd9a0"); pool.light_energy = 0.9; pool.omni_range = 14.0; pool.shadow_enabled = false; add_child(pool)
+	var pool := OmniLight3D.new(); pool.position = Vector3(0,4.5,1); pool.light_color = Color("ffd9a0"); pool.light_energy = 0.6; pool.omni_range = 14.0; pool.shadow_enabled = false; add_child(pool)
 	var fill := DirectionalLight3D.new(); fill.rotation_degrees = Vector3(-38, 125, 0); fill.light_energy = 0.20; fill.light_color = Color("cfe6ff"); fill.shadow_enabled = false; add_child(fill)
 	var sun := DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-52, -38, 0); sun.light_energy = light_e; sun.light_color = Color(1,0.96,0.88); sun.shadow_enabled = true; sun.shadow_opacity = 0.40; sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS; sun.shadow_blur = 7.0; add_child(sun)
-	var cam := Camera3D.new(); cam.projection = Camera3D.PROJECTION_ORTHOGONAL; cam.size = 6.5 if OS.get_cmdline_user_args().has("--close") else (21.0 if round_no>=10 else 19.0); cam.look_at_from_position(Vector3(9.5,8,7.5) if OS.get_cmdline_user_args().has("--close") else Vector3(11,11,11), Vector3(2.6,0.6,-0.8) if OS.get_cmdline_user_args().has("--close") else Vector3(1.3,0.5,-1.1), Vector3.UP); cam.current = true; add_child(cam)	# ground grass: big plane + lighter patches
+	var cam := Camera3D.new(); cam.projection = Camera3D.PROJECTION_ORTHOGONAL
+	if OS.get_cmdline_user_args().has("--hill"):
+		cam.size = 12.0; cam.look_at_from_position(Vector3(24,12,8), Vector3(12,3,-12), Vector3.UP)
+	elif OS.get_cmdline_user_args().has("--close"):
+		cam.size = 6.5; cam.look_at_from_position(Vector3(9.5,8,7.5), Vector3(2.6,0.6,-0.8), Vector3.UP)
+	else:
+		cam.size = 21.0 if round_no>=10 else 19.0; cam.look_at_from_position(Vector3(11,11,11), Vector3(1.3,0.5,-1.1), Vector3.UP)
+	cam.current = true; add_child(cam)	# ground grass: big plane + lighter patches
 	_build_terrain()
 	for k in 26:
 		var px := -13.0 + fmod(float(k)*3.71, 26.0); var pz := -11.0 + fmod(float(k)*5.13, 22.0)
@@ -343,15 +355,20 @@ func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	box(p+Vector3(0,0.15,0), Vector3(2.5,0.3,2.0), Color("9a968c"))
 	box(p+Vector3(0,1.0,0), Vector3(2.3,1.7,1.9), Color("e8d9b8"), 0,0,0, "plaster")
-	# timber
-	for x in [-1.1,-0.4,0.4,1.1]: box(p+Vector3(x,1.0,0.97), Vector3(0.19,1.75,0.09), Color("54351d"))
-	box(p+Vector3(1.16,1.0,0), Vector3(0.07,1.75,1.9), Color("54351d")); box(p+Vector3(-1.16,1.0,0), Vector3(0.07,1.75,1.9), Color("54351d"))
-	box(p+Vector3(0,0.82,1.0), Vector3(0.86,1.5,0.07), Color("2e2015"))
-	box(p+Vector3(0,1.55,0.97), Vector3(2.3,0.14,0.06), Color("6b4423"))
-	box(p+Vector3(0,0.8,0.98), Vector3(0.7,1.3,0.08), Color("5d3d24"))
-	box(p+Vector3(-0.65,1.15,0.98), Vector3(0.45,0.5,0.06), Color("ffd98a"))
-	box(p+Vector3(-0.98,1.15,0.98), Vector3(0.16,0.5,0.05), Color("7a4a2a")); box(p+Vector3(-0.32,1.15,0.98), Vector3(0.16,0.5,0.05), Color("7a4a2a"))
-	box(p+Vector3(0.65,1.15,0.98), Vector3(0.4,0.48,0.06), Color("ffd98a")); box(p+Vector3(0.92,1.15,0.98), Vector3(0.14,0.48,0.05), Color("7a4a2a"))
+	# light timber FRAME only: corner posts + top/bottom rails (plaster dominant)
+	for sx in [-1.09, 1.09]:
+		box(p+Vector3(sx,1.0,0.96), Vector3(0.17,1.75,0.09), Color("7a5a36"))
+		box(p+Vector3(sx,1.0,-0.96), Vector3(0.17,1.75,0.09), Color("7a5a36"))
+	box(p+Vector3(0,1.80,0.97), Vector3(2.32,0.15,0.07), Color("7a5a36")); box(p+Vector3(0,0.24,0.97), Vector3(2.32,0.15,0.07), Color("7a5a36"))
+	box(p+Vector3(1.16,1.0,0), Vector3(0.07,1.75,0.17), Color("7a5a36")); box(p+Vector3(-1.16,1.0,0), Vector3(0.07,1.75,0.17), Color("7a5a36"))
+	box(p+Vector3(1.17,1.80,0), Vector3(0.06,0.15,1.92), Color("7a5a36"))
+	# door (lighter wood, framed) + warm windows + flower box
+	box(p+Vector3(0,0.82,0.99), Vector3(0.78,1.42,0.06), Color("8a6742"))
+	box(p+Vector3(0,0.80,1.01), Vector3(0.62,1.28,0.06), Color("6e4a2c"))
+	box(p+Vector3(-0.68,1.22,0.98), Vector3(0.48,0.54,0.06), Color("ffd98a")); box(p+Vector3(0.68,1.22,0.98), Vector3(0.48,0.54,0.06), Color("ffd98a"))
+	box(p+Vector3(-0.68,0.90,1.0), Vector3(0.56,0.12,0.10), Color("5d7a34"))
+	for fx3 in 3: blob(p+Vector3(-0.82+float(fx3)*0.14,0.99,1.02), Vector3(0.07,0.06,0.07), Color("e2543e") if fx3%2==0 else Color("f2f0e6"))
+	box(p+Vector3(1.18,1.22,0.25), Vector3(0.06,0.5,0.44), Color("ffd98a"))
 	roof2(p+Vector3(0,1.85,0), 3.0, 2.5, 1.15, 0.18, roof)
 	box(p+Vector3(0.8,2.6,-0.3), Vector3(0.45,1.0,0.45), stone)
 	blob(p+Vector3(0.8,3.35,-0.3), Vector3(0.22,0.18,0.22), Color(1,1,1,0.35)); blob(p+Vector3(0.95,3.6,-0.3), Vector3(0.32,0.24,0.32), Color(1,1,1,0.22))
