@@ -591,11 +591,20 @@ func _fill_more() -> void:
 func _top_band() -> void:
 	for tp8 in [Vector3(10,0,-16), Vector3(18,0,-16), Vector3(8,0,-11.8)]:
 		_build_tree(tp8, Color("79c24d"), Color("a9dd77"))
-	for sd2 in 5:
-		var sx9 := 10.0+float(sd2)*2.6; var sz9 := -15.8+fmod(float(sd2)*0.9,1.6)
-		blob(Vector3(sx9, _h(sx9,sz9)+0.08, sz9), Vector3(0.95,0.24,0.75), Color("eef2f4"))
-		blob(Vector3(sx9+1.1, _h(sx9+1.1,sz9)+0.14, sz9), Vector3(0.5,0.36,0.5), Color("a89a80"))
-	box(Vector3(15.5, _h(15.5,-15.2)+0.05, -15.2), Vector3(5.2,0.14,1.6), Color("a89a80"), 0.15)
+	for sd2 in 3:
+		var sx9 := 11.0+float(sd2)*3.4; var sz9 := -15.8+fmod(float(sd2)*0.9,1.6)
+		blob(Vector3(sx9, _h(sx9,sz9)+0.08, sz9), Vector3(0.55,0.16,0.45), Color("eef2f4"))
+		blob(Vector3(sx9+1.1, _h(sx9+1.1,sz9)+0.14, sz9), Vector3(0.5,0.36,0.5), Color("8f7a5f"))
+	box(Vector3(15.5, _h(15.5,-15.2)+0.05, -15.2), Vector3(5.2,0.14,1.6), Color("8f7a5f"), 0.15)
+	# worked terraces on the east mass face
+	for tfi in 3:
+		var tfx: float = [20.0, 21.5, 19.0][tfi]; var tfz: float = [-3.0, -7.0, -10.5][tfi]; var tfy := _h(tfx,tfz)+0.06
+		box(Vector3(tfx, tfy, tfz), Vector3(3.6,0.14,1.35), Color("86b83e") if tfi%2==0 else Color("b08d55"), 0.15, 0, 0, "dirt" if tfi%2==1 else "")
+		for cr2 in 4: box(Vector3(tfx-1.2+float(cr2)*0.8, tfy+0.09, tfz), Vector3(0.45,0.08,1.1), Color("3f7020") if tfi%2==0 else Color("96683c"), 0.15)
+	# corner rock mass covering far-plane transition bottom-right
+	blob(Vector3(26, _h(26,-1)+0.25, -1), Vector3(2.3,0.9,1.9), Color("6e6355"))
+	blob(Vector3(23.5, _h(23.5,3)+0.2, 3), Vector3(1.6,0.7,1.3), Color("6e6355"))
+	blob(Vector3(28, _h(28,-4)+0.2, -4), Vector3(1.8,0.8,1.5), Color("6e6355"))
 	for cf4 in 2:
 		var cx9 := 6.5+float(cf4)*7.0; var cz9 := -13.6
 		box(Vector3(cx9, _h(cx9,cz9)+0.05, cz9), Vector3(5.2,0.14,1.6), Color("86b83e") if cf4%2==0 else Color("b08d55"), 0.14)
