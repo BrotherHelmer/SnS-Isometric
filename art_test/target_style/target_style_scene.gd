@@ -203,7 +203,7 @@ func _setup() -> void:
 	elif OS.get_cmdline_user_args().has("--close"):
 		cam.size = 6.5; cam.look_at_from_position(Vector3(9.5,8,7.5), Vector3(2.6,0.6,-0.8), Vector3.UP)
 	else:
-		cam.size = 23.5 if round_no>=10 else 19.0; cam.look_at_from_position(Vector3(11,11,11), Vector3(1.3,0.5,-1.1), Vector3.UP)
+		cam.size = 25.0 if round_no>=10 else 19.0; cam.look_at_from_position(Vector3(12.0,11.5,8.5), Vector3(2.5,0.8,-2.8), Vector3.UP)
 	cam.current = true; add_child(cam)	# ground grass: big plane + lighter patches
 	_build_terrain()
 	for k in 26:
@@ -247,7 +247,7 @@ func _setup() -> void:
 	for li2 in 5:
 		var lx2 := 10.0+fmod(float(li2)*2.3,6.0); var lz2 := -8.0-fmod(float(li2)*1.1,4.0)
 		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(li2),0.1)).scaled(Vector3(1.1,0.65,0.9)), Vector3(lx2,_h(lx2,lz2)+0.3,lz2)), Color("6e665c"), "rock"); tri_total+=128
-	_hill_content(); _hill_props(); _hill_fields(); _summit(); _props2()
+	_hill_content(); _hill_props(); _hill_fields(); _summit(); _upper_fill(); _props2()
 	for mw in [[Vector3(5.2,_h(5.2,-6.3),-6.3), Color("2f62b8")], [Vector3(7.2,_h(7.2,-7.0),-7.0), Color("d43a2a")], [Vector3(8.6,_h(8.6,-6.4),-6.4), Color("3f7d3a")], [Vector3(-2.2,0,8.6), Color("d43a2a")], [Vector3(11.2,0,6.4), Color("2f62b8")], [Vector3(-9.2,0,-4.2), Color("2f62b8")]]: _mini(mw[0], mw[1])
 	# market stall: posts, striped canopy, crates
 	for mp in [Vector3(-4.6,0,5.9), Vector3(-3.4,0,5.9), Vector3(-4.6,0,7.0), Vector3(-3.4,0,7.0)]: box(mp+Vector3(0,0.75,0), Vector3(0.13,1.5,0.13), Color("6b4423"))
@@ -435,13 +435,13 @@ func _hill_fields() -> void:
 	cyl(sh+Vector3(0,1.75,0), 1.45,0.2,1.2, Color("b98a35"), 8, "thatch")
 	_build_tree(Vector3(6.5,0,-10.5), Color("79c24d"), Color("a9dd77")); _build_tree(Vector3(19.5,0,-6.0), Color("79c24d"), Color("a9dd77"))
 func _summit() -> void:
-	var base := Vector3(16.0, _h(16.0,-16.0), -16.0)
+	var base := Vector3(18.0, _h(18.0,-11.5), -11.5)
 	cyl(base+Vector3(0,0.06,0), 1.5,1.5,0.08, Color("9a958a"), 12)
 	for si4 in 5:
 		var sa := float(si4) * TAU / 5.0
-		box(base+Vector3(sin(sa)*1.25, 0.75, cos(sa)*1.25), Vector3(0.42,1.5+fmod(float(si4)*0.23,0.5),0.3), Color("7e7a72"), sa, 0.12, 0)
-	box(base+Vector3(0,0.9,0), Vector3(0.55,1.8,0.4), Color("8a867e"), 0.3, 0.08, 0)
-	var up := [Vector2(14.2,-7.5), Vector2(15.0,-10.5), Vector2(14.6,-13.5), Vector2(16.0,-15.5)]
+		box(base+Vector3(sin(sa)*1.25, 1.05, cos(sa)*1.25), Vector3(0.48,2.1+fmod(float(si4)*0.23,0.5),0.34), Color("7e7a72"), sa, 0.12, 0)
+	box(base+Vector3(0,1.25,0), Vector3(0.6,2.5,0.42), Color("8a867e"), 0.3, 0.08, 0)
+	var up := [Vector2(14.2,-7.5), Vector2(15.5,-8.8), Vector2(17.0,-10.0), Vector2(18.0,-11.2)]
 	for ui in up.size()-1:
 		var a4: Vector2 = up[ui]; var b4: Vector2 = up[ui+1]; var mid4 := (a4+b4)*0.5; var dir4 := b4-a4
 		box(Vector3(mid4.x, _h(mid4.x,mid4.y)+0.06, mid4.y), Vector3(1.05,0.07,dir4.length()+0.6), Color("c9ab72"), atan2(dir4.x,dir4.y), 0,0, "dirt")
@@ -454,6 +454,21 @@ func _summit() -> void:
 	for sd in 4:
 		var sx5 := 13.0+float(sd)*2.2; var sz5 := -15.0-fmod(float(sd)*1.1,2.0)
 		blob(Vector3(sx5, _h(sx5,sz5)+0.08, sz5), Vector3(0.85,0.22,0.7), Color("eef2f4"))
+func _upper_fill() -> void:
+	for mf in 4:
+		var mx := 7.0+float(mf)*3.6; var mz := -10.8 - float(mf%2)*1.6; var my := _h(mx,mz)+0.05
+		box(Vector3(mx, my, mz), Vector3(4.2,0.14,1.5), Color("86b83e") if mf%2==0 else Color("a89a80"), 0.18, 0, 0, "" if mf%2==0 else "rock")
+		for cr4 in 4: box(Vector3(mx-1.4+float(cr4)*0.9, my+0.1, mz), Vector3(0.5,0.09,1.3), Color("4e7d26") if mf%2==0 else Color("7e7668"), 0.18)
+	for tp5 in [Vector3(8.5,0,-12), Vector3(13,0,-11), Vector3(19.5,0,-12.8), Vector3(11.5,0,-14.5), Vector3(22,0,-9)]:
+		_build_tree(tp5, Color("79c24d"), Color("a9dd77"))
+	_build_hut(Vector3(19.0, _h(19.0,-12.0)-0.1, -12.0), Color("9d9584"))
+	var net := [Vector2(10.5,-8.5), Vector2(12.5,-9.8), Vector2(14.2,-8.2), Vector2(15.0,-11.0), Vector2(19.0,-11.6)]
+	for ni in net.size()-1:
+		var a5: Vector2 = net[ni]; var b5: Vector2 = net[ni+1]; var mid5 := (a5+b5)*0.5; var dir5 := b5-a5
+		box(Vector3(mid5.x, _h(mid5.x,mid5.y)+0.06, mid5.y), Vector3(1.0,0.07,dir5.length()+0.6), Color("c9ab72"), atan2(dir5.x,dir5.y), 0,0, "dirt")
+	for fp5 in 5:
+		var fx7 := 8.0+float(fp5)*2.6; var fz7 := -10.2-fmod(float(fp5)*0.7,1.8)
+		box(Vector3(fx7, _h(fx7,fz7)+0.4, fz7), Vector3(0.09,0.8,0.09), Color("6b4a2c"))
 func _props2() -> void:
 	# log piles
 	for lp in [Vector3(-6.8,0,7.6), Vector3(8.8,0,6.2), Vector3(1.2,0,7.8)]:
@@ -609,11 +624,14 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 		for rw in 6:
 			var tt := (float(rw)+0.5)/6.0
 			var sp2 := Vector3(side2*hw2*(1.0-tt), top+pitch2*tt, 0)
-			box(sp2 + nrm2*0.012, Vector3(0.52,0.045,2.80), roof.darkened(0.38), 0, -side2*sang, 0)
+			box(sp2 + nrm2*0.012, Vector3(0.52,0.045,2.80), roof.darkened(0.46), 0, -side2*sang, 0)
 			for sg2 in 3:
-				box(sp2 + nrm2*0.048 + Vector3(0,0,-0.93+float(sg2)*0.93), Vector3(0.46,0.06,0.86), roof.darkened(0.10) if (rw+sg2)%2==0 else roof.lightened(0.08), 0, -side2*sang, 0)
+				box(sp2 + nrm2*0.048 + Vector3(0,0,-0.93+float(sg2)*0.93), Vector3(0.46,0.06,0.86), roof.darkened(0.22) if (rw+sg2)%2==0 else roof.lightened(0.15), 0, -side2*sang, 0)
 	for ccx in [-1.15, 1.15]:
 		for ccz in [-0.95, 0.95]: cyl(Vector3(ccx*wf, cy, ccz), 0.13, 0.13, wh, Color("e8d9b8"), 8, "plaster")
+	box(Vector3(0,0.44,1.02), Vector3(2.42*wf,0.28,0.16), stone, 0, 0, 0.30, "stone")
+	box(Vector3(0,top-0.10,0), Vector3(2.36*wf,0.13,1.96), Color("f0e2c4"), 0,0,0, "plaster")
+	box(Vector3(-0.62*wf,cy,0.99), Vector3(0.72,wh*0.62,0.045), Color("dfcda6"), 0,0,0, "plaster"); box(Vector3(0.62*wf,cy,0.99), Vector3(0.72,wh*0.62,0.045), Color("dfcda6"), 0,0,0, "plaster")
 	# stone foundation skirt
 	box(Vector3(0,0.34,0), Vector3(2.36*wf,0.32,1.96), stone, 0,0,0, "stone")
 	box(Vector3(-0.62*wf,top+0.67,0.68), Vector3(0.52,0.52,0.42), Color("e8d9b8"), 0,0,0, "plaster")
