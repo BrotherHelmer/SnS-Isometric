@@ -248,7 +248,7 @@ func _setup() -> void:
 	for li2 in 5:
 		var lx2 := 10.0+fmod(float(li2)*2.3,6.0); var lz2 := -8.0-fmod(float(li2)*1.1,4.0)
 		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(li2),0.1)).scaled(Vector3(1.1,0.65,0.9)), Vector3(lx2,_h(lx2,lz2)+0.3,lz2)), Color("6e665c"), "rock"); tri_total+=128
-	_hill_content(); _hill_props(); _hill_fields(); _summit(); _upper_fill(); _fill_more(); _props2()
+	_hill_content(); _hill_props(); _hill_fields(); _summit(); _upper_fill(); _fill_more(); _top_band(); _props2()
 	for mw in [[Vector3(5.2,_h(5.2,-6.3),-6.3), Color("2f62b8")], [Vector3(7.2,_h(7.2,-7.0),-7.0), Color("d43a2a")], [Vector3(8.6,_h(8.6,-6.4),-6.4), Color("3f7d3a")], [Vector3(-2.2,0,8.6), Color("d43a2a")], [Vector3(11.2,0,6.4), Color("2f62b8")], [Vector3(-9.2,0,-4.2), Color("2f62b8")]]: _mini(mw[0], mw[1])
 	# market stall: posts, striped canopy, crates
 	for mp in [Vector3(-4.6,0,5.9), Vector3(-3.4,0,5.9), Vector3(-4.6,0,7.0), Vector3(-3.4,0,7.0)]: box(mp+Vector3(0,0.75,0), Vector3(0.13,1.5,0.13), Color("6b4423"))
@@ -273,7 +273,7 @@ func _setup() -> void:
 	for p in [Vector3(-8,-0,-6),Vector3(6,0,-6),Vector3(8,0,1),Vector3(-9,0,3),Vector3(5.5,0,6.5),Vector3(-6.5,0,-4),Vector3(1.5,0,-7.5)]:
 		_build_tree(p, leaf, leaf2)
 	_build_house(Vector3(-8.6,0,4.8), roof, stone)
-	_build_house(Vector3(9.6,0,1.8), roof, stone)
+	_build_roundhouse(Vector3(9.6,0,1.8), roof)
 	_build_house(Vector3(-11.5,0,-6.5), roof, stone)
 	_build_house(Vector3(11.8,0,7.5), roof, stone)
 	_build_house(Vector3(-5.5,0,10.8), roof, stone)
@@ -507,6 +507,17 @@ func _fill_more() -> void:
 		box(Vector3(lx6, 0.05, lz6), Vector3(5.2,0.12,2.0), Color("86b83e") if lf%2==0 else Color("b08d55"), 0.3)
 		for cr5 in 5: box(Vector3(lx6-1.9+float(cr5)*0.95, 0.14, lz6), Vector3(0.55,0.09,1.7), Color("3f7020") if lf%2==0 else Color("96683c"), 0.3)
 	_build_tree(Vector3(-15.5,0,4.5), Color("79c24d"), Color("a9dd77")); _build_tree(Vector3(-11,0,12), Color("79c24d"), Color("a9dd77"))
+func _top_band() -> void:
+	for tp8 in [Vector3(10,0,-16), Vector3(14,0,-17), Vector3(18,0,-16), Vector3(21.5,0,-14.5), Vector3(8,0,-11.8), Vector3(15,0,-13.8), Vector3(19,0,-11)]:
+		_build_tree(tp8, Color("79c24d"), Color("a9dd77"))
+	for sd2 in 5:
+		var sx9 := 10.0+float(sd2)*2.6; var sz9 := -15.8+fmod(float(sd2)*0.9,1.6)
+		blob(Vector3(sx9, _h(sx9,sz9)+0.08, sz9), Vector3(0.95,0.24,0.75), Color("eef2f4"))
+		blob(Vector3(sx9+1.1, _h(sx9+1.1,sz9)+0.14, sz9), Vector3(0.5,0.36,0.5), Color("a89a80"))
+	box(Vector3(15.5, _h(15.5,-15.2)+0.05, -15.2), Vector3(5.2,0.14,1.6), Color("a89a80"), 0.15)
+	for cf4 in 2:
+		var cx9 := 6.5+float(cf4)*7.0; var cz9 := -13.6
+		box(Vector3(cx9, _h(cx9,cz9)+0.05, cz9), Vector3(5.2,0.14,1.6), Color("86b83e") if cf4%2==0 else Color("b08d55"), 0.14)
 func _props2() -> void:
 	# log piles
 	for lp in [Vector3(-6.8,0,7.6), Vector3(8.8,0,6.2), Vector3(1.2,0,7.8)]:
@@ -632,7 +643,11 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	var hang: float = [0.0, PI/2.0, PI, -PI/2.0][absi(int(p.x*7.0 + p.z*13.0)) % 4]
 	house_xf = Transform3D(Basis.from_euler(Vector3(0, hang, 0)), p); house_mode = true
 	box(Vector3(0,0.15,0), Vector3(2.5*wf,0.3,2.0), Color("9a968c"))
-	box(Vector3(0,cy,0), Vector3(2.3*wf,wh,1.9), [Color("e8d9b8"), Color("f0e2c4"), Color("e0cfa8")][vi], 0,0,0, "plaster")
+	if vi == 1:
+		var wm := CylinderMesh.new(); wm.bottom_radius = 1.0; wm.top_radius = 0.90; wm.height = wh; wm.radial_segments = 4; wm.rings = 1
+		add_mesh(wm, house_xf * Transform3D(Basis.from_euler(Vector3(0,PI/4.0,0)).scaled(Vector3(1.15,1,1.34)), Vector3(0,cy,0)), [Color("e8d9b8"), Color("f0e2c4"), Color("e0cfa8")][vi], "plaster"); tri_total += 32
+	else:
+		box(Vector3(0,cy,0), Vector3(2.3*wf,wh,1.9), [Color("e8d9b8"), Color("f0e2c4"), Color("e0cfa8")][vi], 0,0,0, "plaster")
 	for sx in [-1.09, 1.09]:
 		box(Vector3(sx*wf,cy,0.96), Vector3(0.25,wh+0.05,0.11), Color("54381f"), 0,0,0, "timber")
 		box(Vector3(sx*wf,cy,-0.96), Vector3(0.25,wh+0.05,0.11), Color("54381f"), 0,0,0, "timber")
@@ -693,6 +708,17 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 		box(Vector3(lean*(1.16*wf+0.40), (wh+1.1)/2.0, -0.25), Vector3(0.95,wh+1.1,0.95), [Color("e8d9b8"), Color("f0e2c4"), Color("e0cfa8")][vi], 0,0,0, "plaster")
 		cyl(Vector3(lean*(1.16*wf+0.40), wh+1.55, -0.25), 0.72,0.03,0.95, roof, 8, "roofp")
 	house_mode = false
+func _build_roundhouse(p: Vector3, roof: Color) -> void:
+	cyl(p+Vector3(0,0.3,0), 1.28,1.34,0.6, Color("9a968c"), 12, "stone")
+	cyl(p+Vector3(0,1.45,0), 1.18,1.10,1.75, Color("e8d9b8"), 12, "plaster")
+	for pa in 6:
+		var aa := float(pa) * TAU / 6.0
+		box(p+Vector3(sin(aa)*1.16,1.45,cos(aa)*1.16), Vector3(0.15,1.8,0.15), Color("54381f"), aa, 0, 0, "timber")
+	box(p+Vector3(0,2.42,0), Vector3(2.5,0.16,2.5), Color("54381f"))
+	cyl(p+Vector3(0,3.25,0), 1.62,0.12,1.55, roof, 12, "roofp")
+	box(p+Vector3(0,0.95,1.2), Vector3(0.62,1.5,0.1), Color("6e4a2c"))
+	box(p+Vector3(0.85,1.6,0.95), Vector3(0.42,0.5,0.08), Color("ffd98a"))
+	cyl(p+Vector3(0.55,3.3,-0.4), 0.2,0.24,0.9, Color("9a968c"), 8, "stone")
 func _build_hut(p: Vector3, stone: Color) -> void:
 	box(p+Vector3(0,0.7,0), Vector3(2.0,1.4,1.8), Color("cbb489"))
 	box(p+Vector3(0,0.65,0.92), Vector3(0.65,1.1,0.08), Color("3d2b18"))
