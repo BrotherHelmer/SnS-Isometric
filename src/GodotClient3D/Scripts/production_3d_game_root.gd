@@ -537,6 +537,20 @@ func _process(delta: float) -> void:
 			_show_result_screen()
 
 
+## r39-housefix: GUI-consumed clicks never reach _unhandled_input, so a
+## placement click on a panel used to vanish with no feedback at all.
+## Say so (real buttons still work normally and are not flagged).
+func _input(event: InputEvent) -> void:
+	if placement_type == "" or not (event is InputEventMouseButton):
+		return
+	var mb := event as InputEventMouseButton
+	if mb.button_index != MOUSE_BUTTON_LEFT or not mb.pressed:
+		return
+	var hovered := get_viewport().gui_get_hovered_control()
+	if hovered != null and hovered.mouse_filter != Control.MOUSE_FILTER_IGNORE and not (hovered is BaseButton):
+		_show_status("Click on the map to place the %s — that click hit a panel." % Defs.building_name(placement_type), 2.5)
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_R and placement_type != "":
@@ -2230,19 +2244,27 @@ func _create_ui() -> void:
 	placement_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	placement_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	placement_panel.add_theme_stylebox_override("panel", HudSkin.frame("toast", 10.0))
+	# r39-housefix: the hint is display-only. It sits over the map exactly
+	# while placing, and as a STOP panel it silently ate placement clicks
+	# aimed at pads behind it (no message, no house).
+	placement_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(placement_panel)
 	var placement_vbox := VBoxContainer.new()
+	placement_vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	placement_vbox.add_theme_constant_override("separation", 4)
 	placement_panel.add_child(placement_vbox)
 	placement_legend_label = Label.new()
+	placement_legend_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	placement_legend_label.text = ""
 	placement_legend_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	placement_legend_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	placement_legend_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	placement_legend_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	placement_legend_label.add_theme_color_override("font_color", Color("#b9c6a8"))
 	placement_legend_label.add_theme_font_size_override("font_size", 12)
 	placement_vbox.add_child(placement_legend_label)
 	placement_label = Label.new()
+	placement_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	placement_label.text = ""
 	placement_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	placement_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
