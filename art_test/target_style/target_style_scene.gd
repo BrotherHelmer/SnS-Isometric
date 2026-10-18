@@ -2,6 +2,7 @@ extends Node3D
 ## Phase2 target-style test. NOT gameplay. Merged-by-colour low-poly, ortho iso camera.
 var surf := {}
 var house_xf := Transform3D.IDENTITY
+var roof_tilt := 0.0
 var house_mode := false
 var roof_instances := []
 var round_no := 1
@@ -69,7 +70,7 @@ func roof2(p: Vector3, w: float, d: float, h: float, thick: float, c: Color) -> 
 	var prism := ArrayMesh.new(); prism.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	var chk: Array = prism.surface_get_arrays(0); var uvchk: PackedVector2Array = chk[Mesh.ARRAY_TEX_UV]
 	assert(uvchk.size() == verts.size())
-	roof_instances.append([prism, house_xf * Transform3D(Basis.IDENTITY, p) if house_mode else Transform3D(Basis.IDENTITY, p)]); tri_total += 4
+	roof_instances.append([prism, house_xf * Transform3D(Basis.from_euler(Vector3(0, 0, roof_tilt)), p) if house_mode else Transform3D(Basis.IDENTITY, p)]); tri_total += 4
 	var gs := SurfaceTool.new(); gs.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for tri in [[A,E,C],[B,D,F]]:
 		var n2: Vector3 = (tri[1]-tri[0]).cross(tri[2]-tri[0]).normalized()
@@ -656,9 +657,18 @@ func noised_box(w: float, h: float, d: float, amt: float, seedv: float) -> Array
 	if idx.size() == 0:
 		for i in range(0, verts.size()-2, 3): idx.append_array([i, i+1, i+2])
 	var disp := {}
+	var leanx := sin(seedv*1.31) * 0.55; var leanz := cos(seedv*0.93) * 0.30
+	var topofs := [-0.14, 0.10, 0.17, -0.06]
 	for vi3 in verts.size():
 		var v1 := verts[vi3]; var key := str(v1)
-		if not disp.has(key): disp[key] = v1 + v1.normalized() * (sin(v1.x*5.1+seedv) * sin(v1.y*4.3+seedv*1.7) * 0.6 + sin(v1.z*6.2+seedv*0.6) * 0.4) * amt
+		if not disp.has(key):
+			var t01 := clampf((v1.y + h*0.5) / h, 0.0, 1.0)
+			var nv := v1
+			nv.x += leanx * t01 * t01 * h * 0.42; nv.z += leanz * t01 * t01 * h * 0.32
+			nv.x *= 1.0 - 0.19 * t01; nv.z *= 1.0 - 0.09 * t01
+			nv += v1.normalized() * sin(t01 * PI) * amt
+			if t01 > 0.98: nv.y += topofs[(1 if v1.x > 0.0 else 0) + (2 if v1.z > 0.0 else 0)] * (1.05 + 0.45*sin(seedv))
+			disp[key] = nv
 		verts[vi3] = disp[key]
 	for f in range(0, idx.size(), 3):
 		var a: Vector3 = verts[idx[f]]; var b: Vector3 = verts[idx[f+1]]; var c2: Vector3 = verts[idx[f+2]]
@@ -673,13 +683,13 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	var lean := 1.0 if vi == 1 else -1.0
 	wf *= 0.84; wh *= 0.94
 	var hang: float = [0.0, PI/2.0, PI, -PI/2.0][absi(int(p.x*7.0 + p.z*13.0)) % 4]
-	house_xf = Transform3D(Basis.from_euler(Vector3(0, hang, 0)), p); house_mode = true
+	house_xf = Transform3D(Basis.from_euler(Vector3(0, hang, 0)), p); house_mode = true; roof_tilt = sin(float(vi)*2.1 + p.x) * 0.035
 	box(Vector3(0,0.15,0), Vector3(2.5*wf,0.3,2.0), Color("9a968c"))
 	if vi == 1:
 		var wm := CylinderMesh.new(); wm.bottom_radius = 1.0; wm.top_radius = 0.90; wm.height = wh; wm.radial_segments = 4; wm.rings = 1
-		add_mesh(wm, house_xf * Transform3D(Basis.from_euler(Vector3(0,PI/4.0,0)).scaled(Vector3(1.15,1,1.34)), Vector3(0,cy,0)), [Color("e8d9b8"), Color("f0e2c4"), Color("e0cfa8")][vi], "plaster"); tri_total += 32
+		add_mesh(wm, house_xf * Transform3D(Basis(Vector3(1,0,0), Vector3(0.22,1,0), Vector3(0,0,1)) * Basis.from_euler(Vector3(0,PI/4.0,0)).scaled(Vector3(1.15,1,1.34)), Vector3(0,cy,0)), [Color("e8d9b8"), Color("f0e2c4"), Color("e0cfa8")][vi], "plaster"); tri_total += 32
 	else:
-		add_mesh(noised_box(2.3*wf, wh, 1.9, 0.05, float(vi)*3.7), house_xf * Transform3D(Basis.IDENTITY, Vector3(0,cy,0)), [Color("e8d9b8"), Color("f0e2c4"), Color("e0cfa8")][vi], "plaster"); tri_total += 108
+		add_mesh(noised_box(2.3*wf, wh, 1.9, 0.11, float(vi+1)*3.7), house_xf * Transform3D(Basis.IDENTITY, Vector3(0,cy,0)), [Color("e8d9b8"), Color("f0e2c4"), Color("e0cfa8")][vi], "plaster"); tri_total += 108
 	for sx in [-1.09, 1.09]:
 		box(Vector3(sx*wf,cy,0.96), Vector3(0.25,wh+0.05,0.11), Color("54381f"), 0,0,0, "timber")
 		box(Vector3(sx*wf,cy,-0.96), Vector3(0.25,wh+0.05,0.11), Color("54381f"), 0,0,0, "timber")
