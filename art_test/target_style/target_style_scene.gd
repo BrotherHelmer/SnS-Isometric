@@ -12,7 +12,7 @@ func _ready() -> void:
 	_setup()
 	var cl := CanvasLayer.new(); add_child(cl); var vr := TextureRect.new(); vr.texture = load(PT + "vignette.png"); vr.set_anchors_preset(Control.PRESET_FULL_RECT); vr.mouse_filter = Control.MOUSE_FILTER_IGNORE; cl.add_child(vr)
 	for pp in [Vector3(-4,3,3), Vector3(5,3,-2)]:
-		var o := OmniLight3D.new(); o.position = pp; o.light_color = Color("ffcf96"); o.light_energy = 0.4; o.omni_range = 8.0; o.shadow_enabled = false; add_child(o)
+		var o := OmniLight3D.new(); o.position = pp; o.light_color = Color("ffcf96"); o.light_energy = 0.85; o.omni_range = 9.0; o.shadow_enabled = false; add_child(o)
 	await get_tree().process_frame; await get_tree().create_timer(0.9).timeout
 	var img := get_viewport().get_texture().get_image()
 	img.save_png(out_path)
@@ -28,9 +28,9 @@ func mat_col(c: Color) -> StandardMaterial3D:
 func mat_for(key: String, c: Color) -> StandardMaterial3D:
 	var m := mat_col(c); var tx: String = surf_tex.get(key, "")
 	if tx != "" and TEX.has(tx):
-		m.albedo_texture = load(TEX[tx]); m.uv1_scale = Vector3(18,18,1) if tx=="meadow" else (Vector3(1,1,1) if tx=="roofp" else Vector3(4,4,1)); m.albedo_color = Color(0.88,0.88,0.88) if tx in ["roofp","stone","thatch","plaster","dirt","rock"] else Color(1,1,1).lerp(c, 0.25)
+		m.albedo_texture = load(TEX[tx]); m.uv1_scale = Vector3(18,18,1) if tx=="meadow" else (Vector3(1,1,1) if tx=="roofp" else Vector3(6,6,1)); m.albedo_color = Color(0.88,0.88,0.88) if tx in ["roofp","stone","thatch","plaster","dirt","rock"] else Color(1,1,1).lerp(c, 0.25)
 		m.albedo_color = Color(0.78,0.76,0.73)
-		if tx == "forest": m.albedo_color = Color(1,1,1).lerp(c, 0.45)
+		if tx == "forest": m.albedo_color = Color(1,1,1).lerp(c, 0.30)
 		m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	if c.a < 0.99: m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	return m
@@ -114,7 +114,7 @@ func _build_terrain() -> void:
 				var c: Color = g1.lerp(g2, n)
 				if slope > 0.32: c = dirt.lerp(rock, clampf((slope-0.32)*1.4,0,1))
 				if slope > 0.32 and int(h*3.0) % 2 == 0: c = c.darkened(0.13)
-				if h > 2.0: c = snow if h > 3.4 else c.lerp(snow, clampf((h-2.0)*1.1,0,1))
+				if h > 1.5: c = snow if h > 2.8 else c.lerp(snow, clampf((h-1.5)*1.0,0,1))
 				st.set_color(c); st.set_uv(v*0.5); st.add_vertex(Vector3(v.x, h, v.y))
 	st.generate_normals()
 	var mi := MeshInstance3D.new(); mi.mesh = st.commit(); var m := StandardMaterial3D.new(); m.vertex_color_use_as_albedo = true; m.albedo_texture = load(PT + "detail_noise.png"); m.roughness = 0.95; mi.material_override = m; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mi)
@@ -125,16 +125,16 @@ func _setup() -> void:
 	if round_no == 2:
 		grass = Color("69bd45"); grass2 = Color("86cc58"); stone = Color("c4bda9"); roof = Color("c2442c"); leaf = Color("4fae38"); leaf2 = Color("7cc24e"); light_e = 1.05; amb = 0.45
 	if round_no >= 3:
-		grass = Color("406e26"); grass2 = Color("4f7f2e"); stone = Color("9d9584"); roof = Color("bf3f27"); dirt = Color("cda96e"); leaf = Color("3a7326"); leaf2 = Color("527f33"); light_e = 0.95; amb = 0.42
+		grass = Color("406e26"); grass2 = Color("4f7f2e"); stone = Color("9d9584"); roof = Color("bf3f27"); dirt = Color("cda96e"); leaf = Color("55a03c"); leaf2 = Color("8cc65e"); light_e = 0.95; amb = 0.42
 	# environment + light + camera (game iso: ortho, pitch -38, yaw -45)
 	var we := WorldEnvironment.new(); var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR; env.background_color = Color("bfe3ef")
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR; env.ambient_light_color = Color(1,0.98,0.92); env.ambient_light_energy = amb
 	env.fog_enabled = true; env.fog_light_color = Color("f2e3c2"); env.fog_density = 0.0022; env.tonemap_mode = Environment.TONE_MAPPER_LINEAR; env.adjustment_enabled = true; env.adjustment_saturation = 1.22; env.adjustment_contrast = 1.12; env.adjustment_brightness = 1.02; env.glow_enabled = false;
 	we.environment = env; add_child(we)
-	var pool := OmniLight3D.new(); pool.position = Vector3(0,4.5,1); pool.light_color = Color("ffd9a0"); pool.light_energy = 0.55; pool.omni_range = 13.0; pool.shadow_enabled = false; add_child(pool)
+	var pool := OmniLight3D.new(); pool.position = Vector3(0,4.5,1); pool.light_color = Color("ffd9a0"); pool.light_energy = 0.9; pool.omni_range = 14.0; pool.shadow_enabled = false; add_child(pool)
 	var fill := DirectionalLight3D.new(); fill.rotation_degrees = Vector3(-38, 125, 0); fill.light_energy = 0.20; fill.light_color = Color("cfe6ff"); fill.shadow_enabled = false; add_child(fill)
-	var sun := DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-52, -38, 0); sun.light_energy = light_e; sun.light_color = Color(1,0.96,0.88); sun.shadow_enabled = true; sun.shadow_opacity = 0.46; sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS; sun.shadow_blur = 2.5 if round_no>=2 else 1.0; add_child(sun)
+	var sun := DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-52, -38, 0); sun.light_energy = light_e; sun.light_color = Color(1,0.96,0.88); sun.shadow_enabled = true; sun.shadow_opacity = 0.55; sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS; sun.shadow_blur = 2.5 if round_no>=2 else 1.0; add_child(sun)
 	var cam := Camera3D.new(); cam.projection = Camera3D.PROJECTION_ORTHOGONAL; cam.size = 6.5 if OS.get_cmdline_user_args().has("--close") else (21.0 if round_no>=10 else 19.0); cam.look_at_from_position(Vector3(9.5,8,7.5) if OS.get_cmdline_user_args().has("--close") else Vector3(11,11,11), Vector3(2.6,0.6,-0.8) if OS.get_cmdline_user_args().has("--close") else Vector3(0,0.4,0), Vector3.UP); cam.current = true; add_child(cam)	# ground grass: big plane + lighter patches
 	_build_terrain()
 	for k in 26:
@@ -167,12 +167,18 @@ func _setup() -> void:
 	for seg in [[Vector2(3.2,-1.2),Vector2(7.2,-3.8)],[Vector2(-3.4,4.6),Vector2(-8.6,4.8)],[Vector2(3.2,-1.2),Vector2(6.2,4.2)],[Vector2(-1.5,-3.5),Vector2(-5.6,3.4)]]:
 		var a2: Vector2 = seg[0]; var b2: Vector2 = seg[1]; var mid2 := (a2+b2)*0.5; var dir2 := b2-a2
 		box(Vector3(mid2.x,0.028,mid2.y), Vector3(1.25,0.035,dir2.length()+0.8), Color("c9ab72"), atan2(dir2.x,dir2.y), 0,0, "dirt")
-	for li in 9:
-		var lx := 8.5+fmod(float(li)*1.9,7.0); var lz := -10.5-fmod(float(li)*1.35,6.0)
-		box(Vector3(lx, _h(lx,lz)+0.25, lz), Vector3(1.9,0.55,1.3), Color("7b7268") if li%2==0 else Color("8d8478"), float(li)*0.47, 0, 0, "rock")
+	for li in 11:
+		var lx := 4.5+fmod(float(li)*2.0,8.0); var lz := -8.5-fmod(float(li)*1.4,6.5)
+		box(Vector3(lx, _h(lx,lz)+0.3, lz), Vector3(2.6,0.7,1.7), Color("8a8175") if li%2==0 else Color("6e665c"), float(li)*0.47, 0, 0, "rock")
+		box(Vector3(lx, _h(lx,lz)+0.72, lz), Vector3(2.7,0.14,1.8), Color("5d564c"), float(li)*0.47, 0, 0, "rock")
 	for li2 in 5:
 		var lx2 := 10.0+fmod(float(li2)*2.3,6.0); var lz2 := -8.0-fmod(float(li2)*1.1,4.0)
 		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(li2),0.1)).scaled(Vector3(1.1,0.65,0.9)), Vector3(lx2,_h(lx2,lz2)+0.3,lz2)), Color("6e665c"), "rock"); tri_total+=128
+	# market stall: posts, striped canopy, crates
+	for mp in [Vector3(-4.6,0,5.9), Vector3(-3.4,0,5.9), Vector3(-4.6,0,7.0), Vector3(-3.4,0,7.0)]: box(mp+Vector3(0,0.75,0), Vector3(0.13,1.5,0.13), Color("6b4423"))
+	box(Vector3(-4.0,1.62,6.45), Vector3(1.9,0.14,1.9), Color("d43a2a")); box(Vector3(-4.0,1.58,6.45), Vector3(1.9,0.1,0.5), Color("f2ead8")); box(Vector3(-4.0,0.55,6.45), Vector3(1.6,0.5,1.2), Color("a67c4e"), 0,0,0, "timber")
+	for fp2 in [Vector3(6.2,0,4.2), Vector3(-8.2,0,-2.6), Vector3(7.2,0,-3.8)]:
+		box(fp2+Vector3(0,2.2,0), Vector3(0.06,1.3,0.06), Color("4a3421")); box(fp2+Vector3(0.35,2.6,0), Vector3(0.65,0.38,0.04), Color("2f62b8") if fp2.x>0 else Color("d43a2a"))
 	# castle centre-back
 	_build_castle(Vector3(-1.5,0,-3.5), stone, roof)
 	_build_house(Vector3(3.2,0,-1.2), roof, stone)
@@ -208,7 +214,7 @@ func _setup() -> void:
 		var mi := MeshInstance3D.new(); mi.mesh = mesh; mi.material_override = mat_for(key, Color.html(key.split("|")[0])); mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(mi)
 	for ri2 in roof_instances:
 		var rmi := MeshInstance3D.new(); rmi.mesh = ri2[0]; rmi.position = ri2[1]; var rmat := StandardMaterial3D.new(); rmat.albedo_texture = load(TEX["roofp"]); rmat.albedo_color = Color(0.88,0.88,0.88); rmat.roughness = 0.92; rmat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; rmi.material_override = rmat; rmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(rmi)
-	_spawn_carriers()
+	_spawn_carriers(); _spawn_statics()
 func _spawn_carriers() -> void:
 	var chars := ["Farmer_B", "Farmer_A", "Rogue_Hooded", "Rogue"]
 	var cps := [Vector3(0.6,0.05,2.8), Vector3(-2.6,0.05,0.8), Vector3(5.2,0.05,1.6), Vector3(-6.4,0.05,-1.4), Vector3(-8.8,0.05,5.6), Vector3(8.6,0.05,4.6)]
@@ -229,6 +235,24 @@ func _spawn_carriers() -> void:
 			if ap.has_animation(cand): ap.play(cand); print("CARRIER playing ", cand); break
 		ap.advance(0.65)
 		var logm := MeshInstance3D.new(); var cm := CylinderMesh.new(); cm.bottom_radius=0.09; cm.top_radius=0.09; cm.height=1.0; cm.radial_segments=8; logm.mesh=cm; logm.rotation.z=PI/2.0; logm.position=cp+Vector3(0,1.5,0.12); logm.material_override=mat_col(Color("8a5f36")); add_child(logm)
+func _spawn_statics() -> void:
+	var defs := [["Farmer_A", Vector3(-7.6,0.05,3.2), "Tools_/Chopping"], ["Knight", Vector3(2.2,0.05,-5.4), "General_/Idle_A"], ["Farmer_B", Vector3(-4.0,0.05,5.2), "Tools_/Hammering"]]
+	for df in defs:
+		var ps2: PackedScene = load("res://assets/settlement3d/runtime/characters/" + String(df[0]) + ".glb")
+		if ps2 == null: continue
+		var ch2 := ps2.instantiate() as Node3D; ch2.position = df[1]; ch2.rotation.y = 0.8; ch2.scale = Vector3.ONE * 0.92; add_child(ch2)
+		var ap2 := AnimationPlayer.new(); ap2.root_node = NodePath(".."); ch2.add_child(ap2)
+		for libname in ["MovementBasic", "General", "Tools"]:
+			var lp2: PackedScene = load("res://assets/settlement3d/runtime/animations/Rig_Medium/Rig_Medium_" + libname + ".glb")
+			if lp2 == null: continue
+			var inst2 := lp2.instantiate(); var src2 := inst2.find_children("*", "AnimationPlayer", true, false)
+			if src2.size() > 0:
+				for ln2 in (src2[0] as AnimationPlayer).get_animation_library_list(): ap2.add_animation_library(libname + "_" + String(ln2), (src2[0] as AnimationPlayer).get_animation_library(ln2))
+			inst2.queue_free()
+		var clip := String(df[2])
+		if ap2.has_animation(clip): ap2.play(clip); print("STATIC playing ", clip)
+		elif ap2.has_animation("General_/Idle_A"): ap2.play("General_/Idle_A"); print("STATIC fallback Idle")
+		ap2.advance(0.4)
 func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 	box(p+Vector3(0,1.1,0), Vector3(5.4,2.2,4.1), stone, 0,0,0, "stone")
 	for cy in [0.55, 1.05, 1.55]: box(p+Vector3(0,cy,1.82), Vector3(4.6,0.07,0.05), stone.darkened(0.25))
@@ -272,8 +296,8 @@ func _build_hut(p: Vector3, stone: Color) -> void:
 	for ri in 3: cyl(p+Vector3(0,1.55+float(ri)*0.38,0), 1.55-float(ri)*0.38, 1.45-float(ri)*0.38, 0.12, Color("8f6a2a"), 10)
 func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 	var vi := absi(int(p.x*3.0 + p.z*7.0)) % 3
-	if vi == 1: a = Color("4a8a38"); b = Color("7fb04e")
-	elif vi == 2: a = Color("5da03e"); b = Color("a5c95e")
+	if vi == 1: a = Color("65b04a"); b = Color("9bd06e")
+	elif vi == 2: a = Color("74ba52"); b = Color("b5d878")
 	if Vector2(p.x,p.z).length() > 11.0: p.y = _h(p.x, p.z) - 0.1
 	cyl(p+Vector3(0,0.9,0), 0.22,0.32,1.8, Color("6b4423"), 7)
 	if vi == 1:
