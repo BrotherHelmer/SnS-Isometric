@@ -100,10 +100,10 @@ func _h(x: float, z: float) -> float:
 	var jag := mask * (0.22*sin(x*1.9+z*0.7) + 0.14*sin(x*3.7-z*2.3)) * clampf(back*2.0,0.0,1.0)
 	var crag := back * (0.85*sin(x*4.1+z*2.7) + 0.55*sin(x*7.3-z*4.9) + 0.35*sin(x*12.0+z*9.0) + 0.22*sin(x*19.0-z*15.0)) * clampf(hill/4.0, 0.0, 1.0)
 	var sd := Vector2(x-9.0, z+8.8).length(); var shoulder := clampf(1.0 - sd/3.6, 0.0, 1.0); shoulder = shoulder * shoulder
-	var east := clampf((x - 16.0) / 6.0, 0.0, 1.0)
-	var lobe := east * east * clampf(1.0 - absf(z + 4.0) / 18.0, 0.0, 1.0) * 7.0 * (0.75 + 0.45 * (0.5 + 0.5*sin(-z*0.9 + x*0.3)))
+	var east := clampf((x - 17.0) / 3.5, 0.0, 1.0)
+	var lobe := pow(east, 2.2) * clampf(1.0 - absf(z + 4.0) / 18.0, 0.0, 1.0) * 9.0 * (0.75 + 0.45 * (0.5 + 0.5*sin(-z*0.9 + x*0.3)))
 	var ne := clampf((x - 13.0) / 8.0, 0.0, 1.0); var nf := clampf((-z - 7.0) / 9.0, 0.0, 1.0)
-	var nemass := ne * ne * nf * nf * 10.0 * (0.80 + 0.40 * (0.5 + 0.5*sin(x*0.4 - z*0.3)))
+	var nemass := pow(ne, 2.4) * pow(nf, 2.0) * 11.0 * (0.80 + 0.40 * (0.5 + 0.5*sin(x*0.4 - z*0.3)))
 	return mask * roll + hill + lobe + nemass + left * left * 1.6 * mask + jag + crag * (1.0 - shoulder*0.85) + shoulder * 1.15
 var _canopy_sphere: ArrayMesh = null
 func canopy_sphere() -> ArrayMesh:
@@ -237,7 +237,9 @@ func _build_terrain() -> void:
 	var arrays := []; arrays.resize(Mesh.ARRAY_MAX); arrays[Mesh.ARRAY_VERTEX]=verts; arrays[Mesh.ARRAY_NORMAL]=norms; arrays[Mesh.ARRAY_TEX_UV]=uvs; arrays[Mesh.ARRAY_COLOR]=cols; arrays[Mesh.ARRAY_INDEX]=idx
 	var tmesh := ArrayMesh.new(); tmesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	var up2 := MeshInstance3D.new(); var bm3 := BoxMesh.new(); bm3.size = Vector3(400, 0.1, 400); up2.mesh = bm3; up2.position = Vector3(0, -0.60, 0); var um2 := StandardMaterial3D.new(); um2.albedo_texture = load(PT + "detail_noise.png"); um2.set("texture_repeat", 1); um2.uv1_scale = Vector3(120,120,1); um2.albedo_color = Color(0.38,0.42,0.27); um2.roughness = 1.0; up2.material_override = um2; up2.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(up2)
-	var mi := MeshInstance3D.new(); mi.mesh = tmesh; var m := StandardMaterial3D.new(); m.vertex_color_use_as_albedo = true; m.albedo_texture = load(PT + "detail_noise.png"); m.albedo_color = Color(0.55,0.63,0.49); m.roughness = 1.0; m.cull_mode = BaseMaterial3D.CULL_DISABLED; m.set("texture_repeat", 1); mi.material_override = m; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mi)
+	var mi := MeshInstance3D.new(); mi.mesh = tmesh
+	var tsh := Shader.new(); tsh.code = "shader_type spatial;\nrender_mode cull_disabled;\nuniform sampler2D meadow_tex : source_color, repeat_enable;\nuniform sampler2D rock_tex : source_color, repeat_enable;\nvarying vec3 v_c;\nvarying vec3 v_wp;\nvarying vec3 v_wn;\nvoid vertex() { v_c = COLOR.rgb; v_wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; v_wn = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz); }\nvoid fragment() { float steep = smoothstep(0.74, 0.54, v_wn.y); vec3 md = texture(meadow_tex, v_wp.xz * 0.07).rgb; vec3 rk = texture(rock_tex, vec2(v_wp.x * 0.13, v_wp.y * 0.13)).rgb; vec3 grass_c = v_c * md * 1.02; vec3 rock_c = rk * (0.26 + 0.48 * v_c); ALBEDO = mix(grass_c, rock_c, steep); ROUGHNESS = 1.0; }"
+	var m := ShaderMaterial.new(); m.shader = tsh; m.set_shader_parameter("meadow_tex", load(PT + "detail_noise.png")); m.set_shader_parameter("rock_tex", load(PT + "rock_painted.png")); mi.material_override = m; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mi)
 	# outer trees sit on terrain
 func _setup() -> void:
 	get_viewport().screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA
@@ -598,7 +600,7 @@ func _top_band() -> void:
 	box(Vector3(15.5, _h(15.5,-15.2)+0.05, -15.2), Vector3(5.2,0.14,1.6), Color("8f7a5f"), 0.15)
 	# worked terraces on the east mass face
 	for tfi in 7:
-		var tfx: float = [20.0, 21.5, 19.0, 18.0, 22.0, 17.5, 23.0][tfi]; var tfz: float = [-3.0, -7.0, -10.5, -1.5, -11.0, -6.0, -4.0][tfi]; var tfy := _h(tfx,tfz)+0.06
+		var tfx: float = [16.5, 17.5, 18.0, 16.0, 18.5, 15.5, 19.0][tfi]; var tfz: float = [-3.0, -7.0, -10.5, -1.5, -11.0, -6.0, -4.0][tfi]; var tfy := _h(tfx,tfz)+0.06
 		box(Vector3(tfx, tfy, tfz), Vector3(3.6,0.14,1.35), Color("86b83e") if tfi%2==0 else Color("b08d55"), 0.15, 0, 0, "dirt" if tfi%2==1 else "")
 		for cr2 in 4: box(Vector3(tfx-1.2+float(cr2)*0.8, tfy+0.09, tfz), Vector3(0.45,0.08,1.1), Color("3f7020") if tfi%2==0 else Color("96683c"), 0.15)
 	for etp in [Vector3(20.5,0,-5.5), Vector3(22.5,0,-9.5)]:
@@ -607,7 +609,7 @@ func _top_band() -> void:
 		box(epp+Vector3(0,0.25,0), Vector3(0.5,0.5,0.5), Color("a67c4e"), 0.4); cyl(epp+Vector3(0.6,0.28,0.3), 0.22,0.25,0.55, Color("8a5f36"), 7)
 	# painted cliff ledges: geometry bands across east face
 	for ldi in 4:
-		var ldx: float = [19.5, 21.0, 20.0, 22.5][ldi]; var ldz: float = [-4.5, -7.5, -10.0, -12.0][ldi]
+		var ldx: float = [18.5, 19.5, 19.0, 20.5][ldi]; var ldz: float = [-4.5, -7.5, -10.0, -12.0][ldi]
 		box(Vector3(ldx, _h(ldx,ldz)+0.12, ldz), Vector3(4.6,0.34,0.85), Color("6e665c"), 0.15, 0, 0, "rock")
 		box(Vector3(ldx+0.4, _h(ldx+0.4,ldz-1.1)+0.10, ldz-1.1), Vector3(3.4,0.28,0.7), Color("6e665c"), 0.15, 0, 0, "rock")
 	# jagged crest silhouette on NE ridge, snow only in crevices
