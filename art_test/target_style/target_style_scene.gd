@@ -100,7 +100,9 @@ func _h(x: float, z: float) -> float:
 	var jag := mask * (0.22*sin(x*1.9+z*0.7) + 0.14*sin(x*3.7-z*2.3)) * clampf(back*2.0,0.0,1.0)
 	var crag := back * (0.85*sin(x*4.1+z*2.7) + 0.55*sin(x*7.3-z*4.9) + 0.35*sin(x*12.0+z*9.0) + 0.22*sin(x*19.0-z*15.0)) * clampf(hill/4.0, 0.0, 1.0)
 	var sd := Vector2(x-9.0, z+8.8).length(); var shoulder := clampf(1.0 - sd/3.6, 0.0, 1.0); shoulder = shoulder * shoulder
-	return mask * roll + hill + left * left * 1.6 * mask + jag + crag * (1.0 - shoulder*0.85) + shoulder * 1.15
+	var east := clampf((x - 12.0) / 9.0, 0.0, 1.0)
+	var lobe := east * east * clampf(1.0 - absf(z + 6.0) / 13.0, 0.0, 1.0) * 5.2 * (0.75 + 0.45 * (0.5 + 0.5*sin(-z*0.9 + x*0.3)))
+	return mask * roll + hill + lobe + left * left * 1.6 * mask + jag + crag * (1.0 - shoulder*0.85) + shoulder * 1.15
 var _canopy_sphere: ArrayMesh = null
 func canopy_sphere() -> ArrayMesh:
 	if _canopy_sphere != null: return _canopy_sphere
@@ -242,7 +244,7 @@ func _setup() -> void:
 	var sky := Sky.new(); var smat := ProceduralSkyMaterial.new(); smat.sky_top_color = Color("8fc3e8"); smat.sky_horizon_color = Color("f2e3c2"); smat.ground_bottom_color = Color("5d6b46"); smat.ground_horizon_color = Color("d9c9a4"); sky.sky_material = smat; env.sky = sky
 	env.background_mode = Environment.BG_SKY
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY; env.ambient_light_energy = amb * 0.55; env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
-	env.fog_enabled = true; env.fog_light_color = Color("f2e3c2"); env.fog_density = 0.0028; env.tonemap_mode = Environment.TONE_MAPPER_ACES; env.adjustment_enabled = true; env.adjustment_saturation = 1.10; env.adjustment_contrast = 1.02; env.adjustment_brightness = 1.02; env.glow_enabled = false; env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT;
+	env.fog_enabled = true; env.fog_light_color = Color("f2e3c2"); env.fog_density = 0.0015; env.tonemap_mode = Environment.TONE_MAPPER_ACES; env.adjustment_enabled = true; env.adjustment_saturation = 1.10; env.adjustment_contrast = 1.02; env.adjustment_brightness = 1.02; env.glow_enabled = false; env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT;
 	we.environment = env; add_child(we)
 	var pool := OmniLight3D.new(); pool.position = Vector3(0,4.5,1); pool.light_color = Color("ffd9a0"); pool.light_energy = 0.6; pool.omni_range = 14.0; pool.shadow_enabled = false; add_child(pool)
 	var fill := DirectionalLight3D.new(); fill.rotation_degrees = Vector3(-38, 125, 0); fill.light_energy = 0.20; fill.light_color = Color("cfe6ff"); fill.shadow_enabled = false; add_child(fill)
@@ -346,6 +348,7 @@ func _setup() -> void:
 	_build_octstore(Vector3(14.0,0,12.5), stone)
 	_build_house(Vector3(-7.0,0,12.0), roof, stone)
 	_build_house(Vector3(15.0,0,5.5), roof, stone)
+	_build_hut(Vector3(17.5,_h(17.5,1.0),1.0), stone)
 	for tp in [Vector3(-14,0,-8),Vector3(-15,0,2),Vector3(-13,0,9),Vector3(13,0,10),Vector3(19,0,-7),Vector3(8,0,-15),Vector3(-11,0,-11),Vector3(4,0,11),Vector3(-4,0,12),Vector3(14,0,5)]:
 		_build_tree(tp, leaf, leaf2)
 	for bs2 in [Vector3(-2,0,9.5),Vector3(10,0,9),Vector3(-13,0,-1),Vector3(4,0,-9),Vector3(12,0,-3),Vector3(-8,0,-9)]:
@@ -486,7 +489,7 @@ func _hill_content() -> void:
 		box(Vector3(tx2, ty2, tz2), Vector3(4.4,0.16,1.5), Color("86b83e") if ti%2==0 else Color("b08d55"), 0.15, 0, 0, "dirt" if ti%2==1 else "")
 		box(Vector3(tx2, ty2-0.06, tz2+0.82), Vector3(4.5,0.22,0.18), Color("8a7a5c"), 0.15)
 		for cr in 5: box(Vector3(tx2-1.5+float(cr)*0.75, ty2+0.10, tz2), Vector3(0.5,0.09,1.25), Color("3f7020") if ti%2==0 else Color("96683c"), 0.15)
-	for stp in [Vector3(8,0,-9.5), Vector3(13.5,0,-7.2), Vector3(19,0,-8.5), Vector3(15,0,-13.5)]:
+	for stp in [Vector3(8,0,-9.5), Vector3(16.5,0,-12.5), Vector3(22,0,-11), Vector3(15,0,-13.5)]:
 		_build_tree(stp, Color("79c24d"), Color("a9dd77"))
 func _hill_props() -> void:
 	cyl(Vector3(9.0,_h(9.0,-7.4)+0.4,-7.4), 0.3,0.34,0.8, Color("8a5f36"), 8)
@@ -509,7 +512,7 @@ func _hill_fields() -> void:
 	var sh := Vector3(12.5, _h(12.5,-9.8), -9.8)
 	box(sh+Vector3(0,0.65,0), Vector3(1.7,1.3,1.5), Color("cbb489"))
 	cyl(sh+Vector3(0,1.75,0), 1.45,0.2,1.2, Color("b98a35"), 8, "thatch")
-	_build_tree(Vector3(6.5,0,-10.5), Color("79c24d"), Color("a9dd77")); _build_tree(Vector3(19.5,0,-6.0), Color("79c24d"), Color("a9dd77"))
+	_build_tree(Vector3(6.5,0,-10.5), Color("79c24d"), Color("a9dd77")); _build_tree(Vector3(23,0,-5.0), Color("79c24d"), Color("a9dd77"))
 func _summit() -> void:
 	var base := Vector3(9.0, _h(9.0,-8.8), -8.8)
 	cyl(base+Vector3(0,0.05,0), 2.8,2.8,0.07, Color("c9ab72"), 14, "dirt")
