@@ -1,6 +1,7 @@
 extends Node3D
 ## Phase2 target-style test. NOT gameplay. Merged-by-colour low-poly, ortho iso camera.
 var surf := {}
+var roof_instances := []
 var round_no := 1
 var out_path := "/home/box/cos/evidence/2026-10-18-sns-visual-target/phase2/round1.png"
 var tri_total := 0
@@ -61,19 +62,12 @@ func roof2(p: Vector3, w: float, d: float, h: float, thick: float, c: Color) -> 
 	var prism := ArrayMesh.new(); prism.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	var chk: Array = prism.surface_get_arrays(0); var uvchk: PackedVector2Array = chk[Mesh.ARRAY_TEX_UV]
 	assert(uvchk.size() == verts.size())
-	add_mesh(prism, Transform3D(Basis.IDENTITY, p), c, "roofp"); tri_total += 4
+	roof_instances.append([prism, p]); tri_total += 4
 	var gs := SurfaceTool.new(); gs.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for tri in [[A,E,C],[B,D,F]]:
 		var n2: Vector3 = (tri[1]-tri[0]).cross(tri[2]-tri[0]).normalized()
 		for idx in 3: gs.set_normal(n2); gs.set_uv(Vector2(0.5,0.5)); gs.add_vertex(tri[idx])
 	add_mesh(gs.commit(), Transform3D(Basis.IDENTITY, p), Color("e8d9b8"), "plaster"); tri_total += 2
-	var slope_len := sqrt(hw*hw + h*h); var ang := atan2(h, hw)
-	for si in 4:
-		var tt := 0.18 + float(si)*0.21
-		var lc := Vector3(-hw,0,0).lerp(Vector3(0,h,0), tt); var rc := Vector3(hw,0,0).lerp(Vector3(0,h,0), tt)
-		var ln := Vector3(-h, hw, 0).normalized(); var rn := Vector3(h, hw, 0).normalized()
-		box(p+lc+ln*0.035, Vector3(slope_len*0.24, 0.045, d+0.06), c.darkened(0.28), 0, ang)
-		box(p+rc+rn*0.035, Vector3(slope_len*0.24, 0.045, d+0.06), c.darkened(0.28), 0, -ang)
 	# eave shadow line
 	box(p+Vector3(0,0.02,0), Vector3(w+0.15,0.09,d+0.15), c.darkened(0.35))
 func flat_mesh(mesh: Mesh) -> ArrayMesh:
@@ -212,6 +206,8 @@ func _setup() -> void:
 	for key in surf:
 		var st: SurfaceTool = surf[key]; var mesh := st.commit()
 		var mi := MeshInstance3D.new(); mi.mesh = mesh; mi.material_override = mat_for(key, Color.html(key.split("|")[0])); mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(mi)
+	for ri2 in roof_instances:
+		var rmi := MeshInstance3D.new(); rmi.mesh = ri2[0]; rmi.position = ri2[1]; var rmat := StandardMaterial3D.new(); rmat.albedo_texture = load(TEX["roofp"]); rmat.albedo_color = Color(0.88,0.88,0.88); rmat.roughness = 0.92; rmat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; rmi.material_override = rmat; rmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(rmi)
 	_spawn_carriers()
 func _spawn_carriers() -> void:
 	var chars := ["Farmer_B", "Farmer_A", "Rogue_Hooded", "Rogue"]
