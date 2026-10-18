@@ -267,7 +267,8 @@ func _setup() -> void:
 	for mw in [[Vector3(5.2,_h(5.2,-6.3),-6.3), Color("2f62b8")], [Vector3(7.2,_h(7.2,-7.0),-7.0), Color("d43a2a")], [Vector3(8.6,_h(8.6,-6.4),-6.4), Color("3f7d3a")], [Vector3(-2.2,0,8.6), Color("d43a2a")], [Vector3(11.2,0,6.4), Color("2f62b8")], [Vector3(-9.2,0,-4.2), Color("2f62b8")]]: _mini(mw[0], mw[1])
 	# market stall: posts, striped canopy, crates
 	for mp in [Vector3(-4.6,0,5.9), Vector3(-3.4,0,5.9), Vector3(-4.6,0,7.0), Vector3(-3.4,0,7.0)]: box(mp+Vector3(0,0.75,0), Vector3(0.13,1.5,0.13), Color("6b4423"))
-	box(Vector3(-4.0,1.62,6.45), Vector3(1.9,0.14,1.9), Color("d43a2a")); box(Vector3(-4.0,1.58,6.45), Vector3(1.9,0.1,0.5), Color("f2ead8")); box(Vector3(-4.0,0.55,6.45), Vector3(1.6,0.5,1.2), Color("a67c4e"), 0,0,0, "timber")
+	roof2(Vector3(-4.0,1.52,6.45), 2.3, 2.1, 0.55, 0.14, Color("d43a2a"))
+	box(Vector3(-4.0,0.55,6.45), Vector3(1.6,0.5,1.2), Color("a67c4e"), 0,0,0, "timber")
 	for fp2 in [Vector3(6.2,0,4.2), Vector3(-8.2,0,-2.6), Vector3(7.2,0,-3.8)]:
 		box(fp2+Vector3(0,2.2,0), Vector3(0.06,1.3,0.06), Color("4a3421")); box(fp2+Vector3(0.35,2.6,0), Vector3(0.65,0.38,0.04), Color("2f62b8") if fp2.x>0 else Color("d43a2a"))
 	# castle centre-back
@@ -606,9 +607,13 @@ func _mini(mp: Vector3, tc: Color) -> void:
 	cyl(mp+Vector3(0,1.16,0), 0.24,0.26,0.07, Color("c9a86a"), 8)
 	box(mp+Vector3(0.30,0.66,0.08), Vector3(0.08,0.52,0.08), Color("6b4a2c"), 0, 0.5, 0)
 func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
-	box(p+Vector3(0,1.2,0), Vector3(4.7,2.4,3.6), stone, 0,0,0, "stone")
+	add_mesh(noised_box(4.7,2.4,3.6,0.07,4.2), Transform3D(Basis.IDENTITY, p+Vector3(0,1.2,0)), stone, "stone"); tri_total += 108
 	for cy in [0.55, 1.05, 1.55]: box(p+Vector3(0,cy,1.82), Vector3(4.6,0.07,0.05), stone.darkened(0.12))
-	box(p+Vector3(0,2.35,0), Vector3(1.9,2.7,1.9), stone)
+	add_mesh(noised_box(1.9,2.7,1.9,0.06,7.9), Transform3D(Basis.IDENTITY, p+Vector3(0,2.35,0)), stone, "stone"); tri_total += 108
+	# stepped side wing + deformed prism roof over rear keep: uneven central roofline
+	box(p+Vector3(2.95,0.85,0.55), Vector3(1.35,1.7,2.3), stone, 0,0,0, "stone")
+	cyl(p+Vector3(2.95,2.15,0.55), 0.98,0.08,0.9, roof, 9, "roofp")
+	roof2(p+Vector3(-0.6,2.38,-0.85), 3.6, 1.7, 0.95, 0.18, roof)
 	cyl(p+Vector3(0,4.6,0), 1.05,0.05,1.9, roof, 10, "roofp")
 	var ths := [3.3, 3.75, 3.05, 3.5]
 	for oi2 in 4:
@@ -617,7 +622,8 @@ func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 		cyl(p+Vector3(off.x,3.95,off.y), 0.72,0.02,1.7, roof, 10, "roofp")
 		cyl(p+Vector3(off.x,3.25,off.y), 0.88,0.72,0.14, roof.darkened(0.22), 10); cyl(p+Vector3(off.x,3.62,off.y), 0.62,0.46,0.14, roof.darkened(0.22), 10)
 		for ts in 3: box(p+Vector3(off.x+0.63,1.0+float(ts)*0.8,off.y), Vector3(0.1,0.65,0.34), stone.darkened(0.12))
-	for cx in [-1.9,-1.15,-0.4,0.4,1.15,1.9]: box(p+Vector3(cx,2.15,1.82), Vector3(0.42,0.35,0.18), stone)
+	var mhs := [0.35,0.52,0.27,0.46,0.30,0.49]
+	for mi in 6: box(p+Vector3([-1.9,-1.15,-0.4,0.4,1.15,1.9][mi],2.02+mhs[mi]/2.0,1.82), Vector3(0.42,mhs[mi],0.18), stone)
 	for bx in [-0.9,-0.45,0.0,0.45,0.9]: box(p+Vector3(bx,3.42,1.12), Vector3(0.3,0.3,0.16), stone.darkened(0.12))
 	for si2 in 6: box(p+Vector3(-1.8+fmod(float(si2)*0.73,3.6), 0.45+fmod(float(si2)*0.47,1.4), 1.84), Vector3(0.5,0.28,0.06), stone.darkened(0.12) if si2%2==0 else stone.lightened(0.1))
 	for wx in [-1.4,1.4]: box(p+Vector3(wx,1.25,1.83), Vector3(0.34,0.55,0.08), Color("3a2e22"))
@@ -763,7 +769,8 @@ func _build_roundhouse(p: Vector3, roof: Color) -> void:
 		var aa := float(pa) * TAU / 6.0
 		box(p+Vector3(sin(aa)*1.16,1.45,cos(aa)*1.16), Vector3(0.15,1.8,0.15), Color("54381f"), aa, 0, 0, "timber")
 	box(p+Vector3(0,2.42,0), Vector3(2.5,0.16,2.5), Color("54381f"))
-	cyl(p+Vector3(0,3.25,0), 1.62,0.12,1.55, roof, 12, "roofp")
+	var cone1 := CylinderMesh.new(); cone1.bottom_radius=1.62; cone1.top_radius=0.12; cone1.height=1.55; cone1.radial_segments=12
+	add_mesh(cone1, Transform3D(Basis.from_euler(Vector3(sin(p.x*1.3)*0.07,0,cos(p.z*1.7)*0.07)), p+Vector3(sin(p.z)*0.08,3.25,cos(p.x)*0.06)), roof, "roofp"); tri_total += 96
 	box(p+Vector3(0,0.95,1.2), Vector3(0.62,1.5,0.1), Color("6e4a2c"))
 	box(p+Vector3(0.85,1.6,0.95), Vector3(0.42,0.5,0.08), Color("ffd98a"))
 	cyl(p+Vector3(0.55,3.3,-0.4), 0.2,0.24,0.9, Color("9a968c"), 8, "stone")
@@ -771,14 +778,16 @@ func _build_roundbarn(p: Vector3, roof: Color) -> void:
 	cyl(p+Vector3(0,0.25,0), 1.62,1.68,0.5, Color("9a968c"), 14, "stone")
 	cyl(p+Vector3(0,1.25,0), 1.52,1.44,1.55, Color("a8875e"), 14, "timber")
 	box(p+Vector3(0,2.12,0), Vector3(3.2,0.15,3.2), Color("54381f"))
-	cyl(p+Vector3(0,2.95,0), 1.78,0.14,1.55, roof, 14, "roofp")
+	var cone2 := CylinderMesh.new(); cone2.bottom_radius=1.78; cone2.top_radius=0.14; cone2.height=1.55; cone2.radial_segments=14
+	add_mesh(cone2, Transform3D(Basis.from_euler(Vector3(cos(p.x)*0.05,0,sin(p.z*1.4)*0.05)), p+Vector3(cos(p.z)*0.07,2.95,sin(p.x)*0.05)), roof, "roofp"); tri_total += 112
 	box(p+Vector3(0,0.95,1.5), Vector3(0.95,1.55,0.1), Color("54381f"))
 	box(p+Vector3(0.75,1.55,1.42), Vector3(0.4,0.42,0.08), Color("ffd98a"))
 	cyl(p+Vector3(-0.8,2.6,-0.5), 0.18,0.22,0.8, Color("9a968c"), 8, "stone")
 func _build_octstore(p: Vector3, stone: Color) -> void:
 	cyl(p+Vector3(0,0.3,0), 1.45,1.5,0.6, stone, 8, "stone")
 	cyl(p+Vector3(0,1.55,0), 1.32,1.26,1.95, stone, 8, "stone")
-	cyl(p+Vector3(0,2.72,0), 1.58,0.95,0.75, Color("9c4a34"), 8, "roofp")
+	var cone3 := CylinderMesh.new(); cone3.bottom_radius=1.58; cone3.top_radius=0.95; cone3.height=0.75; cone3.radial_segments=8
+	add_mesh(cone3, Transform3D(Basis.from_euler(Vector3(sin(p.x*0.9)*0.06,0,cos(p.z)*0.06)), p+Vector3(0,2.72,0)), Color("9c4a34"), "roofp"); tri_total += 64
 	cyl(p+Vector3(0,3.25,0), 0.4,0.46,0.5, stone, 8, "stone")
 	box(p+Vector3(0,1.0,1.34), Vector3(0.8,1.7,0.1), Color("54381f"))
 	box(p+Vector3(1.75,0.35,0.6), Vector3(0.6,0.6,0.6), Color("a67c4e"), 0.4); cyl(p+Vector3(1.7,0.42,-0.35), 0.3,0.34,0.85, Color("8a5f36"), 8)
@@ -789,9 +798,10 @@ func _build_aframe(p: Vector3, roof: Color, stone: Color) -> void:
 	box(p+Vector3(0,0.75,1.02), Vector3(0.66,1.25,0.08), Color("6e4a2c"))
 	box(p+Vector3(0.62,2.9,-0.3), Vector3(0.36,0.9,0.36), stone, 0,0,0, "stone")
 func _build_hut(p: Vector3, stone: Color) -> void:
-	box(p+Vector3(0,0.7,0), Vector3(2.0,1.4,1.8), Color("cbb489"))
+	add_mesh(noised_box(2.0,1.4,1.8,0.09,p.x*1.3+p.z), Transform3D(Basis.IDENTITY, p+Vector3(0,0.7,0)), Color("cbb489")); tri_total += 108
 	box(p+Vector3(0,0.65,0.92), Vector3(0.65,1.1,0.08), Color("3d2b18"))
-	cyl(p+Vector3(0,2.05,0), 1.75,0.25,1.5, Color("b98a35"), 10, "thatch")
+	var cone4 := CylinderMesh.new(); cone4.bottom_radius=1.75; cone4.top_radius=0.25; cone4.height=1.5; cone4.radial_segments=10
+	add_mesh(cone4, Transform3D(Basis.from_euler(Vector3(sin(p.x)*0.06,0,cos(p.z*1.2)*0.06)), p+Vector3(sin(p.z)*0.06,2.05,0)), Color("b98a35"), "thatch"); tri_total += 80
 	for ri in 3: cyl(p+Vector3(0,1.55+float(ri)*0.38,0), 1.55-float(ri)*0.38, 1.45-float(ri)*0.38, 0.12, Color("8f6a2a"), 10)
 	cyl(p+Vector3(0,1.38,0), 1.82,1.88,0.2, Color("7d5c26"), 10)
 	for bi2 in 8:
