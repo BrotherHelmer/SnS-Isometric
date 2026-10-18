@@ -220,7 +220,7 @@ func _build_terrain() -> void:
 				var fd := Vector2(v.x-feat.x, v.y-feat.y).length()
 				if fd < 4.4: c = c.lerp(dirt, (1.0-fd/4.4) * 0.50)
 			var snowpatch := 0.5 + 0.5*sin(v.x*1.9+1.3) * sin(v.y*1.4-0.7)
-			if h > 4.2 and slope <= 0.90:
+			if h > 4.2 and slope <= 0.55:
 				var sf := clampf((snowpatch-0.34)*4.0, 0.0, 1.0) * clampf((h-2.7)*2.5, 0.0, 1.0)
 				c = c.lerp(Color("9fb2c2"), sf)
 			verts[vi] = Vector3(v.x, h, v.y); cols[vi] = c
@@ -617,6 +617,24 @@ func _top_band() -> void:
 		var crx := 15.5 + float(cri)*1.35; var crz := -14.8 - fmod(float(cri)*0.8, 1.8); var cry := _h(crx,crz)
 		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.3,float(cri)*1.3,0.2)).scaled(Vector3(0.85,0.62,0.75)), Vector3(crx, cry+0.28, crz)), Color("6e665c"), "rock"); tri_total += 128
 		if cri % 2 == 0: blob(Vector3(crx+0.55, cry+0.12, crz+0.3), Vector3(0.34,0.13,0.3), Color("eef2f4"))
+	# talus cones + outcrops breaking the wall plane (merged rock key)
+	for tli in 6:
+		var tlx: float = [16.8, 17.5, 16.5, 18.0, 17.0, 18.5][tli]; var tlz: float = [-2.0, -5.0, -8.0, -10.0, -12.0, -3.5][tli]
+		var tls: float = [1.5, 2.1, 1.7, 2.2, 1.6, 1.9][tli]
+		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2, float(tli)*1.1, 0.15)).scaled(Vector3(tls, tls*0.48, tls*0.8)), Vector3(tlx, _h(tlx,tlz)+0.12, tlz)), Color("6e665c"), "rock"); tri_total += 128
+	for oci in 5:
+		var ocx: float = [19.5, 20.5, 19.8, 21.0, 20.2][oci]; var ocz: float = [-4.0, -6.5, -9.0, -11.0, -13.0][oci]
+		var ocs: float = [1.0, 1.3, 0.9, 1.2, 1.0][oci]
+		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.4, float(oci)*1.7, -0.2)).scaled(Vector3(ocs, ocs*0.8, ocs*0.9)), Vector3(ocx, _h(ocx,ocz)+0.1, ocz)), Color("6e665c"), "rock"); tri_total += 128
+	# switchback path ON the face + workers
+	var swp := [Vector2(15.5,-0.5), Vector2(18.0,-2.8), Vector2(16.2,-5.2), Vector2(19.0,-7.2), Vector2(17.2,-9.8), Vector2(19.8,-12.0)]
+	for swi in swp.size()-1:
+		var sa: Vector2 = swp[swi]; var sb: Vector2 = swp[swi+1]; var ssteps := int(sa.distance_to(sb) / 0.55)
+		for ss in ssteps+1:
+			var sp := sa.lerp(sb, float(ss)/float(maxi(ssteps,1)))
+			cyl(Vector3(sp.x, _h(sp.x,sp.y)+0.05, sp.y), 0.55,0.55,0.05, Color("c9ab72"), 8, "dirt")
+	for fmw in [[Vector3(17.6,0,-4.0), Color("d43a2a")], [Vector3(18.8,0,-8.0), Color("2f62b8")], [Vector3(17.8,0,-11.0), Color("3f7d3a")]]:
+		var fmp: Vector3 = fmw[0]; fmp.y = _h(fmp.x, fmp.z) + 0.05; _mini(fmp, fmw[1])
 	# corner rock mass covering far-plane transition bottom-right
 	add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.3,0.7,0.2)).scaled(Vector3(1.9,1.05,1.6)), Vector3(26, _h(26,-1)+0.25, -1)), Color("6e665c"), "rock"); tri_total += 128
 	add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(-0.2,1.9,0.4)).scaled(Vector3(1.35,0.75,1.1)), Vector3(23.5, _h(23.5,3)+0.2, 3)), Color("6e665c"), "rock"); tri_total += 128
