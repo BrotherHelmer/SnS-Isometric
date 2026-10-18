@@ -247,7 +247,7 @@ func _setup() -> void:
 	for li2 in 5:
 		var lx2 := 10.0+fmod(float(li2)*2.3,6.0); var lz2 := -8.0-fmod(float(li2)*1.1,4.0)
 		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(li2),0.1)).scaled(Vector3(1.1,0.65,0.9)), Vector3(lx2,_h(lx2,lz2)+0.3,lz2)), Color("6e665c"), "rock"); tri_total+=128
-	_hill_content(); _hill_props(); _props2()
+	_hill_content(); _hill_props(); _hill_fields(); _props2()
 	for mw in [[Vector3(5.2,_h(5.2,-6.3),-6.3), Color("2f62b8")], [Vector3(7.2,_h(7.2,-7.0),-7.0), Color("d43a2a")], [Vector3(8.6,_h(8.6,-6.4),-6.4), Color("3f7d3a")], [Vector3(-2.2,0,8.6), Color("d43a2a")], [Vector3(11.2,0,6.4), Color("2f62b8")], [Vector3(-9.2,0,-4.2), Color("2f62b8")]]: _mini(mw[0], mw[1])
 	# market stall: posts, striped canopy, crates
 	for mp in [Vector3(-4.6,0,5.9), Vector3(-3.4,0,5.9), Vector3(-4.6,0,7.0), Vector3(-3.4,0,7.0)]: box(mp+Vector3(0,0.75,0), Vector3(0.13,1.5,0.13), Color("6b4423"))
@@ -417,6 +417,16 @@ func _hill_props() -> void:
 	box(Vector3(11.9,_h(11.9,-7.8)+0.3,-7.8), Vector3(0.6,0.6,0.6), Color("a67c4e"), 0.4)
 	for fp3 in [Vector3(4.2,_h(4.2,-5.6),-5.6), Vector3(6.8,_h(6.8,-6.6),-6.6), Vector3(9.2,_h(9.2,-7.4),-7.4)]:
 		box(fp3+Vector3(0.7,0.9,0.5), Vector3(0.09,1.1,0.09), Color("6b4a2c")); box(fp3+Vector3(0.7,1.45,0.5), Vector3(0.55,0.3,0.04), Color("d43a2a"))
+func _hill_fields() -> void:
+	for fi2 in 2:
+		var fx5 := 3.4+float(fi2)*3.4; var fz5 := -5.6-float(fi2)*0.4; var fy5 := _h(fx5,fz5)+0.05
+		box(Vector3(fx5, fy5, fz5), Vector3(4.6,0.15,1.7), Color("86b83e") if fi2%2==0 else Color("b08d55"), 0.12, 0, 0, "" if fi2%2==0 else "dirt")
+		for cr2 in 5: box(Vector3(fx5-1.6+float(cr2)*0.8, fy5+0.1, fz5), Vector3(0.5,0.09,1.45), Color("3f7020") if fi2%2==0 else Color("96683c"), 0.12)
+		for fp4 in 4: box(Vector3(fx5-2.1+float(fp4)*1.4, fy5+0.35, fz5+0.95), Vector3(0.09,0.7,0.09), Color("6b4a2c"))
+	var sh := Vector3(12.5, _h(12.5,-9.8), -9.8)
+	box(sh+Vector3(0,0.65,0), Vector3(1.7,1.3,1.5), Color("cbb489"))
+	cyl(sh+Vector3(0,1.75,0), 1.45,0.2,1.2, Color("b98a35"), 8, "thatch")
+	_build_tree(Vector3(6.5,0,-10.5), Color("79c24d"), Color("a9dd77")); _build_tree(Vector3(19.5,0,-6.0), Color("79c24d"), Color("a9dd77"))
 func _props2() -> void:
 	# log piles
 	for lp in [Vector3(-6.8,0,7.6), Vector3(8.8,0,6.2), Vector3(1.2,0,7.8)]:
@@ -491,7 +501,7 @@ func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 	box(p+Vector3(0,2.35,0), Vector3(1.9,2.7,1.9), stone)
 	cyl(p+Vector3(0,4.6,0), 1.05,0.05,1.9, roof, 10, "roofp")
 	for off in [Vector2(-1.85,-1.45),Vector2(1.85,-1.45),Vector2(-1.85,1.45),Vector2(1.85,1.45)]:
-		cyl(p+Vector3(off.x,1.65,off.y), 0.52,0.52,3.3, stone, 8, "stone")
+		cyl(p+Vector3(off.x,1.65,off.y), 0.58,0.45,3.3, stone, 8, "stone")
 		cyl(p+Vector3(off.x,3.95,off.y), 0.72,0.02,1.7, roof, 10, "roofp")
 		cyl(p+Vector3(off.x,3.25,off.y), 0.88,0.72,0.14, roof.darkened(0.22), 10); cyl(p+Vector3(off.x,3.62,off.y), 0.62,0.46,0.14, roof.darkened(0.22), 10)
 		for ts in 3: box(p+Vector3(off.x+0.63,1.0+float(ts)*0.8,off.y), Vector3(0.1,0.65,0.34), stone.darkened(0.15))
@@ -560,6 +570,14 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	var pitch2: float = [1.32, 1.10, 1.55][vi]
 	roof2(Vector3(0,top,0), 3.35*wf, 2.8, pitch2, 0.18, roof)
 	box(Vector3(0,top+pitch2+0.03,-0.7), Vector3(0.15,0.1,1.1), roof.darkened(0.15)); box(Vector3(0,top+pitch2+0.07,0.45), Vector3(0.15,0.1,1.2), roof.darkened(0.15))
+	# modelled shingle rows: thin offset slabs following both slopes
+	var hw2 := 1.5*wf; var sang := atan2(pitch2, hw2)
+	for side2 in [-1.0, 1.0]:
+		for rw in 5:
+			var tt := (float(rw)+0.5)/5.0
+			box(Vector3(side2*hw2*(1.0-tt), top+pitch2*tt+0.018, 0), Vector3(0.40,0.028,2.78), roof.darkened(0.10) if rw%2==0 else roof.lightened(0.06), 0, -side2*sang, 0)
+	# stone foundation skirt
+	box(Vector3(0,0.34,0), Vector3(2.36*wf,0.32,1.96), stone, 0,0,0, "stone")
 	box(Vector3(-0.62*wf,top+0.67,0.68), Vector3(0.52,0.52,0.42), Color("e8d9b8"), 0,0,0, "plaster")
 	box(Vector3(-0.62*wf,top+0.77,0.90), Vector3(0.34,0.3,0.05), Color("ffd98a"))
 	box(Vector3(-0.62*wf,top+1.01,0.68), Vector3(0.68,0.1,0.56), roof)
@@ -572,6 +590,8 @@ func _build_hut(p: Vector3, stone: Color) -> void:
 	box(p+Vector3(0,0.65,0.92), Vector3(0.65,1.1,0.08), Color("3d2b18"))
 	cyl(p+Vector3(0,2.05,0), 1.75,0.25,1.5, Color("b98a35"), 10, "thatch")
 	for ri in 3: cyl(p+Vector3(0,1.55+float(ri)*0.38,0), 1.55-float(ri)*0.38, 1.45-float(ri)*0.38, 0.12, Color("8f6a2a"), 10)
+	cyl(p+Vector3(0,1.38,0), 1.82,1.88,0.2, Color("7d5c26"), 10)
+	cyl(p+Vector3(0,2.92,0), 0.3,0.36,0.22, Color("8f6a2a"), 8)
 func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 	var tsc := 0.85 + 0.45 * (0.5 + 0.5*sin(p.x*2.7 + p.z*1.9))
 	var vi := absi(int(p.x*3.0 + p.z*7.0)) % 7
@@ -589,10 +609,12 @@ func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 		for pi in 4:
 			add_canopy(Transform3D(Basis.from_euler(Vector3(0,float(pi)*0.8,0)).scaled(Vector3(0.85,1.05,0.85)), p+Vector3(0,1.9+float(pi)*0.62,0)), a if pi%2==0 else b)
 		return
-	for ci in 7:
-		var off: Vector3 = [Vector3(0,2.6,0), Vector3(0.85,2.05,0.3), Vector3(-0.85,2.15,-0.25), Vector3(0.1,3.25,-0.1), Vector3(-0.2,1.9,0.7), Vector3(1.15,2.7,-0.5), Vector3(-1.1,2.8,0.45)][ci]
-		var sc: float = [1.25,0.9,0.85,0.9,0.75,0.62,0.6][ci]
-		add_canopy(Transform3D(Basis.from_euler(Vector3(0, float(ci)*0.62, 0)).scaled(Vector3(sc*1.15*tsc, sc*0.95*tsc, sc*1.15*tsc)), p+off*Vector3(1,tsc,1)), a if ci==0 else b)
+	for ci in 10:
+		var off: Vector3 = [Vector3(0,2.6,0), Vector3(0.85,2.05,0.3), Vector3(-0.85,2.15,-0.25), Vector3(0.1,3.25,-0.1), Vector3(-0.2,1.9,0.7), Vector3(1.15,2.7,-0.5), Vector3(-1.1,2.8,0.45), Vector3(1.3,2.2,0.6), Vector3(-1.3,2.3,-0.6), Vector3(0.5,3.6,0.5)][ci]
+		var sc: float = [1.25,0.9,0.85,0.9,0.75,0.62,0.6,0.5,0.48,0.52][ci]
+		var cc2: Color = a.lerp(b, clampf(float(ci)/7.0, 0.0, 1.0))
+		if ci % 3 == 2: cc2 = cc2.lightened(0.13)
+		add_canopy(Transform3D(Basis.from_euler(Vector3(0, float(ci)*0.62, 0)).scaled(Vector3(sc*1.15*tsc, sc*0.95*tsc, sc*1.15*tsc)), p+off*Vector3(1,tsc,1)), cc2)
 func _build_carrier(p: Vector3) -> void:
 	box(p+Vector3(-0.16,0.35,0), Vector3(0.2,0.7,0.22), Color("4a3421")); box(p+Vector3(0.16,0.35,0), Vector3(0.2,0.7,0.22), Color("4a3421"))
 	box(p+Vector3(0,0.95,0), Vector3(0.62,0.65,0.4), Color("2f62b8"))
