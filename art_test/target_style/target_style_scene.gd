@@ -24,7 +24,7 @@ func _ready() -> void:
 	get_tree().quit()
 var surf_tex := {}
 const PT := "res://art_test/target_style/textures_painted/"
-const TEX := {"meadow":PT+"grass_painted.png","dirt":PT+"dirt_painted.png","stone":PT+"stone_painted.png","plaster":PT+"plaster_painted.png","timber":"res://assets/settlement3d/runtime/gfx/architecture/timber_diff.jpg","slate":PT+"roof_painted.png","rock":PT+"rock_painted.png","thatch":PT+"thatch_painted.png","leafp":PT+"foliage_painted.png","roofp":PT+"roof_painted.png"}
+const TEX := {"meadow":PT+"grass_painted.png","dirt":PT+"dirt_painted.png","stone":PT+"stone_painted.png","plaster":PT+"plaster_painted.png","timber":PT+"wood_painted.png","slate":PT+"roof_painted.png","rock":PT+"rock_painted.png","thatch":PT+"thatch_painted.png","leafp":PT+"foliage_painted.png","roofp":PT+"roof_painted.png"}
 func mat_col(c: Color) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new(); m.albedo_color = c; m.roughness = 1.0; m.albedo_texture = load(PT + "grain_painted.png"); m.uv1_scale = Vector3(3,3,1); return m
 func mat_for(key: String, c: Color) -> StandardMaterial3D:
@@ -118,9 +118,9 @@ func add_canopy(xf: Transform3D, c: Color) -> void:
 	for f in range(0, verts.size() - 2, 3):
 		var tv := [xf * verts[f], xf * verts[f+1], xf * verts[f+2]]
 		var fn: Vector3 = (tv[1]-tv[0]).cross(tv[2]-tv[0]).normalized()
-		var vary := 0.80 + 0.45 * (0.5 + 0.5 * sin(seedv + float(f) * 2.39))
+		var vary := 0.70 + 0.62 * (0.5 + 0.5 * sin(seedv + float(f) * 2.39))
 		var cc := Color(clampf(c.r*vary,0,1), clampf(c.g*vary,0,1), clampf(c.b*vary,0,1))
-		if fn.y > 0.45: cc = cc.lightened(0.18)
+		if fn.y > 0.45: cc = cc.lightened(0.26)
 		for j in 3:
 			canopy_st.set_normal(fn); canopy_st.set_color(cc); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j])
 	tri_total += 128
@@ -549,6 +549,7 @@ func _props2() -> void:
 	# gardens + door stone paths at houses, laundry lines, scattered barrels/crates
 	var houses := [Vector3(3.2,0,-1.2), Vector3(-3.4,0,4.6), Vector3(7.2,0,-3.8), Vector3(-8.6,0,4.8), Vector3(9.6,0,1.8), Vector3(-6.5,0,-10.0), Vector3(12.5,0,11.0), Vector3(-5.5,0,10.8), Vector3(13.5,0,4.5)]
 	for hp in houses:
+		cyl(hp+Vector3(0,0.018,0), 2.7,2.7,0.015, Color(0.10,0.16,0.05,0.45), 14)
 		var hang2: float = [0.0, PI/2.0, PI, -PI/2.0][absi(int(hp.x*7.0 + hp.z*13.0)) % 4]
 		var hb := Basis.from_euler(Vector3(0, hang2, 0))
 		for gx in 3:
@@ -675,6 +676,7 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	var pitch2: float = [1.32, 1.10, 1.55][vi]
 	roof2(Vector3(0,top,0), 3.35*wf, 2.8, pitch2, 0.18, roof)
 	box(Vector3(0,top+pitch2+0.03,-0.7), Vector3(0.15,0.1,1.1), roof.darkened(0.15)); box(Vector3(0,top+pitch2+0.07,0.45), Vector3(0.15,0.1,1.2), roof.darkened(0.15))
+	box(Vector3(0,top+pitch2+0.13,0), Vector3(0.09,0.05,2.62), roof.lightened(0.15))
 	# modelled shingle rows: thin offset slabs following both slopes
 	var hw2 := 1.5*wf; var sang := atan2(pitch2, hw2)
 	for side2 in [-1.0, 1.0]:
