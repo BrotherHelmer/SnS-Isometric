@@ -24,7 +24,7 @@ var surf_tex := {}
 const PT := "res://art_test/target_style/textures_painted/"
 const TEX := {"meadow":PT+"grass_painted.png","dirt":PT+"dirt_painted.png","stone":PT+"stone_painted.png","plaster":PT+"plaster_painted.png","timber":"res://assets/settlement3d/runtime/gfx/architecture/timber_diff.jpg","slate":PT+"roof_painted.png","rock":PT+"rock_painted.png","thatch":PT+"thatch_painted.png","leafp":PT+"foliage_painted.png","roofp":PT+"roof_painted.png"}
 func mat_col(c: Color) -> StandardMaterial3D:
-	var m := StandardMaterial3D.new(); m.albedo_color = c; m.roughness = 1.0; return m
+	var m := StandardMaterial3D.new(); m.albedo_color = c; m.roughness = 1.0; m.albedo_texture = load(PT + "grain_painted.png"); m.uv1_scale = Vector3(3,3,1); return m
 func mat_for(key: String, c: Color) -> StandardMaterial3D:
 	var m := mat_col(c); var tx: String = surf_tex.get(key, "")
 	if tx != "" and TEX.has(tx):
@@ -148,6 +148,7 @@ func _build_terrain() -> void:
 	var mi := MeshInstance3D.new(); mi.mesh = st.commit(); var m := StandardMaterial3D.new(); m.vertex_color_use_as_albedo = true; m.albedo_texture = load(PT + "detail_noise.png"); m.roughness = 0.95; mi.material_override = m; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mi)
 	# outer trees sit on terrain
 func _setup() -> void:
+	get_viewport().screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA
 	# round presets: 1 pipeline, 2 softer/yellower, 3 tuned toward target mean colour
 	var grass := Color("6fbf3f"); var grass2 := Color("8fd14f"); var stone := Color("b8b4a8"); var roof := Color("c23b2a"); var dirt := Color("c9a86a"); var leaf := Color("4e9b35"); var leaf2 := Color("77c04a"); var light_e := 1.0; var amb := 0.55
 	if round_no == 2:
@@ -156,13 +157,14 @@ func _setup() -> void:
 		grass = Color("406e26"); grass2 = Color("4f7f2e"); stone = Color("9d9584"); roof = Color("bf3f27"); dirt = Color("cda96e"); leaf = Color("79c24d"); leaf2 = Color("a9dd77"); light_e = 0.88; amb = 0.50
 	# environment + light + camera (game iso: ortho, pitch -38, yaw -45)
 	var we := WorldEnvironment.new(); var env := Environment.new()
-	env.background_mode = Environment.BG_COLOR; env.background_color = Color("bfe3ef")
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR; env.ambient_light_color = Color(1,0.98,0.92); env.ambient_light_energy = amb
-	env.fog_enabled = true; env.fog_light_color = Color("f2e3c2"); env.fog_density = 0.0028; env.tonemap_mode = Environment.TONE_MAPPER_LINEAR; env.adjustment_enabled = true; env.adjustment_saturation = 1.13; env.adjustment_contrast = 1.02; env.adjustment_brightness = 1.02; env.glow_enabled = false;
+	var sky := Sky.new(); var smat := ProceduralSkyMaterial.new(); smat.sky_top_color = Color("8fc3e8"); smat.sky_horizon_color = Color("f2e3c2"); smat.ground_bottom_color = Color("5d6b46"); smat.ground_horizon_color = Color("d9c9a4"); sky.sky_material = smat; env.sky = sky
+	env.background_mode = Environment.BG_SKY
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY; env.ambient_light_energy = amb * 0.55; env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
+	env.fog_enabled = true; env.fog_light_color = Color("f2e3c2"); env.fog_density = 0.0028; env.tonemap_mode = Environment.TONE_MAPPER_ACES; env.adjustment_enabled = true; env.adjustment_saturation = 1.24; env.adjustment_contrast = 1.02; env.adjustment_brightness = 1.02; env.glow_enabled = true; env.glow_bloom = 0.04; env.glow_strength = 0.5; env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT;
 	we.environment = env; add_child(we)
 	var pool := OmniLight3D.new(); pool.position = Vector3(0,4.5,1); pool.light_color = Color("ffd9a0"); pool.light_energy = 0.9; pool.omni_range = 14.0; pool.shadow_enabled = false; add_child(pool)
 	var fill := DirectionalLight3D.new(); fill.rotation_degrees = Vector3(-38, 125, 0); fill.light_energy = 0.20; fill.light_color = Color("cfe6ff"); fill.shadow_enabled = false; add_child(fill)
-	var sun := DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-52, -38, 0); sun.light_energy = light_e; sun.light_color = Color(1,0.96,0.88); sun.shadow_enabled = true; sun.shadow_opacity = 0.40; sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS; sun.shadow_blur = 4.5; add_child(sun)
+	var sun := DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-52, -38, 0); sun.light_energy = light_e; sun.light_color = Color(1,0.96,0.88); sun.shadow_enabled = true; sun.shadow_opacity = 0.40; sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS; sun.shadow_blur = 7.0; add_child(sun)
 	var cam := Camera3D.new(); cam.projection = Camera3D.PROJECTION_ORTHOGONAL; cam.size = 6.5 if OS.get_cmdline_user_args().has("--close") else (21.0 if round_no>=10 else 19.0); cam.look_at_from_position(Vector3(9.5,8,7.5) if OS.get_cmdline_user_args().has("--close") else Vector3(11,11,11), Vector3(2.6,0.6,-0.8) if OS.get_cmdline_user_args().has("--close") else Vector3(1.3,0.5,-1.1), Vector3.UP); cam.current = true; add_child(cam)	# ground grass: big plane + lighter patches
 	_build_terrain()
 	for k in 26:
@@ -190,8 +192,8 @@ func _setup() -> void:
 		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.3,float(si9)*1.7,0.15)).scaled(Vector3(ss9,ss9*0.72,ss9*0.85)), Vector3(sx9, _h(sx9,sz9)+ss9*0.22, sz9)), Color("7a6f5e") if si9%2==0 else Color("c9bda6")); tri_total += 128
 	for ti9 in 13:
 		var tx9 := 6.5 + fmod(float(ti9)*2.61, 14.5); var tz9 := -6.2 - fmod(float(ti9)*1.37, 3.2)
-		var ts9 := 0.8 + fmod(float(ti9)*0.43, 0.8)
-		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(ti9)*2.1,0.1)).scaled(Vector3(ts9,ts9*0.62,ts9*0.8)), Vector3(tx9, _h(tx9,tz9)+ts9*0.18, tz9)), Color("8d8172") if ti9%3==0 else Color("c4b9a4")); tri_total += 128
+		var ts9 := 0.55 + fmod(float(ti9)*0.39, 0.6)
+		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(ti9)*2.1,0.1)).scaled(Vector3(ts9,ts9*0.62,ts9*0.8)), Vector3(tx9, _h(tx9,tz9)+ts9*0.18, tz9)), Color("8d8172") if ti9%3==0 else (Color("a08b6d") if ti9%3==1 else Color("c4b9a4"))); tri_total += 128
 	for ei in 10:
 		var ex := -11.0+fmod(float(ei)*4.91,23.0); var ez := -6.0+fmod(float(ei)*5.37,17.0)
 		cyl(Vector3(ex,0.03,ez), 0.62,0.62,0.025, Color("9a7c4e") if ei%2==0 else Color("bfae6a"), 8)
@@ -247,7 +249,7 @@ func _setup() -> void:
 	for ri2 in roof_instances:
 		var rmi := MeshInstance3D.new(); rmi.mesh = ri2[0]; rmi.position = ri2[1]; var rmat := StandardMaterial3D.new(); rmat.albedo_texture = load(TEX["roofp"]); rmat.albedo_color = Color(0.88,0.88,0.88); rmat.roughness = 0.92; rmat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; rmi.material_override = rmat; rmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(rmi)
 	if canopy_st != null:
-		var cmi := MeshInstance3D.new(); cmi.mesh = canopy_st.commit(); var cm := StandardMaterial3D.new(); cm.albedo_texture = load(TEX["leafp"]); cm.vertex_color_use_as_albedo = true; cm.albedo_color = Color(1.15,1.15,1.1); cm.roughness = 1.0; cm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; cmi.material_override = cm; cmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(cmi)
+		var cmi := MeshInstance3D.new(); cmi.mesh = canopy_st.commit(); var cm := StandardMaterial3D.new(); cm.albedo_texture = load(TEX["leafp"]); cm.vertex_color_use_as_albedo = true; cm.albedo_color = Color(1.0,1.0,0.98); cm.roughness = 1.0; cm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; cmi.material_override = cm; cmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(cmi)
 	_spawn_carriers(); _spawn_statics()
 func _spawn_carriers() -> void:
 	var chars := ["Farmer_B", "Farmer_A", "Rogue_Hooded", "Rogue"]
