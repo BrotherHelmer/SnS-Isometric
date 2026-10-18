@@ -100,8 +100,8 @@ func _h(x: float, z: float) -> float:
 	var jag := mask * (0.22*sin(x*1.9+z*0.7) + 0.14*sin(x*3.7-z*2.3)) * clampf(back*2.0,0.0,1.0)
 	var crag := back * (0.85*sin(x*4.1+z*2.7) + 0.55*sin(x*7.3-z*4.9) + 0.35*sin(x*12.0+z*9.0) + 0.22*sin(x*19.0-z*15.0)) * clampf(hill/4.0, 0.0, 1.0)
 	var sd := Vector2(x-9.0, z+8.8).length(); var shoulder := clampf(1.0 - sd/3.6, 0.0, 1.0); shoulder = shoulder * shoulder
-	var east := clampf((x - 12.0) / 9.0, 0.0, 1.0)
-	var lobe := east * east * clampf(1.0 - absf(z + 6.0) / 13.0, 0.0, 1.0) * 5.2 * (0.75 + 0.45 * (0.5 + 0.5*sin(-z*0.9 + x*0.3)))
+	var east := clampf((x - 16.0) / 6.0, 0.0, 1.0)
+	var lobe := east * east * clampf(1.0 - absf(z + 4.0) / 18.0, 0.0, 1.0) * 7.0 * (0.75 + 0.45 * (0.5 + 0.5*sin(-z*0.9 + x*0.3)))
 	return mask * roll + hill + lobe + left * left * 1.6 * mask + jag + crag * (1.0 - shoulder*0.85) + shoulder * 1.15
 var _canopy_sphere: ArrayMesh = null
 func canopy_sphere() -> ArrayMesh:
@@ -171,7 +171,7 @@ func flat_sphere() -> ArrayMesh:
 func _build_terrain() -> void:
 	# WELDED smooth-shaded heightfield: shared grid vertices, smooth normals,
 	# continuous (not per-cell) colour functions so facets stop reading.
-	var size := 64.0; var steps := 144
+	var size := 120.0; var steps := 230
 	var g1 := Color("27631d"); var g2 := Color("3f842c"); var dirt := Color("9c7f52"); var rock := Color("8f7a5f"); var snow := Color("f4f6f2")
 	var n1 := steps + 1
 	var verts := PackedVector3Array(); var cols := PackedColorArray(); var uvs := PackedVector2Array(); var norms := PackedVector3Array()
@@ -193,6 +193,11 @@ func _build_terrain() -> void:
 			var gsf := 0.74 + 0.40 * gshade
 			c = Color(c.r*gsf, c.g*gsf, c.b*gsf)
 			if slope > 0.30: c = dirt.lerp(rock, clampf((slope-0.30)*1.3,0,1))
+			if v.x > 18.0 and slope > 0.16:
+				c = c.lerp(rock, clampf((slope-0.16)*1.6, 0.0, 0.85))
+				var band2 := 0.5 + 0.5*sin(h*1.35 + v.x*0.32 - v.y*0.48)
+				if band2 > 0.55: c = c.lerp(Color("bfb096"), (band2-0.55) * 0.5)
+				else: c = c.darkened((0.55-band2) * 0.25)
 			if slope > 0.55:
 				c = rock.lerp(Color("5f4c38"), clampf((slope-0.55)*0.9,0,1))
 				if int(floor(h*1.6)) % 2 == 0: c = c.darkened(0.28)
@@ -213,7 +218,7 @@ func _build_terrain() -> void:
 				var fd := Vector2(v.x-feat.x, v.y-feat.y).length()
 				if fd < 4.4: c = c.lerp(dirt, (1.0-fd/4.4) * 0.50)
 			var snowpatch := 0.5 + 0.5*sin(v.x*1.9+1.3) * sin(v.y*1.4-0.7)
-			if h > 2.7 and slope <= 0.90:
+			if h > 4.2 and slope <= 0.90:
 				var sf := clampf((snowpatch-0.34)*4.0, 0.0, 1.0) * clampf((h-2.7)*2.5, 0.0, 1.0)
 				c = c.lerp(Color("9fb2c2"), sf)
 			verts[vi] = Vector3(v.x, h, v.y); cols[vi] = c
@@ -229,7 +234,8 @@ func _build_terrain() -> void:
 	for ni in norms.size(): norms[ni] = -norms[ni].normalized()
 	var arrays := []; arrays.resize(Mesh.ARRAY_MAX); arrays[Mesh.ARRAY_VERTEX]=verts; arrays[Mesh.ARRAY_NORMAL]=norms; arrays[Mesh.ARRAY_TEX_UV]=uvs; arrays[Mesh.ARRAY_COLOR]=cols; arrays[Mesh.ARRAY_INDEX]=idx
 	var tmesh := ArrayMesh.new(); tmesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	var mi := MeshInstance3D.new(); mi.mesh = tmesh; var m := StandardMaterial3D.new(); m.vertex_color_use_as_albedo = true; m.albedo_texture = load(PT + "detail_noise.png"); m.albedo_color = Color(0.55,0.63,0.49); m.roughness = 1.0; mi.material_override = m; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mi)
+	var up2 := MeshInstance3D.new(); var bm3 := BoxMesh.new(); bm3.size = Vector3(400, 0.1, 400); up2.mesh = bm3; up2.position = Vector3(0, -0.30, 0); var um2 := StandardMaterial3D.new(); um2.albedo_texture = load(PT + "detail_noise.png"); um2.set("texture_repeat", 1); um2.uv1_scale = Vector3(120,120,1); um2.albedo_color = Color(0.36,0.46,0.29); um2.roughness = 1.0; up2.material_override = um2; up2.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(up2)
+	var mi := MeshInstance3D.new(); mi.mesh = tmesh; var m := StandardMaterial3D.new(); m.vertex_color_use_as_albedo = true; m.albedo_texture = load(PT + "detail_noise.png"); m.albedo_color = Color(0.55,0.63,0.49); m.roughness = 1.0; m.cull_mode = BaseMaterial3D.CULL_DISABLED; m.set("texture_repeat", 1); mi.material_override = m; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mi)
 	# outer trees sit on terrain
 func _setup() -> void:
 	get_viewport().screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA
