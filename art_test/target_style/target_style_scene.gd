@@ -255,9 +255,10 @@ func _setup() -> void:
 	var sky := Sky.new(); var smat := ProceduralSkyMaterial.new(); smat.sky_top_color = Color("8fc3e8"); smat.sky_horizon_color = Color("f2e3c2"); smat.ground_bottom_color = Color("5d6b46"); smat.ground_horizon_color = Color("d9c9a4"); sky.sky_material = smat; env.sky = sky
 	env.background_mode = Environment.BG_SKY
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY; env.ambient_light_energy = amb * 0.55; env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
-	env.fog_enabled = true; env.fog_light_color = Color("f2e3c2"); env.fog_density = 0.0008; env.tonemap_mode = Environment.TONE_MAPPER_ACES; env.adjustment_enabled = true; env.adjustment_saturation = 1.10; env.adjustment_contrast = 1.02; env.adjustment_brightness = 1.02; env.glow_enabled = false; env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT;
+	env.fog_enabled = true; env.fog_light_color = Color("f2e3c2"); env.fog_density = 0.0012; env.tonemap_mode = Environment.TONE_MAPPER_ACES; env.adjustment_enabled = true; env.adjustment_saturation = 1.10; env.adjustment_contrast = 1.02; env.adjustment_brightness = 1.02; env.glow_enabled = false; env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT;
 	we.environment = env; add_child(we)
 	var pool := OmniLight3D.new(); pool.position = Vector3(0,4.5,1); pool.light_color = Color("ffd9a0"); pool.light_energy = 0.6; pool.omni_range = 14.0; pool.shadow_enabled = false; add_child(pool)
+	var pool2 := OmniLight3D.new(); pool2.position = Vector3(17,8,-5); pool2.light_color = Color("ffd9a0"); pool2.light_energy = 0.55; pool2.omni_range = 13.0; pool2.shadow_enabled = false; add_child(pool2)
 	var fill := DirectionalLight3D.new(); fill.rotation_degrees = Vector3(-38, 125, 0); fill.light_energy = 0.20; fill.light_color = Color("cfe6ff"); fill.shadow_enabled = false; add_child(fill)
 	var sun := DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-52, -38, 0); sun.light_energy = light_e; sun.light_color = Color(1,0.96,0.88); sun.shadow_enabled = true; sun.shadow_opacity = 0.40; sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS; sun.shadow_blur = 7.0; add_child(sun)
 	var cam := Camera3D.new(); cam.projection = Camera3D.PROJECTION_ORTHOGONAL
@@ -336,6 +337,15 @@ func _setup() -> void:
 				wp += wperp * sin(wt*5.0 + float(wi2)*1.7) * 0.35
 				var wy: float = 0.032 + (_h(wp.x,wp.y) if Vector2(wp.x,wp.y).length() > 11.0 else 0.0)
 				cyl(Vector3(wp.x, wy, wp.y), 0.82,0.82,0.035, dirt, 9)
+	for bp9 in [Vector2(3.2,-1.2), Vector2(7.5,5.5), Vector2(-4.5,6.0), Vector2(9.0,-4.5), Vector2(-10.0,-3.5), Vector2(-10.5,5.5), Vector2(12.0,2.5), Vector2(14.0,12.5), Vector2(-7.0,12.0), Vector2(15.0,5.5), Vector2(-6.5,-10.0), Vector2(17.5,1.0)]:
+		var by9: float = _h(bp9.x,bp9.y) if bp9.length() > 11.0 else 0.0
+		blob(Vector3(bp9.x, by9+0.03, bp9.y), Vector3(2.35,0.05,1.95), Color("a8895a"))
+		blob(Vector3(bp9.x, by9+0.045, bp9.y), Vector3(1.8,0.045,1.5), Color(0.10,0.16,0.05,0.42))
+		for wt in 4:
+			var wang: float = float(wt)*1.7 + float(bp9.x)
+			blob(Vector3(bp9.x+sin(wang)*1.55, by9+0.07, bp9.y+cos(wang)*1.25), Vector3(0.34,0.16,0.3), Color("5b963a"))
+	blob(Vector3(-1.5,0.03,-3.5), Vector3(3.5,0.055,2.9), Color("a8895a"))
+	blob(Vector3(-1.5,0.045,-3.5), Vector3(2.8,0.05,2.3), Color(0.10,0.16,0.05,0.42))
 	# castle centre-back
 	_build_castle(Vector3(-1.5,0,-3.5), stone, roof)
 	_build_octstore(Vector3(3.2,0,-1.2), stone)
