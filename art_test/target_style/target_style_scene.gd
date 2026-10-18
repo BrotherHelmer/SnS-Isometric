@@ -17,15 +17,16 @@ func _ready() -> void:
 	print("TARGETSTYLE round=", round_no, " draws=", draws, " prims=", prims, " authored_tris~=", tri_total, " out=", out_path)
 	get_tree().quit()
 var surf_tex := {}
-const TEX := {"meadow":"res://assets/settlement3d/runtime/gfx/terrain/meadow_diff.jpg","dirt":"res://assets/settlement3d/runtime/gfx/terrain/dirt_diff.jpg","stone":"res://assets/settlement3d/runtime/gfx/architecture/stone_diff.jpg","plaster":"res://assets/settlement3d/runtime/gfx/architecture/plaster_diff.jpg","timber":"res://assets/settlement3d/runtime/gfx/architecture/timber_diff.jpg","slate":"res://assets/settlement3d/runtime/gfx/architecture/slate_diff.jpg","rock":"res://assets/settlement3d/runtime/gfx/terrain/rock_diff.jpg"}
+const PT := "res://art_test/target_style/textures_painted/"
+const TEX := {"meadow":PT+"grass_painted.png","dirt":PT+"dirt_painted.png","stone":PT+"stone_painted.png","plaster":PT+"plaster_painted.png","timber":"res://assets/settlement3d/runtime/gfx/architecture/timber_diff.jpg","slate":PT+"roof_painted.png","rock":PT+"rock_painted.png","thatch":PT+"thatch_painted.png","roofp":PT+"roof_painted.png"}
 func mat_col(c: Color) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new(); m.albedo_color = c; m.roughness = 0.92; return m
 func mat_for(key: String, c: Color) -> StandardMaterial3D:
 	var m := mat_col(c); var tx: String = surf_tex.get(key, "")
 	if tx != "" and TEX.has(tx):
 		m.albedo_texture = load(TEX[tx]); m.uv1_scale = Vector3(18,18,1) if tx=="meadow" else Vector3(4,4,1); m.albedo_color = Color(1,1,1).lerp(c, 0.25)
-		if tx == "meadow": m.albedo_color = Color("93dc62")
-		if tx == "plaster" or tx == "stone": m.albedo_color = Color("f5efe2")
+		m.albedo_color = Color(0.78,0.76,0.73)
+		if tx == "forest": m.albedo_color = Color(1,1,1).lerp(c, 0.45)
 		m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	if c.a < 0.99: m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	return m
@@ -46,8 +47,8 @@ func roof2(p: Vector3, w: float, d: float, h: float, thick: float, c: Color) -> 
 	# two slanted slabs
 	var len := sqrt((w/2.0)*(w/2.0) + h*h)
 	var ang := atan2(h, w/2.0)
-	box(p + Vector3(-w/4.0, h/2.0, 0), Vector3(len, thick, d), c, 0, ang)
-	box(p + Vector3(w/4.0, h/2.0, 0), Vector3(len, thick, d), c, 0, -ang)
+	box(p + Vector3(-w/4.0, h/2.0, 0), Vector3(len, thick, d), c, 0, ang, 0, "roofp")
+	box(p + Vector3(w/4.0, h/2.0, 0), Vector3(len, thick, d), c, 0, -ang, 0, "roofp")
 func flat_mesh(mesh: Mesh) -> ArrayMesh:
 	var mdt := MeshDataTool.new(); mdt.create_from_surface(mesh, 0)
 	var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -108,7 +109,7 @@ func _setup() -> void:
 	var we := WorldEnvironment.new(); var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR; env.background_color = Color("bfe3ef")
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR; env.ambient_light_color = Color(1,0.98,0.92); env.ambient_light_energy = amb
-	env.fog_enabled = true; env.fog_light_color = Color("dfeef2"); env.fog_density = 0.0015; env.tonemap_mode = Environment.TONE_MAPPER_LINEAR; env.adjustment_enabled = true; env.adjustment_saturation = 1.12; env.adjustment_brightness = 1.0
+	env.fog_enabled = true; env.fog_light_color = Color("f2e3c2"); env.fog_density = 0.0022; env.tonemap_mode = Environment.TONE_MAPPER_LINEAR; env.adjustment_enabled = true; env.adjustment_saturation = 1.22; env.adjustment_contrast = 1.12; env.adjustment_brightness = 1.02; env.glow_enabled = false;
 	we.environment = env; add_child(we)
 	var fill := DirectionalLight3D.new(); fill.rotation_degrees = Vector3(-38, 125, 0); fill.light_energy = 0.20; fill.light_color = Color("cfe6ff"); fill.shadow_enabled = false; add_child(fill)
 	var sun := DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-52, -38, 0); sun.light_energy = light_e; sun.light_color = Color(1,0.96,0.88); sun.shadow_enabled = true; sun.shadow_opacity = 0.46; sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS; sun.shadow_blur = 2.5 if round_no>=2 else 1.0; add_child(sun)
@@ -206,7 +207,7 @@ func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 	box(p+Vector3(0,2.15,0), Vector3(2.2,2.3,2.2), stone)
 	cyl(p+Vector3(0,4.35,0), 1.15,0.05,1.6, roof, 10)
 	for off in [Vector2(-2.1,-1.6),Vector2(2.1,-1.6),Vector2(-2.1,1.6),Vector2(2.1,1.6)]:
-		cyl(p+Vector3(off.x,1.4,off.y), 0.62,0.62,2.8, stone, 10)
+		cyl(p+Vector3(off.x,1.4,off.y), 0.62,0.62,2.8, stone, 8, "stone")
 		cyl(p+Vector3(off.x,3.55,off.y), 0.85,0.02,1.5, roof, 10)
 		cyl(p+Vector3(off.x,3.25,off.y), 0.88,0.72,0.14, roof.darkened(0.22), 10); cyl(p+Vector3(off.x,3.62,off.y), 0.62,0.46,0.14, roof.darkened(0.22), 10)
 		for ts in 3: box(p+Vector3(off.x+0.63,1.0+float(ts)*0.8,off.y), Vector3(0.1,0.65,0.34), stone.darkened(0.15))
@@ -220,7 +221,7 @@ func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 	box(p+Vector3(0.0,3.9,0), Vector3(0.08,1.2,0.08), Color("6b4423")); box(p+Vector3(0.45,4.3,0), Vector3(0.8,0.45,0.05), Color("d43a2a"))
 func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	box(p+Vector3(0,0.15,0), Vector3(2.5,0.3,2.0), Color("9a968c"))
-	box(p+Vector3(0,1.0,0), Vector3(2.3,1.7,1.9), Color("e8d9b8"))
+	box(p+Vector3(0,1.0,0), Vector3(2.3,1.7,1.9), Color("e8d9b8"), 0,0,0, "plaster")
 	# timber
 	for x in [-1.1,-0.4,0.4,1.1]: box(p+Vector3(x,1.0,0.97), Vector3(0.14,1.7,0.06), Color("6b4423"))
 	box(p+Vector3(0,1.55,0.97), Vector3(2.3,0.14,0.06), Color("6b4423"))
@@ -238,7 +239,7 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 func _build_hut(p: Vector3, stone: Color) -> void:
 	box(p+Vector3(0,0.7,0), Vector3(2.0,1.4,1.8), Color("cbb489"))
 	box(p+Vector3(0,0.65,0.92), Vector3(0.65,1.1,0.08), Color("3d2b18"))
-	cyl(p+Vector3(0,2.05,0), 1.75,0.25,1.5, Color("b98a35"), 10)
+	cyl(p+Vector3(0,2.05,0), 1.75,0.25,1.5, Color("b98a35"), 10, "thatch")
 	for ri in 3: cyl(p+Vector3(0,1.55+float(ri)*0.38,0), 1.55-float(ri)*0.38, 1.45-float(ri)*0.38, 0.12, Color("8f6a2a"), 10)
 func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 	var vi := absi(int(p.x*3.0 + p.z*7.0)) % 3
@@ -247,7 +248,9 @@ func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 	if Vector2(p.x,p.z).length() > 11.0: p.y = _h(p.x, p.z) - 0.1
 	cyl(p+Vector3(0,0.9,0), 0.22,0.32,1.8, Color("6b4423"), 7)
 	if vi == 1:
-		cyl(p+Vector3(0,2.2,0), 1.15,0.55,1.7, a, 7, "forest"); cyl(p+Vector3(0,3.3,0), 0.8,0.25,1.5, b, 7, "forest"); return
+		for pi in 4:
+			add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0,float(pi)*0.8,0)).scaled(Vector3(0.85,1.05,0.85)), p+Vector3(0,1.9+float(pi)*0.62,0)), a if pi%2==0 else b, "forest"); tri_total+=128
+		return
 	for ci in 5:
 		var off: Vector3 = [Vector3(0,2.6,0), Vector3(0.85,2.05,0.3), Vector3(-0.85,2.15,-0.25), Vector3(0.1,3.25,-0.1), Vector3(-0.2,1.9,0.7)][ci]
 		var sc: float = [1.25,0.9,0.85,0.9,0.75][ci]
