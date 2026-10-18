@@ -145,6 +145,10 @@ func add_canopy(xf: Transform3D, c: Color) -> void:
 		var vary := 0.70 + 0.62 * (0.5 + 0.5 * sin(seedv + float(f) * 2.39))
 		var cc := Color(clampf(c.r*vary,0,1), clampf(c.g*vary,0,1), clampf(c.b*vary,0,1))
 		if fn.y > 0.45: cc = cc.lightened(0.26)
+		if fn.y < 0.1: cc = cc.darkened(0.28)
+		var clus := sin(seedv*0.7 + float(f) * 1.37)
+		if clus > 0.45: cc = cc.darkened(0.30)
+		elif clus < -0.55: cc = cc.lightened(0.18)
 		for j in 3:
 			var sn2: Vector3 = (tv[j] - xf.origin).normalized()
 			canopy_st.set_normal(fn); canopy_st.set_color(cc); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j])
@@ -165,7 +169,7 @@ func flat_sphere() -> ArrayMesh:
 func _build_terrain() -> void:
 	# WELDED smooth-shaded heightfield: shared grid vertices, smooth normals,
 	# continuous (not per-cell) colour functions so facets stop reading.
-	var size := 64.0; var steps := 104
+	var size := 64.0; var steps := 144
 	var g1 := Color("27631d"); var g2 := Color("3f842c"); var dirt := Color("9c7f52"); var rock := Color("8d8172"); var snow := Color("f4f6f2")
 	var n1 := steps + 1
 	var verts := PackedVector3Array(); var cols := PackedColorArray(); var uvs := PackedVector2Array(); var norms := PackedVector3Array()
@@ -211,7 +215,7 @@ func _build_terrain() -> void:
 				var sf := clampf((snowpatch-0.34)*4.0, 0.0, 1.0) * clampf((h-2.7)*2.5, 0.0, 1.0)
 				c = c.lerp(Color("9fb2c2"), sf)
 			verts[vi] = Vector3(v.x, h, v.y); cols[vi] = c
-			uvs[vi] = Vector2(v.x*0.09, h*0.09) if slope > 0.55 else v*0.07
+			uvs[vi] = Vector2(v.x*0.15, h*0.15) if slope > 0.55 else v*0.07
 	var idx := PackedInt32Array()
 	for iz2 in steps:
 		for ix2 in steps:
@@ -577,11 +581,16 @@ func _top_band() -> void:
 		box(Vector3(cx9, _h(cx9,cz9)+0.05, cz9), Vector3(5.2,0.14,1.6), Color("86b83e") if cf4%2==0 else Color("b08d55"), 0.14)
 func _aprons() -> void:
 	for ap2 in [Vector3(10.5,_h(10.5,-8.5),-8.5), Vector3(14.2,_h(14.2,-6.9),-6.9), Vector3(19.0,_h(19.0,-13.8),-13.8)]:
-		blob(ap2+Vector3(0,0.03,0), Vector3(3.1,0.055,2.5), Color("c9ab72"))
-		blob(ap2+Vector3(1.3,0.035,0.7), Vector3(2.0,0.05,1.6), Color("c9ab72"))
-		blob(ap2+Vector3(-1.5,0.03,-0.6), Vector3(1.8,0.05,1.5), Color("a8895a"))
+		blob(ap2+Vector3(0,0.03,0), Vector3(3.1,0.055,2.5), Color("8a6c42"))
+		blob(ap2+Vector3(1.3,0.035,0.7), Vector3(2.0,0.05,1.6), Color("a8895a"))
+		blob(ap2+Vector3(-1.5,0.03,-0.6), Vector3(1.8,0.05,1.5), Color("8a6c42"))
 		blob(ap2+Vector3(2.3,0.025, -0.9), Vector3(1.3,0.045,1.1), Color("7fae4a"))
 		blob(ap2+Vector3(-2.4,0.025,1.0), Vector3(1.2,0.045,1.0), Color("7fae4a"))
+		for sti in 6:
+			var soff := Vector3(sin(float(sti)*2.4+ap2.x)*1.9, 0.07, cos(float(sti)*1.9+ap2.z)*1.4)
+			blob(ap2+soff, Vector3(0.22,0.10,0.20), Color("9a968c"))
+		for dsi in 4:
+			box(ap2+Vector3(sin(float(dsi)*1.8+ap2.z)*1.6, 0.05, cos(float(dsi)*2.2)*1.1), Vector3(0.85,0.03,0.20), Color("6e5638"), float(dsi)*0.7)
 func _props2() -> void:
 	# log piles
 	for lp in [Vector3(-6.8,0,7.6), Vector3(8.8,0,6.2), Vector3(1.2,0,7.8)]:
