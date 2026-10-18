@@ -235,7 +235,7 @@ func _setup() -> void:
 		var lx2 := 10.0+fmod(float(li2)*2.3,6.0); var lz2 := -8.0-fmod(float(li2)*1.1,4.0)
 		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(li2),0.1)).scaled(Vector3(1.1,0.65,0.9)), Vector3(lx2,_h(lx2,lz2)+0.3,lz2)), Color("6e665c"), "rock"); tri_total+=128
 	_hill_content(); _props2()
-	for mw in [[Vector3(5.2,_h(5.2,-6.3),-6.3), Color("2f62b8")], [Vector3(7.2,_h(7.2,-7.0),-7.0), Color("c2543a")], [Vector3(8.6,_h(8.6,-6.4),-6.4), Color("3f7d3a")], [Vector3(-2.2,0,8.6), Color("c2543a")], [Vector3(11.2,0,6.4), Color("2f62b8")], [Vector3(-9.2,0,-4.2), Color("7a4a8c")]]: _mini(mw[0], mw[1])
+	for mw in [[Vector3(5.2,_h(5.2,-6.3),-6.3), Color("2f62b8")], [Vector3(7.2,_h(7.2,-7.0),-7.0), Color("d43a2a")], [Vector3(8.6,_h(8.6,-6.4),-6.4), Color("3f7d3a")], [Vector3(-2.2,0,8.6), Color("d43a2a")], [Vector3(11.2,0,6.4), Color("2f62b8")], [Vector3(-9.2,0,-4.2), Color("2f62b8")]]: _mini(mw[0], mw[1])
 	# market stall: posts, striped canopy, crates
 	for mp in [Vector3(-4.6,0,5.9), Vector3(-3.4,0,5.9), Vector3(-4.6,0,7.0), Vector3(-3.4,0,7.0)]: box(mp+Vector3(0,0.75,0), Vector3(0.13,1.5,0.13), Color("6b4423"))
 	box(Vector3(-4.0,1.62,6.45), Vector3(1.9,0.14,1.9), Color("d43a2a")); box(Vector3(-4.0,1.58,6.45), Vector3(1.9,0.1,0.5), Color("f2ead8")); box(Vector3(-4.0,0.55,6.45), Vector3(1.6,0.5,1.2), Color("a67c4e"), 0,0,0, "timber")
@@ -274,6 +274,16 @@ func _setup() -> void:
 	for p in [Vector3(4.8,0.25,-4),Vector3(-7.5,0.2,6),Vector3(7,0.2,-2)]: blob(p, Vector3(0.5,0.35,0.45), Color("9a968c"))
 	for ap in [Vector3(-1.5,0,-3.5), Vector3(3.2,0,-1.2), Vector3(-3.4,0,4.6), Vector3(6.2,0,4.2), Vector3(7.2,0,-3.8)]:
 		cyl(ap+Vector3(0,0.018,0), 2.6,2.6,0.015, Color(0.10,0.16,0.05,0.45), 14)
+	# coloured flower patches merged into existing colour meshes (blooms survive, no dots/instances)
+	var bloom_cols := [Color("e2543e"), Color("ffd94a"), Color("ff9db0"), Color("e2543e"), Color("ffd94a"), Color("f2f0e6")]
+	for bc in 10:
+		var bcx := -13.0+fmod(float(bc)*4.31,27.0); var bcz := -10.0+fmod(float(bc)*3.97,20.0)
+		for bb in 12:
+			var bpx := bcx + fmod(float(bb)*0.53,1.4)-0.7; var bpz := bcz + fmod(float(bb)*0.71,1.1)-0.55
+			blob(Vector3(bpx,0.07,bpz), Vector3(0.16,0.06,0.16), bloom_cols[(bc+bb)%6])
+	for cp2 in [Vector3(0.6,0,2.8), Vector3(-2.6,0,0.8), Vector3(5.2,0,1.6), Vector3(-6.4,0,-1.4), Vector3(-8.8,0,5.6), Vector3(8.6,0,4.6), Vector3(3.8,0,-4.2), Vector3(-9.5,0,1.5)]:
+		var lm2 := CylinderMesh.new(); lm2.bottom_radius=0.09; lm2.top_radius=0.09; lm2.height=1.0; lm2.radial_segments=8
+		add_mesh(lm2, Transform3D(Basis.from_euler(Vector3(0,0,PI/2.0)), cp2+Vector3(0,1.28,0.12)), Color("8a5f36")); tri_total += 32
 	# commit merged meshes
 	for key in surf:
 		var st: SurfaceTool = surf[key]; var mesh := st.commit()
@@ -303,7 +313,7 @@ func _spawn_carriers() -> void:
 		for cand in ["MovementBasic_/Walking_A", "MovementBasic/Walking_A"]:
 			if ap.has_animation(cand): ap.play(cand); print("CARRIER playing ", cand); break
 		ap.advance(0.65)
-		var logm := MeshInstance3D.new(); var cm := CylinderMesh.new(); cm.bottom_radius=0.09; cm.top_radius=0.09; cm.height=1.0; cm.radial_segments=8; logm.mesh=cm; logm.rotation.z=PI/2.0; logm.position=cp+Vector3(0,1.5,0.12); logm.material_override=mat_col(Color("8a5f36")); add_child(logm)
+		# carrier log merged pre-commit in _setup (saves a draw per carrier)
 func _spawn_statics() -> void:
 	var defs := [["Farmer_A", Vector3(-7.6,0.05,3.2), "Tools_/Chopping"], ["Knight", Vector3(2.2,0.05,-5.4), "General_/Idle_A"], ["Farmer_B", Vector3(-4.0,0.05,5.2), "Tools_/Hammering"], ["Farmer_A", Vector3(9.6,_h(9.6,-7.0)+0.05,-7.0), "Tools_/Hammering"], ["Rogue_Hooded", Vector3(-5.0,0.05,4.4), "General_/Idle_A"]]
 	for df in defs:
@@ -427,7 +437,7 @@ func _spawn_tufts() -> void:
 	var verts := PackedVector3Array(); var norms := PackedVector3Array(); var uvs := PackedVector2Array()
 	for rot in [0.0, PI/2.0]:
 		var bx := Vector3(cos(rot),0,-sin(rot)); var base := verts.size()
-		var cs := [Vector3(-0.17,0,0), Vector3(0.17,0,0), Vector3(0.13,0.38,0), Vector3(-0.13,0.38,0)]
+		var cs := [Vector3(-0.24,0,0), Vector3(0.24,0,0), Vector3(0.17,0.52,0), Vector3(-0.17,0.52,0)]
 		for cv in cs: verts.append(Vector3(cv.x*bx.x, cv.y, cv.x*bx.z))
 		var nn := Vector3(bx.z,0,bx.x)
 		for j in 4: norms.append(nn); uvs.append(Vector2(0.5,0.5))
@@ -439,8 +449,8 @@ func _spawn_tufts() -> void:
 	var rng := RandomNumberGenerator.new(); rng.seed = 99
 	for i in 1200:
 		var gx := rng.randf_range(-17.0, 20.0); var gz := rng.randf_range(-14.0, 13.0)
-		var xf := Transform3D(Basis.from_euler(Vector3(0, rng.randf()*PI, 0)).scaled(Vector3.ONE * rng.randf_range(0.5,0.95)), Vector3(gx, _h(gx,gz)+0.02, gz))
-		mm.set_instance_transform(i, xf); mm.set_instance_color(i, Color("386e20").lerp(Color("5da038"), rng.randf()))
+		var xf := Transform3D(Basis.from_euler(Vector3(0, rng.randf()*PI, 0)).scaled(Vector3.ONE * rng.randf_range(0.6,1.0)), Vector3(gx, _h(gx,gz)+0.02, gz))
+		mm.set_instance_transform(i, xf); mm.set_instance_color(i, Color("24540f").lerp(Color("4e8c2e"), rng.randf()))
 	var mmi := MultiMeshInstance3D.new(); mmi.multimesh = mm; var mt := StandardMaterial3D.new(); mt.albedo_color = Color(1,1,1); mt.vertex_color_use_as_albedo = true; mt.cull_mode = BaseMaterial3D.CULL_DISABLED; mt.roughness = 1.0; mmi.material_override = mt; mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mmi)
 	# flowers/stones now painted into terrain texture (R27), no dot instances
 	tri_total += 1200 * 4
@@ -451,11 +461,11 @@ func _mini(mp: Vector3, tc: Color) -> void:
 	cyl(mp+Vector3(0,1.16,0), 0.24,0.26,0.07, Color("c9a86a"), 8)
 	box(mp+Vector3(0.30,0.66,0.08), Vector3(0.08,0.52,0.08), Color("6b4a2c"), 0, 0.5, 0)
 func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
-	box(p+Vector3(0,1.1,0), Vector3(5.4,2.2,4.1), stone, 0,0,0, "stone")
+	box(p+Vector3(0,1.2,0), Vector3(4.7,2.4,3.6), stone, 0,0,0, "stone")
 	for cy in [0.55, 1.05, 1.55]: box(p+Vector3(0,cy,1.82), Vector3(4.6,0.07,0.05), stone.darkened(0.25))
-	box(p+Vector3(0,2.15,0), Vector3(2.2,2.3,2.2), stone)
+	box(p+Vector3(0,2.35,0), Vector3(1.9,2.7,1.9), stone)
 	cyl(p+Vector3(0,4.6,0), 1.05,0.05,1.9, roof, 10, "roofp")
-	for off in [Vector2(-2.1,-1.6),Vector2(2.1,-1.6),Vector2(-2.1,1.6),Vector2(2.1,1.6)]:
+	for off in [Vector2(-1.85,-1.45),Vector2(1.85,-1.45),Vector2(-1.85,1.45),Vector2(1.85,1.45)]:
 		cyl(p+Vector3(off.x,1.65,off.y), 0.52,0.52,3.3, stone, 8, "stone")
 		cyl(p+Vector3(off.x,3.95,off.y), 0.72,0.02,1.7, roof, 10, "roofp")
 		cyl(p+Vector3(off.x,3.25,off.y), 0.88,0.72,0.14, roof.darkened(0.22), 10); cyl(p+Vector3(off.x,3.62,off.y), 0.62,0.46,0.14, roof.darkened(0.22), 10)
@@ -483,7 +493,7 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	var wh: float = 2.45 if vi == 2 else 1.7
 	var cy := 0.15 + wh/2.0; var top := 0.15 + wh
 	var lean := 1.0 if vi == 1 else -1.0
-	wf *= 0.92; wh *= 0.94
+	wf *= 0.84; wh *= 0.94
 	var hang: float = [0.0, PI/2.0, PI, -PI/2.0][absi(int(p.x*7.0 + p.z*13.0)) % 4]
 	house_xf = Transform3D(Basis.from_euler(Vector3(0, hang, 0)), p); house_mode = true
 	box(Vector3(0,0.15,0), Vector3(2.5*wf,0.3,2.0), Color("9a968c"))
