@@ -83,10 +83,10 @@ func _h(x: float, z: float) -> float:
 	var mask := clampf((d - 10.0) / 13.0, 0.0, 1.0); mask = mask * mask
 	var roll := 0.55 * sin(x * 0.23) * cos(z * 0.19) + 0.35 * sin(x * 0.09 + 1.7) * sin(z * 0.13)
 	var back := clampf((-z - 6.0) / 10.0, 0.0, 1.0); back = back * back
-	var hill := back * 12.5 * clampf(1.35 - absf(x - 17.0) / 19.0, 0.0, 1.0)
+	var hill := back * 12.5 * clampf(1.35 - absf(x - 14.0) / 19.0, 0.0, 1.0)
 	var left := clampf(( -x - 14.0) / 16.0, 0.0, 1.0)
 	var jag := mask * (0.22*sin(x*1.9+z*0.7) + 0.14*sin(x*3.7-z*2.3)) * clampf(back*2.0,0.0,1.0)
-	var crag := back * (0.42*sin(x*4.1+z*2.7) + 0.28*sin(x*7.3-z*4.9) + 0.18*sin(x*11.0+z*8.0)) * clampf(hill/4.0, 0.0, 1.0)
+	var crag := back * (0.85*sin(x*4.1+z*2.7) + 0.55*sin(x*7.3-z*4.9) + 0.35*sin(x*12.0+z*9.0) + 0.22*sin(x*19.0-z*15.0)) * clampf(hill/4.0, 0.0, 1.0)
 	return mask * roll + hill + left * left * 1.6 * mask + jag + crag
 var canopy_st: SurfaceTool = null
 func add_canopy(xf: Transform3D, c: Color) -> void:
@@ -118,7 +118,7 @@ func flat_sphere() -> ArrayMesh:
 	_flat_sphere = st.commit(); return _flat_sphere
 func _build_terrain() -> void:
 	var size := 64.0; var steps := 88; var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var g1 := Color("2f6b1f"); var g2 := Color("478c2e"); var dirt := Color("9c7f52"); var rock := Color("7d766b"); var snow := Color("f4f6f2")
+	var g1 := Color("2f6b1f"); var g2 := Color("478c2e"); var dirt := Color("9c7f52"); var rock := Color("787c83"); var snow := Color("f4f6f2")
 	for iz in steps:
 		for ix in steps:
 			var x0 := -size/2 + size*float(ix)/steps; var x1 := -size/2 + size*float(ix+1)/steps
@@ -130,11 +130,14 @@ func _build_terrain() -> void:
 				var c: Color = g1.lerp(g2, n)
 				if slope > 0.30: c = dirt.lerp(rock, clampf((slope-0.30)*1.3,0,1))
 				if slope > 0.55:
-					c = rock.lerp(Color("6f675c"), clampf((slope-0.55)*0.9,0,1))
-					if int(floor(h*1.4)) % 2 == 0: c = c.darkened(0.20)
+					c = rock.lerp(Color("565a61"), clampf((slope-0.55)*0.9,0,1))
+					if int(floor(h*1.6)) % 2 == 0: c = c.darkened(0.28)
 					var crev := 0.5 + 0.5*sin(v.x*7.3 - v.y*4.9) * sin(v.x*4.1 + v.y*2.7)
-					c = c.darkened(crev * 0.30)
-				if h > 4.2 and slope <= 0.75: c = snow if h > 5.6 else c.lerp(snow, clampf((h-4.2)*0.8,0,1))
+					c = c.darkened(crev * 0.45)
+					var mot := 0.5 + 0.5*sin(v.x*23.7) * sin(v.y*19.3)
+					c = c.lerp(Color("b2b5ba"), mot * 0.45)
+				var snowpatch := 0.5 + 0.5*sin(v.x*3.1+1.3) * sin(v.y*2.3-0.7)
+				if h > 3.0 and slope <= 1.35 and snowpatch > 0.18: c = snow if h > 3.8 and snowpatch > 0.50 else c.lerp(snow, clampf((h-3.0)*1.0,0,1) * clampf((snowpatch-0.18)*2.2,0,1))
 				st.set_color(c); st.set_uv(v*0.5); st.add_vertex(Vector3(v.x, h, v.y))
 	st.generate_normals()
 	var mi := MeshInstance3D.new(); mi.mesh = st.commit(); var m := StandardMaterial3D.new(); m.vertex_color_use_as_albedo = true; m.albedo_texture = load(PT + "detail_noise.png"); m.roughness = 0.95; mi.material_override = m; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mi)
@@ -150,12 +153,12 @@ func _setup() -> void:
 	var we := WorldEnvironment.new(); var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR; env.background_color = Color("bfe3ef")
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR; env.ambient_light_color = Color(1,0.98,0.92); env.ambient_light_energy = amb
-	env.fog_enabled = true; env.fog_light_color = Color("f2e3c2"); env.fog_density = 0.0060; env.tonemap_mode = Environment.TONE_MAPPER_LINEAR; env.adjustment_enabled = true; env.adjustment_saturation = 1.15; env.adjustment_contrast = 1.05; env.adjustment_brightness = 1.02; env.glow_enabled = false;
+	env.fog_enabled = true; env.fog_light_color = Color("f2e3c2"); env.fog_density = 0.0045; env.tonemap_mode = Environment.TONE_MAPPER_LINEAR; env.adjustment_enabled = true; env.adjustment_saturation = 1.15; env.adjustment_contrast = 1.05; env.adjustment_brightness = 1.02; env.glow_enabled = false;
 	we.environment = env; add_child(we)
 	var pool := OmniLight3D.new(); pool.position = Vector3(0,4.5,1); pool.light_color = Color("ffd9a0"); pool.light_energy = 0.9; pool.omni_range = 14.0; pool.shadow_enabled = false; add_child(pool)
 	var fill := DirectionalLight3D.new(); fill.rotation_degrees = Vector3(-38, 125, 0); fill.light_energy = 0.20; fill.light_color = Color("cfe6ff"); fill.shadow_enabled = false; add_child(fill)
 	var sun := DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-52, -38, 0); sun.light_energy = light_e; sun.light_color = Color(1,0.96,0.88); sun.shadow_enabled = true; sun.shadow_opacity = 0.45; sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS; sun.shadow_blur = 4.5; add_child(sun)
-	var cam := Camera3D.new(); cam.projection = Camera3D.PROJECTION_ORTHOGONAL; cam.size = 6.5 if OS.get_cmdline_user_args().has("--close") else (21.0 if round_no>=10 else 19.0); cam.look_at_from_position(Vector3(9.5,8,7.5) if OS.get_cmdline_user_args().has("--close") else Vector3(11,11,11), Vector3(2.6,0.6,-0.8) if OS.get_cmdline_user_args().has("--close") else Vector3(0,0.4,0), Vector3.UP); cam.current = true; add_child(cam)	# ground grass: big plane + lighter patches
+	var cam := Camera3D.new(); cam.projection = Camera3D.PROJECTION_ORTHOGONAL; cam.size = 6.5 if OS.get_cmdline_user_args().has("--close") else (21.0 if round_no>=10 else 19.0); cam.look_at_from_position(Vector3(9.5,8,7.5) if OS.get_cmdline_user_args().has("--close") else Vector3(11,11,11), Vector3(2.6,0.6,-0.8) if OS.get_cmdline_user_args().has("--close") else Vector3(1.3,0.5,-1.1), Vector3.UP); cam.current = true; add_child(cam)	# ground grass: big plane + lighter patches
 	_build_terrain()
 	for k in 26:
 		var px := -13.0 + fmod(float(k)*3.71, 26.0); var pz := -11.0 + fmod(float(k)*5.13, 22.0)
