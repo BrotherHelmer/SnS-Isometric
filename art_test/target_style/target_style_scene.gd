@@ -226,6 +226,7 @@ func _setup() -> void:
 	for li2 in 5:
 		var lx2 := 10.0+fmod(float(li2)*2.3,6.0); var lz2 := -8.0-fmod(float(li2)*1.1,4.0)
 		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(li2),0.1)).scaled(Vector3(1.1,0.65,0.9)), Vector3(lx2,_h(lx2,lz2)+0.3,lz2)), Color("6e665c"), "rock"); tri_total+=128
+	_hill_content(); _props2()
 	# market stall: posts, striped canopy, crates
 	for mp in [Vector3(-4.6,0,5.9), Vector3(-3.4,0,5.9), Vector3(-4.6,0,7.0), Vector3(-3.4,0,7.0)]: box(mp+Vector3(0,0.75,0), Vector3(0.13,1.5,0.13), Color("6b4423"))
 	box(Vector3(-4.0,1.62,6.45), Vector3(1.9,0.14,1.9), Color("d43a2a")); box(Vector3(-4.0,1.58,6.45), Vector3(1.9,0.1,0.5), Color("f2ead8")); box(Vector3(-4.0,0.55,6.45), Vector3(1.6,0.5,1.2), Color("a67c4e"), 0,0,0, "timber")
@@ -268,6 +269,7 @@ func _setup() -> void:
 		var rmi := MeshInstance3D.new(); rmi.mesh = ri2[0]; rmi.position = ri2[1]; var rmat := StandardMaterial3D.new(); rmat.albedo_texture = load(TEX["roofp"]); rmat.albedo_color = Color(0.88,0.88,0.88); rmat.roughness = 0.92; rmat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; rmi.material_override = rmat; rmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(rmi)
 	if canopy_st != null:
 		var cmi := MeshInstance3D.new(); cmi.mesh = canopy_st.commit(); var cm := StandardMaterial3D.new(); cm.albedo_texture = load(TEX["leafp"]); cm.vertex_color_use_as_albedo = true; cm.albedo_color = Color(1.0,1.0,0.98); cm.roughness = 1.0; cm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; cmi.material_override = cm; cmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(cmi)
+	_spawn_tufts()
 	_spawn_carriers(); _spawn_statics()
 func _spawn_carriers() -> void:
 	var chars := ["Farmer_B", "Farmer_A", "Rogue_Hooded", "Rogue"]
@@ -336,6 +338,78 @@ func _spawn_cliffs() -> void:
 		for si3 in 3:
 			var bp := pos + Vector3(float(si3)*1.3-1.3, -float(df[3])*0.3, 1.8)
 			add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0,float(si3),0)).scaled(Vector3(0.6,0.42,0.55)), Vector3(bp.x, _h(bp.x,bp.z)+0.12, bp.z)), Color("6e665c"), "rock"); tri_total += 128
+func _build_mine(mp: Vector3) -> void:
+	box(mp+Vector3(0,0.75,-0.15), Vector3(1.5,1.5,0.18), Color("17110b"))
+	box(mp+Vector3(-0.82,0.85,0), Vector3(0.2,1.9,0.24), Color("6b4a2c")); box(mp+Vector3(0.82,0.85,0), Vector3(0.2,1.9,0.24), Color("6b4a2c"))
+	box(mp+Vector3(0,1.85,0), Vector3(1.95,0.24,0.26), Color("7a5a36"))
+	box(mp+Vector3(-0.45,0.45,0), Vector3(0.14,1.1,0.14), Color("54381f"))
+	for rz in 2: box(mp+Vector3(-0.32+float(rz)*0.64, -0.55, 1.5), Vector3(0.09,0.06,2.6), Color("4c4c50"))
+	for sl in 4: box(mp+Vector3(0, -0.62, 0.55+float(sl)*0.62), Vector3(0.95,0.07,0.16), Color("6b4a2c"))
+	box(mp+Vector3(0,-0.25,2.1), Vector3(0.78,0.42,1.0), Color("5d4630")); box(mp+Vector3(0,0.02,2.1), Vector3(0.66,0.2,0.84), Color("3c3f45"))
+func _build_watchtower(tp: Vector3) -> void:
+	for lx in [-0.55, 0.55]:
+		for lz in [-0.55, 0.55]: box(tp+Vector3(lx,1.6,lz), Vector3(0.17,3.2,0.17), Color("6b4a2c"))
+	box(tp+Vector3(0,1.7,0.62), Vector3(1.35,0.12,0.12), Color("54381f"), 0, 0, 0.5); box(tp+Vector3(0,1.7,-0.62), Vector3(1.35,0.12,0.12), Color("54381f"), 0, 0, -0.5)
+	box(tp+Vector3(0,3.3,0), Vector3(1.8,0.18,1.8), Color("7a5a36"))
+	box(tp+Vector3(0,4.05,0), Vector3(1.45,1.35,1.45), Color("a8875e"), 0,0,0, "timber")
+	box(tp+Vector3(0,4.15,0.75), Vector3(0.44,0.5,0.06), Color("ffd98a"))
+	cyl(tp+Vector3(0,5.25,0), 1.35,0.04,1.15, Color("9c4a34"), 8, "roofp")
+func _hill_content() -> void:
+	_build_mine(Vector3(10.5, _h(10.5,-8.5)+0.55, -8.5))
+	_build_watchtower(Vector3(17.0, _h(17.0,-11.0)-0.15, -11.0))
+	var sw := [Vector2(2,-4.5), Vector2(6,-5.2), Vector2(5.2,-6.8), Vector2(8.6,-7.2), Vector2(10.2,-8.0)]
+	for si in sw.size()-1:
+		var a3: Vector2 = sw[si]; var b3: Vector2 = sw[si+1]; var mid3 := (a3+b3)*0.5; var dir3 := b3-a3
+		box(Vector3(mid3.x, _h(mid3.x,mid3.y)+0.06, mid3.y), Vector3(1.15,0.07,dir3.length()+0.7), Color("c9ab72"), atan2(dir3.x,dir3.y), 0,0, "dirt")
+	for ti in 3:
+		var tx2 := 4.6+float(ti)*2.1; var tz2 := -6.4-float(ti)*0.55
+		box(Vector3(tx2, _h(tx2,tz2)+0.04, tz2), Vector3(3.4,0.14,1.15), Color("7fae4a") if ti%2==0 else Color("a8895a"), 0.15)
+	for stp in [Vector3(8,0,-9.5), Vector3(13.5,0,-7.2), Vector3(19,0,-8.5), Vector3(15,0,-13.5)]:
+		_build_tree(stp, Color("79c24d"), Color("a9dd77"))
+func _props2() -> void:
+	# log piles
+	for lp in [Vector3(-6.8,0,7.6), Vector3(8.8,0,6.2), Vector3(1.2,0,7.8)]:
+		for li in 5:
+			var lm := CylinderMesh.new(); lm.bottom_radius=0.14; lm.top_radius=0.14; lm.height=1.15; lm.radial_segments=7
+			add_mesh(lm, Transform3D(Basis.from_euler(Vector3(0,0,PI/2.0)), lp+Vector3(0,0.15+0.27*float(li%3),-0.3+0.3*float(li/3))), Color("8a6742")); tri_total += 28
+	# cart
+	var cp := Vector3(4.6,0,5.6)
+	box(cp+Vector3(0,0.62,0), Vector3(1.5,0.14,0.95), Color("8a6742")); box(cp+Vector3(0,0.85,0.44), Vector3(1.5,0.4,0.08), Color("7a5a36")); box(cp+Vector3(0,0.85,-0.44), Vector3(1.5,0.4,0.08), Color("7a5a36"))
+	for wx in [-0.62, 0.62]:
+		var wm := CylinderMesh.new(); wm.bottom_radius=0.46; wm.top_radius=0.46; wm.height=0.1; wm.radial_segments=10
+		add_mesh(wm, Transform3D(Basis.from_euler(Vector3(PI/2.0,0,0)), cp+Vector3(wx,0.46,0.52)), Color("54381f")); tri_total += 40
+	# well
+	var wp := Vector3(-5.6,0,-4.6)
+	cyl(wp+Vector3(0,0.42,0), 0.62,0.68,0.85, Color("9a968c"), 9, "stone")
+	box(wp+Vector3(-0.62,1.25,0), Vector3(0.13,1.7,0.13), Color("6b4a2c")); box(wp+Vector3(0.62,1.25,0), Vector3(0.13,1.7,0.13), Color("6b4a2c"))
+	box(wp+Vector3(-0.35,2.32,0), Vector3(0.95,0.09,0.8), Color("9c4a34"), 0, 0.42, 0); box(wp+Vector3(0.35,2.32,0), Vector3(0.95,0.09,0.8), Color("9c4a34"), 0, -0.42, 0)
+	# sacks + crates near houses/market
+	for sp in [Vector3(-3.2,0,6.9), Vector3(2.6,0,0.6), Vector3(6.8,0,-2.4), Vector3(-7.8,0,3.6)]:
+		blob(sp+Vector3(0,0.28,0), Vector3(0.34,0.3,0.34), Color("c2a878")); blob(sp+Vector3(0.3,0.2,0.15), Vector3(0.26,0.22,0.26), Color("b09468"))
+		box(sp+Vector3(-0.45,0.3,-0.2), Vector3(0.55,0.55,0.55), Color("a67c4e"), 0.3)
+	# fence lines
+	for fx in 6: box(Vector3(-9.5+float(fx)*0.85,0.4,8.6), Vector3(0.12,0.8,0.12), Color("7a5a36"))
+	box(Vector3(-7.4,0.62,8.6), Vector3(4.6,0.1,0.1), Color("8a6742"))
+func _spawn_tufts() -> void:
+	var verts := PackedVector3Array(); var norms := PackedVector3Array(); var uvs := PackedVector2Array()
+	for rot in [0.0, PI/2.0]:
+		var bx := Vector3(cos(rot),0,-sin(rot)); var base := verts.size()
+		var cs := [Vector3(-0.17,0,0), Vector3(0.17,0,0), Vector3(0.13,0.38,0), Vector3(-0.13,0.38,0)]
+		for cv in cs: verts.append(Vector3(cv.x*bx.x, cv.y, cv.x*bx.z))
+		var nn := Vector3(bx.z,0,bx.x)
+		for j in 4: norms.append(nn); uvs.append(Vector2(0.5,0.5))
+		verts.append_array([]) # noop keep arrays aligned
+	var idx := PackedInt32Array([0,1,2, 0,2,3, 4,5,6, 4,6,7])
+	var arrays := []; arrays.resize(Mesh.ARRAY_MAX); arrays[Mesh.ARRAY_VERTEX]=verts; arrays[Mesh.ARRAY_NORMAL]=norms; arrays[Mesh.ARRAY_TEX_UV]=uvs; arrays[Mesh.ARRAY_INDEX]=idx
+	var tm := ArrayMesh.new(); tm.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var mm := MultiMesh.new(); mm.transform_format = MultiMesh.TRANSFORM_3D; mm.use_colors = true; mm.mesh = tm; mm.instance_count = 900
+	var rng := RandomNumberGenerator.new(); rng.seed = 99
+	for i in 1300:
+		var gx := rng.randf_range(-17.0, 20.0); var gz := rng.randf_range(-14.0, 13.0)
+		var xf := Transform3D(Basis.from_euler(Vector3(0, rng.randf()*PI, 0)).scaled(Vector3.ONE * rng.randf_range(0.5,0.95)), Vector3(gx, _h(gx,gz)+0.02, gz))
+		mm.set_instance_transform(i, xf); mm.set_instance_color(i, Color("386e20").lerp(Color("5da038"), rng.randf()))
+	var mmi := MultiMeshInstance3D.new(); mmi.multimesh = mm; var mt := StandardMaterial3D.new(); mt.albedo_color = Color(1,1,1); mt.vertex_color_use_as_albedo = true; mt.cull_mode = BaseMaterial3D.CULL_DISABLED; mt.roughness = 1.0; mmi.material_override = mt; mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mmi)
+	tri_total += 900 * 4
 func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 	box(p+Vector3(0,1.1,0), Vector3(5.4,2.2,4.1), stone, 0,0,0, "stone")
 	for cy in [0.55, 1.05, 1.55]: box(p+Vector3(0,cy,1.82), Vector3(4.6,0.07,0.05), stone.darkened(0.25))
@@ -356,6 +430,12 @@ func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 	for wf in [Vector2(-1.9,1.35),Vector2(1.9,1.35),Vector2(0,2.6)]:
 		box(p+Vector3(wf.x,wf.y,2.07), Vector3(0.52,0.68,0.08), Color("e8c87a")); box(p+Vector3(wf.x,wf.y,2.11), Vector3(0.36,0.5,0.05), Color("3a2c1c"))
 	box(p+Vector3(0,0.7,2.08), Vector3(0.95,1.4,0.15), Color("4a3421"))
+	# gatehouse protrusion + annex tower (silhouette complexity)
+	box(p+Vector3(0,0.85,2.45), Vector3(1.7,1.7,0.85), stone, 0,0,0, "stone")
+	cyl(p+Vector3(0,2.15,2.45), 1.15,0.35,0.85, roof, 8, "roofp")
+	cyl(p+Vector3(-3.35,1.7,0.3), 0.82,0.82,3.4, stone, 8, "stone")
+	cyl(p+Vector3(-3.35,4.15,0.3), 1.05,0.03,1.35, roof, 9, "roofp")
+	for bx2 in [-1.2,-0.6,0.0,0.6,1.2]: box(p+Vector3(bx2,2.42,-1.82), Vector3(0.34,0.32,0.16), stone.darkened(0.1))
 	box(p+Vector3(0.0,3.9,0), Vector3(0.08,1.2,0.08), Color("6b4423")); box(p+Vector3(0.45,4.3,0), Vector3(0.8,0.45,0.05), Color("d43a2a"))
 func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	box(p+Vector3(0,0.15,0), Vector3(2.5,0.3,2.0), Color("9a968c"))
@@ -374,8 +454,19 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	box(p+Vector3(-0.68,0.90,1.0), Vector3(0.56,0.12,0.10), Color("5d7a34"))
 	for fx3 in 3: blob(p+Vector3(-0.82+float(fx3)*0.14,0.99,1.02), Vector3(0.07,0.06,0.07), Color("e2543e") if fx3%2==0 else Color("f2f0e6"))
 	box(p+Vector3(1.18,1.22,0.25), Vector3(0.06,0.5,0.44), Color("ffd98a"))
+	# porch: posts + sloped canopy over door
+	box(p+Vector3(-0.55,0.75,1.32), Vector3(0.12,1.5,0.12), Color("7a5a36")); box(p+Vector3(0.55,0.75,1.32), Vector3(0.12,1.5,0.12), Color("7a5a36"))
+	box(p+Vector3(0,1.58,1.22), Vector3(1.5,0.09,0.95), Color("8a6742"), 0, 0, 0.22)
+	# lean-to side extension with shed slab
+	box(p+Vector3(-1.58,0.55,0), Vector3(0.95,1.1,1.6), Color("e0cfa8"), 0,0,0, "plaster")
+	box(p+Vector3(-1.58,1.2,0), Vector3(1.15,0.09,1.85), Color("9c4a34"), 0, 0.20, 0)
 	roof2(p+Vector3(0,1.85,0), 3.0, 2.5, 1.15, 0.18, roof)
+	# dormer on front slope + second chimney
+	box(p+Vector3(-0.62,2.52,0.68), Vector3(0.52,0.52,0.42), Color("e8d9b8"), 0,0,0, "plaster")
+	box(p+Vector3(-0.62,2.62,0.90), Vector3(0.34,0.3,0.05), Color("ffd98a"))
+	box(p+Vector3(-0.62,2.86,0.68), Vector3(0.68,0.1,0.56), roof)
 	box(p+Vector3(0.8,2.6,-0.3), Vector3(0.45,1.0,0.45), stone)
+	box(p+Vector3(-0.78,2.45,-0.25), Vector3(0.34,0.75,0.34), stone)
 	blob(p+Vector3(0.8,3.35,-0.3), Vector3(0.22,0.18,0.22), Color(1,1,1,0.35)); blob(p+Vector3(0.95,3.6,-0.3), Vector3(0.32,0.24,0.32), Color(1,1,1,0.22))
 func _build_hut(p: Vector3, stone: Color) -> void:
 	box(p+Vector3(0,0.7,0), Vector3(2.0,1.4,1.8), Color("cbb489"))
@@ -391,6 +482,9 @@ func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 	if Vector2(p.x,p.z).length() > 11.0: p.y = _h(p.x, p.z) - 0.1
 	cyl(p+Vector3(0,0.035,0), 1.7,1.7,0.02, Color(0.09,0.15,0.04,0.32), 12)
 	cyl(p+Vector3(0,0.9,0), 0.22,0.32,1.8, Color("6b4423"), 7)
+	for bang in [0.7, -0.65]:
+		var bm := CylinderMesh.new(); bm.bottom_radius=0.07; bm.top_radius=0.13; bm.height=1.05; bm.radial_segments=6
+		add_mesh(bm, Transform3D(Basis.from_euler(Vector3(0,0,bang)), p+Vector3(bang*0.45,1.55,0)), Color("6b4423")); tri_total += 24
 	if vi == 1:
 		for pi in 4:
 			add_canopy(Transform3D(Basis.from_euler(Vector3(0,float(pi)*0.8,0)).scaled(Vector3(0.85,1.05,0.85)), p+Vector3(0,1.9+float(pi)*0.62,0)), a if pi%2==0 else b)
