@@ -249,6 +249,10 @@ func _setup() -> void:
 		var lx2 := 10.0+fmod(float(li2)*2.3,6.0); var lz2 := -8.0-fmod(float(li2)*1.1,4.0)
 		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(li2),0.1)).scaled(Vector3(1.1,0.65,0.9)), Vector3(lx2,_h(lx2,lz2)+0.3,lz2)), Color("6e665c"), "rock"); tri_total+=128
 	_hill_content(); _hill_props(); _hill_fields(); _summit(); _upper_fill(); _fill_more(); _top_band(); _props2()
+	for uw in [[Vector3(5.0,_h(5.0,-6.4),-6.4), Color("2f62b8")], [Vector3(8.2,_h(8.2,-10.1),-10.1), Color("d43a2a")], [Vector3(11.5,_h(11.5,-11.2),-11.2), Color("2f62b8")], [Vector3(15.0,_h(15.0,-13.6),-13.6), Color("d43a2a")], [Vector3(6.8,_h(6.8,-13.4),-13.4), Color("2f62b8")]]:
+		_mini(uw[0], uw[1])
+	for up2 in [Vector3(6.2,_h(6.2,-9.8),-9.8), Vector3(12.8,_h(12.8,-12.6),-12.6), Vector3(17.5,_h(17.5,-11.0),-11.0)]:
+		cyl(up2+Vector3(0,0.4,0), 0.3,0.34,0.8, Color("8a5f36"), 8); box(up2+Vector3(0.55,0.3,0.3), Vector3(0.55,0.55,0.55), Color("a67c4e"), 0.3)
 	for mw in [[Vector3(5.2,_h(5.2,-6.3),-6.3), Color("2f62b8")], [Vector3(7.2,_h(7.2,-7.0),-7.0), Color("d43a2a")], [Vector3(8.6,_h(8.6,-6.4),-6.4), Color("3f7d3a")], [Vector3(-2.2,0,8.6), Color("d43a2a")], [Vector3(11.2,0,6.4), Color("2f62b8")], [Vector3(-9.2,0,-4.2), Color("2f62b8")]]: _mini(mw[0], mw[1])
 	# market stall: posts, striped canopy, crates
 	for mp in [Vector3(-4.6,0,5.9), Vector3(-3.4,0,5.9), Vector3(-4.6,0,7.0), Vector3(-3.4,0,7.0)]: box(mp+Vector3(0,0.75,0), Vector3(0.13,1.5,0.13), Color("6b4423"))
@@ -272,10 +276,10 @@ func _setup() -> void:
 	# trees
 	for p in [Vector3(-8,-0,-6),Vector3(6,0,-6),Vector3(8,0,1),Vector3(-9,0,3),Vector3(5.5,0,6.5),Vector3(-6.5,0,-4),Vector3(1.5,0,-7.5)]:
 		_build_tree(p, leaf, leaf2)
-	_build_house(Vector3(-8.6,0,4.8), roof, stone)
+	_build_roundbarn(Vector3(-8.6,0,4.8), roof)
 	_build_roundhouse(Vector3(9.6,0,1.8), roof)
-	_build_house(Vector3(-11.5,0,-6.5), roof, stone)
-	_build_house(Vector3(11.8,0,7.5), roof, stone)
+	_build_aframe(Vector3(-11.5,0,-6.5), roof, stone)
+	_build_octstore(Vector3(11.8,0,7.5), stone)
 	_build_house(Vector3(-5.5,0,10.8), roof, stone)
 	_build_house(Vector3(13.5,0,4.5), roof, stone)
 	for tp in [Vector3(-14,0,-8),Vector3(-15,0,2),Vector3(-13,0,9),Vector3(13,0,10),Vector3(15,0,-4),Vector3(11,0,-12),Vector3(-11,0,-11),Vector3(4,0,11),Vector3(-4,0,12),Vector3(14,0,5)]:
@@ -719,6 +723,27 @@ func _build_roundhouse(p: Vector3, roof: Color) -> void:
 	box(p+Vector3(0,0.95,1.2), Vector3(0.62,1.5,0.1), Color("6e4a2c"))
 	box(p+Vector3(0.85,1.6,0.95), Vector3(0.42,0.5,0.08), Color("ffd98a"))
 	cyl(p+Vector3(0.55,3.3,-0.4), 0.2,0.24,0.9, Color("9a968c"), 8, "stone")
+func _build_roundbarn(p: Vector3, roof: Color) -> void:
+	cyl(p+Vector3(0,0.25,0), 1.62,1.68,0.5, Color("9a968c"), 14, "stone")
+	cyl(p+Vector3(0,1.25,0), 1.52,1.44,1.55, Color("a8875e"), 14, "timber")
+	box(p+Vector3(0,2.12,0), Vector3(3.2,0.15,3.2), Color("54381f"))
+	cyl(p+Vector3(0,2.95,0), 1.78,0.14,1.55, roof, 14, "roofp")
+	box(p+Vector3(0,0.95,1.5), Vector3(0.95,1.55,0.1), Color("54381f"))
+	box(p+Vector3(0.75,1.55,1.42), Vector3(0.4,0.42,0.08), Color("ffd98a"))
+	cyl(p+Vector3(-0.8,2.6,-0.5), 0.18,0.22,0.8, Color("9a968c"), 8, "stone")
+func _build_octstore(p: Vector3, stone: Color) -> void:
+	cyl(p+Vector3(0,0.3,0), 1.45,1.5,0.6, stone, 8, "stone")
+	cyl(p+Vector3(0,1.55,0), 1.32,1.26,1.95, stone, 8, "stone")
+	cyl(p+Vector3(0,2.72,0), 1.58,0.95,0.75, Color("9c4a34"), 8, "roofp")
+	cyl(p+Vector3(0,3.25,0), 0.4,0.46,0.5, stone, 8, "stone")
+	box(p+Vector3(0,1.0,1.34), Vector3(0.8,1.7,0.1), Color("54381f"))
+	box(p+Vector3(1.75,0.35,0.6), Vector3(0.6,0.6,0.6), Color("a67c4e"), 0.4); cyl(p+Vector3(1.7,0.42,-0.35), 0.3,0.34,0.85, Color("8a5f36"), 8)
+func _build_aframe(p: Vector3, roof: Color, stone: Color) -> void:
+	box(p+Vector3(0,0.15,0), Vector3(2.6,0.3,2.2), stone, 0,0,0, "stone")
+	box(p+Vector3(0,0.55,0), Vector3(2.3,0.85,1.9), Color("e8d9b8"), 0,0,0, "plaster")
+	roof2(p+Vector3(0,0.92,0), 3.3, 2.6, 2.15, 0.18, roof)
+	box(p+Vector3(0,0.75,1.02), Vector3(0.66,1.25,0.08), Color("6e4a2c"))
+	box(p+Vector3(0.62,2.9,-0.3), Vector3(0.36,0.9,0.36), stone, 0,0,0, "stone")
 func _build_hut(p: Vector3, stone: Color) -> void:
 	box(p+Vector3(0,0.7,0), Vector3(2.0,1.4,1.8), Color("cbb489"))
 	box(p+Vector3(0,0.65,0.92), Vector3(0.65,1.1,0.08), Color("3d2b18"))
