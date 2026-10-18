@@ -115,7 +115,7 @@ func canopy_sphere() -> ArrayMesh:
 		var dv := verts[dvi]; var dk := str(dv)
 		if not disp2.has(dk):
 			var dn := dv.normalized()
-			var ds := 1.0 + 0.20*sin(dn.x*5.1+dn.y*3.3) + 0.16*sin(dn.y*7.2+dn.z*4.4) + 0.10*sin(dn.z*9.0-dn.x*5.0)
+			var ds := 1.0 + 0.30*sin(dn.x*5.1+dn.y*3.3) + 0.23*sin(dn.y*7.2+dn.z*4.4) + 0.15*sin(dn.z*9.0-dn.x*5.0)
 			disp2[dk] = dv * ds
 		verts[dvi] = disp2[dk]
 	var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -626,7 +626,7 @@ func _top_band() -> void:
 	# jagged crest silhouette on NE ridge, snow only in crevices
 	for cri in 7:
 		var crx := 15.5 + float(cri)*1.35; var crz := -14.8 - fmod(float(cri)*0.8, 1.8); var cry := _h(crx,crz)
-		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.3,float(cri)*1.3,0.2)).scaled(Vector3(0.85,0.62,0.75)), Vector3(crx, cry+0.28, crz)), Color("6e665c"), "rock"); tri_total += 128
+		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.3,float(cri)*1.3,0.2)).scaled(Vector3(1.45,1.05,1.25)), Vector3(crx, cry+0.35, crz)), Color("6e665c"), "rock"); tri_total += 128
 		if cri % 2 == 0: blob(Vector3(crx+0.55, cry+0.12, crz+0.3), Vector3(0.34,0.13,0.3), Color("eef2f4"))
 	# talus cones + outcrops breaking the wall plane (merged rock key)
 	for tli in 6:
@@ -799,7 +799,7 @@ func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 	box(p+Vector3(2.95,0.85,0.55), Vector3(1.35,1.7,2.3), stone, 0,0,0, "stone")
 	cyl(p+Vector3(2.95,2.15,0.55), 0.98,0.08,0.9, roof, 9, "roofp")
 	roof2(p+Vector3(-0.6,2.38,-0.85), 3.6, 1.7, 0.95, 0.18, roof)
-	cyl(p+Vector3(0,4.6,0), 1.05,0.05,1.9, roof, 10, "roofp")
+	cyl(p+Vector3(0,4.85,0), 1.05,0.05,2.4, roof, 10, "roofp")
 	var ths := [3.3, 3.75, 3.05, 3.5]
 	for oi2 in 4:
 		var off: Vector2 = [Vector2(-1.85,-1.45),Vector2(1.85,-1.45),Vector2(-1.85,1.45),Vector2(1.85,1.45)][oi2]
@@ -954,8 +954,8 @@ func _build_roundhouse(p: Vector3, roof: Color) -> void:
 		var aa := float(pa) * TAU / 6.0
 		box(p+Vector3(sin(aa)*1.16,1.45,cos(aa)*1.16), Vector3(0.15,1.8,0.15), Color("54381f"), aa, 0, 0, "timber")
 	box(p+Vector3(0,2.42,0), Vector3(2.5,0.16,2.5), Color("54381f"))
-	var cone1 := CylinderMesh.new(); cone1.bottom_radius=1.62; cone1.top_radius=0.12; cone1.height=1.55; cone1.radial_segments=12
-	add_mesh(cone1, Transform3D(Basis.from_euler(Vector3(sin(p.x*1.3)*0.07,0,cos(p.z*1.7)*0.07)), p+Vector3(sin(p.z)*0.08,3.25,cos(p.x)*0.06)), roof, "roofp"); tri_total += 96
+	var cone1 := CylinderMesh.new(); cone1.bottom_radius=1.62; cone1.top_radius=0.12; cone1.height=1.55 + 0.38*sin(p.x*1.9); cone1.radial_segments=12
+	add_mesh(cone1, Transform3D(Basis.from_euler(Vector3(sin(p.x*1.3)*0.07,0,cos(p.z*1.7)*0.07)), p+Vector3(sin(p.z)*0.08,3.25 + 0.19*sin(p.x*1.9),cos(p.x)*0.06)), roof, "roofp"); tri_total += 96
 	box(p+Vector3(0,0.95,1.2), Vector3(0.62,1.5,0.1), Color("6e4a2c"))
 	box(p+Vector3(0.85,1.6,0.95), Vector3(0.42,0.5,0.08), Color("ffd98a"))
 	cyl(p+Vector3(0.55,3.3,-0.4), 0.2,0.24,0.9, Color("9a968c"), 8, "stone")
@@ -1015,7 +1015,7 @@ func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 		var sc: float = [1.05,0.78,0.74,0.78,0.66,0.55,0.53,0.45,0.43,0.46,0.40,0.38,0.36,0.34][ci] * (0.88 + 0.24 * (0.5 + 0.5*sin(float(ci)*2.3)))
 		var cc2: Color = a.lerp(b, clampf(float(ci)/7.0, 0.0, 1.0))
 		if ci % 3 == 2: cc2 = cc2.lightened(0.13)
-		add_canopy(Transform3D(Basis.from_euler(Vector3(0, float(ci)*0.62, 0)).scaled(Vector3(sc*1.15*tsc, sc*0.95*tsc, sc*1.15*tsc)), p+off*Vector3(1,tsc,1)), cc2)
+		add_canopy(Transform3D(Basis.from_euler(Vector3(0, float(ci)*0.62, 0)).scaled(Vector3(sc*1.15*tsc, sc*0.95*tsc, sc*1.15*tsc)), p+off*Vector3(1.28,tsc,1.28)), cc2)
 func _build_carrier(p: Vector3) -> void:
 	box(p+Vector3(-0.16,0.35,0), Vector3(0.2,0.7,0.22), Color("4a3421")); box(p+Vector3(0.16,0.35,0), Vector3(0.2,0.7,0.22), Color("4a3421"))
 	box(p+Vector3(0,0.95,0), Vector3(0.62,0.65,0.4), Color("2f62b8"))
