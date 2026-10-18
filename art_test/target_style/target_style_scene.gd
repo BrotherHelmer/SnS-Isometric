@@ -9,6 +9,9 @@ func _ready() -> void:
 		if a.begins_with("--round="): round_no = int(a.trim_prefix("--round="))
 		if a.begins_with("--out="): out_path = a.trim_prefix("--out=")
 	_setup()
+	var cl := CanvasLayer.new(); add_child(cl); var vr := TextureRect.new(); vr.texture = load(PT + "vignette.png"); vr.set_anchors_preset(Control.PRESET_FULL_RECT); vr.mouse_filter = Control.MOUSE_FILTER_IGNORE; cl.add_child(vr)
+	for pp in [Vector3(-4,3,3), Vector3(5,3,-2)]:
+		var o := OmniLight3D.new(); o.position = pp; o.light_color = Color("ffcf96"); o.light_energy = 0.4; o.omni_range = 8.0; o.shadow_enabled = false; add_child(o)
 	await get_tree().process_frame; await get_tree().create_timer(0.9).timeout
 	var img := get_viewport().get_texture().get_image()
 	img.save_png(out_path)
@@ -44,11 +47,24 @@ func blob(p: Vector3, s: Vector3, c: Color, tx := "") -> void:
 	var m := SphereMesh.new(); m.radial_segments = 8; m.rings = 4; m.radius = 1.0; m.height = 2.0; tri_total += 64
 	add_mesh(m, Transform3D(Basis.IDENTITY.scaled(s), p), c, tx)
 func roof2(p: Vector3, w: float, d: float, h: float, thick: float, c: Color) -> void:
-	# two slanted slabs
-	var len := sqrt((w/2.0)*(w/2.0) + h*h)
-	var ang := atan2(h, w/2.0)
-	box(p + Vector3(-w/4.0, h/2.0, 0), Vector3(len, thick, d), c, 0, ang, 0, "roofp")
-	box(p + Vector3(w/4.0, h/2.0, 0), Vector3(len, thick, d), c, 0, -ang, 0, "roofp")
+	# CUSTOM UV PRISM: slopes with explicit UV (u along ridge x2, v eave->ridge), gables plaster
+	var hw := w/2.0
+	var eL := Vector3(-hw,0,-d/2); var eL2 := Vector3(-hw,0,d/2); var r1 := Vector3(0,h,-d/2); var r2 := Vector3(0,h,d/2)
+	var eR := Vector3(hw,0,-d/2); var eR2 := Vector3(hw,0,d/2)
+	var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var quads := [[eL,r1,r2,eL2],[eR2,r2,r1,eR]]
+	for qi in quads.size():
+		var q: Array = quads[qi]; var n: Vector3 = (q[1]-q[0]).cross(q[3]-q[0]).normalized(); if n.y < 0: n = -n
+		var uvs := [Vector2(0,0), Vector2(0,3), Vector2(2,3), Vector2(2,0)]
+		for idx in [0,1,2,0,2,3]: st.set_normal(n); st.set_uv(uvs[idx]); st.add_vertex(q[idx])
+	add_mesh(st.commit(), Transform3D(Basis.IDENTITY, p), c, "roofp"); tri_total += 4
+	var gs := SurfaceTool.new(); gs.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for tri in [[eL,eR,r1],[eL2,r2,eR2]]:
+		var n2: Vector3 = (tri[1]-tri[0]).cross(tri[2]-tri[0]).normalized()
+		for idx in 3: gs.set_normal(n2); gs.set_uv(Vector2(0.5,0.5)); gs.add_vertex(tri[idx])
+	add_mesh(gs.commit(), Transform3D(Basis.IDENTITY, p), Color("e8d9b8"), "plaster"); tri_total += 2
+	# eave shadow line
+	box(p+Vector3(0,0.02,0), Vector3(w+0.15,0.09,d+0.15), c.darkened(0.35))
 func flat_mesh(mesh: Mesh) -> ArrayMesh:
 	var mdt := MeshDataTool.new(); mdt.create_from_surface(mesh, 0)
 	var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -96,7 +112,7 @@ func _build_terrain() -> void:
 				if h > 2.0: c = snow if h > 3.4 else c.lerp(snow, clampf((h-2.0)*1.1,0,1))
 				st.set_color(c); st.set_uv(v*0.5); st.add_vertex(Vector3(v.x, h, v.y))
 	st.generate_normals()
-	var mi := MeshInstance3D.new(); mi.mesh = st.commit(); var m := StandardMaterial3D.new(); m.vertex_color_use_as_albedo = true; m.albedo_texture = load(TEX["meadow"]); m.roughness = 0.95; mi.material_override = m; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mi)
+	var mi := MeshInstance3D.new(); mi.mesh = st.commit(); var m := StandardMaterial3D.new(); m.vertex_color_use_as_albedo = true; m.albedo_texture = load(PT + "detail_noise.png"); m.roughness = 0.95; mi.material_override = m; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mi)
 	# outer trees sit on terrain
 func _setup() -> void:
 	# round presets: 1 pipeline, 2 softer/yellower, 3 tuned toward target mean colour
@@ -114,7 +130,7 @@ func _setup() -> void:
 	var pool := OmniLight3D.new(); pool.position = Vector3(0,4.5,1); pool.light_color = Color("ffd9a0"); pool.light_energy = 0.55; pool.omni_range = 13.0; pool.shadow_enabled = false; add_child(pool)
 	var fill := DirectionalLight3D.new(); fill.rotation_degrees = Vector3(-38, 125, 0); fill.light_energy = 0.20; fill.light_color = Color("cfe6ff"); fill.shadow_enabled = false; add_child(fill)
 	var sun := DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-52, -38, 0); sun.light_energy = light_e; sun.light_color = Color(1,0.96,0.88); sun.shadow_enabled = true; sun.shadow_opacity = 0.46; sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS; sun.shadow_blur = 2.5 if round_no>=2 else 1.0; add_child(sun)
-	var cam := Camera3D.new(); cam.projection = Camera3D.PROJECTION_ORTHOGONAL; cam.size = 21.0 if round_no>=10 else 19.0; cam.look_at_from_position(Vector3(11,11,11), Vector3(0,0.4,0), Vector3.UP); cam.current = true; add_child(cam)	# ground grass: big plane + lighter patches
+	var cam := Camera3D.new(); cam.projection = Camera3D.PROJECTION_ORTHOGONAL; cam.size = 6.5 if OS.get_cmdline_user_args().has("--close") else (21.0 if round_no>=10 else 19.0); cam.look_at_from_position(Vector3(9.5,8,7.5) if OS.get_cmdline_user_args().has("--close") else Vector3(11,11,11), Vector3(2.6,0.6,-0.8) if OS.get_cmdline_user_args().has("--close") else Vector3(0,0.4,0), Vector3.UP); cam.current = true; add_child(cam)	# ground grass: big plane + lighter patches
 	_build_terrain()
 	for k in 26:
 		var px := -13.0 + fmod(float(k)*3.71, 26.0); var pz := -11.0 + fmod(float(k)*5.13, 22.0)
@@ -187,8 +203,10 @@ func _setup() -> void:
 		var mi := MeshInstance3D.new(); mi.mesh = mesh; mi.material_override = mat_for(key, Color.html(key.split("|")[0])); mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(mi)
 	_spawn_carriers()
 func _spawn_carriers() -> void:
-	var ps: PackedScene = load("res://assets/settlement3d/runtime/characters/Farmer_B.glb")
-	for cp in [Vector3(0.6,0.05,2.8), Vector3(-2.6,0.05,0.8), Vector3(5.2,0.05,1.6), Vector3(-6.4,0.05,-1.4)]:
+	var chars := ["Farmer_B", "Farmer_A", "Rogue_Hooded", "Rogue"]
+	var cps := [Vector3(0.6,0.05,2.8), Vector3(-2.6,0.05,0.8), Vector3(5.2,0.05,1.6), Vector3(-6.4,0.05,-1.4), Vector3(-8.8,0.05,5.6), Vector3(8.6,0.05,4.6)]
+	for ci2 in cps.size():
+		var cp: Vector3 = cps[ci2]; var ps: PackedScene = load("res://assets/settlement3d/runtime/characters/" + chars[ci2 % chars.size()] + ".glb")
 		if ps == null: _build_carrier(cp); continue
 		var ch := ps.instantiate() as Node3D; ch.position = cp; ch.rotation.y = -0.7; ch.scale = Vector3.ONE * 0.92; add_child(ch)
 		var ap := AnimationPlayer.new(); ap.root_node = NodePath(".."); ch.add_child(ap)
@@ -208,10 +226,10 @@ func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 	box(p+Vector3(0,1.1,0), Vector3(5.4,2.2,4.1), stone, 0,0,0, "stone")
 	for cy in [0.55, 1.05, 1.55]: box(p+Vector3(0,cy,1.82), Vector3(4.6,0.07,0.05), stone.darkened(0.25))
 	box(p+Vector3(0,2.15,0), Vector3(2.2,2.3,2.2), stone)
-	cyl(p+Vector3(0,4.35,0), 1.15,0.05,1.6, roof, 10)
+	cyl(p+Vector3(0,4.35,0), 1.15,0.05,1.6, roof, 10, "roofp")
 	for off in [Vector2(-2.1,-1.6),Vector2(2.1,-1.6),Vector2(-2.1,1.6),Vector2(2.1,1.6)]:
 		cyl(p+Vector3(off.x,1.4,off.y), 0.62,0.62,2.8, stone, 8, "stone")
-		cyl(p+Vector3(off.x,3.55,off.y), 0.85,0.02,1.5, roof, 10)
+		cyl(p+Vector3(off.x,3.55,off.y), 0.85,0.02,1.5, roof, 10, "roofp")
 		cyl(p+Vector3(off.x,3.25,off.y), 0.88,0.72,0.14, roof.darkened(0.22), 10); cyl(p+Vector3(off.x,3.62,off.y), 0.62,0.46,0.14, roof.darkened(0.22), 10)
 		for ts in 3: box(p+Vector3(off.x+0.63,1.0+float(ts)*0.8,off.y), Vector3(0.1,0.65,0.34), stone.darkened(0.15))
 	for cx in [-1.9,-1.15,-0.4,0.4,1.15,1.9]: box(p+Vector3(cx,2.15,1.82), Vector3(0.42,0.35,0.18), stone)
@@ -251,8 +269,8 @@ func _build_hut(p: Vector3, stone: Color) -> void:
 	for ri in 3: cyl(p+Vector3(0,1.55+float(ri)*0.38,0), 1.55-float(ri)*0.38, 1.45-float(ri)*0.38, 0.12, Color("8f6a2a"), 10)
 func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 	var vi := absi(int(p.x*3.0 + p.z*7.0)) % 3
-	if vi == 1: a = Color("35702a"); b = Color("679c3a")
-	elif vi == 2: a = Color("4d8a2f"); b = Color("93b84e")
+	if vi == 1: a = Color("4a8a38"); b = Color("7fb04e")
+	elif vi == 2: a = Color("5da03e"); b = Color("a5c95e")
 	if Vector2(p.x,p.z).length() > 11.0: p.y = _h(p.x, p.z) - 0.1
 	cyl(p+Vector3(0,0.9,0), 0.22,0.32,1.8, Color("6b4423"), 7)
 	if vi == 1:
