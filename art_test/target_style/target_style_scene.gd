@@ -225,7 +225,7 @@ func _setup() -> void:
 		box(Vector3(-8.0+float(mi)*8.0, 1.6+float(mi)*0.5, -14.5), Vector3(13,0.9,1.6), Color(1,1,1,0.05))
 	for bi in 12:
 		var bx := -10.0+fmod(float(bi)*4.37,22.0); var bz := -12.0+fmod(float(bi)*3.13,10.0)
-		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0,float(bi),0)).scaled(Vector3(0.7,0.5,0.6)), Vector3(bx, _h(bx,bz)+0.15, bz)), Color("8f846c")); tri_total += 128
+		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0,float(bi),0)).scaled(Vector3(0.7,0.5,0.6)), Vector3(bx, _h(bx,bz)+0.15, bz)), Color("8a867e")); tri_total += 128
 	for si9 in 15:
 		var sx9 := 8.5 + fmod(float(si9)*3.17, 12.5); var sz9 := -8.0 - fmod(float(si9)*2.43, 7.5)
 		var ss9 := 1.1 + fmod(float(si9)*0.41, 1.1)
@@ -233,10 +233,10 @@ func _setup() -> void:
 	for ti9 in 13:
 		var tx9 := 6.5 + fmod(float(ti9)*2.61, 14.5); var tz9 := -6.2 - fmod(float(ti9)*1.37, 3.2)
 		var ts9 := 0.55 + fmod(float(ti9)*0.39, 0.6)
-		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(ti9)*2.1,0.1)).scaled(Vector3(ts9,ts9*0.62,ts9*0.8)), Vector3(tx9, _h(tx9,tz9)+ts9*0.18, tz9)), Color("776c5c") if ti9%3==0 else (Color("8a785e") if ti9%3==1 else Color("a89a80"))); tri_total += 128
+		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(ti9)*2.1,0.1)).scaled(Vector3(ts9,ts9*0.62,ts9*0.8)), Vector3(tx9, _h(tx9,tz9)+ts9*0.18, tz9)), Color("6e6355") if ti9%3==0 else (Color("a89a80") if ti9%3==1 else Color("a89a80"))); tri_total += 128
 	for ei in 10:
 		var ex := -11.0+fmod(float(ei)*4.91,23.0); var ez := -6.0+fmod(float(ei)*5.37,17.0)
-		cyl(Vector3(ex,0.03,ez), 0.62,0.62,0.025, Color("9a7c4e") if ei%2==0 else Color("bfae6a"), 8)
+		cyl(Vector3(ex,0.03,ez), 0.62,0.62,0.025, Color("9a7c4e") if ei%2==0 else Color("b08d55"), 8)
 	for fi in 36:
 		var fx2 := -12.0+fmod(float(fi)*3.97,25.0); var fz := -9.0+fmod(float(fi)*4.53,20.0)
 		if Vector2(fx2,fz).length() < 11.0:
@@ -261,16 +261,16 @@ func _setup() -> void:
 		box(fp2+Vector3(0,2.2,0), Vector3(0.06,1.3,0.06), Color("4a3421")); box(fp2+Vector3(0.35,2.6,0), Vector3(0.65,0.38,0.04), Color("2f62b8") if fp2.x>0 else Color("d43a2a"))
 	# castle centre-back
 	_build_castle(Vector3(-1.5,0,-3.5), stone, roof)
-	_build_house(Vector3(3.2,0,-1.2), roof, stone)
+	_build_octstore(Vector3(3.2,0,-1.2), stone)
 	_build_hut(Vector3(6.2,0,4.2), stone)
-	_build_house(Vector3(-3.4,0,4.6), roof, stone)
-	_build_house(Vector3(7.2,0,-3.8), roof, stone)
+	_build_aframe(Vector3(-3.4,0,4.6), roof, stone)
+	_build_roundhouse(Vector3(7.2,0,-3.8), roof)
 	_build_hut(Vector3(-8.2,0,-2.6), stone)
 	# props: barrels, crates, fence, rocks
 	for bp in [Vector3(5.4,0,-0.2), Vector3(-6.2,0,0.8), Vector3(1.8,0,-5.6)]:
 		cyl(bp+Vector3(0,0.45,0), 0.38,0.42,0.9, Color("8a5f36"), 9); box(bp+Vector3(0.8,0.35,0.2), Vector3(0.7,0.7,0.7), Color("a67c4e"), 0.4)
 	for fx in 4: box(Vector3(-6.0+float(fx)*0.65,0.45,6.6), Vector3(0.14,0.9,0.14), Color("6b4423"))
-	box(Vector3(-4.7,0.75,6.6), Vector3(3.4,0.13,0.13), Color("7a5230"))
+	box(Vector3(-4.7,0.75,6.6), Vector3(3.4,0.13,0.13), Color("7a5a36"))
 	for fp in [Vector3(-1.5,0,-3.5), Vector3(3.2,0,-1.2)]:
 		box(fp+Vector3(0,4.6,0), Vector3(0.07,1.4,0.07), Color("4a3421")); box(fp+Vector3(0.4,5.1,0), Vector3(0.75,0.42,0.04), Color("d43a2a"))
 	# trees
@@ -278,8 +278,8 @@ func _setup() -> void:
 		_build_tree(p, leaf, leaf2)
 	_build_roundbarn(Vector3(-8.6,0,4.8), roof)
 	_build_roundhouse(Vector3(9.6,0,1.8), roof)
-	_build_aframe(Vector3(-11.5,0,-6.5), roof, stone)
-	_build_octstore(Vector3(11.8,0,7.5), stone)
+	_build_aframe(Vector3(-6.5,0,-10.0), roof, stone)
+	_build_octstore(Vector3(12.5,0,11.0), stone)
 	_build_house(Vector3(-5.5,0,10.8), roof, stone)
 	_build_house(Vector3(13.5,0,4.5), roof, stone)
 	for tp in [Vector3(-14,0,-8),Vector3(-15,0,2),Vector3(-13,0,9),Vector3(13,0,10),Vector3(15,0,-4),Vector3(11,0,-12),Vector3(-11,0,-11),Vector3(4,0,11),Vector3(-4,0,12),Vector3(14,0,5)]:
@@ -345,7 +345,7 @@ func _spawn_carriers() -> void:
 		ap.advance(0.65)
 		# carrier log merged pre-commit in _setup (saves a draw per carrier)
 func _spawn_statics() -> void:
-	var defs := [["Farmer_A", Vector3(-7.6,0.05,3.2), "Tools_/Chopping"], ["Knight", Vector3(2.2,0.05,-5.4), "General_/Idle_A"], ["Farmer_B", Vector3(-4.0,0.05,5.2), "Tools_/Hammering"], ["Farmer_A", Vector3(9.6,_h(9.6,-7.0)+0.05,-7.0), "Tools_/Hammering"], ["Rogue_Hooded", Vector3(-5.0,0.05,4.4), "General_/Idle_A"]]
+	var defs := [["Farmer_A", Vector3(-7.6,0.05,3.2), "Tools_/Chopping"], ["Knight", Vector3(2.2,0.05,-5.4), "General_/Idle_A"], ["Farmer_B", Vector3(-4.0,0.05,5.2), "Tools_/Hammering"], ["Farmer_A", Vector3(9.6,_h(9.6,-7.0)+0.05,-7.0), "Tools_/Hammering"], ["Rogue_Hooded", Vector3(-5.0,0.05,4.4), "General_/Idle_A"], ["Farmer_A", Vector3(6.0,_h(6.0,-6.8)+0.05,-6.8), "Tools_/Chopping"], ["Farmer_B", Vector3(11.0,_h(11.0,-11.0)+0.05,-11.0), "Tools_/Hammering"]]
 	for df in defs:
 		var ps2: PackedScene = load("res://assets/settlement3d/runtime/characters/" + String(df[0]) + ".glb")
 		if ps2 == null: continue
@@ -398,7 +398,7 @@ func _build_mine(mp: Vector3) -> void:
 	box(mp+Vector3(-0.45,0.45,0), Vector3(0.14,1.1,0.14), Color("54381f"))
 	for rz in 2: box(mp+Vector3(-0.32+float(rz)*0.64, -0.55, 1.5), Vector3(0.09,0.06,2.6), Color("4c4c50"))
 	for sl in 4: box(mp+Vector3(0, -0.62, 0.55+float(sl)*0.62), Vector3(0.95,0.07,0.16), Color("6b4a2c"))
-	box(mp+Vector3(0,-0.25,2.1), Vector3(0.78,0.42,1.0), Color("5d4630")); box(mp+Vector3(0,0.02,2.1), Vector3(0.66,0.2,0.84), Color("3c3f45"))
+	box(mp+Vector3(0,-0.25,2.1), Vector3(0.78,0.42,1.0), Color("54381f")); box(mp+Vector3(0,0.02,2.1), Vector3(0.66,0.2,0.84), Color("4c4c50"))
 func _build_watchtower(tp: Vector3) -> void:
 	for lx in [-0.55, 0.55]:
 		for lz in [-0.55, 0.55]: box(tp+Vector3(lx,2.1,lz), Vector3(0.17,4.2,0.17), Color("6b4a2c"))
@@ -435,7 +435,7 @@ func _hill_fields() -> void:
 		for fp4 in 4: box(Vector3(fx5-2.1+float(fp4)*1.4, fy5+0.35, fz5+0.95), Vector3(0.09,0.7,0.09), Color("6b4a2c"))
 	for fi3 in 6:
 		var fx6 := 2.2+float(fi3)*1.9; var fz6 := -5.0 - float(fi3%3)*0.95; var fy6 := _h(fx6,fz6)+0.05
-		box(Vector3(fx6, fy6, fz6), Vector3(4.8,0.15,1.6), Color("7fae4a") if fi3%2==0 else Color("c2a878"), 0.1, 0, 0, "" if fi3%2==0 else "dirt")
+		box(Vector3(fx6, fy6, fz6), Vector3(4.8,0.15,1.6), Color("7fae4a") if fi3%2==0 else Color("a67c4e"), 0.1, 0, 0, "" if fi3%2==0 else "dirt")
 		for cr3 in 5: box(Vector3(fx6-1.6+float(cr3)*0.8, fy6+0.1, fz6), Vector3(0.5,0.09,1.4), Color("4e7d26") if fi3%2==0 else Color("96683c"), 0.1)
 	for tp3 in [Vector3(4.5,0,-11.5), Vector3(11,0,-12.5), Vector3(20,0,-9.5), Vector3(7.5,0,-13), Vector3(17,0,-13.5)]:
 		_build_tree(tp3, Color("79c24d"), Color("a9dd77"))
@@ -541,19 +541,19 @@ func _props2() -> void:
 	box(wp+Vector3(-0.35,2.32,0), Vector3(0.95,0.09,0.8), Color("9c4a34"), 0, 0.42, 0); box(wp+Vector3(0.35,2.32,0), Vector3(0.95,0.09,0.8), Color("9c4a34"), 0, -0.42, 0)
 	# sacks + crates near houses/market
 	for sp in [Vector3(-3.2,0,6.9), Vector3(2.6,0,0.6), Vector3(6.8,0,-2.4), Vector3(-7.8,0,3.6)]:
-		blob(sp+Vector3(0,0.28,0), Vector3(0.34,0.3,0.34), Color("c2a878")); blob(sp+Vector3(0.3,0.2,0.15), Vector3(0.26,0.22,0.26), Color("b09468"))
+		blob(sp+Vector3(0,0.28,0), Vector3(0.34,0.3,0.34), Color("a67c4e")); blob(sp+Vector3(0.3,0.2,0.15), Vector3(0.26,0.22,0.26), Color("a67c4e"))
 		box(sp+Vector3(-0.45,0.3,-0.2), Vector3(0.55,0.55,0.55), Color("a67c4e"), 0.3)
 	# fence lines
 	for fx in 6: box(Vector3(-9.5+float(fx)*0.85,0.4,8.6), Vector3(0.12,0.8,0.12), Color("7a5a36"))
 	box(Vector3(-7.4,0.62,8.6), Vector3(4.6,0.1,0.1), Color("8a6742"))
 	# gardens + door stone paths at houses, laundry lines, scattered barrels/crates
-	var houses := [Vector3(3.2,0,-1.2), Vector3(-3.4,0,4.6), Vector3(7.2,0,-3.8), Vector3(-8.6,0,4.8), Vector3(9.6,0,1.8), Vector3(-11.5,0,-6.5), Vector3(11.8,0,7.5), Vector3(-5.5,0,10.8), Vector3(13.5,0,4.5)]
+	var houses := [Vector3(3.2,0,-1.2), Vector3(-3.4,0,4.6), Vector3(7.2,0,-3.8), Vector3(-8.6,0,4.8), Vector3(9.6,0,1.8), Vector3(-6.5,0,-10.0), Vector3(12.5,0,11.0), Vector3(-5.5,0,10.8), Vector3(13.5,0,4.5)]
 	for hp in houses:
 		var hang2: float = [0.0, PI/2.0, PI, -PI/2.0][absi(int(hp.x*7.0 + hp.z*13.0)) % 4]
 		var hb := Basis.from_euler(Vector3(0, hang2, 0))
 		for gx in 3:
 			for gz in 2: blob(hp + hb * Vector3(2.1+float(gx)*0.42,0.22,0.9+float(gz)*0.42), Vector3(0.2,0.18,0.2), Color("5da038") if (gx+gz)%2==0 else Color("7fae4a"))
-		cyl(hp + hb * Vector3(0,0.03,2.3), 0.5,0.5,0.03, Color("c9bda6"), 8); cyl(hp + hb * Vector3(0.25,0.03,3.3), 0.45,0.45,0.03, Color("bfb096"), 8)
+		cyl(hp + hb * Vector3(0,0.03,2.3), 0.5,0.5,0.03, Color("c9bda6"), 8); cyl(hp + hb * Vector3(0.25,0.03,3.3), 0.45,0.45,0.03, Color("c9bda6"), 8)
 		cyl(hp + hb * Vector3(1.9,0.4,0.4), 0.3,0.34,0.8, Color("8a5f36"), 8)
 	for lp2 in [Vector3(-1.8,0,7.9), Vector3(8.9,0,3.4)]:
 		box(lp2+Vector3(-0.8,0.85,0), Vector3(0.09,1.7,0.09), Color("7a5a36")); box(lp2+Vector3(0.8,0.85,0), Vector3(0.09,1.7,0.09), Color("7a5a36"))
@@ -592,19 +592,19 @@ func _mini(mp: Vector3, tc: Color) -> void:
 	box(mp+Vector3(0.30,0.66,0.08), Vector3(0.08,0.52,0.08), Color("6b4a2c"), 0, 0.5, 0)
 func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 	box(p+Vector3(0,1.2,0), Vector3(4.7,2.4,3.6), stone, 0,0,0, "stone")
-	for cy in [0.55, 1.05, 1.55]: box(p+Vector3(0,cy,1.82), Vector3(4.6,0.07,0.05), stone.darkened(0.25))
+	for cy in [0.55, 1.05, 1.55]: box(p+Vector3(0,cy,1.82), Vector3(4.6,0.07,0.05), stone.darkened(0.12))
 	box(p+Vector3(0,2.35,0), Vector3(1.9,2.7,1.9), stone)
 	cyl(p+Vector3(0,4.6,0), 1.05,0.05,1.9, roof, 10, "roofp")
 	for off in [Vector2(-1.85,-1.45),Vector2(1.85,-1.45),Vector2(-1.85,1.45),Vector2(1.85,1.45)]:
 		cyl(p+Vector3(off.x,1.65,off.y), 0.58,0.45,3.3, stone, 8, "stone")
 		cyl(p+Vector3(off.x,3.95,off.y), 0.72,0.02,1.7, roof, 10, "roofp")
 		cyl(p+Vector3(off.x,3.25,off.y), 0.88,0.72,0.14, roof.darkened(0.22), 10); cyl(p+Vector3(off.x,3.62,off.y), 0.62,0.46,0.14, roof.darkened(0.22), 10)
-		for ts in 3: box(p+Vector3(off.x+0.63,1.0+float(ts)*0.8,off.y), Vector3(0.1,0.65,0.34), stone.darkened(0.15))
+		for ts in 3: box(p+Vector3(off.x+0.63,1.0+float(ts)*0.8,off.y), Vector3(0.1,0.65,0.34), stone.darkened(0.12))
 	for cx in [-1.9,-1.15,-0.4,0.4,1.15,1.9]: box(p+Vector3(cx,2.15,1.82), Vector3(0.42,0.35,0.18), stone)
 	for bx in [-0.9,-0.45,0.0,0.45,0.9]: box(p+Vector3(bx,3.42,1.12), Vector3(0.3,0.3,0.16), stone.darkened(0.12))
-	for si2 in 6: box(p+Vector3(-1.8+fmod(float(si2)*0.73,3.6), 0.45+fmod(float(si2)*0.47,1.4), 1.84), Vector3(0.5,0.28,0.06), stone.darkened(0.18) if si2%2==0 else stone.lightened(0.1))
+	for si2 in 6: box(p+Vector3(-1.8+fmod(float(si2)*0.73,3.6), 0.45+fmod(float(si2)*0.47,1.4), 1.84), Vector3(0.5,0.28,0.06), stone.darkened(0.12) if si2%2==0 else stone.lightened(0.1))
 	for wx in [-1.4,1.4]: box(p+Vector3(wx,1.25,1.83), Vector3(0.34,0.55,0.08), Color("3a2e22"))
-	box(p+Vector3(0,0.18,1.84), Vector3(4.7,0.36,0.12), Color("8f887a"))
+	box(p+Vector3(0,0.18,1.84), Vector3(4.7,0.36,0.12), Color("8a867e"))
 	for ccx2 in [-2.32, 2.32]:
 		for ccz2 in [-1.78, 1.78]: cyl(p+Vector3(ccx2, 1.2, ccz2), 0.20, 0.20, 2.4, stone, 8, "stone")
 	# modelled stonework relief: extruded blocks, 2 tints (front + right faces)
@@ -615,7 +615,7 @@ func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 	for ry3 in 3:
 		for cz3 in 5:
 			if (cz3 + ry3) % 2 == 0: continue
-			box(p+Vector3(2.36, 0.55+float(ry3)*0.5, -1.2+float(cz3)*0.6), Vector3(0.07,0.34,0.46), stone.darkened(0.10), 0,0,0, "stone")
+			box(p+Vector3(2.36, 0.55+float(ry3)*0.5, -1.2+float(cz3)*0.6), Vector3(0.07,0.34,0.46), stone.darkened(0.12), 0,0,0, "stone")
 	# battlements along side top edges + centre tower roof ring
 	for bz2 in [-1.2,-0.4,0.4,1.2]:
 		box(p+Vector3(2.32,2.52,bz2), Vector3(0.16,0.3,0.34), stone); box(p+Vector3(-2.32,2.52,bz2), Vector3(0.16,0.3,0.34), stone)
