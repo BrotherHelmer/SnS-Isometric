@@ -94,7 +94,7 @@ func _h(x: float, z: float) -> float:
 	var left := clampf(( -x - 14.0) / 16.0, 0.0, 1.0)
 	var jag := mask * (0.22*sin(x*1.9+z*0.7) + 0.14*sin(x*3.7-z*2.3)) * clampf(back*2.0,0.0,1.0)
 	var crag := back * (0.85*sin(x*4.1+z*2.7) + 0.55*sin(x*7.3-z*4.9) + 0.35*sin(x*12.0+z*9.0) + 0.22*sin(x*19.0-z*15.0)) * clampf(hill/4.0, 0.0, 1.0)
-	var sd := Vector2(x-18.0, z+11.5).length(); var shoulder := clampf(1.0 - sd/3.6, 0.0, 1.0); shoulder = shoulder * shoulder
+	var sd := Vector2(x-12.0, z+12.5).length(); var shoulder := clampf(1.0 - sd/3.6, 0.0, 1.0); shoulder = shoulder * shoulder
 	return mask * roll + hill + left * left * 1.6 * mask + jag + crag * (1.0 - shoulder*0.85) + shoulder * 1.15
 var _canopy_sphere: ArrayMesh = null
 func canopy_sphere() -> ArrayMesh:
@@ -309,8 +309,13 @@ func _setup() -> void:
 	for key in surf:
 		var st: SurfaceTool = surf[key]; var mesh := st.commit()
 		var mi := MeshInstance3D.new(); mi.mesh = mesh; mi.material_override = mat_for(key, Color.html(key.split("|")[0])); mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(mi)
+	var roof_groups := {}
 	for ri2 in roof_instances:
-		var rmi := MeshInstance3D.new(); rmi.mesh = ri2[0]; rmi.transform = ri2[1]; var rmat := StandardMaterial3D.new(); rmat.albedo_texture = load(TEX["roofp"]); var rv := absi(int(ri2[1].origin.x*5.0 + ri2[1].origin.z*3.0)) % 3; rmat.albedo_color = [Color(0.88,0.88,0.88), Color(0.80,0.74,0.70), Color(0.92,0.84,0.74)][rv]; rmat.roughness = 0.92; rmat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; rmi.material_override = rmat; rmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(rmi)
+		var rv := absi(int(ri2[1].origin.x*5.0 + ri2[1].origin.z*3.0)) % 3
+		if not roof_groups.has(rv): roof_groups[rv] = SurfaceTool.new(); (roof_groups[rv] as SurfaceTool).begin(Mesh.PRIMITIVE_TRIANGLES)
+		(roof_groups[rv] as SurfaceTool).append_from(ri2[0], 0, ri2[1])
+	for rv2 in roof_groups:
+		var rmi := MeshInstance3D.new(); rmi.mesh = (roof_groups[rv2] as SurfaceTool).commit(); var rmat := StandardMaterial3D.new(); rmat.albedo_texture = load(TEX["roofp"]); rmat.albedo_color = [Color(0.88,0.88,0.88), Color(0.80,0.74,0.70), Color(0.92,0.84,0.74)][rv2]; rmat.roughness = 0.92; rmat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; rmi.material_override = rmat; rmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(rmi)
 	if canopy_st != null:
 		var cmi := MeshInstance3D.new(); cmi.mesh = canopy_st.commit(); var cm := StandardMaterial3D.new(); cm.albedo_texture = load(TEX["leafp"]); cm.vertex_color_use_as_albedo = true; cm.albedo_color = Color(1.0,1.0,0.98); cm.roughness = 1.0; cm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; cmi.material_override = cm; cmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(cmi)
 	_spawn_tufts()
@@ -436,7 +441,7 @@ func _hill_fields() -> void:
 	cyl(sh+Vector3(0,1.75,0), 1.45,0.2,1.2, Color("b98a35"), 8, "thatch")
 	_build_tree(Vector3(6.5,0,-10.5), Color("79c24d"), Color("a9dd77")); _build_tree(Vector3(19.5,0,-6.0), Color("79c24d"), Color("a9dd77"))
 func _summit() -> void:
-	var base := Vector3(18.0, _h(18.0,-11.5), -11.5)
+	var base := Vector3(12.0, _h(12.0,-12.5), -12.5)
 	cyl(base+Vector3(0,0.05,0), 2.8,2.8,0.07, Color("c9ab72"), 14, "dirt")
 	cyl(base+Vector3(0,0.09,0), 1.5,1.5,0.08, Color("9a958a"), 12)
 	for ri4 in 7:
@@ -446,7 +451,7 @@ func _summit() -> void:
 		var sa := float(si4) * TAU / 5.0
 		box(base+Vector3(sin(sa)*1.25, 1.05, cos(sa)*1.25), Vector3(0.48,2.1+fmod(float(si4)*0.23,0.5),0.34), Color("7e7a72"), sa, 0.12, 0)
 	box(base+Vector3(0,1.25,0), Vector3(0.6,2.5,0.42), Color("8a867e"), 0.3, 0.08, 0)
-	var up := [Vector2(14.2,-7.5), Vector2(15.5,-8.8), Vector2(17.0,-10.0), Vector2(18.0,-11.2)]
+	var up := [Vector2(14.2,-7.5), Vector2(13.2,-9.5), Vector2(12.6,-11.0), Vector2(12.0,-12.2)]
 	for ui in up.size()-1:
 		var a4: Vector2 = up[ui]; var b4: Vector2 = up[ui+1]; var mid4 := (a4+b4)*0.5; var dir4 := b4-a4
 		box(Vector3(mid4.x, _h(mid4.x,mid4.y)+0.06, mid4.y), Vector3(1.05,0.07,dir4.length()+0.6), Color("c9ab72"), atan2(dir4.x,dir4.y), 0,0, "dirt")
@@ -457,7 +462,7 @@ func _summit() -> void:
 		box(Vector3(rx4, _h(rx4,rz4)+0.05, rz4), Vector3(3.6,0.13,1.4), Color("8d8172"), 0.2, 0, 0, "rock")
 		for sb in 4: blob(Vector3(rx4-1.2+float(sb)*0.8, _h(rx4,rz4)+0.16, rz4), Vector3(0.3,0.2,0.3), Color("a89a80"))
 	for sd in 4:
-		var sx5 := 13.0+float(sd)*2.2; var sz5 := -15.0-fmod(float(sd)*1.1,2.0)
+		var sx5 := 9.5+float(sd)*2.0; var sz5 := -14.5-fmod(float(sd)*1.1,2.0)
 		blob(Vector3(sx5, _h(sx5,sz5)+0.08, sz5), Vector3(0.85,0.22,0.7), Color("eef2f4"))
 func _upper_fill() -> void:
 	for mf in 4:
@@ -475,12 +480,16 @@ func _upper_fill() -> void:
 		var fx7 := 8.0+float(fp5)*2.6; var fz7 := -10.2-fmod(float(fp5)*0.7,1.8)
 		box(Vector3(fx7, _h(fx7,fz7)+0.4, fz7), Vector3(0.09,0.8,0.09), Color("6b4a2c"))
 func _fill_more() -> void:
-	for tp6 in [Vector3(9.5,0,-13.5), Vector3(14.5,0,-12.5), Vector3(20.5,0,-8.5), Vector3(6.5,0,-14.5), Vector3(16.5,0,-15.5), Vector3(23.5,0,-13)]:
+	for tp6 in [Vector3(9.5,0,-13.5), Vector3(15.5,0,-14.0), Vector3(20.5,0,-8.5), Vector3(6.5,0,-14.5), Vector3(16.5,0,-15.5), Vector3(23.5,0,-13)]:
 		_build_tree(tp6, Color("79c24d"), Color("a9dd77"))
 	for cf in 3:
 		var cx6 := 8.5+float(cf)*5.0; var cz6 := -12.8-float(cf)*0.5
 		box(Vector3(cx6, _h(cx6,cz6)+0.05, cz6), Vector3(5.6,0.15,1.8), Color("b08d55") if cf%2==0 else Color("86b83e"), 0.15)
 		for oc in 3: blob(Vector3(cx6-1.6+float(oc)*1.5, _h(cx6,cz6)+0.2, cz6+0.6), Vector3(0.5,0.35,0.5), Color("a89a80"))
+	for cf2 in 3:
+		var cx7 := 7.5+float(cf2)*5.2; var cz7 := -9.9-float(cf2)*0.3
+		box(Vector3(cx7, _h(cx7,cz7)+0.05, cz7), Vector3(5.8,0.15,1.7), Color("86b83e") if cf2%2==0 else Color("b08d55"), 0.12)
+		for cr6 in 5: box(Vector3(cx7-1.9+float(cr6)*0.95, _h(cx7,cz7)+0.15, cz7), Vector3(0.55,0.09,1.5), Color("3f7020") if cf2%2==0 else Color("96683c"), 0.12)
 	# lower-left farm: fields + trees + fence (fills reframed meadow)
 	for lf in 2:
 		var lx6 := -13.5+float(lf)*0.4; var lz6 := 8.5+float(lf)*2.2
@@ -659,6 +668,16 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	box(Vector3(0.8,top+0.84,-0.3), Vector3(0.37,1.18,0.37), stone, 0,0,0, "stone")
 	if vi != 1: box(Vector3(-0.78,top+0.6,-0.25), Vector3(0.34,0.75,0.34), stone)
 	blob(Vector3(0.8,top+1.5,-0.3), Vector3(0.22,0.18,0.22), Color(1,1,1,0.35)); blob(Vector3(0.95,top+1.75,-0.3), Vector3(0.32,0.24,0.32), Color(1,1,1,0.22))
+	# massing variety: genuinely different silhouettes per variant
+	if vi == 0:
+		box(Vector3(0,0.62,-1.32), Vector3(1.5,1.25,0.85), [Color("e8d9b8"), Color("f0e2c4"), Color("e0cfa8")][vi], 0,0,0, "plaster")
+		box(Vector3(0,1.32,-1.32), Vector3(1.7,0.09,1.05), Color("9c4a34"), 0, 0, 0.18)
+	elif vi == 1:
+		box(Vector3(lean*(1.16*wf+0.42),1.62,0), Vector3(0.88,1.05,1.45), [Color("e8d9b8"), Color("f0e2c4"), Color("e0cfa8")][vi], 0,0,0, "plaster")
+		box(Vector3(lean*(1.16*wf+0.42),2.22,0), Vector3(1.05,0.1,1.62), roof.darkened(0.12))
+	else:
+		box(Vector3(lean*(1.16*wf+0.40), (wh+0.55)/2.0, -0.25), Vector3(0.92,wh+0.55,0.92), [Color("e8d9b8"), Color("f0e2c4"), Color("e0cfa8")][vi], 0,0,0, "plaster")
+		cyl(Vector3(lean*(1.16*wf+0.40), wh+0.95, -0.25), 0.68,0.03,0.85, roof, 8, "roofp")
 	house_mode = false
 func _build_hut(p: Vector3, stone: Color) -> void:
 	box(p+Vector3(0,0.7,0), Vector3(2.0,1.4,1.8), Color("cbb489"))
