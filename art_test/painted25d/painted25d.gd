@@ -1,5 +1,5 @@
 extends Node3D
-# Painted 2.5D prototype P2 (hero house + mountain backdrop, palette calibrated down): painted sprites on a smooth painted ground slope.
+# Painted 2.5D prototype P3 (hero castle/pine, house variants, terrain mid-detail): painted sprites on a smooth painted ground slope.
 # R68 low-poly scene untouched; fixed iso camera identical to R68; no post/FX.
 func gy(x: float, z: float) -> float:
 	var e: float = clampf((x - 4.0) / 18.0, 0.0, 1.0)
@@ -26,16 +26,22 @@ func _ready() -> void:
 	# --- painted sprites: tex, ground pos, world height, contact row px, canvas h, flip, tint ---
 	_sprite("castle.png", Vector3(0, 0, -5.5), 8.6, 780.0, 820.0, false, Color.WHITE)
 	_sprite("house.png", Vector3(-5.5, 0, 1.8), 4.0, 520.0, 560.0, false, Color.WHITE)
-	_sprite("house.png", Vector3(5.0, 0, 2.8), 3.8, 520.0, 560.0, true, Color(0.94, 0.97, 1.02))
-	_sprite("house.png", Vector3(-0.8, 0, 5.6), 3.4, 520.0, 560.0, false, Color(1.03, 0.98, 0.92))
+	_sprite("house2.png", Vector3(5.0, 0, 2.8), 3.7, 478.0, 520.0, true, Color(0.96, 0.98, 1.0))
+	_sprite("house3.png", Vector3(-0.8, 0, 5.6), 4.3, 578.0, 620.0, false, Color(1.02, 0.98, 0.92))
 	_sprite("pine.png", Vector3(-8.5, 0, -3.5), 4.6, 650.0, 680.0, false, Color.WHITE)
 	_sprite("pine.png", Vector3(6.5, 0, -4.2), 5.0, 650.0, 680.0, true, Color.WHITE)
 	_sprite("pine.png", Vector3(9.5, 0, 0.6), 3.8, 650.0, 680.0, false, Color(0.95, 1.0, 0.95))
 	_sprite("pine.png", Vector3(-3.8, 0, -7.8), 5.4, 650.0, 680.0, false, Color.WHITE)
 	_sprite("pine.png", Vector3(12.5, 0, -5.5), 4.4, 650.0, 680.0, true, Color.WHITE)
 	_sprite("pine.png", Vector3(-2.9, 0, 4.4), 3.1, 650.0, 680.0, false, Color.WHITE) # foreground overlap test vs carrier
-	_sprite("house.png", Vector3(3.4, 0, -1.6), 3.0, 520.0, 560.0, true, Color(0.97, 0.94, 0.90))
-	_sprite("house.png", Vector3(-8.2, 0, 5.4), 3.1, 520.0, 560.0, false, Color(1.0, 1.0, 1.0))
+	_sprite("house2.png", Vector3(3.4, 0, -1.6), 3.1, 478.0, 520.0, false, Color(0.97, 0.94, 0.90))
+	_sprite("house3.png", Vector3(-8.2, 0, 5.4), 3.6, 578.0, 620.0, true, Color(1.0, 1.0, 1.0))
+	_sprite("house2.png", Vector3(-11.5, 0, -2.2), 3.3, 478.0, 520.0, false, Color(0.95, 0.95, 0.95))
+	_sprite("house.png", Vector3(8.6, 0, 6.4), 3.2, 520.0, 560.0, true, Color(0.98, 0.96, 0.92))
+	_sprite("pine.png", Vector3(14.5, 0, 2.5), 4.6, 650.0, 680.0, false, Color.WHITE)
+	_sprite("pine.png", Vector3(-13.5, 0, -5.5), 5.0, 650.0, 680.0, true, Color.WHITE)
+	_sprite("pine.png", Vector3(1.8, 0, -9.5), 4.4, 650.0, 680.0, false, Color.WHITE)
+	_sprite("boulder.png", Vector3(7.5, 0, -7.5), 1.0, 235.0, 260.0, false, Color.WHITE)
 	_sprite("pine.png", Vector3(-6.8, 0, -6.2), 4.8, 650.0, 680.0, true, Color.WHITE)
 	_sprite("pine.png", Vector3(8.8, 0, 5.8), 4.2, 650.0, 680.0, false, Color.WHITE)
 	_sprite("pine.png", Vector3(-11.5, 0, 0.5), 5.2, 650.0, 680.0, false, Color.WHITE)

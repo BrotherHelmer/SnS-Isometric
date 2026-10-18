@@ -1,7 +1,7 @@
 """Paint prototype assets for the 2.5D test. Supersampled x3, soft edges.
 Run: python3 art_test/painted25d/paint_assets.py  (writes assets/*.png)"""
 import math, random
-from PIL import Image, ImageDraw, ImageFilter, ImageEnhance
+from PIL import Image, ImageDraw, ImageFilter, ImageEnhance, ImageChops
 random.seed(25)
 OUT = "art_test/painted25d/assets/"
 SS = 3
@@ -129,55 +129,209 @@ for i in range(26):
     d.ellipse([((vx+rndg.uniform(-7, 7))*SS, (vy+rndg.uniform(-5, 5))*SS), ((vx+9)*SS, (vy+7)*SS)], fill=(92, 124, 58, 190))
 finish(img, 600, 560, "house.png")
 
-# ---------------- CASTLE SECTION (700x820, contact y~780) ----------------
-img = canvas(700, 820); d = ImageDraw.Draw(img, 'RGBA')
-shadow(d, 350, 782, 265, 34)
-# main block (two-tone: light left, shadow right)
-d.polygon(wob([(190,330),(505,322),(520,775),(175,780)], 6, 11), fill=(178, 170, 156, 255))
-d.polygon(wob([(350,326),(505,322),(520,775),(355,778)], 5, 12), fill=(148, 140, 126, 255))
-strokes(d, (200, 340, 500, 760), 200, [(210, 202, 186), (128, 120, 106)], 3)
-for ry in range(6):
-    for cx in range(5):
-        if (cx+ry) % 3: d.rounded_rectangle([((205+cx*60)*SS, (360+ry*62)*SS), ((252+cx*60)*SS, (398+ry*62)*SS)], 5*SS, outline=(122, 114, 100, 90), width=2*SS)
-# battlements
-for i in range(7): d.rectangle([((196+i*46)*SS, 296*SS), ((228+i*46)*SS, 330*SS)], fill=(168, 160, 146, 255))
-# towers: tall left, shorter right, conical roofs
-for (tx, tw_, th, rh) in [(118, 120, 500, 190), (468, 108, 392, 160)]:
-    top = 780 - th
-    d.polygon(wob([(tx, top+rh*0.4),(tx+tw_, top+rh*0.4),(tx+tw_-8, 778),(tx+8, 778)], 5, 13+tx), fill=(186, 178, 164, 255))
-    d.polygon(wob([(tx+tw_*0.55, top+rh*0.4),(tx+tw_, top+rh*0.4),(tx+tw_-8, 778),(tx+tw_*0.55, 778)], 4, 14+tx), fill=(152, 144, 130, 255))
-    d.polygon(wob([(tx-16, top+rh*0.45),(tx+tw_*0.5, top),(tx+tw_+16, top+rh*0.45)], 6, 15+tx), fill=(168, 78, 44, 255))
-    for r in range(4): d.line([((tx-8+r*4)*SS, (top+rh*0.42-r*22)*SS), ((tx+tw_+8-r*4)*SS, (top+rh*0.42-r*22)*SS)], fill=(110, 50, 30, 120), width=4*SS)
-    d.rounded_rectangle([((tx+tw_*0.32)*SS, (top+rh*0.62)*SS), ((tx+tw_*0.62)*SS, (top+rh*0.88)*SS)], 8*SS, fill=(52, 42, 34, 255))
-    d.rectangle([((tx+tw_*0.5-3)*SS, (top-32)*SS), ((tx+tw_*0.5+3)*SS, top*SS)], fill=(92, 64, 36, 255))
-    d.polygon([((tx+tw_*0.5+3)*SS, (top-32)*SS), ((tx+tw_*0.5+38)*SS, (top-22)*SS), ((tx+tw_*0.5+3)*SS, (top-12)*SS)], fill=(206, 52, 40, 255))
-# gate + windows
-d.rounded_rectangle([302*SS, 640*SS, 398*SS, 778*SS], 22*SS, fill=(74, 54, 36, 255))
-d.ellipse([302*SS, 606*SS, 398*SS, 672*SS], fill=(74, 54, 36, 255))
-for wx, wy in [(255, 470), (415, 455), (335, 520)]:
-    d.rounded_rectangle([(wx*SS, wy*SS), ((wx+34)*SS, (wy+52)*SS)], 9*SS, fill=(255, 216, 138, 255), outline=(96, 84, 66, 255), width=4*SS)
-finish(img, 700, 820, "castle.png", bright=0.86, sat=0.82)
+# ---------------- HOUSE VARIANT A: wide cottage (640x520, contact y~478) ----------------
+img = canvas(640, 520); d = ImageDraw.Draw(img, 'RGBA')
+shadow(d, 320, 480, 225, 24)
+wallp = wob([(122,252),(518,242),(534,462),(108,466)], 5, 101)
+roofp = wob([(66,266),(318,104),(578,252),(578,272),(66,282)], 5, 102)
+wmask = Image.new("L", img.size, 0); ImageDraw.Draw(wmask).polygon(wallp, fill=255)
+rmask = Image.new("L", img.size, 0); ImageDraw.Draw(rmask).polygon(roofp, fill=255)
+d.polygon(wallp, fill=(202, 182, 144, 255))
+lay = Image.new("RGBA", img.size, (0,0,0,0)); ld = ImageDraw.Draw(lay)
+ld.polygon(wob([(122,252),(310,246),(312,464),(108,466)], 4, 103), fill=(255, 240, 205, 60))
+ld.polygon(wob([(420,246),(518,242),(534,462),(424,464)], 4, 104), fill=(104, 94, 82, 88))
+ld.rectangle([104*SS, 428*SS, 538*SS, 466*SS], fill=(86, 66, 46, 66))
+strokes(ld, (112, 256, 530, 460), 260, [(236, 220, 180), (186, 162, 120), (168, 150, 118)], 3, seed=105)
+img.paste(Image.alpha_composite(img, lay), (0, 0), wmask); d = ImageDraw.Draw(img, 'RGBA')
+rndv = random.Random(107)
+for row, fy in enumerate([414, 440]):
+    for i in range(11):
+        x = 116 + i*39 + (19 if row else 0)
+        c = rndv.choice([(146, 136, 120), (130, 120, 104), (158, 146, 128)])
+        d.rounded_rectangle([(x*SS, fy*SS), ((x+32)*SS, (fy+23)*SS)], 6*SS, fill=c+(255,), outline=(88, 80, 68, 160), width=2*SS)
+for x0b, y0b, x1b, y1b, wd in [(132,250,126,464,12),(318,246,318,464,12),(506,244,516,460,12),(122,256,520,248,11)]:
+    d.line([(x0b*SS, y0b*SS), (x1b*SS, y1b*SS)], fill=(82, 56, 31, 255), width=wd*SS)
+d.polygon(roofp, fill=(142, 74, 44, 255))
+lay = Image.new("RGBA", img.size, (0,0,0,0)); ld = ImageDraw.Draw(lay)
+ld.polygon(wob([(318,104),(578,252),(578,272),(318,226)], 4, 108), fill=(70, 36, 26, 92))
+strokes(ld, (70, 110, 572, 268), 360, [(192, 114, 72), (118, 58, 35), (210, 142, 94)], 3, seed=109)
+for r in range(7):
+    tt = r/6.0; y = 258 - tt*138; hw = 238 - tt*214
+    ld.line([((318-hw)*SS, y*SS), ((318+hw)*SS, y*SS)], fill=(90, 45, 27, 150), width=4*SS)
+    x = 318-hw
+    while x < 318+hw-14:
+        ld.arc([(x*SS, (y-6)*SS), ((x+22)*SS, (y+10)*SS)], 0, 180, fill=(176, 102, 62, 200), width=4*SS); x += 22
+img.paste(Image.alpha_composite(img, lay), (0, 0), rmask); d = ImageDraw.Draw(img, 'RGBA')
+d.line([(70*SS, 268*SS), (318*SS, 110*SS), (572*SS, 254*SS)], fill=(224, 154, 100, 160), width=5*SS)
+d.rectangle([66*SS, 254*SS, 578*SS, 270*SS], fill=(62, 37, 22, 110))
+# chimney left + woodpile lean-to right
+d.polygon(wob([(176,84),(214,80),(218,158),(180,162)], 3, 110), fill=(144, 134, 118, 255))
+d.rectangle([172*SS, 74*SS, 220*SS, 88*SS], fill=(102, 94, 82, 255))
+d.polygon(wob([(520,330),(586,356),(582,462),(528,458)], 4, 111), fill=(122, 88, 54, 255))
+d.polygon(wob([(512,332),(592,352),(588,368),(516,352)], 4, 112), fill=(104, 58, 36, 255))
+for i in range(8):
+    lx, ly = 534 + (i % 4)*13, 420 - (i//4)*16
+    d.ellipse([(lx*SS, ly*SS), ((lx+13)*SS, (ly+13)*SS)], fill=(150, 108, 66, 255), outline=(92, 62, 34, 255), width=2*SS)
+d.rounded_rectangle([206*SS, 356*SS, 262*SS, 464*SS], 13*SS, fill=(94, 62, 35, 255))
+d.ellipse([206*SS, 338*SS, 262*SS, 378*SS], fill=(94, 62, 35, 255))
+for wx in [356, 448]:
+    d.rounded_rectangle([(wx*SS, 306*SS), ((wx+50)*SS, 358*SS)], 5*SS, fill=(240, 196, 112, 255), outline=(78, 52, 29, 255), width=5*SS)
+    d.line([((wx+25)*SS, 306*SS), ((wx+25)*SS, 358*SS)], fill=(78, 52, 29, 255), width=3*SS)
+for i in range(38):
+    gx = rndv.uniform(112, 530); gl = rndv.uniform(7, 18)
+    d.line([(gx*SS, 468*SS), ((gx+rndv.uniform(-3, 3))*SS, (468-gl)*SS)], fill=rndv.choice([(86, 122, 54), (64, 104, 44)])+(200,), width=2*SS)
+finish(img, 640, 520, "house2.png")
 
-# ---------------- PINE (360x680, contact y~650) ----------------
+# ---------------- HOUSE VARIANT B: tall narrow house (520x620, contact y~578) ----------------
+img = canvas(520, 620); d = ImageDraw.Draw(img, 'RGBA')
+shadow(d, 260, 580, 165, 22)
+wallp = wob([(150,332),(370,322),(382,560),(138,564)], 5, 121)
+roofp = wob([(92,342),(258,66),(428,330),(428,350),(92,358)], 5, 122)
+wmask = Image.new("L", img.size, 0); ImageDraw.Draw(wmask).polygon(wallp, fill=255)
+rmask = Image.new("L", img.size, 0); ImageDraw.Draw(rmask).polygon(roofp, fill=255)
+d.polygon(wallp, fill=(208, 188, 150, 255))
+lay = Image.new("RGBA", img.size, (0,0,0,0)); ld = ImageDraw.Draw(lay)
+ld.polygon(wob([(150,332),(258,328),(260,562),(138,564)], 4, 123), fill=(255, 240, 205, 60))
+ld.polygon(wob([(316,326),(370,322),(382,560),(318,562)], 4, 124), fill=(104, 94, 82, 88))
+strokes(ld, (142, 336, 378, 556), 240, [(238, 222, 182), (188, 164, 122), (170, 150, 118)], 3, seed=125)
+img.paste(Image.alpha_composite(img, lay), (0, 0), wmask); d = ImageDraw.Draw(img, 'RGBA')
+rndv = random.Random(127)
+for row, fy in enumerate([512, 538]):
+    for i in range(7):
+        x = 146 + i*34 + (16 if row else 0)
+        c = rndv.choice([(146, 136, 120), (130, 120, 104), (158, 146, 128)])
+        d.rounded_rectangle([(x*SS, fy*SS), ((x+28)*SS, (fy+22)*SS)], 6*SS, fill=c+(255,), outline=(88, 80, 68, 160), width=2*SS)
+for x0b, y0b, x1b, y1b, wd in [(158,330,152,560,12),(260,326,260,560,11),(362,324,370,558,12),(150,336,372,328,11),(156,446,368,440,8)]:
+    d.line([(x0b*SS, y0b*SS), (x1b*SS, y1b*SS)], fill=(84, 58, 32, 255), width=wd*SS)
+d.polygon(roofp, fill=(138, 70, 42, 255))
+lay = Image.new("RGBA", img.size, (0,0,0,0)); ld = ImageDraw.Draw(lay)
+ld.polygon(wob([(258,66),(428,330),(428,350),(258,220)], 4, 128), fill=(70, 36, 26, 96))
+strokes(ld, (96, 72, 424, 344), 380, [(188, 108, 66), (112, 54, 32), (206, 138, 90)], 3, seed=129)
+for r in range(10):
+    tt = r/9.0; y = 336 - tt*248; hw = 164 - tt*148
+    ld.line([((258-hw)*SS, y*SS), ((258+hw)*SS, y*SS)], fill=(88, 44, 26, 150), width=3*SS)
+    x = 258-hw
+    while x < 258+hw-12:
+        ld.arc([(x*SS, (y-6)*SS), ((x+20)*SS, (y+9)*SS)], 0, 180, fill=(172, 98, 60, 200), width=3*SS); x += 20
+img.paste(Image.alpha_composite(img, lay), (0, 0), rmask); d = ImageDraw.Draw(img, 'RGBA')
+# dormer on roof slope + round attic window
+d.polygon(wob([(216,238),(262,204),(306,240),(302,292),(220,292)], 4, 130), fill=(214, 196, 158, 255))
+d.polygon(wob([(208,242),(262,196),(314,240),(306,252),(216,254)], 4, 131), fill=(120, 62, 38, 255))
+d.rectangle([240*SS, 246*SS, 282*SS, 290*SS], fill=(240, 196, 112, 255), outline=(78, 52, 29, 255), width=4*SS)
+d.ellipse([240*SS, 356*SS, 278*SS, 394*SS], fill=(240, 200, 118, 255), outline=(80, 54, 30, 255), width=4*SS)
+d.line([(259*SS, 356*SS), (259*SS, 394*SS)], fill=(80, 54, 30, 255), width=3*SS)
+d.polygon(wob([(330,150),(364,146),(368,224),(334,228)], 3, 132), fill=(144, 134, 118, 255))
+d.rectangle([326*SS, 140*SS, 370*SS, 154*SS], fill=(102, 94, 82, 255))
+d.rounded_rectangle([226*SS, 452*SS, 280*SS, 562*SS], 13*SS, fill=(94, 62, 35, 255))
+d.ellipse([226*SS, 434*SS, 280*SS, 472*SS], fill=(94, 62, 35, 255))
+for wx, wy in [(168, 452), (308, 452)]:
+    d.rounded_rectangle([(wx*SS, wy*SS), ((wx+44)*SS, (wy+50)*SS)], 5*SS, fill=(240, 196, 112, 255), outline=(78, 52, 29, 255), width=4*SS)
+for i in range(34):
+    gx = rndv.uniform(142, 378); gl = rndv.uniform(7, 17)
+    d.line([(gx*SS, 566*SS), ((gx+rndv.uniform(-3, 3))*SS, (566-gl)*SS)], fill=rndv.choice([(86, 122, 54), (64, 104, 44)])+(200,), width=2*SS)
+finish(img, 520, 620, "house3.png")
+
+# ---------------- HERO CASTLE P3 (700x820, contact y~780): dense stone/value system ----------------
+img = canvas(700, 820); d = ImageDraw.Draw(img, 'RGBA')
+shadow(d, 350, 782, 268, 34)
+cmask = Image.new("L", img.size, 0); cmd = ImageDraw.Draw(cmask)
+mainp = wob([(190,330),(505,322),(520,775),(175,780)], 6, 11)
+cmd.polygon(mainp, fill=255)
+d.polygon(mainp, fill=(168, 158, 142, 255))
+towers = [(118, 120, 500, 190), (468, 108, 392, 160)]  # tx, w, h, roof h
+for (tx, tw_, th, rh) in towers:
+    top = 780 - th
+    tp = wob([(tx, top+rh*0.4),(tx+tw_, top+rh*0.4),(tx+tw_-8, 778),(tx+8, 778)], 5, 13+tx)
+    cmd.polygon(tp, fill=255); d.polygon(tp, fill=(176, 166, 150, 255))
+# stone courses: individual shaded stones in offset rows (clipped to walls)
+lay = Image.new("RGBA", img.size, (0,0,0,0)); ld = ImageDraw.Draw(lay)
+rndc = random.Random(21)
+for ry in range(10):
+    y = 348 + ry*42
+    for cx in range(9):
+        x = 168 + cx*62 + (30 if ry % 2 else 0)
+        if x > 512: continue
+        c = rndc.choice([(186, 176, 156), (148, 138, 120), (198, 188, 168), (128, 118, 102), (170, 158, 140)])
+        ld.rounded_rectangle([(x*SS, y*SS), ((x+rndc.randint(44,58))*SS, (y+34)*SS)], 6*SS, fill=c+(255,), outline=(92, 84, 72, 200), width=2*SS)
+        ld.line([((x+5)*SS, (y+6)*SS), ((x+40)*SS, (y+6)*SS)], fill=(224, 216, 196, 120), width=2*SS)
+strokes(ld, (180, 335, 515, 770), 380, [(210, 200, 180), (128, 118, 104), (188, 176, 156)], 3, seed=23)
+ld.polygon(wob([(352,326),(505,322),(520,775),(356,778)], 5, 24), fill=(96, 90, 82, 64))       # shadow half
+ld.polygon(wob([(190,330),(300,328),(302,778),(175,780)], 5, 25), fill=(255, 244, 214, 52))    # lit edge
+ld.rectangle([170*SS, 738*SS, 525*SS, 780*SS], fill=(80, 66, 48, 84))                          # base AO
+for i in range(60):  # moss at base
+    mx, my = rndc.uniform(185, 510), rndc.uniform(742, 776)
+    ld.ellipse([(mx*SS, my*SS), ((mx+12)*SS, (my+8)*SS)], fill=(96, 118, 62, 130))
+img.paste(Image.alpha_composite(img, lay), (0, 0), cmask); d = ImageDraw.Draw(img, 'RGBA')
+# battlements: shaded merlons
+for i in range(7):
+    x = 196+i*46
+    d.rectangle([(x*SS, 296*SS), ((x+32)*SS, 330*SS)], fill=(172, 162, 148, 255))
+    d.rectangle([(x*SS, 296*SS), ((x+32)*SS, 304*SS)], fill=(206, 196, 178, 255))
+    d.rectangle([((x+22)*SS, 296*SS), ((x+32)*SS, 330*SS)], fill=(138, 130, 116, 255))
+# tower roofs: shingled cones like hero house + tower shading, windows, flags
+for (tx, tw_, th, rh) in towers:
+    top = 780 - th
+    d.polygon(wob([(tx+tw_*0.55, top+rh*0.4),(tx+tw_, top+rh*0.4),(tx+tw_-8, 778),(tx+tw_*0.55, 778)], 4, 14+tx), fill=(140, 130, 116, 85))
+    rp = wob([(tx-16, top+rh*0.45),(tx+tw_*0.5, top),(tx+tw_+16, top+rh*0.45)], 6, 15+tx)
+    rm2 = Image.new("L", img.size, 0); ImageDraw.Draw(rm2).polygon(rp, fill=255)
+    d.polygon(rp, fill=(146, 76, 46, 255))
+    lay = Image.new("RGBA", img.size, (0,0,0,0)); ld = ImageDraw.Draw(lay)
+    strokes(ld, (tx-14, top, tx+tw_+14, top+rh*0.45), 90, [(196, 118, 74), (110, 54, 32), (214, 146, 96)], 2, seed=tx)
+    for r in range(4):
+        yy = top+rh*0.42-r*22
+        ld.arc([((tx-6)*SS, (yy-9)*SS), ((tx+tw_+6)*SS, (yy+9)*SS)], 0, 180, fill=(92, 46, 28, 160), width=3*SS)
+    img.paste(Image.alpha_composite(img, lay), (0, 0), rm2); d = ImageDraw.Draw(img, 'RGBA')
+    d.rounded_rectangle([((tx+tw_*0.32)*SS, (top+rh*0.62)*SS), ((tx+tw_*0.62)*SS, (top+rh*0.88)*SS)], 8*SS, fill=(46, 38, 30, 255), outline=(210, 198, 174, 120), width=2*SS)
+    d.rectangle([((tx+tw_*0.5-3)*SS, (top-32)*SS), ((tx+tw_*0.5+3)*SS, top*SS)], fill=(92, 64, 36, 255))
+    d.polygon([((tx+tw_*0.5+3)*SS, (top-32)*SS), ((tx+tw_*0.5+38)*SS, (top-22)*SS), ((tx+tw_*0.5+3)*SS, (top-12)*SS)], fill=(186, 54, 42, 255))
+# gate: stone arch surround + planked door; round window; glow windows
+d.rounded_rectangle([296*SS, 634*SS, 404*SS, 780*SS], 24*SS, outline=(196, 186, 168, 255), width=10*SS)
+d.rounded_rectangle([304*SS, 642*SS, 396*SS, 778*SS], 20*SS, fill=(82, 60, 38, 255))
+d.ellipse([304*SS, 608*SS, 396*SS, 676*SS], fill=(82, 60, 38, 255))
+for px in [326, 348, 370]: d.line([(px*SS, 622*SS), (px*SS, 772*SS)], fill=(50, 36, 20, 170), width=3*SS)
+for by in [690, 730]: d.line([(306*SS, by*SS), (394*SS, by*SS)], fill=(40, 34, 28, 200), width=4*SS)
+d.ellipse([330*SS, 420*SS, 372*SS, 462*SS], fill=(244, 202, 120, 255), outline=(92, 80, 64, 255), width=4*SS)
+for wx, wy in [(255, 500), (415, 485), (255, 590), (415, 580)]:
+    d.rounded_rectangle([(wx*SS, wy*SS), ((wx+34)*SS, (wy+52)*SS)], 9*SS, fill=(246, 204, 124, 255), outline=(92, 80, 64, 255), width=4*SS)
+    d.line([((wx+17)*SS, wy*SS), ((wx+17)*SS, (wy+52)*SS)], fill=(92, 80, 64, 255), width=3*SS)
+for i in range(22):  # vine on left tower
+    vx, vy = 150 + (i % 3)*9, 700 - i*13
+    d.ellipse([(vx*SS, vy*SS), ((vx+11)*SS, (vy+8)*SS)], fill=(92, 120, 60, 180))
+finish(img, 700, 820, "castle.png", bright=0.90, sat=0.85)
+
+# ---------------- HERO PINE P3 (360x680, contact y~650): dense needle clusters ----------------
 img = canvas(360, 680); d = ImageDraw.Draw(img, 'RGBA')
-shadow(d, 180, 652, 105, 16)
-d.polygon(wob([(170,300),(190,300),(197,650),(162,650)], 4, 21), fill=(104, 72, 44, 255))
+shadow(d, 180, 652, 108, 16)
+d.polygon(wob([(170,300),(190,300),(197,650),(162,650)], 4, 21), fill=(96, 66, 40, 255))
+strokes(d, (166, 320, 194, 646), 60, [(140, 104, 66), (70, 48, 28)], 2, horiz=False, seed=29)
 pmask = Image.new("L", img.size, 0); pmd = ImageDraw.Draw(pmask)
-tiers = [(58, 74), (128, 104), (202, 128), (282, 148), (368, 162), (458, 168)]
+tiers = [(54, 70), (122, 100), (196, 124), (276, 144), (362, 158), (452, 164)]
+tierpolys = []
 for ti, (ty, halfw) in enumerate(tiers):
     pts = [(180-halfw, ty+44)]
-    for s2 in range(7):
-        pts.append((180-halfw + (2*halfw)*(s2+0.5)/7, ty+62 + (s2 % 2)*16))
-        pts.append((180-halfw + (2*halfw)*(s2+1)/7, ty+40))
-    pts += [(180+10, ty+6), (180, ty-16), (180-10, ty+6)]
-    base = [(34, 88, 30), (40, 98, 34), (46, 108, 38), (52, 116, 42), (57, 124, 46), (62, 130, 50)][ti]
-    d.polygon(wob(pts, 4, 30+ti), fill=base + (255,))
-    pmd.polygon(wob(pts, 4, 30+ti), fill=255)
-    d.line([(180-halfw)*SS, (ty+48)*SS, (180+halfw)*SS, (ty+48)*SS], fill=(24, 62, 22, 120), width=4*SS)
-sl2 = Image.new("RGBA", img.size, (0,0,0,0)); sd2 = ImageDraw.Draw(sl2)
-strokes(sd2, (15, 40, 345, 560), 260, [(150, 205, 100), (96, 158, 64), (190, 225, 140)], 3, seed=77)
-img.paste(Image.alpha_composite(img, sl2), (0, 0), pmask); d = ImageDraw.Draw(img, 'RGBA')
-finish(img, 360, 680, "pine.png", bright=0.82, sat=0.80)
+    for s2 in range(8):
+        pts.append((180-halfw + (2*halfw)*(s2+0.5)/8, ty+64 + (s2 % 2)*17))
+        pts.append((180-halfw + (2*halfw)*(s2+1)/8, ty+40))
+    pts += [(180+10, ty+4), (180, ty-18), (180-10, ty+4)]
+    wp = wob(pts, 4, 30+ti); tierpolys.append(wp)
+    base = [(26, 70, 24), (30, 78, 26), (34, 86, 28), (38, 94, 31), (42, 102, 34), (46, 108, 37)][ti]
+    d.polygon(wp, fill=base + (255,)); pmd.polygon(wp, fill=255)
+lay = Image.new("RGBA", img.size, (0,0,0,0)); ld = ImageDraw.Draw(lay)
+rndp = random.Random(31)
+for wp in tierpolys:  # underside shadow band per tier
+    pass
+for i in range(1500):  # needle strokes: short angled strokes everywhere in tiers
+    x, y = rndp.uniform(8, 352), rndp.uniform(30, 580)
+    c = rndp.choice([(18, 52, 18), (58, 116, 40), (92, 148, 58), (130, 176, 88), (40, 92, 30)])
+    ld.line([(x*SS, y*SS), ((x+rndp.uniform(-16, 16))*SS, (y+rndp.uniform(6, 14))*SS)], fill=c+(rndp.randint(90, 200),), width=2*SS)
+for i in range(320):  # needle cluster dabs, light tips lower edges
+    x, y = rndp.uniform(10, 350), rndp.uniform(40, 590)
+    c = rndp.choice([(22, 60, 20), (70, 126, 46), (150, 190, 100)])
+    ld.ellipse([(x*SS, y*SS), ((x+rndp.uniform(6, 15))*SS, (y+5)*SS)], fill=c+(170,))
+img.paste(Image.alpha_composite(img, lay), (0, 0), pmask); d = ImageDraw.Draw(img, 'RGBA')
+for (ty, halfw) in tiers:  # tier underside shadow + drooping dark tips
+    d.line([((180-halfw)*SS, (ty+50)*SS), ((180+halfw)*SS, (ty+50)*SS)], fill=(14, 40, 14, 150), width=5*SS)
+finish(img, 360, 680, "pine.png", bright=0.88, sat=0.85)
 
 # ---------------- BOULDER (360x260) ----------------
 img = canvas(360, 260); d = ImageDraw.Draw(img, 'RGBA')
@@ -209,6 +363,16 @@ rndm = random.Random(74)
 for i in range(34):  # strata bands
     y = rndm.uniform(240, 860); x0 = rndm.uniform(120, 700)
     ld.line([(x0*SS, y*SS), ((x0+rndm.uniform(180, 420))*SS, (y+rndm.uniform(28, 66))*SS)], fill=(96, 86, 76, 90), width=int(rndm.uniform(3, 7))*SS)
+lay = Image.new("RGBA", img.size, (0,0,0,0)); ld = ImageDraw.Draw(lay)
+for i in range(90):  # small facet polygons breaking the large flat planes
+    fx, fy = rndm.uniform(140, 1380), rndm.uniform(130, 860); fr = rndm.uniform(28, 110)
+    c = rndm.choice([(188, 174, 152), (104, 96, 88), (160, 146, 124), (84, 78, 74), (206, 194, 170)])
+    pts = [(fx+rndm.uniform(-fr, fr), fy+rndm.uniform(-fr*0.6, fr*0.6)) for _ in range(rndm.randint(3, 5))]
+    ld.polygon([(x*SS, y*SS) for x, y in pts], fill=c+(rndm.randint(34, 80),))
+strokes(ld, (80, 120, 1450, 900), 800, [(186, 172, 148), (96, 88, 80), (150, 134, 112)], 2, seed=83)
+for i in range(46):  # gully shadow strokes running downhill
+    gx, gy = rndm.uniform(180, 1360), rndm.uniform(160, 620)
+    ld.line([(gx*SS, gy*SS), ((gx+rndm.uniform(-24, 24))*SS, (gy+rndm.uniform(60, 150))*SS)], fill=(70, 64, 60, 90), width=4*SS)
 img.paste(Image.alpha_composite(img, lay), (0, 0), mmask); d = ImageDraw.Draw(img, 'RGBA')
 # snow: soft irregular patches under peaks (blurred layer, clipped)
 snow = Image.new("RGBA", img.size, (0,0,0,0)); snd = ImageDraw.Draw(snow)
@@ -257,6 +421,37 @@ for w, a in [(74, 46), (52, 80), (34, 170)]:
 for i in range(240):
     x, y = random.uniform(0, 2048), random.uniform(0, 1200)
     if random.random() < 0.5: d.line([x, y, x+random.uniform(14, 42), y+random.uniform(-6, 6)], fill=(220, 236, 180, 46), width=5)
+# --- mid-detail: crop fields with row strokes + hedge borders (mid scale, survives mips) ---
+fields = [([(560,430),(800,430),(820,600),(580,620)], (168, 140, 88), (140, 116, 70)),
+          ([(1180,500),(1500,480),(1520,660),(1200,680)], (128, 100, 70), (104, 80, 54)),
+          ([(700,700),(1050,690),(1080,880),(730,900)], (86, 128, 54), (66, 106, 42)),
+          ([(1150,300),(1480,290),(1500,450),(1170,460)], (172, 158, 100), (146, 132, 76)),
+          ([(1250,760),(1580,740),(1600,920),(1280,940)], (150, 128, 78), (124, 104, 60))]
+for poly, fillc, rowc in fields:
+    d.polygon(poly, fill=fillc + (110,))
+    fm = Image.new("L", img.size, 0); ImageDraw.Draw(fm).polygon(poly, fill=255)
+    fl = Image.new("RGBA", img.size, (0,0,0,0)); fld = ImageDraw.Draw(fl)
+    for ry in range(min(p[1] for p in poly)+24, max(p[1] for p in poly), 34):
+        fld.line([(min(p[0] for p in poly), ry), (max(p[0] for p in poly), ry+14)], fill=rowc + (95,), width=9)
+    img.paste(fl, (0, 0), ImageChops.multiply(fm, fl.split()[3])); d = ImageDraw.Draw(img, 'RGBA')
+    d.line(poly + [poly[0]], fill=(52, 84, 34, 170), width=10)
+# fences: post-and-rail lines along two field edges
+for (fx0, fy0, fx1, fy1) in [(560, 600, 960, 620), (1020, 800, 1480, 760), (940, 560, 1020, 800)]:
+    d.line([(fx0, fy0-8), (fx1, fy1-8)], fill=(96, 68, 42, 190), width=6)
+    d.line([(fx0, fy0+6), (fx1, fy1+6)], fill=(110, 80, 48, 170), width=5)
+    steps = int(math.hypot(fx1-fx0, fy1-fy0)//36)
+    for i in range(steps+1):
+        px, py = fx0+(fx1-fx0)*i/max(steps,1), fy0+(fy1-fy0)*i/max(steps,1)
+        d.rectangle([px-4, py-13, px+4, py+9], fill=(74, 52, 30, 230))
+# path wear: darker worn edges, ruts, worn patches along route
+d.line([(x, y) for x, y in path], fill=(116, 92, 60, 96), width=48, joint="curve")
+d.line([(x, y) for x, y in path], fill=(202, 168, 112, 165), width=27, joint="curve")
+for i in range(90):
+    tt = random.random(); seg = min(int(tt*(len(path)-1)), len(path)-2); ft = tt*(len(path)-1)-seg
+    px = path[seg][0]+(path[seg+1][0]-path[seg][0])*ft + random.uniform(-16, 16)
+    py = path[seg][1]+(path[seg+1][1]-path[seg][1])*ft + random.uniform(-11, 11)
+    r = random.uniform(12, 34)
+    d.ellipse([px-r, py-r*0.5, px+r, py+r*0.5], fill=random.choice([(150, 118, 76), (216, 182, 124)]) + (66,))
 # worn plots under buildings + flower patches
 for (x, y, r) in [(560, 620, 150), (1180, 640, 165), (820, 330, 210), (420, 300, 110)]:
     d.ellipse([x-r, y-r*0.55, x+r, y+r*0.55], fill=(176, 148, 100, 72))
