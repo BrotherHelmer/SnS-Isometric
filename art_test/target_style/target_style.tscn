@@ -1,0 +1,4 @@
+[gd_scene load_steps=2 format=3 uid="uid://targetstyle1"]
+[ext_resource type="Script" path="res://art_test/target_style/target_style_scene.gd" id="1"]
+[node name="TargetStyle" type="Node3D"]
+script = ExtResource("1")
