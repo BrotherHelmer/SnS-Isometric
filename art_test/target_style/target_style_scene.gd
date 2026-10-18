@@ -638,6 +638,29 @@ func _top_band() -> void:
 	for ldi3 in 2:
 		var ldx3: float = [19.5, 20.0][ldi3]; var ldz3: float = [-7.0, -11.0][ldi3]
 		box(Vector3(ldx3, _h(ldx3,ldz3)+0.2, ldz3), Vector3(5.6,0.65,1.8), Color("6e665c"), 0.2, 0.08, 0, "rock")
+	# CAMERA-FACING south-east plane breaks (the wall filling frame right edge)
+	for sri in 3:
+		var srx: float = [23.0, 25.5, 28.0][sri]
+		for sst in 3:
+			var srz: float = [-2.0, 1.0, 4.0][sst]; var srs: float = [2.0, 1.7, 1.4][sst]
+			add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(-0.3, float(sri)*1.6+float(sst)*0.8, 0.25)).scaled(Vector3(srs, srs*0.85, srs)), Vector3(srx, _h(srx,srz)+0.15, srz)), Color("6e665c"), "rock"); tri_total += 128
+	for sli in 2:
+		var slx: float = [24.0, 26.0][sli]; var slz: float = [2.0, -1.5][sli]
+		box(Vector3(slx, _h(slx,slz)+0.2, slz), Vector3(5.2,0.6,1.7), Color("6e665c"), 0.12, 0.06, 0, "rock")
+	for stf in 3:
+		var stx: float = [23.0, 26.0, 21.0][stf]; var stz: float = [8.0, 6.0, 10.0][stf]
+		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2, float(stf)*2.2, 0.1)).scaled(Vector3(2.9, 1.25, 2.3)), Vector3(stx, _h(stx,stz)+0.1, stz)), Color("6e665c"), "rock"); tri_total += 128
+	# switchback shelf on the south-east face, retaining edge toward camera (+z)
+	var ssp := [Vector2(20.0,4.5), Vector2(23.0,1.5), Vector2(21.5,-1.5), Vector2(24.5,-4.5)]
+	for ssi in ssp.size()-1:
+		var ssa: Vector2 = ssp[ssi]; var ssb: Vector2 = ssp[ssi+1]; var ssmid := (ssa+ssb)*0.5; var ssdir := ssb-ssa
+		var ssy: float = (_h(ssa.x,ssa.y) + _h(ssb.x,ssb.y))*0.5 + 0.22
+		var ssperp := Vector2(-ssdir.normalized().y, ssdir.normalized().x)
+		if ssperp.y < 0.0: ssperp = -ssperp
+		box(Vector3(ssmid.x, ssy, ssmid.y), Vector3(1.55,0.22,ssdir.length()+0.7), Color("dcc08a"), atan2(ssdir.x, ssdir.y), 0, 0, "dirt")
+		box(Vector3(ssmid.x+ssperp.x*0.78, ssy-0.28, ssmid.y+ssperp.y*0.78), Vector3(0.32,0.55,ssdir.length()+0.6), Color("6e665c"), atan2(ssdir.x, ssdir.y), 0, 0, "rock")
+	for smw in [[Vector3(22.0,0,2.0), Color("d43a2a")], [Vector3(24.0,0,-3.0), Color("2f62b8")]]:
+		var smp: Vector3 = smw[0]; smp.y = _h(smp.x, smp.z) + 0.25; _mini(smp, smw[1])
 	# switchback path ON the face + workers
 	var swp := [Vector2(15.5,-0.5), Vector2(18.0,-2.8), Vector2(16.2,-5.2), Vector2(19.0,-7.2), Vector2(17.2,-9.8), Vector2(19.8,-12.0)]
 	for swi in swp.size()-1:
