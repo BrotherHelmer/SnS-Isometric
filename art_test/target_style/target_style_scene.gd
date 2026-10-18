@@ -27,7 +27,7 @@ func mat_col(c: Color) -> StandardMaterial3D:
 func mat_for(key: String, c: Color) -> StandardMaterial3D:
 	var m := mat_col(c); var tx: String = surf_tex.get(key, "")
 	if tx != "" and TEX.has(tx):
-		m.albedo_texture = load(TEX[tx]); m.uv1_scale = Vector3(18,18,1) if tx=="meadow" else Vector3(4,4,1); m.albedo_color = Color(1,1,1).lerp(c, 0.25)
+		m.albedo_texture = load(TEX[tx]); m.uv1_scale = Vector3(18,18,1) if tx=="meadow" else (Vector3(1,1,1) if tx=="roofp" else Vector3(4,4,1)); m.albedo_color = Color(0.88,0.88,0.88) if tx in ["roofp","stone","thatch","plaster","dirt","rock"] else Color(1,1,1).lerp(c, 0.25)
 		m.albedo_color = Color(0.78,0.76,0.73)
 		if tx == "forest": m.albedo_color = Color(1,1,1).lerp(c, 0.45)
 		m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
@@ -47,22 +47,33 @@ func blob(p: Vector3, s: Vector3, c: Color, tx := "") -> void:
 	var m := SphereMesh.new(); m.radial_segments = 8; m.rings = 4; m.radius = 1.0; m.height = 2.0; tri_total += 64
 	add_mesh(m, Transform3D(Basis.IDENTITY.scaled(s), p), c, tx)
 func roof2(p: Vector3, w: float, d: float, h: float, thick: float, c: Color) -> void:
-	# CUSTOM UV PRISM: slopes with explicit UV (u along ridge x2, v eave->ridge), gables plaster
+	# STANDALONE ArrayMesh prism, explicit arrays. v: 0 at eave -> 1 at ridge (10 shingle rows in texture)
 	var hw := w/2.0
-	var eL := Vector3(-hw,0,-d/2); var eL2 := Vector3(-hw,0,d/2); var r1 := Vector3(0,h,-d/2); var r2 := Vector3(0,h,d/2)
-	var eR := Vector3(hw,0,-d/2); var eR2 := Vector3(hw,0,d/2)
-	var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var quads := [[eL,r1,r2,eL2],[eR2,r2,r1,eR]]
-	for qi in quads.size():
-		var q: Array = quads[qi]; var n: Vector3 = (q[1]-q[0]).cross(q[3]-q[0]).normalized(); if n.y < 0: n = -n
-		var uvs := [Vector2(0,0), Vector2(0,3), Vector2(2,3), Vector2(2,0)]
-		for idx in [0,1,2,0,2,3]: st.set_normal(n); st.set_uv(uvs[idx]); st.add_vertex(q[idx])
-	add_mesh(st.commit(), Transform3D(Basis.IDENTITY, p), c, "roofp"); tri_total += 4
+	var A := Vector3(-hw,0,-d/2); var B := Vector3(-hw,0,d/2); var C := Vector3(0,h,-d/2); var D := Vector3(0,h,d/2)
+	var E := Vector3(hw,0,-d/2); var F := Vector3(hw,0,d/2)
+	var verts := PackedVector3Array(); var norms := PackedVector3Array(); var uvs := PackedVector2Array(); var cols := PackedColorArray()
+	var slopes := [[A,C,D,B],[F,D,C,E]]
+	for q in slopes:
+		var n: Vector3 = (q[1]-q[0]).cross(q[3]-q[0]).normalized(); if n.y < 0: n = -n
+		var uvq := [Vector2(0,0), Vector2(0,1), Vector2(2,1), Vector2(2,0)]
+		for idx in [0,1,2,0,2,3]: verts.append(q[idx]); norms.append(n); uvs.append(uvq[idx]); cols.append(Color.WHITE)
+	var arrays := []; arrays.resize(Mesh.ARRAY_MAX); arrays[Mesh.ARRAY_VERTEX]=verts; arrays[Mesh.ARRAY_NORMAL]=norms; arrays[Mesh.ARRAY_TEX_UV]=uvs; arrays[Mesh.ARRAY_COLOR]=cols
+	var prism := ArrayMesh.new(); prism.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var chk: Array = prism.surface_get_arrays(0); var uvchk: PackedVector2Array = chk[Mesh.ARRAY_TEX_UV]
+	assert(uvchk.size() == verts.size())
+	add_mesh(prism, Transform3D(Basis.IDENTITY, p), c, "roofp"); tri_total += 4
 	var gs := SurfaceTool.new(); gs.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for tri in [[eL,eR,r1],[eL2,r2,eR2]]:
+	for tri in [[A,E,C],[B,D,F]]:
 		var n2: Vector3 = (tri[1]-tri[0]).cross(tri[2]-tri[0]).normalized()
 		for idx in 3: gs.set_normal(n2); gs.set_uv(Vector2(0.5,0.5)); gs.add_vertex(tri[idx])
 	add_mesh(gs.commit(), Transform3D(Basis.IDENTITY, p), Color("e8d9b8"), "plaster"); tri_total += 2
+	var slope_len := sqrt(hw*hw + h*h); var ang := atan2(h, hw)
+	for si in 4:
+		var tt := 0.18 + float(si)*0.21
+		var lc := Vector3(-hw,0,0).lerp(Vector3(0,h,0), tt); var rc := Vector3(hw,0,0).lerp(Vector3(0,h,0), tt)
+		var ln := Vector3(-h, hw, 0).normalized(); var rn := Vector3(h, hw, 0).normalized()
+		box(p+lc+ln*0.035, Vector3(slope_len*0.24, 0.045, d+0.06), c.darkened(0.28), 0, ang)
+		box(p+rc+rn*0.035, Vector3(slope_len*0.24, 0.045, d+0.06), c.darkened(0.28), 0, -ang)
 	# eave shadow line
 	box(p+Vector3(0,0.02,0), Vector3(w+0.15,0.09,d+0.15), c.darkened(0.35))
 func flat_mesh(mesh: Mesh) -> ArrayMesh:
@@ -256,10 +267,6 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	box(p+Vector3(-0.98,1.15,0.98), Vector3(0.16,0.5,0.05), Color("7a4a2a")); box(p+Vector3(-0.32,1.15,0.98), Vector3(0.16,0.5,0.05), Color("7a4a2a"))
 	box(p+Vector3(0.65,1.15,0.98), Vector3(0.4,0.48,0.06), Color("ffd98a")); box(p+Vector3(0.92,1.15,0.98), Vector3(0.14,0.48,0.05), Color("7a4a2a"))
 	roof2(p+Vector3(0,1.85,0), 3.0, 2.5, 1.15, 0.18, roof)
-	for si in 3:
-		var sy := 2.05 + float(si)*0.32
-		box(p+Vector3(-0.62, sy, 0), Vector3(1.35,0.06,2.55), roof.darkened(0.18), 0, 0.66)
-		box(p+Vector3(0.62, sy, 0), Vector3(1.35,0.06,2.55), roof.darkened(0.18), 0, -0.66)
 	box(p+Vector3(0.8,2.6,-0.3), Vector3(0.45,1.0,0.45), stone)
 	blob(p+Vector3(0.8,3.35,-0.3), Vector3(0.22,0.18,0.22), Color(1,1,1,0.35)); blob(p+Vector3(0.95,3.6,-0.3), Vector3(0.32,0.24,0.32), Color(1,1,1,0.22))
 func _build_hut(p: Vector3, stone: Color) -> void:
