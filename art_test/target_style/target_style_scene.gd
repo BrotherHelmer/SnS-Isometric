@@ -27,11 +27,11 @@ var surf_tex := {}
 const PT := "res://art_test/target_style/textures_painted/"
 const TEX := {"meadow":PT+"grass_painted.png","dirt":PT+"dirt_painted.png","stone":PT+"stone_painted.png","plaster":PT+"plaster_painted.png","timber":PT+"wood_painted.png","slate":PT+"roof_painted.png","rock":PT+"rock_painted.png","thatch":PT+"thatch_painted.png","leafp":PT+"foliage_painted.png","roofp":PT+"roof_painted.png"}
 func mat_col(c: Color) -> StandardMaterial3D:
-	var m := StandardMaterial3D.new(); m.albedo_color = c; m.roughness = 1.0; m.albedo_texture = load(PT + "grain_painted.png"); m.uv1_scale = Vector3(3,3,1); return m
+	var m := StandardMaterial3D.new(); m.albedo_color = c; m.roughness = 1.0; m.albedo_texture = load(PT + "grain_painted.png"); m.uv1_scale = Vector3(1.5,1.5,1); return m
 func mat_for(key: String, c: Color) -> StandardMaterial3D:
 	var m := mat_col(c); var tx: String = surf_tex.get(key, "")
 	if tx != "" and TEX.has(tx):
-		m.albedo_texture = load(TEX[tx]); m.uv1_scale = Vector3(18,18,1) if tx=="meadow" else (Vector3(1,1,1) if tx in ["roofp","stone","plaster","thatch","rock"] else Vector3(6,6,1)); m.albedo_color = Color(0.88,0.87,0.85)
+		m.albedo_texture = load(TEX[tx]); m.uv1_scale = Vector3(3,3,1) if tx=="meadow" else (Vector3(1,1,1) if tx in ["roofp","stone","plaster","thatch","rock"] else Vector3(1.5,1.5,1)); m.albedo_color = Color(0.88,0.87,0.85)
 		if tx == "forest": m.albedo_color = Color(1,1,1).lerp(c, 0.30)
 		m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	if c.a < 0.99: m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
