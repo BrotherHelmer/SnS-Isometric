@@ -61,9 +61,10 @@ func _h(x: float, z: float) -> float:
 	var mask := clampf((d - 10.0) / 13.0, 0.0, 1.0); mask = mask * mask
 	var roll := 0.55 * sin(x * 0.23) * cos(z * 0.19) + 0.35 * sin(x * 0.09 + 1.7) * sin(z * 0.13)
 	var back := clampf((-z - 6.0) / 13.0, 0.0, 1.0); back = back * back
-	var hill := back * 7.0 * clampf(1.25 - absf(x - 3.0) / 19.0, 0.0, 1.0)
+	var hill := back * 9.0 * clampf(1.3 - absf(x - 10.0) / 20.0, 0.0, 1.0)
 	var left := clampf(( -x - 14.0) / 16.0, 0.0, 1.0)
-	return mask * roll + hill + left * left * 1.6 * mask
+	var jag := mask * (0.22*sin(x*1.9+z*0.7) + 0.14*sin(x*3.7-z*2.3)) * clampf(back*2.0,0.0,1.0)
+	return mask * roll + hill + left * left * 1.6 * mask + jag
 var _flat_sphere: ArrayMesh = null
 func flat_sphere() -> ArrayMesh:
 	if _flat_sphere != null: return _flat_sphere
@@ -79,7 +80,7 @@ func flat_sphere() -> ArrayMesh:
 	_flat_sphere = st.commit(); return _flat_sphere
 func _build_terrain() -> void:
 	var size := 64.0; var steps := 56; var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var g1 := Color("2f6b1f"); var g2 := Color("478c2e"); var dirt := Color("8a6f42"); var rock := Color("5d564c"); var snow := Color("f4f6f2")
+	var g1 := Color("2f6b1f"); var g2 := Color("478c2e"); var dirt := Color("9c7f52"); var rock := Color("8a8175"); var snow := Color("f4f6f2")
 	for iz in steps:
 		for ix in steps:
 			var x0 := -size/2 + size*float(ix)/steps; var x1 := -size/2 + size*float(ix+1)/steps
@@ -90,10 +91,11 @@ func _build_terrain() -> void:
 				var n := 0.5 + 0.28*sin(v.x*1.31 + sin(v.y*1.73)*2.1) + 0.22*sin(v.x*3.7 - v.y*2.9)
 				var c: Color = g1.lerp(g2, n)
 				if slope > 0.32: c = dirt.lerp(rock, clampf((slope-0.32)*1.4,0,1))
-				if h > 4.2: c = c.lerp(snow, clampf((h-4.2)*1.6,0,1))
+				if slope > 0.32 and int(h*3.0) % 2 == 0: c = c.darkened(0.13)
+				if h > 4.2: c = c.lerp(snow, clampf((h-4.2)*1.4,0,1))
 				st.set_color(c); st.set_uv(v*0.14); st.add_vertex(Vector3(v.x, h, v.y))
 	st.generate_normals()
-	var mi := MeshInstance3D.new(); mi.mesh = st.commit(); var m := StandardMaterial3D.new(); m.vertex_color_use_as_albedo = true; m.roughness = 0.95; mi.material_override = m; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mi)
+	var mi := MeshInstance3D.new(); mi.mesh = st.commit(); var m := StandardMaterial3D.new(); m.vertex_color_use_as_albedo = true; m.albedo_texture = load(TEX["meadow"]); m.roughness = 0.95; mi.material_override = m; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mi)
 	# outer trees sit on terrain
 func _setup() -> void:
 	# round presets: 1 pipeline, 2 softer/yellower, 3 tuned toward target mean colour
@@ -109,7 +111,7 @@ func _setup() -> void:
 	env.fog_enabled = true; env.fog_light_color = Color("dfeef2"); env.fog_density = 0.0015; env.tonemap_mode = Environment.TONE_MAPPER_LINEAR; env.adjustment_enabled = true; env.adjustment_saturation = 1.12; env.adjustment_brightness = 1.0
 	we.environment = env; add_child(we)
 	var fill := DirectionalLight3D.new(); fill.rotation_degrees = Vector3(-38, 125, 0); fill.light_energy = 0.20; fill.light_color = Color("cfe6ff"); fill.shadow_enabled = false; add_child(fill)
-	var sun := DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-52, -38, 0); sun.light_energy = light_e; sun.light_color = Color(1,0.96,0.88); sun.shadow_enabled = true; sun.shadow_opacity = 0.30; sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS; sun.shadow_blur = 2.5 if round_no>=2 else 1.0; add_child(sun)
+	var sun := DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-52, -38, 0); sun.light_energy = light_e; sun.light_color = Color(1,0.96,0.88); sun.shadow_enabled = true; sun.shadow_opacity = 0.46; sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS; sun.shadow_blur = 2.5 if round_no>=2 else 1.0; add_child(sun)
 	var cam := Camera3D.new(); cam.projection = Camera3D.PROJECTION_ORTHOGONAL; cam.size = 21.0 if round_no>=10 else 19.0; cam.look_at_from_position(Vector3(11,11,11), Vector3(0,0.4,0), Vector3.UP); cam.current = true; add_child(cam)	# ground grass: big plane + lighter patches
 	_build_terrain()
 	for k in 26:
@@ -128,6 +130,19 @@ func _setup() -> void:
 
 	for mi in 3:
 		box(Vector3(-8.0+float(mi)*8.0, 1.6+float(mi)*0.5, -14.5), Vector3(13,0.9,1.6), Color(1,1,1,0.05))
+	for bi in 12:
+		var bx := -10.0+fmod(float(bi)*4.37,22.0); var bz := -12.0+fmod(float(bi)*3.13,10.0)
+		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0,float(bi),0)).scaled(Vector3(0.7,0.5,0.6)), Vector3(bx, _h(bx,bz)+0.15, bz)), Color("6f675c"), "rock"); tri_total += 128
+	for ei in 10:
+		var ex := -11.0+fmod(float(ei)*4.91,23.0); var ez := -6.0+fmod(float(ei)*5.37,17.0)
+		cyl(Vector3(ex,0.03,ez), 0.62,0.62,0.025, Color("9a7c4e") if ei%2==0 else Color("bfae6a"), 8)
+	for fi in 36:
+		var fx2 := -12.0+fmod(float(fi)*3.97,25.0); var fz := -9.0+fmod(float(fi)*4.53,20.0)
+		if Vector2(fx2,fz).length() < 11.0: cyl(Vector3(fx2,0.04,fz), 0.13,0.13,0.03, [Color("ffffff"),Color("ffd94a"),Color("ff9db0")][fi%3], 6)
+	# branch paths connecting buildings
+	for seg in [[Vector2(3.2,-1.2),Vector2(7.2,-3.8)],[Vector2(-3.4,4.6),Vector2(-8.6,4.8)],[Vector2(3.2,-1.2),Vector2(6.2,4.2)],[Vector2(-1.5,-3.5),Vector2(-5.6,3.4)]]:
+		var a2: Vector2 = seg[0]; var b2: Vector2 = seg[1]; var mid2 := (a2+b2)*0.5; var dir2 := b2-a2
+		box(Vector3(mid2.x,0.028,mid2.y), Vector3(1.25,0.035,dir2.length()+0.8), Color("c9ab72"), atan2(dir2.x,dir2.y), 0,0, "dirt")
 	# castle centre-back
 	_build_castle(Vector3(-1.5,0,-3.5), stone, roof)
 	_build_house(Vector3(3.2,0,-1.2), roof, stone)
@@ -162,7 +177,7 @@ func _setup() -> void:
 	_spawn_carriers()
 func _spawn_carriers() -> void:
 	var ps: PackedScene = load("res://assets/settlement3d/runtime/characters/Farmer_B.glb")
-	for cp in [Vector3(0.6,0.05,2.8), Vector3(-2.6,0.05,0.8)]:
+	for cp in [Vector3(0.6,0.05,2.8), Vector3(-2.6,0.05,0.8), Vector3(5.2,0.05,1.6), Vector3(-6.4,0.05,-1.4)]:
 		if ps == null: _build_carrier(cp); continue
 		var ch := ps.instantiate() as Node3D; ch.position = cp; ch.rotation.y = -0.7; ch.scale = Vector3.ONE * 0.92; add_child(ch)
 		var ap := AnimationPlayer.new(); ap.root_node = NodePath(".."); ch.add_child(ap)
@@ -179,7 +194,7 @@ func _spawn_carriers() -> void:
 		ap.advance(0.65)
 		var logm := MeshInstance3D.new(); var cm := CylinderMesh.new(); cm.bottom_radius=0.09; cm.top_radius=0.09; cm.height=1.0; cm.radial_segments=8; logm.mesh=cm; logm.rotation.z=PI/2.0; logm.position=cp+Vector3(0,1.5,0.12); logm.material_override=mat_col(Color("8a5f36")); add_child(logm)
 func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
-	box(p+Vector3(0,1.0,0), Vector3(4.6,2.0,3.6), stone, 0,0,0, "stone")
+	box(p+Vector3(0,1.1,0), Vector3(5.4,2.2,4.1), stone, 0,0,0, "stone")
 	for cy in [0.55, 1.05, 1.55]: box(p+Vector3(0,cy,1.82), Vector3(4.6,0.07,0.05), stone.darkened(0.25))
 	box(p+Vector3(0,2.15,0), Vector3(2.2,2.3,2.2), stone)
 	cyl(p+Vector3(0,4.35,0), 1.15,0.05,1.6, roof, 10)
@@ -191,7 +206,8 @@ func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 	for si2 in 6: box(p+Vector3(-1.8+fmod(float(si2)*0.73,3.6), 0.45+fmod(float(si2)*0.47,1.4), 1.84), Vector3(0.5,0.28,0.06), stone.darkened(0.18) if si2%2==0 else stone.lightened(0.1))
 	for wx in [-1.4,1.4]: box(p+Vector3(wx,1.25,1.83), Vector3(0.34,0.55,0.08), Color("3a2e22"))
 	box(p+Vector3(0,0.18,1.84), Vector3(4.7,0.36,0.12), Color("8f887a"))
-	box(p+Vector3(0,0.7,1.85), Vector3(0.9,1.4,0.15), Color("4a3421"))
+	box(p+Vector3(-1.6,1.7,2.08), Vector3(0.55,1.15,0.07), Color("c22e22")); box(p+Vector3(1.6,1.7,2.08), Vector3(0.55,1.15,0.07), Color("c22e22"))
+	box(p+Vector3(0,0.7,2.08), Vector3(0.95,1.4,0.15), Color("4a3421"))
 	box(p+Vector3(0.0,3.9,0), Vector3(0.08,1.2,0.08), Color("6b4423")); box(p+Vector3(0.45,4.3,0), Vector3(0.8,0.45,0.05), Color("d43a2a"))
 func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	box(p+Vector3(0,0.15,0), Vector3(2.5,0.3,2.0), Color("9a968c"))
@@ -213,6 +229,9 @@ func _build_hut(p: Vector3, stone: Color) -> void:
 	cyl(p+Vector3(0,2.05,0), 1.75,0.25,1.5, Color("b98a35"), 10)
 	for ri in 3: cyl(p+Vector3(0,1.55+float(ri)*0.38,0), 1.55-float(ri)*0.38, 1.45-float(ri)*0.38, 0.12, Color("8f6a2a"), 10)
 func _build_tree(p: Vector3, a: Color, b: Color) -> void:
+	var vi := absi(int(p.x*3.0 + p.z*7.0)) % 3
+	if vi == 1: a = Color("35702a"); b = Color("679c3a")
+	elif vi == 2: a = Color("4d8a2f"); b = Color("93b84e")
 	if Vector2(p.x,p.z).length() > 11.0: p.y = _h(p.x, p.z) - 0.1
 	cyl(p+Vector3(0,0.9,0), 0.22,0.32,1.8, Color("6b4423"), 7)
 	for ci in 5:
