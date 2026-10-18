@@ -28,8 +28,7 @@ func mat_col(c: Color) -> StandardMaterial3D:
 func mat_for(key: String, c: Color) -> StandardMaterial3D:
 	var m := mat_col(c); var tx: String = surf_tex.get(key, "")
 	if tx != "" and TEX.has(tx):
-		m.albedo_texture = load(TEX[tx]); m.uv1_scale = Vector3(18,18,1) if tx=="meadow" else (Vector3(1,1,1) if tx=="roofp" else Vector3(6,6,1)); m.albedo_color = Color(0.88,0.88,0.88) if tx in ["roofp","stone","thatch","plaster","dirt","rock"] else Color(1,1,1).lerp(c, 0.25)
-		m.albedo_color = Color(0.78,0.76,0.73)
+		m.albedo_texture = load(TEX[tx]); m.uv1_scale = Vector3(18,18,1) if tx=="meadow" else (Vector3(1,1,1) if tx in ["roofp","stone","plaster","thatch","rock"] else Vector3(6,6,1)); m.albedo_color = Color(0.88,0.87,0.85)
 		if tx == "forest": m.albedo_color = Color(1,1,1).lerp(c, 0.30)
 		m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	if c.a < 0.99: m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -128,7 +127,9 @@ func _build_terrain() -> void:
 			for v in quad:
 				var h := _h(v.x, v.y); var slope := absf(_h(v.x+0.8, v.y)-h) + absf(_h(v.x, v.y+0.8)-h)
 				var n := 0.5 + 0.28*sin(v.x*1.31 + sin(v.y*1.73)*2.1) + 0.22*sin(v.x*3.7 - v.y*2.9)
-				var c: Color = g1.lerp(g2, n)
+				var patch := 0.5 + 0.5*sin(v.x*0.31+2.0) * sin(v.y*0.27-1.1)
+				var c: Color = g1.lerp(g2, n).lerp(Color("6f9a38"), patch * 0.38)
+				if patch > 0.72: c = c.lerp(Color("a8895a"), (patch-0.72) * 0.9)
 				if slope > 0.30: c = dirt.lerp(rock, clampf((slope-0.30)*1.3,0,1))
 				if slope > 0.55:
 					c = rock.lerp(Color("6b5f50"), clampf((slope-0.55)*0.9,0,1))
@@ -143,7 +144,7 @@ func _build_terrain() -> void:
 				if h > 2.7 and slope <= 1.65:
 					var sf := clampf((snowpatch-0.34)*4.0, 0.0, 1.0) * clampf((h-2.7)*2.5, 0.0, 1.0)
 					c = c.lerp(Color("f8fafc"), sf)
-				st.set_color(c); st.set_uv(v*0.5); st.add_vertex(Vector3(v.x, h, v.y))
+				st.set_color(c); st.set_uv(v*0.07); st.add_vertex(Vector3(v.x, h, v.y))
 	st.generate_normals()
 	var mi := MeshInstance3D.new(); mi.mesh = st.commit(); var m := StandardMaterial3D.new(); m.vertex_color_use_as_albedo = true; m.albedo_texture = load(PT + "detail_noise.png"); m.roughness = 0.95; mi.material_override = m; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mi)
 	# outer trees sit on terrain
