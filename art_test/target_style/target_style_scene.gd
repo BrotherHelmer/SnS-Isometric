@@ -122,6 +122,7 @@ func add_canopy(xf: Transform3D, c: Color) -> void:
 		var cc := Color(clampf(c.r*vary,0,1), clampf(c.g*vary,0,1), clampf(c.b*vary,0,1))
 		if fn.y > 0.45: cc = cc.lightened(0.26)
 		for j in 3:
+			var sn2: Vector3 = (tv[j] - xf.origin).normalized()
 			canopy_st.set_normal(fn); canopy_st.set_color(cc); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j])
 	tri_total += 128
 var _flat_sphere: ArrayMesh = null
@@ -172,6 +173,9 @@ func _build_terrain() -> void:
 					c = c.darkened(crack * 0.30)
 					var lich := 0.5 + 0.5*sin(v.x*1.4-0.5) * sin(v.y*1.1+2.1)
 					if lich > 0.52: c = c.lerp(Color("5f8140"), clampf((lich-0.52)*1.8,0,0.85))
+				for feat in [Vector2(10.5,-8.5), Vector2(14.2,-6.9), Vector2(9.0,-8.8)]:
+					var fd := Vector2(v.x-feat.x, v.y-feat.y).length()
+					if fd < 3.2: c = c.lerp(dirt, (1.0-fd/3.2) * 0.45)
 				var snowpatch := 0.5 + 0.5*sin(v.x*1.9+1.3) * sin(v.y*1.4-0.7)
 				if h > 2.7 and slope <= 0.90:
 					var sf := clampf((snowpatch-0.34)*4.0, 0.0, 1.0) * clampf((h-2.7)*2.5, 0.0, 1.0)
@@ -248,9 +252,11 @@ func _setup() -> void:
 	for li2 in 5:
 		var lx2 := 10.0+fmod(float(li2)*2.3,6.0); var lz2 := -8.0-fmod(float(li2)*1.1,4.0)
 		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(li2),0.1)).scaled(Vector3(1.1,0.65,0.9)), Vector3(lx2,_h(lx2,lz2)+0.3,lz2)), Color("6e665c"), "rock"); tri_total+=128
-	_hill_content(); _hill_props(); _hill_fields(); _summit(); _upper_fill(); _fill_more(); _top_band(); _props2()
-	for uw in [[Vector3(5.0,_h(5.0,-6.4),-6.4), Color("2f62b8")], [Vector3(8.2,_h(8.2,-10.1),-10.1), Color("d43a2a")], [Vector3(11.5,_h(11.5,-11.2),-11.2), Color("2f62b8")], [Vector3(15.0,_h(15.0,-13.6),-13.6), Color("d43a2a")], [Vector3(6.8,_h(6.8,-13.4),-13.4), Color("2f62b8")]]:
+	_hill_content(); _hill_props(); _hill_fields(); _summit(); _upper_fill(); _fill_more(); _top_band(); _aprons(); _props2()
+	for uw in [[Vector3(-4.2,0,7.6), Color("d43a2a")], [Vector3(2.8,0,8.8), Color("2f62b8")], [Vector3(-9.8,0,5.6), Color("2f62b8")], [Vector3(4.4,_h(4.4,-6.2),-6.2), Color("d43a2a")], [Vector3(13.2,_h(13.2,-12.4),-12.4), Color("2f62b8")], [Vector3(-13.2,0,9.2), Color("d43a2a")], [Vector3(5.0,_h(5.0,-6.4),-6.4), Color("2f62b8")], [Vector3(8.2,_h(8.2,-10.1),-10.1), Color("d43a2a")], [Vector3(11.5,_h(11.5,-11.2),-11.2), Color("2f62b8")], [Vector3(15.0,_h(15.0,-13.6),-13.6), Color("d43a2a")], [Vector3(6.8,_h(6.8,-13.4),-13.4), Color("2f62b8")]]:
 		_mini(uw[0], uw[1])
+	for gp in [Vector3(-3.6,0,6.2), Vector3(3.4,0,-3.4), Vector3(8.8,0,5.2), Vector3(-7.4,0,-1.6)]:
+		blob(gp+Vector3(0,0.24,0), Vector3(0.3,0.26,0.3), Color("a67c4e")); blob(gp+Vector3(0.28,0.18,0.14), Vector3(0.24,0.2,0.24), Color("a67c4e")); cyl(gp+Vector3(-0.3,0.34,0.1), 0.24,0.27,0.68, Color("8a5f36"), 8)
 	for up2 in [Vector3(6.2,_h(6.2,-9.8),-9.8), Vector3(12.8,_h(12.8,-12.6),-12.6), Vector3(17.5,_h(17.5,-11.0),-11.0)]:
 		cyl(up2+Vector3(0,0.4,0), 0.3,0.34,0.8, Color("8a5f36"), 8); box(up2+Vector3(0.55,0.3,0.3), Vector3(0.55,0.55,0.55), Color("a67c4e"), 0.3)
 	for mw in [[Vector3(5.2,_h(5.2,-6.3),-6.3), Color("2f62b8")], [Vector3(7.2,_h(7.2,-7.0),-7.0), Color("d43a2a")], [Vector3(8.6,_h(8.6,-6.4),-6.4), Color("3f7d3a")], [Vector3(-2.2,0,8.6), Color("d43a2a")], [Vector3(11.2,0,6.4), Color("2f62b8")], [Vector3(-9.2,0,-4.2), Color("2f62b8")]]: _mini(mw[0], mw[1])
@@ -330,7 +336,7 @@ func _spawn_carriers() -> void:
 	for ci2 in cps.size():
 		var cp: Vector3 = cps[ci2]; var ps: PackedScene = load("res://assets/settlement3d/runtime/characters/" + chars[ci2 % chars.size()] + ".glb")
 		if ps == null: _build_carrier(cp); continue
-		var ch := ps.instantiate() as Node3D; ch.position = cp; ch.rotation.y = -0.7; ch.scale = Vector3.ONE * 0.80; add_child(ch)
+		var ch := ps.instantiate() as Node3D; ch.position = cp; ch.rotation.y = -0.7; ch.scale = Vector3.ONE * 0.72; add_child(ch)
 		var ap := AnimationPlayer.new(); ap.root_node = NodePath(".."); ch.add_child(ap)
 		for libname in ["MovementBasic", "General", "Tools"]:
 			var lp: PackedScene = load("res://assets/settlement3d/runtime/animations/Rig_Medium/Rig_Medium_" + libname + ".glb")
@@ -349,7 +355,7 @@ func _spawn_statics() -> void:
 	for df in defs:
 		var ps2: PackedScene = load("res://assets/settlement3d/runtime/characters/" + String(df[0]) + ".glb")
 		if ps2 == null: continue
-		var ch2 := ps2.instantiate() as Node3D; ch2.position = df[1]; ch2.rotation.y = 0.8; ch2.scale = Vector3.ONE * 0.80; add_child(ch2)
+		var ch2 := ps2.instantiate() as Node3D; ch2.position = df[1]; ch2.rotation.y = 0.8; ch2.scale = Vector3.ONE * 0.72; add_child(ch2)
 		var ap2 := AnimationPlayer.new(); ap2.root_node = NodePath(".."); ch2.add_child(ap2)
 		for libname in ["MovementBasic", "General", "Tools"]:
 			var lp2: PackedScene = load("res://assets/settlement3d/runtime/animations/Rig_Medium/Rig_Medium_" + libname + ".glb")
@@ -522,6 +528,9 @@ func _top_band() -> void:
 	for cf4 in 2:
 		var cx9 := 6.5+float(cf4)*7.0; var cz9 := -13.6
 		box(Vector3(cx9, _h(cx9,cz9)+0.05, cz9), Vector3(5.2,0.14,1.6), Color("86b83e") if cf4%2==0 else Color("b08d55"), 0.14)
+func _aprons() -> void:
+	for ap2 in [Vector3(10.5,_h(10.5,-8.5),-8.5), Vector3(14.2,_h(14.2,-6.9),-6.9), Vector3(19.0,_h(19.0,-13.8),-13.8)]:
+		cyl(ap2+Vector3(0,0.05,0), 2.1,2.1,0.05, Color("c9ab72"), 12, "dirt")
 func _props2() -> void:
 	# log piles
 	for lp in [Vector3(-6.8,0,7.6), Vector3(8.8,0,6.2), Vector3(1.2,0,7.8)]:
@@ -596,8 +605,10 @@ func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 	for cy in [0.55, 1.05, 1.55]: box(p+Vector3(0,cy,1.82), Vector3(4.6,0.07,0.05), stone.darkened(0.12))
 	box(p+Vector3(0,2.35,0), Vector3(1.9,2.7,1.9), stone)
 	cyl(p+Vector3(0,4.6,0), 1.05,0.05,1.9, roof, 10, "roofp")
-	for off in [Vector2(-1.85,-1.45),Vector2(1.85,-1.45),Vector2(-1.85,1.45),Vector2(1.85,1.45)]:
-		cyl(p+Vector3(off.x,1.65,off.y), 0.58,0.45,3.3, stone, 8, "stone")
+	var ths := [3.3, 3.75, 3.05, 3.5]
+	for oi2 in 4:
+		var off: Vector2 = [Vector2(-1.85,-1.45),Vector2(1.85,-1.45),Vector2(-1.85,1.45),Vector2(1.85,1.45)][oi2]
+		cyl(p+Vector3(off.x,ths[oi2]/2.0,off.y), 0.58,0.45,ths[oi2], stone, 8, "stone")
 		cyl(p+Vector3(off.x,3.95,off.y), 0.72,0.02,1.7, roof, 10, "roofp")
 		cyl(p+Vector3(off.x,3.25,off.y), 0.88,0.72,0.14, roof.darkened(0.22), 10); cyl(p+Vector3(off.x,3.62,off.y), 0.62,0.46,0.14, roof.darkened(0.22), 10)
 		for ts in 3: box(p+Vector3(off.x+0.63,1.0+float(ts)*0.8,off.y), Vector3(0.1,0.65,0.34), stone.darkened(0.12))
@@ -638,6 +649,22 @@ func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 	cyl(p+Vector3(-3.35,4.15,0.3), 1.05,0.03,1.35, roof, 9, "roofp")
 	for bx2 in [-1.2,-0.6,0.0,0.6,1.2]: box(p+Vector3(bx2,2.42,-1.82), Vector3(0.34,0.32,0.16), stone.darkened(0.1))
 	box(p+Vector3(0.0,3.9,0), Vector3(0.08,1.2,0.08), Color("6b4423")); box(p+Vector3(0.45,4.3,0), Vector3(0.8,0.45,0.05), Color("d43a2a"))
+func noised_box(w: float, h: float, d: float, amt: float, seedv: float) -> ArrayMesh:
+	var bm := BoxMesh.new(); bm.size = Vector3(w,h,d)
+	var arrays: Array = bm.get_mesh_arrays(); var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]; var uvs: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]; var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	if idx.size() == 0:
+		for i in range(0, verts.size()-2, 3): idx.append_array([i, i+1, i+2])
+	var disp := {}
+	for vi3 in verts.size():
+		var v1 := verts[vi3]; var key := str(v1)
+		if not disp.has(key): disp[key] = v1 + v1.normalized() * (sin(v1.x*5.1+seedv) * sin(v1.y*4.3+seedv*1.7) * 0.6 + sin(v1.z*6.2+seedv*0.6) * 0.4) * amt
+		verts[vi3] = disp[key]
+	for f in range(0, idx.size(), 3):
+		var a: Vector3 = verts[idx[f]]; var b: Vector3 = verts[idx[f+1]]; var c2: Vector3 = verts[idx[f+2]]
+		var n := (b-a).cross(c2-a).normalized()
+		for j in 3: st.set_normal(n); st.set_uv(uvs[idx[f+j]]); st.add_vertex(verts[idx[f+j]])
+	return st.commit()
 func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	var vi := absi(int(p.x*5.0 + p.z*3.0)) % 3
 	var wf: float = [1.0, 0.84, 1.18][vi]
@@ -652,7 +679,7 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 		var wm := CylinderMesh.new(); wm.bottom_radius = 1.0; wm.top_radius = 0.90; wm.height = wh; wm.radial_segments = 4; wm.rings = 1
 		add_mesh(wm, house_xf * Transform3D(Basis.from_euler(Vector3(0,PI/4.0,0)).scaled(Vector3(1.15,1,1.34)), Vector3(0,cy,0)), [Color("e8d9b8"), Color("f0e2c4"), Color("e0cfa8")][vi], "plaster"); tri_total += 32
 	else:
-		box(Vector3(0,cy,0), Vector3(2.3*wf,wh,1.9), [Color("e8d9b8"), Color("f0e2c4"), Color("e0cfa8")][vi], 0,0,0, "plaster")
+		add_mesh(noised_box(2.3*wf, wh, 1.9, 0.05, float(vi)*3.7), house_xf * Transform3D(Basis.IDENTITY, Vector3(0,cy,0)), [Color("e8d9b8"), Color("f0e2c4"), Color("e0cfa8")][vi], "plaster"); tri_total += 108
 	for sx in [-1.09, 1.09]:
 		box(Vector3(sx*wf,cy,0.96), Vector3(0.25,wh+0.05,0.11), Color("54381f"), 0,0,0, "timber")
 		box(Vector3(sx*wf,cy,-0.96), Vector3(0.25,wh+0.05,0.11), Color("54381f"), 0,0,0, "timber")
