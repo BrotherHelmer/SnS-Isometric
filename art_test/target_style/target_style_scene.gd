@@ -56,21 +56,25 @@ func blob(p: Vector3, s: Vector3, c: Color, tx := "") -> void:
 	if house_mode: xf3 = house_xf * xf3
 	add_mesh(m, xf3, c, tx)
 func roof2(p: Vector3, w: float, d: float, h: float, thick: float, c: Color) -> void:
-	# STANDALONE ArrayMesh prism, explicit arrays. v: 0 at eave -> 1 at ridge (10 shingle rows in texture)
+	# DEFORMED prism: sagged ridge, uneven eaves/ridge ends, slight twist. v: 0 eave -> 1 ridge
 	var hw := w/2.0
-	var A := Vector3(-hw,0,-d/2); var B := Vector3(-hw,0,d/2); var C := Vector3(0,h,-d/2); var D := Vector3(0,h,d/2)
-	var E := Vector3(hw,0,-d/2); var F := Vector3(hw,0,d/2)
+	var org := house_xf.origin if house_mode else p
+	var seedv := org.x*1.71 + org.z*2.37
+	var e1 := sin(seedv*1.7)*0.12; var e2 := cos(seedv*1.31)*0.12; var tw := sin(seedv*0.9)*0.10
+	var ec0 := sin(seedv)*0.08; var ec1 := cos(seedv*2.1)*0.08; var ec2 := sin(seedv*1.2+2.0)*0.08; var ec3 := cos(seedv*0.7+1.0)*0.08
+	var A := Vector3(-hw,ec0,-d/2); var B := Vector3(-hw,ec3,d/2); var E := Vector3(hw,ec1,-d/2); var F := Vector3(hw,ec2,d/2)
+	var C := Vector3(tw,h+e1,-d/2); var D := Vector3(-tw,h+e2,d/2); var M := Vector3(0,h+(e1+e2)*0.5-0.13,0)
+	var Am := Vector3(-hw,(ec0+ec3)*0.5,0); var Em := Vector3(hw,(ec1+ec2)*0.5,0)
 	var verts := PackedVector3Array(); var norms := PackedVector3Array(); var uvs := PackedVector2Array(); var cols := PackedColorArray()
-	var slopes := [[A,C,D,B],[F,D,C,E]]
-	for q in slopes:
+	var quads := [[A,C,M,Am,0.0],[Am,M,D,B,1.0],[F,D,M,Em,0.0],[Em,M,C,E,1.0]]
+	for q in quads:
 		var n: Vector3 = (q[1]-q[0]).cross(q[3]-q[0]).normalized(); if n.y < 0: n = -n
-		var uvq := [Vector2(0,0), Vector2(0,1), Vector2(2,1), Vector2(2,0)]
+		var u0: float = q[4]
+		var uvq := [Vector2(u0,0), Vector2(u0,1), Vector2(u0+1.0,1), Vector2(u0+1.0,0)]
 		for idx in [0,1,2,0,2,3]: verts.append(q[idx]); norms.append(n); uvs.append(uvq[idx]); cols.append(Color.WHITE)
 	var arrays := []; arrays.resize(Mesh.ARRAY_MAX); arrays[Mesh.ARRAY_VERTEX]=verts; arrays[Mesh.ARRAY_NORMAL]=norms; arrays[Mesh.ARRAY_TEX_UV]=uvs; arrays[Mesh.ARRAY_COLOR]=cols
 	var prism := ArrayMesh.new(); prism.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	var chk: Array = prism.surface_get_arrays(0); var uvchk: PackedVector2Array = chk[Mesh.ARRAY_TEX_UV]
-	assert(uvchk.size() == verts.size())
-	roof_instances.append([prism, house_xf * Transform3D(Basis.from_euler(Vector3(0, 0, roof_tilt)), p) if house_mode else Transform3D(Basis.IDENTITY, p)]); tri_total += 4
+	roof_instances.append([prism, house_xf * Transform3D(Basis.from_euler(Vector3(0, 0, roof_tilt)), p) if house_mode else Transform3D(Basis.IDENTITY, p)]); tri_total += 8
 	var gs := SurfaceTool.new(); gs.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for tri in [[A,E,C],[B,D,F]]:
 		var n2: Vector3 = (tri[1]-tri[0]).cross(tri[2]-tri[0]).normalized()
@@ -681,6 +685,7 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	var wh: float = 2.45 if vi == 2 else 1.7
 	var cy := 0.15 + wh/2.0; var top := 0.15 + wh
 	var lean := 1.0 if vi == 1 else -1.0
+	var wj := sin(p.x*3.1 + p.z*1.7) * 0.13
 	wf *= 0.84; wh *= 0.94
 	var hang: float = [0.0, PI/2.0, PI, -PI/2.0][absi(int(p.x*7.0 + p.z*13.0)) % 4]
 	house_xf = Transform3D(Basis.from_euler(Vector3(0, hang, 0)), p); house_mode = true; roof_tilt = sin(float(vi)*2.1 + p.x) * 0.035
@@ -696,8 +701,8 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	box(Vector3(0,top-0.05,0.97), Vector3(2.32*wf,0.21,0.08), Color("54381f"), 0,0,0, "timber"); box(Vector3(0,0.24,0.97), Vector3(2.32*wf,0.21,0.08), Color("54381f"), 0,0,0, "timber")
 	box(Vector3(1.16*wf,cy,0), Vector3(0.07,wh+0.05,0.17), Color("54381f"), 0,0,0, "timber"); box(Vector3(-1.16*wf,cy,0), Vector3(0.07,wh+0.05,0.17), Color("54381f"), 0,0,0, "timber")
 	box(Vector3(0,0.82,0.99), Vector3(0.78,1.42,0.06), Color("8a6742"))
-	box(Vector3(0,0.80,1.01), Vector3(0.54,1.28,0.06), Color("6e4a2c"))
-	box(Vector3(-0.68*wf,1.22,0.98), Vector3(0.52,0.60,0.06), Color("ffd98a")); box(Vector3(0.68*wf,1.22,0.98), Vector3(0.52,0.60,0.06), Color("ffd98a"))
+	box(Vector3(wj*0.7,0.80,1.01), Vector3(0.54,1.28,0.06), Color("6e4a2c"))
+	box(Vector3(-0.68*wf+wj,1.22+wj*0.4,0.98), Vector3(0.52,0.60,0.06), Color("ffd98a")); box(Vector3(0.68*wf+wj,1.22-wj*0.3,0.98), Vector3(0.52,0.60,0.06), Color("ffd98a"))
 	box(Vector3(-1.02*wf,1.22,0.97), Vector3(0.15,0.60,0.05), Color("5d7a34")); box(Vector3(-0.34*wf,1.22,0.97), Vector3(0.15,0.60,0.05), Color("5d7a34")); box(Vector3(0.34*wf,1.22,0.97), Vector3(0.15,0.60,0.05), Color("5d7a34")); box(Vector3(1.02*wf,1.22,0.97), Vector3(0.15,0.60,0.05), Color("5d7a34"))
 	if vi == 2:
 		box(Vector3(-0.68*wf,2.05,0.98), Vector3(0.48,0.54,0.06), Color("ffd98a")); box(Vector3(0.68*wf,2.05,0.98), Vector3(0.48,0.54,0.06), Color("ffd98a"))
