@@ -252,7 +252,7 @@ func _setup() -> void:
 	var sky := Sky.new(); var smat := ProceduralSkyMaterial.new(); smat.sky_top_color = Color("8fc3e8"); smat.sky_horizon_color = Color("f2e3c2"); smat.ground_bottom_color = Color("5d6b46"); smat.ground_horizon_color = Color("d9c9a4"); sky.sky_material = smat; env.sky = sky
 	env.background_mode = Environment.BG_SKY
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY; env.ambient_light_energy = amb * 0.55; env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
-	env.fog_enabled = true; env.fog_light_color = Color("f2e3c2"); env.fog_density = 0.0015; env.tonemap_mode = Environment.TONE_MAPPER_ACES; env.adjustment_enabled = true; env.adjustment_saturation = 1.10; env.adjustment_contrast = 1.02; env.adjustment_brightness = 1.02; env.glow_enabled = false; env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT;
+	env.fog_enabled = true; env.fog_light_color = Color("f2e3c2"); env.fog_density = 0.0008; env.tonemap_mode = Environment.TONE_MAPPER_ACES; env.adjustment_enabled = true; env.adjustment_saturation = 1.10; env.adjustment_contrast = 1.02; env.adjustment_brightness = 1.02; env.glow_enabled = false; env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT;
 	we.environment = env; add_child(we)
 	var pool := OmniLight3D.new(); pool.position = Vector3(0,4.5,1); pool.light_color = Color("ffd9a0"); pool.light_energy = 0.6; pool.omni_range = 14.0; pool.shadow_enabled = false; add_child(pool)
 	var fill := DirectionalLight3D.new(); fill.rotation_degrees = Vector3(-38, 125, 0); fill.light_energy = 0.20; fill.light_color = Color("cfe6ff"); fill.shadow_enabled = false; add_child(fill)
@@ -605,6 +605,16 @@ func _top_band() -> void:
 		_build_tree(etp, Color("79c24d"), Color("a9dd77"))
 	for epp in [Vector3(19.5,_h(19.5,-4.2),-4.2), Vector3(21.8,_h(21.8,-8.2),-8.2)]:
 		box(epp+Vector3(0,0.25,0), Vector3(0.5,0.5,0.5), Color("a67c4e"), 0.4); cyl(epp+Vector3(0.6,0.28,0.3), 0.22,0.25,0.55, Color("8a5f36"), 7)
+	# painted cliff ledges: geometry bands across east face
+	for ldi in 4:
+		var ldx: float = [19.5, 21.0, 20.0, 22.5][ldi]; var ldz: float = [-4.5, -7.5, -10.0, -12.0][ldi]
+		box(Vector3(ldx, _h(ldx,ldz)+0.12, ldz), Vector3(4.6,0.34,0.85), Color("6e665c"), 0.15, 0, 0, "rock")
+		box(Vector3(ldx+0.4, _h(ldx+0.4,ldz-1.1)+0.10, ldz-1.1), Vector3(3.4,0.28,0.7), Color("6e665c"), 0.15, 0, 0, "rock")
+	# jagged crest silhouette on NE ridge, snow only in crevices
+	for cri in 7:
+		var crx := 15.5 + float(cri)*1.35; var crz := -14.8 - fmod(float(cri)*0.8, 1.8); var cry := _h(crx,crz)
+		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.3,float(cri)*1.3,0.2)).scaled(Vector3(0.85,0.62,0.75)), Vector3(crx, cry+0.28, crz)), Color("6e665c"), "rock"); tri_total += 128
+		if cri % 2 == 0: blob(Vector3(crx+0.55, cry+0.12, crz+0.3), Vector3(0.34,0.13,0.3), Color("eef2f4"))
 	# corner rock mass covering far-plane transition bottom-right
 	add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.3,0.7,0.2)).scaled(Vector3(1.9,1.05,1.6)), Vector3(26, _h(26,-1)+0.25, -1)), Color("6e665c"), "rock"); tri_total += 128
 	add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(-0.2,1.9,0.4)).scaled(Vector3(1.35,0.75,1.1)), Vector3(23.5, _h(23.5,3)+0.2, 3)), Color("6e665c"), "rock"); tri_total += 128
