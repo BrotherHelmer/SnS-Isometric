@@ -148,8 +148,8 @@ func add_canopy(xf: Transform3D, c: Color) -> void:
 		var fn: Vector3 = (tv[1]-tv[0]).cross(tv[2]-tv[0]).normalized()
 		var vary := 0.70 + 0.62 * (0.5 + 0.5 * sin(seedv + float(f) * 2.39))
 		var cc := Color(clampf(c.r*vary,0,1), clampf(c.g*vary,0,1), clampf(c.b*vary,0,1))
-		if fn.y > 0.45: cc = cc.lightened(0.26)
-		if fn.y < 0.1: cc = cc.darkened(0.28)
+		if fn.y > 0.45: cc = cc.lightened(0.38)
+		if fn.y < 0.1: cc = cc.darkened(0.42)
 		var clus := sin(seedv*0.7 + float(f) * 1.37)
 		if clus > 0.45: cc = cc.darkened(0.30)
 		elif clus < -0.55: cc = cc.lightened(0.18)
@@ -192,7 +192,7 @@ func _build_terrain() -> void:
 			var sunface := clampf(0.5 - ((_h(v.x+0.8, v.y)-_h(v.x-0.8, v.y)) * 0.9 + (_h(v.x, v.y+0.8)-_h(v.x, v.y-0.8)) * 0.6) * 0.5, 0.0, 1.0)
 			c = c.darkened(sunface * 0.16)
 			var gshade := 0.5 + 0.5*sin(v.x*0.53-1.0) * sin(v.y*0.47+0.6)
-			var gsf := 0.74 + 0.40 * gshade
+			var gsf := 0.66 + 0.54 * gshade
 			c = Color(c.r*gsf, c.g*gsf, c.b*gsf)
 			if slope > 0.30: c = dirt.lerp(rock, clampf((slope-0.30)*1.3,0,1))
 			if v.x > 18.0 and slope > 0.16:
@@ -249,18 +249,18 @@ func _setup() -> void:
 	if round_no == 2:
 		grass = Color("69bd45"); grass2 = Color("86cc58"); stone = Color("c4bda9"); roof = Color("c2442c"); leaf = Color("4fae38"); leaf2 = Color("7cc24e"); light_e = 1.05; amb = 0.45
 	if round_no >= 3:
-		grass = Color("406e26"); grass2 = Color("4f7f2e"); stone = Color("9d9584"); roof = Color("bf3f27"); dirt = Color("cda96e"); leaf = Color("4e8f33"); leaf2 = Color("7cb54f"); light_e = 0.88; amb = 0.50
+		grass = Color("406e26"); grass2 = Color("4f7f2e"); stone = Color("9d9584"); roof = Color("bf3f27"); dirt = Color("cda96e"); leaf = Color("4e8f33"); leaf2 = Color("7cb54f"); light_e = 1.04; amb = 0.37
 	# environment + light + camera (game iso: ortho, pitch -38, yaw -45)
 	var we := WorldEnvironment.new(); var env := Environment.new()
 	var sky := Sky.new(); var smat := ProceduralSkyMaterial.new(); smat.sky_top_color = Color("8fc3e8"); smat.sky_horizon_color = Color("f2e3c2"); smat.ground_bottom_color = Color("5d6b46"); smat.ground_horizon_color = Color("d9c9a4"); sky.sky_material = smat; env.sky = sky
 	env.background_mode = Environment.BG_SKY
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY; env.ambient_light_energy = amb * 0.55; env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
-	env.fog_enabled = true; env.fog_light_color = Color("f2e3c2"); env.fog_density = 0.0012; env.tonemap_mode = Environment.TONE_MAPPER_ACES; env.adjustment_enabled = true; env.adjustment_saturation = 1.10; env.adjustment_contrast = 1.02; env.adjustment_brightness = 1.02; env.glow_enabled = false; env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT;
+	env.fog_enabled = true; env.fog_light_color = Color("f2e3c2"); env.fog_density = 0.0012; env.tonemap_mode = Environment.TONE_MAPPER_ACES; env.adjustment_enabled = true; env.adjustment_saturation = 1.10; env.adjustment_contrast = 1.08; env.adjustment_brightness = 1.02; env.glow_enabled = false; env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT;
 	we.environment = env; add_child(we)
 	var pool := OmniLight3D.new(); pool.position = Vector3(0,4.5,1); pool.light_color = Color("ffd9a0"); pool.light_energy = 0.6; pool.omni_range = 14.0; pool.shadow_enabled = false; add_child(pool)
 	var pool2 := OmniLight3D.new(); pool2.position = Vector3(17,8,-5); pool2.light_color = Color("ffd9a0"); pool2.light_energy = 0.55; pool2.omni_range = 13.0; pool2.shadow_enabled = false; add_child(pool2)
 	var fill := DirectionalLight3D.new(); fill.rotation_degrees = Vector3(-38, 125, 0); fill.light_energy = 0.20; fill.light_color = Color("cfe6ff"); fill.shadow_enabled = false; add_child(fill)
-	var sun := DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-52, -38, 0); sun.light_energy = light_e; sun.light_color = Color(1,0.96,0.88); sun.shadow_enabled = true; sun.shadow_opacity = 0.40; sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS; sun.shadow_blur = 7.0; add_child(sun)
+	var sun := DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-52, -38, 0); sun.light_energy = light_e; sun.light_color = Color(1,0.96,0.88); sun.shadow_enabled = true; sun.shadow_opacity = 0.50; sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS; sun.shadow_blur = 7.0; add_child(sun)
 	var cam := Camera3D.new(); cam.projection = Camera3D.PROJECTION_ORTHOGONAL
 	if OS.get_cmdline_user_args().has("--hill"):
 		cam.size = 12.0; cam.look_at_from_position(Vector3(24,12,8), Vector3(12,3,-12), Vector3.UP)
@@ -407,7 +407,7 @@ func _setup() -> void:
 		if not roof_groups.has(rv): roof_groups[rv] = SurfaceTool.new(); (roof_groups[rv] as SurfaceTool).begin(Mesh.PRIMITIVE_TRIANGLES)
 		(roof_groups[rv] as SurfaceTool).append_from(ri2[0], 0, ri2[1])
 	for rv2 in roof_groups:
-		var rmi := MeshInstance3D.new(); rmi.mesh = (roof_groups[rv2] as SurfaceTool).commit(); var rmat := StandardMaterial3D.new(); rmat.albedo_texture = load(TEX["roofp"]); rmat.albedo_color = [Color(0.88,0.88,0.88), Color(0.80,0.74,0.70), Color(0.92,0.84,0.74)][rv2]; rmat.roughness = 0.92; rmat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; rmi.material_override = rmat; rmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(rmi)
+		var rmi := MeshInstance3D.new(); rmi.mesh = (roof_groups[rv2] as SurfaceTool).commit(); var rmat := StandardMaterial3D.new(); rmat.albedo_texture = load(TEX["roofp"]); rmat.albedo_color = [Color(0.96,0.84,0.72), Color(0.84,0.66,0.52), Color(0.80,0.76,0.72)][rv2]; rmat.roughness = 0.92; rmat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; rmi.material_override = rmat; rmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(rmi)
 	if canopy_st != null:
 		var cmi := MeshInstance3D.new(); cmi.mesh = canopy_st.commit(); var cm := StandardMaterial3D.new(); cm.albedo_texture = load(TEX["leafp"]); cm.vertex_color_use_as_albedo = true; cm.albedo_color = Color(0.88,0.92,0.84); cm.roughness = 1.0; cm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; cmi.material_override = cm; cmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(cmi)
 	if card_st != null:
@@ -907,7 +907,7 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	box(Vector3(lean*(1.16*wf+0.42),0.55,0), Vector3(0.95,1.1,1.6), Color("e0cfa8"), 0,0,0, "plaster")
 	box(Vector3(lean*(1.16*wf+0.42),1.2,0), Vector3(1.15,0.09,1.85), Color("9c4a34"), 0, lean*0.20, 0)
 	var pitch2: float = [1.32, 1.10, 1.55][vi]
-	roof2(Vector3(0,top,0), 3.35*wf, 2.8, pitch2, 0.18, roof)
+	roof2(Vector3(0,top,0), 3.62*wf, 2.8, pitch2, 0.18, roof)
 	box(Vector3(0,top+pitch2+0.03,-0.7), Vector3(0.15,0.1,1.1), roof.darkened(0.15)); box(Vector3(0,top+pitch2+0.07,0.45), Vector3(0.15,0.1,1.2), roof.darkened(0.15))
 	box(Vector3(0,top+pitch2+0.13,0), Vector3(0.09,0.05,2.62), roof.lightened(0.15))
 	# modelled shingle rows: thin offset slabs following both slopes
@@ -930,7 +930,7 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	box(Vector3(-0.62*wf,top+0.67,0.68), Vector3(0.52,0.52,0.42), Color("e8d9b8"), 0,0,0, "plaster")
 	box(Vector3(-0.62*wf,top+0.77,0.90), Vector3(0.34,0.3,0.05), Color("ffd98a"))
 	box(Vector3(-0.62*wf,top+1.01,0.68), Vector3(0.68,0.1,0.56), roof)
-	box(Vector3(0.8,top+0.84,-0.3), Vector3(0.37,1.18,0.37), stone, 0,0,0, "stone")
+	box(Vector3(0.8,top+0.84,-0.3), Vector3(0.47,1.25,0.47), stone, 0,0,0, "stone")
 	if vi != 1: box(Vector3(-0.78,top+0.6,-0.25), Vector3(0.34,0.75,0.34), stone)
 	blob(Vector3(0.8,top+1.5,-0.3), Vector3(0.22,0.18,0.22), Color(1,1,1,0.35)); blob(Vector3(0.95,top+1.75,-0.3), Vector3(0.32,0.24,0.32), Color(1,1,1,0.22))
 	# massing variety: genuinely different silhouettes per variant
