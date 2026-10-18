@@ -93,7 +93,7 @@ func _build_terrain() -> void:
 				var c: Color = g1.lerp(g2, n)
 				if slope > 0.32: c = dirt.lerp(rock, clampf((slope-0.32)*1.4,0,1))
 				if slope > 0.32 and int(h*3.0) % 2 == 0: c = c.darkened(0.13)
-				if h > 2.4: c = c.lerp(snow, clampf((h-2.4)*1.2,0,1))
+				if h > 2.0: c = snow if h > 3.4 else c.lerp(snow, clampf((h-2.0)*1.1,0,1))
 				st.set_color(c); st.set_uv(v*0.5); st.add_vertex(Vector3(v.x, h, v.y))
 	st.generate_normals()
 	var mi := MeshInstance3D.new(); mi.mesh = st.commit(); var m := StandardMaterial3D.new(); m.vertex_color_use_as_albedo = true; m.albedo_texture = load(TEX["meadow"]); m.roughness = 0.95; mi.material_override = m; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mi)
@@ -111,6 +111,7 @@ func _setup() -> void:
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR; env.ambient_light_color = Color(1,0.98,0.92); env.ambient_light_energy = amb
 	env.fog_enabled = true; env.fog_light_color = Color("f2e3c2"); env.fog_density = 0.0022; env.tonemap_mode = Environment.TONE_MAPPER_LINEAR; env.adjustment_enabled = true; env.adjustment_saturation = 1.22; env.adjustment_contrast = 1.12; env.adjustment_brightness = 1.02; env.glow_enabled = false;
 	we.environment = env; add_child(we)
+	var pool := OmniLight3D.new(); pool.position = Vector3(0,4.5,1); pool.light_color = Color("ffd9a0"); pool.light_energy = 0.55; pool.omni_range = 13.0; pool.shadow_enabled = false; add_child(pool)
 	var fill := DirectionalLight3D.new(); fill.rotation_degrees = Vector3(-38, 125, 0); fill.light_energy = 0.20; fill.light_color = Color("cfe6ff"); fill.shadow_enabled = false; add_child(fill)
 	var sun := DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-52, -38, 0); sun.light_energy = light_e; sun.light_color = Color(1,0.96,0.88); sun.shadow_enabled = true; sun.shadow_opacity = 0.46; sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS; sun.shadow_blur = 2.5 if round_no>=2 else 1.0; add_child(sun)
 	var cam := Camera3D.new(); cam.projection = Camera3D.PROJECTION_ORTHOGONAL; cam.size = 21.0 if round_no>=10 else 19.0; cam.look_at_from_position(Vector3(11,11,11), Vector3(0,0.4,0), Vector3.UP); cam.current = true; add_child(cam)	# ground grass: big plane + lighter patches
@@ -170,6 +171,8 @@ func _setup() -> void:
 		_build_tree(p, leaf, leaf2)
 	_build_house(Vector3(-8.6,0,4.8), roof, stone)
 	_build_house(Vector3(9.6,0,1.8), roof, stone)
+	_build_house(Vector3(-11.5,0,-6.5), roof, stone)
+	_build_house(Vector3(11.8,0,7.5), roof, stone)
 	for tp in [Vector3(-14,0,-8),Vector3(-15,0,2),Vector3(-13,0,9),Vector3(13,0,10),Vector3(15,0,-4),Vector3(11,0,-12),Vector3(-11,0,-11),Vector3(4,0,11),Vector3(-4,0,12),Vector3(14,0,5)]:
 		_build_tree(tp, leaf, leaf2)
 	for bs in [Vector3(-5,0,-7),Vector3(6,0,8),Vector3(-10,0,-3),Vector3(9,0,-8)]:
@@ -177,7 +180,7 @@ func _setup() -> void:
 	# stones
 	for p in [Vector3(4.8,0.25,-4),Vector3(-7.5,0.2,6),Vector3(7,0.2,-2)]: blob(p, Vector3(0.5,0.35,0.45), Color("9a968c"))
 	for ap in [Vector3(-1.5,0,-3.5), Vector3(3.2,0,-1.2), Vector3(-3.4,0,4.6), Vector3(6.2,0,4.2), Vector3(7.2,0,-3.8)]:
-		cyl(ap+Vector3(0,0.018,0), 2.6,2.6,0.015, Color(0.12,0.18,0.06,0.28), 14)
+		cyl(ap+Vector3(0,0.018,0), 2.6,2.6,0.015, Color(0.10,0.16,0.05,0.45), 14)
 	# commit merged meshes
 	for key in surf:
 		var st: SurfaceTool = surf[key]; var mesh := st.commit()
@@ -217,13 +220,18 @@ func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 	for wx in [-1.4,1.4]: box(p+Vector3(wx,1.25,1.83), Vector3(0.34,0.55,0.08), Color("3a2e22"))
 	box(p+Vector3(0,0.18,1.84), Vector3(4.7,0.36,0.12), Color("8f887a"))
 	box(p+Vector3(-1.6,1.7,2.08), Vector3(0.55,1.15,0.07), Color("c22e22")); box(p+Vector3(1.6,1.7,2.08), Vector3(0.55,1.15,0.07), Color("c22e22"))
+	for bt in [Vector2(-2.55,-1.95),Vector2(2.55,-1.95),Vector2(-2.55,1.95),Vector2(2.55,1.95)]: box(p+Vector3(bt.x,0.55,bt.y), Vector3(0.55,1.1,0.55), stone.darkened(0.14), 0.4, 0, 0, "stone")
+	for wf in [Vector2(-1.9,1.35),Vector2(1.9,1.35),Vector2(0,2.6)]:
+		box(p+Vector3(wf.x,wf.y,2.07), Vector3(0.52,0.68,0.08), Color("e8c87a")); box(p+Vector3(wf.x,wf.y,2.11), Vector3(0.36,0.5,0.05), Color("3a2c1c"))
 	box(p+Vector3(0,0.7,2.08), Vector3(0.95,1.4,0.15), Color("4a3421"))
 	box(p+Vector3(0.0,3.9,0), Vector3(0.08,1.2,0.08), Color("6b4423")); box(p+Vector3(0.45,4.3,0), Vector3(0.8,0.45,0.05), Color("d43a2a"))
 func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	box(p+Vector3(0,0.15,0), Vector3(2.5,0.3,2.0), Color("9a968c"))
 	box(p+Vector3(0,1.0,0), Vector3(2.3,1.7,1.9), Color("e8d9b8"), 0,0,0, "plaster")
 	# timber
-	for x in [-1.1,-0.4,0.4,1.1]: box(p+Vector3(x,1.0,0.97), Vector3(0.14,1.7,0.06), Color("6b4423"))
+	for x in [-1.1,-0.4,0.4,1.1]: box(p+Vector3(x,1.0,0.97), Vector3(0.19,1.75,0.09), Color("54351d"))
+	box(p+Vector3(1.16,1.0,0), Vector3(0.07,1.75,1.9), Color("54351d")); box(p+Vector3(-1.16,1.0,0), Vector3(0.07,1.75,1.9), Color("54351d"))
+	box(p+Vector3(0,0.82,1.0), Vector3(0.86,1.5,0.07), Color("2e2015"))
 	box(p+Vector3(0,1.55,0.97), Vector3(2.3,0.14,0.06), Color("6b4423"))
 	box(p+Vector3(0,0.8,0.98), Vector3(0.7,1.3,0.08), Color("5d3d24"))
 	box(p+Vector3(-0.65,1.15,0.98), Vector3(0.45,0.5,0.06), Color("ffd98a"))
