@@ -423,6 +423,13 @@ func _hill_fields() -> void:
 		box(Vector3(fx5, fy5, fz5), Vector3(4.6,0.15,1.7), Color("86b83e") if fi2%2==0 else Color("b08d55"), 0.12, 0, 0, "" if fi2%2==0 else "dirt")
 		for cr2 in 5: box(Vector3(fx5-1.6+float(cr2)*0.8, fy5+0.1, fz5), Vector3(0.5,0.09,1.45), Color("3f7020") if fi2%2==0 else Color("96683c"), 0.12)
 		for fp4 in 4: box(Vector3(fx5-2.1+float(fp4)*1.4, fy5+0.35, fz5+0.95), Vector3(0.09,0.7,0.09), Color("6b4a2c"))
+	for fi3 in 6:
+		var fx6 := 2.2+float(fi3)*1.9; var fz6 := -5.0 - float(fi3%3)*0.95; var fy6 := _h(fx6,fz6)+0.05
+		box(Vector3(fx6, fy6, fz6), Vector3(4.8,0.15,1.6), Color("7fae4a") if fi3%2==0 else Color("c2a878"), 0.1, 0, 0, "" if fi3%2==0 else "dirt")
+		for cr3 in 5: box(Vector3(fx6-1.6+float(cr3)*0.8, fy6+0.1, fz6), Vector3(0.5,0.09,1.4), Color("4e7d26") if fi3%2==0 else Color("96683c"), 0.1)
+	for tp3 in [Vector3(4.5,0,-11.5), Vector3(11,0,-12.5), Vector3(20,0,-9.5), Vector3(7.5,0,-13), Vector3(17,0,-13.5)]:
+		_build_tree(tp3, Color("79c24d"), Color("a9dd77"))
+	_build_hut(Vector3(8.2, _h(8.2,-11.2)-0.1, -11.2), Color("9d9584"))
 	var sh := Vector3(12.5, _h(12.5,-9.8), -9.8)
 	box(sh+Vector3(0,0.65,0), Vector3(1.7,1.3,1.5), Color("cbb489"))
 	cyl(sh+Vector3(0,1.75,0), 1.45,0.2,1.2, Color("b98a35"), 8, "thatch")
@@ -510,6 +517,8 @@ func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 	for si2 in 6: box(p+Vector3(-1.8+fmod(float(si2)*0.73,3.6), 0.45+fmod(float(si2)*0.47,1.4), 1.84), Vector3(0.5,0.28,0.06), stone.darkened(0.18) if si2%2==0 else stone.lightened(0.1))
 	for wx in [-1.4,1.4]: box(p+Vector3(wx,1.25,1.83), Vector3(0.34,0.55,0.08), Color("3a2e22"))
 	box(p+Vector3(0,0.18,1.84), Vector3(4.7,0.36,0.12), Color("8f887a"))
+	for ccx2 in [-2.32, 2.32]:
+		for ccz2 in [-1.78, 1.78]: cyl(p+Vector3(ccx2, 1.2, ccz2), 0.20, 0.20, 2.4, stone, 8, "stone")
 	# modelled stonework relief: extruded blocks, 2 tints (front + right faces)
 	for ry2 in 4:
 		for cx2 in 7:
@@ -573,9 +582,14 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	# modelled shingle rows: thin offset slabs following both slopes
 	var hw2 := 1.5*wf; var sang := atan2(pitch2, hw2)
 	for side2 in [-1.0, 1.0]:
-		for rw in 5:
-			var tt := (float(rw)+0.5)/5.0
-			box(Vector3(side2*hw2*(1.0-tt), top+pitch2*tt+0.018, 0), Vector3(0.40,0.028,2.78), roof.darkened(0.10) if rw%2==0 else roof.lightened(0.06), 0, -side2*sang, 0)
+		var nrm2 := Vector3(side2*pitch2, hw2, 0).normalized()
+		for rw in 4:
+			var tt := (float(rw)+0.5)/4.0
+			var sp2 := Vector3(side2*hw2*(1.0-tt), top+pitch2*tt, 0)
+			box(sp2 + nrm2*0.012, Vector3(0.66,0.05,2.80), roof.darkened(0.38), 0, -side2*sang, 0)
+			box(sp2 + nrm2*0.055, Vector3(0.60,0.075,2.78), roof.darkened(0.10) if rw%2==0 else roof.lightened(0.08), 0, -side2*sang, 0)
+	for ccx in [-1.15, 1.15]:
+		for ccz in [-0.95, 0.95]: cyl(Vector3(ccx*wf, cy, ccz), 0.13, 0.13, wh, Color("e8d9b8"), 8, "plaster")
 	# stone foundation skirt
 	box(Vector3(0,0.34,0), Vector3(2.36*wf,0.32,1.96), stone, 0,0,0, "stone")
 	box(Vector3(-0.62*wf,top+0.67,0.68), Vector3(0.52,0.52,0.42), Color("e8d9b8"), 0,0,0, "plaster")
@@ -591,6 +605,9 @@ func _build_hut(p: Vector3, stone: Color) -> void:
 	cyl(p+Vector3(0,2.05,0), 1.75,0.25,1.5, Color("b98a35"), 10, "thatch")
 	for ri in 3: cyl(p+Vector3(0,1.55+float(ri)*0.38,0), 1.55-float(ri)*0.38, 1.45-float(ri)*0.38, 0.12, Color("8f6a2a"), 10)
 	cyl(p+Vector3(0,1.38,0), 1.82,1.88,0.2, Color("7d5c26"), 10)
+	for bi2 in 8:
+		var ba := float(bi2) * PI / 4.0
+		box(p+Vector3(sin(ba)*1.58, 1.78, cos(ba)*1.58), Vector3(0.22,0.95,0.12), Color("a87c34") if bi2%2==0 else Color("c49a48"), ba, 0, 0)
 	cyl(p+Vector3(0,2.92,0), 0.3,0.36,0.22, Color("8f6a2a"), 8)
 func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 	var tsc := 0.85 + 0.45 * (0.5 + 0.5*sin(p.x*2.7 + p.z*1.9))
