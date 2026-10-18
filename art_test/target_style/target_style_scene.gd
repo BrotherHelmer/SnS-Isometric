@@ -144,7 +144,7 @@ func flat_sphere() -> ArrayMesh:
 		for vtx in [a,b,c2]: st.set_normal(n); st.set_uv(Vector2(vtx.x*0.5+0.5, vtx.y*0.5+0.5)); st.add_vertex(vtx)
 	_flat_sphere = st.commit(); return _flat_sphere
 func _build_terrain() -> void:
-	var size := 64.0; var steps := 88; var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var size := 64.0; var steps := 104; var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var g1 := Color("27631d"); var g2 := Color("3f842c"); var dirt := Color("9c7f52"); var rock := Color("8d8172"); var snow := Color("f4f6f2")
 	for iz in steps:
 		for ix in steps:
@@ -172,6 +172,9 @@ func _build_terrain() -> void:
 					c = c.darkened(crev * 0.45)
 					var mot := 0.5 + 0.5*sin(v.x*23.7) * sin(v.y*19.3)
 					c = c.lerp(Color("c9bda6"), mot * 0.30)
+					var band := 0.5 + 0.5*sin(h*1.35 + v.x*0.32 - v.y*0.48)
+					if band > 0.55: c = c.lerp(Color("bfb096"), (band-0.55) * 0.55)
+					else: c = c.darkened((0.55-band) * 0.22)
 					var cf := 0.74 + 0.56 * chunk
 					c = Color(clampf(c.r*cf,0,1), clampf(c.g*cf,0,1), clampf(c.b*cf,0,1))
 					var crack := clampf(1.0 - absf(sin(v.x*5.3 + v.y*3.9 + sin(v.y*7.0))) / 0.22, 0.0, 1.0)
@@ -180,7 +183,7 @@ func _build_terrain() -> void:
 					if lich > 0.52: c = c.lerp(Color("5f8140"), clampf((lich-0.52)*1.8,0,0.85))
 				for feat in [Vector2(10.5,-8.5), Vector2(14.2,-6.9), Vector2(9.0,-8.8)]:
 					var fd := Vector2(v.x-feat.x, v.y-feat.y).length()
-					if fd < 3.2: c = c.lerp(dirt, (1.0-fd/3.2) * 0.45)
+					if fd < 4.4: c = c.lerp(dirt, (1.0-fd/4.4) * 0.50)
 				var snowpatch := 0.5 + 0.5*sin(v.x*1.9+1.3) * sin(v.y*1.4-0.7)
 				if h > 2.7 and slope <= 0.90:
 					var sf := clampf((snowpatch-0.34)*4.0, 0.0, 1.0) * clampf((h-2.7)*2.5, 0.0, 1.0)
@@ -265,6 +268,9 @@ func _setup() -> void:
 	for up2 in [Vector3(6.2,_h(6.2,-9.8),-9.8), Vector3(12.8,_h(12.8,-12.6),-12.6), Vector3(17.5,_h(17.5,-11.0),-11.0)]:
 		cyl(up2+Vector3(0,0.4,0), 0.3,0.34,0.8, Color("8a5f36"), 8); box(up2+Vector3(0.55,0.3,0.3), Vector3(0.55,0.55,0.55), Color("a67c4e"), 0.3)
 	for mw in [[Vector3(5.2,_h(5.2,-6.3),-6.3), Color("2f62b8")], [Vector3(7.2,_h(7.2,-7.0),-7.0), Color("d43a2a")], [Vector3(8.6,_h(8.6,-6.4),-6.4), Color("3f7d3a")], [Vector3(-2.2,0,8.6), Color("d43a2a")], [Vector3(11.2,0,6.4), Color("2f62b8")], [Vector3(-9.2,0,-4.2), Color("2f62b8")]]: _mini(mw[0], mw[1])
+	for mw2 in [[Vector3(1.8,0,6.8), Color("3f7d3a")], [Vector3(-6.8,0,8.4), Color("2f62b8")], [Vector3(10.4,0,-1.8), Color("d43a2a")], [Vector3(-11.8,0,3.4), Color("3f7d3a")], [Vector3(4.8,0,9.6), Color("2f62b8")], [Vector3(12.6,_h(12.6,-9.6),-9.6), Color("d43a2a")], [Vector3(7.6,_h(7.6,-11.8),-11.8), Color("3f7d3a")], [Vector3(-4.8,0,-6.6), Color("2f62b8")]]: _mini(mw2[0], mw2[1])
+	for sp9 in [Vector3(2.2,0,4.4), Vector3(-7.8,0,7.2), Vector3(9.2,0,3.2), Vector3(-2.8,0,-1.8), Vector3(6.6,0,7.8), Vector3(-10.6,0,-5.2), Vector3(13.8,0,7.2), Vector3(0.4,0,11.6)]:
+		box(sp9+Vector3(0,0.16,0), Vector3(0.36,0.32,0.36), Color("a67c4e"), 0.3); cyl(sp9+Vector3(0.42,0.20,0.18), 0.17,0.19,0.4, Color("8a5f36"), 7)
 	# market stall: posts, striped canopy, crates
 	for mp in [Vector3(-4.6,0,5.9), Vector3(-3.4,0,5.9), Vector3(-4.6,0,7.0), Vector3(-3.4,0,7.0)]: box(mp+Vector3(0,0.75,0), Vector3(0.13,1.5,0.13), Color("6b4423"))
 	roof2(Vector3(-4.0,1.52,6.45), 2.3, 2.1, 0.55, 0.14, Color("d43a2a"))
@@ -342,7 +348,7 @@ func _spawn_carriers() -> void:
 	for ci2 in cps.size():
 		var cp: Vector3 = cps[ci2]; var ps: PackedScene = load("res://assets/settlement3d/runtime/characters/" + chars[ci2 % chars.size()] + ".glb")
 		if ps == null: _build_carrier(cp); continue
-		var ch := ps.instantiate() as Node3D; ch.position = cp; ch.rotation.y = -0.7; ch.scale = Vector3.ONE * 0.72; add_child(ch)
+		var ch := ps.instantiate() as Node3D; ch.position = cp; ch.rotation.y = -0.7; ch.scale = Vector3.ONE * 0.62; add_child(ch)
 		var ap := AnimationPlayer.new(); ap.root_node = NodePath(".."); ch.add_child(ap)
 		for libname in ["MovementBasic", "General", "Tools"]:
 			var lp: PackedScene = load("res://assets/settlement3d/runtime/animations/Rig_Medium/Rig_Medium_" + libname + ".glb")
@@ -361,7 +367,7 @@ func _spawn_statics() -> void:
 	for df in defs:
 		var ps2: PackedScene = load("res://assets/settlement3d/runtime/characters/" + String(df[0]) + ".glb")
 		if ps2 == null: continue
-		var ch2 := ps2.instantiate() as Node3D; ch2.position = df[1]; ch2.rotation.y = 0.8; ch2.scale = Vector3.ONE * 0.72; add_child(ch2)
+		var ch2 := ps2.instantiate() as Node3D; ch2.position = df[1]; ch2.rotation.y = 0.8; ch2.scale = Vector3.ONE * 0.62; add_child(ch2)
 		var ap2 := AnimationPlayer.new(); ap2.root_node = NodePath(".."); ch2.add_child(ap2)
 		for libname in ["MovementBasic", "General", "Tools"]:
 			var lp2: PackedScene = load("res://assets/settlement3d/runtime/animations/Rig_Medium/Rig_Medium_" + libname + ".glb")
@@ -536,7 +542,7 @@ func _top_band() -> void:
 		box(Vector3(cx9, _h(cx9,cz9)+0.05, cz9), Vector3(5.2,0.14,1.6), Color("86b83e") if cf4%2==0 else Color("b08d55"), 0.14)
 func _aprons() -> void:
 	for ap2 in [Vector3(10.5,_h(10.5,-8.5),-8.5), Vector3(14.2,_h(14.2,-6.9),-6.9), Vector3(19.0,_h(19.0,-13.8),-13.8)]:
-		cyl(ap2+Vector3(0,0.05,0), 2.1,2.1,0.05, Color("c9ab72"), 12, "dirt")
+		cyl(ap2+Vector3(0,0.05,0), 3.1,3.1,0.05, Color("c9ab72"), 12, "dirt")
 func _props2() -> void:
 	# log piles
 	for lp in [Vector3(-6.8,0,7.6), Vector3(8.8,0,6.2), Vector3(1.2,0,7.8)]:
@@ -809,7 +815,7 @@ func _build_hut(p: Vector3, stone: Color) -> void:
 		box(p+Vector3(sin(ba)*1.58, 1.78, cos(ba)*1.58), Vector3(0.22,0.95,0.12), Color("a87c34") if bi2%2==0 else Color("c49a48"), ba, 0, 0)
 	cyl(p+Vector3(0,2.92,0), 0.3,0.36,0.22, Color("8f6a2a"), 8)
 func _build_tree(p: Vector3, a: Color, b: Color) -> void:
-	var tsc := 0.85 + 0.45 * (0.5 + 0.5*sin(p.x*2.7 + p.z*1.9))
+	var tsc := (0.85 + 0.45 * (0.5 + 0.5*sin(p.x*2.7 + p.z*1.9))) * 0.80
 	var vi := absi(int(p.x*3.0 + p.z*7.0)) % 7
 	if vi == 5: a = Color("c07a2e"); b = Color("e0a44a")
 	vi = vi % 3
@@ -825,9 +831,9 @@ func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 		for pi in 4:
 			add_canopy(Transform3D(Basis.from_euler(Vector3(0,float(pi)*0.8,0)).scaled(Vector3(0.85,1.05,0.85)), p+Vector3(0,1.9+float(pi)*0.62,0)), a if pi%2==0 else b)
 		return
-	for ci in 10:
-		var off: Vector3 = [Vector3(0,2.6,0), Vector3(0.85,2.05,0.3), Vector3(-0.85,2.15,-0.25), Vector3(0.1,3.25,-0.1), Vector3(-0.2,1.9,0.7), Vector3(1.15,2.7,-0.5), Vector3(-1.1,2.8,0.45), Vector3(1.3,2.2,0.6), Vector3(-1.3,2.3,-0.6), Vector3(0.5,3.6,0.5)][ci]
-		var sc: float = [1.25,0.9,0.85,0.9,0.75,0.62,0.6,0.5,0.48,0.52][ci] * (0.88 + 0.24 * (0.5 + 0.5*sin(float(ci)*2.3)))
+	for ci in 14:
+		var off: Vector3 = [Vector3(0,2.6,0), Vector3(0.85,2.05,0.3), Vector3(-0.85,2.15,-0.25), Vector3(0.1,3.25,-0.1), Vector3(-0.2,1.9,0.7), Vector3(1.15,2.7,-0.5), Vector3(-1.1,2.8,0.45), Vector3(1.3,2.2,0.6), Vector3(-1.3,2.3,-0.6), Vector3(0.5,3.6,0.5), Vector3(1.5,2.5,0.1), Vector3(-1.5,2.6,-0.2), Vector3(0.3,2.0,1.05), Vector3(-0.4,3.05,0.95)][ci]
+		var sc: float = [1.05,0.78,0.74,0.78,0.66,0.55,0.53,0.45,0.43,0.46,0.40,0.38,0.36,0.34][ci] * (0.88 + 0.24 * (0.5 + 0.5*sin(float(ci)*2.3)))
 		var cc2: Color = a.lerp(b, clampf(float(ci)/7.0, 0.0, 1.0))
 		if ci % 3 == 2: cc2 = cc2.lightened(0.13)
 		add_canopy(Transform3D(Basis.from_euler(Vector3(0, float(ci)*0.62, 0)).scaled(Vector3(sc*1.15*tsc, sc*0.95*tsc, sc*1.15*tsc)), p+off*Vector3(1,tsc,1)), cc2)
