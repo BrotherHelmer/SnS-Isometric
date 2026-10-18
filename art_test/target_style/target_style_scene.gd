@@ -190,7 +190,7 @@ func _setup() -> void:
 	elif OS.get_cmdline_user_args().has("--close"):
 		cam.size = 6.5; cam.look_at_from_position(Vector3(9.5,8,7.5), Vector3(2.6,0.6,-0.8), Vector3.UP)
 	else:
-		cam.size = 21.0 if round_no>=10 else 19.0; cam.look_at_from_position(Vector3(11,11,11), Vector3(1.3,0.5,-1.1), Vector3.UP)
+		cam.size = 23.5 if round_no>=10 else 19.0; cam.look_at_from_position(Vector3(11,11,11), Vector3(1.3,0.5,-1.1), Vector3.UP)
 	cam.current = true; add_child(cam)	# ground grass: big plane + lighter patches
 	_build_terrain()
 	for k in 26:
@@ -235,6 +235,7 @@ func _setup() -> void:
 		var lx2 := 10.0+fmod(float(li2)*2.3,6.0); var lz2 := -8.0-fmod(float(li2)*1.1,4.0)
 		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(li2),0.1)).scaled(Vector3(1.1,0.65,0.9)), Vector3(lx2,_h(lx2,lz2)+0.3,lz2)), Color("6e665c"), "rock"); tri_total+=128
 	_hill_content(); _props2()
+	for mw in [[Vector3(5.2,_h(5.2,-6.3),-6.3), Color("2f62b8")], [Vector3(7.2,_h(7.2,-7.0),-7.0), Color("c2543a")], [Vector3(8.6,_h(8.6,-6.4),-6.4), Color("3f7d3a")], [Vector3(-2.2,0,8.6), Color("c2543a")], [Vector3(11.2,0,6.4), Color("2f62b8")], [Vector3(-9.2,0,-4.2), Color("7a4a8c")]]: _mini(mw[0], mw[1])
 	# market stall: posts, striped canopy, crates
 	for mp in [Vector3(-4.6,0,5.9), Vector3(-3.4,0,5.9), Vector3(-4.6,0,7.0), Vector3(-3.4,0,7.0)]: box(mp+Vector3(0,0.75,0), Vector3(0.13,1.5,0.13), Color("6b4423"))
 	box(Vector3(-4.0,1.62,6.45), Vector3(1.9,0.14,1.9), Color("d43a2a")); box(Vector3(-4.0,1.58,6.45), Vector3(1.9,0.1,0.5), Color("f2ead8")); box(Vector3(-4.0,0.55,6.45), Vector3(1.6,0.5,1.2), Color("a67c4e"), 0,0,0, "timber")
@@ -289,7 +290,7 @@ func _spawn_carriers() -> void:
 	for ci2 in cps.size():
 		var cp: Vector3 = cps[ci2]; var ps: PackedScene = load("res://assets/settlement3d/runtime/characters/" + chars[ci2 % chars.size()] + ".glb")
 		if ps == null: _build_carrier(cp); continue
-		var ch := ps.instantiate() as Node3D; ch.position = cp; ch.rotation.y = -0.7; ch.scale = Vector3.ONE * 0.92; add_child(ch)
+		var ch := ps.instantiate() as Node3D; ch.position = cp; ch.rotation.y = -0.7; ch.scale = Vector3.ONE * 0.80; add_child(ch)
 		var ap := AnimationPlayer.new(); ap.root_node = NodePath(".."); ch.add_child(ap)
 		for libname in ["MovementBasic", "General", "Tools"]:
 			var lp: PackedScene = load("res://assets/settlement3d/runtime/animations/Rig_Medium/Rig_Medium_" + libname + ".glb")
@@ -308,7 +309,7 @@ func _spawn_statics() -> void:
 	for df in defs:
 		var ps2: PackedScene = load("res://assets/settlement3d/runtime/characters/" + String(df[0]) + ".glb")
 		if ps2 == null: continue
-		var ch2 := ps2.instantiate() as Node3D; ch2.position = df[1]; ch2.rotation.y = 0.8; ch2.scale = Vector3.ONE * 0.92; add_child(ch2)
+		var ch2 := ps2.instantiate() as Node3D; ch2.position = df[1]; ch2.rotation.y = 0.8; ch2.scale = Vector3.ONE * 0.80; add_child(ch2)
 		var ap2 := AnimationPlayer.new(); ap2.root_node = NodePath(".."); ch2.add_child(ap2)
 		for libname in ["MovementBasic", "General", "Tools"]:
 			var lp2: PackedScene = load("res://assets/settlement3d/runtime/animations/Rig_Medium/Rig_Medium_" + libname + ".glb")
@@ -434,39 +435,29 @@ func _spawn_tufts() -> void:
 	var idx := PackedInt32Array([0,1,2, 0,2,3, 4,5,6, 4,6,7])
 	var arrays := []; arrays.resize(Mesh.ARRAY_MAX); arrays[Mesh.ARRAY_VERTEX]=verts; arrays[Mesh.ARRAY_NORMAL]=norms; arrays[Mesh.ARRAY_TEX_UV]=uvs; arrays[Mesh.ARRAY_INDEX]=idx
 	var tm := ArrayMesh.new(); tm.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	var mm := MultiMesh.new(); mm.transform_format = MultiMesh.TRANSFORM_3D; mm.use_colors = true; mm.mesh = tm; mm.instance_count = 1600
+	var mm := MultiMesh.new(); mm.transform_format = MultiMesh.TRANSFORM_3D; mm.use_colors = true; mm.mesh = tm; mm.instance_count = 1200
 	var rng := RandomNumberGenerator.new(); rng.seed = 99
-	for i in 1600:
+	for i in 1200:
 		var gx := rng.randf_range(-17.0, 20.0); var gz := rng.randf_range(-14.0, 13.0)
 		var xf := Transform3D(Basis.from_euler(Vector3(0, rng.randf()*PI, 0)).scaled(Vector3.ONE * rng.randf_range(0.5,0.95)), Vector3(gx, _h(gx,gz)+0.02, gz))
 		mm.set_instance_transform(i, xf); mm.set_instance_color(i, Color("386e20").lerp(Color("5da038"), rng.randf()))
 	var mmi := MultiMeshInstance3D.new(); mmi.multimesh = mm; var mt := StandardMaterial3D.new(); mt.albedo_color = Color(1,1,1); mt.vertex_color_use_as_albedo = true; mt.cull_mode = BaseMaterial3D.CULL_DISABLED; mt.roughness = 1.0; mmi.material_override = mt; mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mmi)
-	# instanced flower patches (clustered) + small stone clusters: 1 draw each
-	var sm2 := SphereMesh.new(); sm2.radial_segments = 6; sm2.rings = 3; sm2.radius = 1.0; sm2.height = 2.0
-	var fmm := MultiMesh.new(); fmm.transform_format = MultiMesh.TRANSFORM_3D; fmm.use_colors = true; fmm.mesh = sm2; fmm.instance_count = 260
-	var centres := []
-	for ci in 10: centres.append(Vector2(rng.randf_range(-14.0,16.0), rng.randf_range(-11.0,11.0)))
-	for i2 in 260:
-		var cen: Vector2 = centres[i2 % centres.size()]; var fx4 := cen.x + rng.randf_range(-1.3,1.3); var fz4 := cen.y + rng.randf_range(-1.3,1.3)
-		fmm.set_instance_transform(i2, Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * rng.randf_range(0.05,0.10)), Vector3(fx4, _h(fx4,fz4)+0.09, fz4)))
-		fmm.set_instance_color(i2, [Color("f2f0e6"), Color("ffd94a"), Color("ff9db0"), Color("e2543e")][i2 % 4])
-	var fmi := MultiMeshInstance3D.new(); fmi.multimesh = fmm; fmi.material_override = mt; fmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(fmi)
-	var smm := MultiMesh.new(); smm.transform_format = MultiMesh.TRANSFORM_3D; smm.use_colors = true; smm.mesh = sm2; smm.instance_count = 170
-	for i3 in 170:
-		var sx4 := rng.randf_range(-16.0,19.0); var sz4 := rng.randf_range(-13.0,12.0); var ss4 := rng.randf_range(0.13,0.36)
-		smm.set_instance_transform(i3, Transform3D(Basis.from_euler(Vector3(0, rng.randf()*PI, 0)).scaled(Vector3(ss4, ss4*0.55, ss4)), Vector3(sx4, _h(sx4,sz4)+ss4*0.3, sz4)))
-		smm.set_instance_color(i3, Color("4f4c44").lerp(Color("767268"), rng.randf()))
-	var smi := MultiMeshInstance3D.new(); smi.multimesh = smm; smi.material_override = mt; smi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(smi)
-	tri_total += (260 + 170) * 24
-	tri_total += 1600 * 4
+	# flowers/stones now painted into terrain texture (R27), no dot instances
+	tri_total += 1200 * 4
+func _mini(mp: Vector3, tc: Color) -> void:
+	box(mp+Vector3(-0.09,0.22,0), Vector3(0.13,0.44,0.15), Color("4a3421")); box(mp+Vector3(0.09,0.22,0), Vector3(0.13,0.44,0.15), Color("4a3421"))
+	box(mp+Vector3(0,0.62,0), Vector3(0.42,0.42,0.26), tc)
+	blob(mp+Vector3(0,1.02,0), Vector3(0.17,0.18,0.17), Color("e8b88a"))
+	cyl(mp+Vector3(0,1.16,0), 0.24,0.26,0.07, Color("c9a86a"), 8)
+	box(mp+Vector3(0.30,0.66,0.08), Vector3(0.08,0.52,0.08), Color("6b4a2c"), 0, 0.5, 0)
 func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 	box(p+Vector3(0,1.1,0), Vector3(5.4,2.2,4.1), stone, 0,0,0, "stone")
 	for cy in [0.55, 1.05, 1.55]: box(p+Vector3(0,cy,1.82), Vector3(4.6,0.07,0.05), stone.darkened(0.25))
 	box(p+Vector3(0,2.15,0), Vector3(2.2,2.3,2.2), stone)
-	cyl(p+Vector3(0,4.35,0), 1.15,0.05,1.6, roof, 10, "roofp")
+	cyl(p+Vector3(0,4.6,0), 1.05,0.05,1.9, roof, 10, "roofp")
 	for off in [Vector2(-2.1,-1.6),Vector2(2.1,-1.6),Vector2(-2.1,1.6),Vector2(2.1,1.6)]:
-		cyl(p+Vector3(off.x,1.4,off.y), 0.62,0.62,2.8, stone, 8, "stone")
-		cyl(p+Vector3(off.x,3.55,off.y), 0.85,0.02,1.5, roof, 10, "roofp")
+		cyl(p+Vector3(off.x,1.65,off.y), 0.52,0.52,3.3, stone, 8, "stone")
+		cyl(p+Vector3(off.x,3.95,off.y), 0.72,0.02,1.7, roof, 10, "roofp")
 		cyl(p+Vector3(off.x,3.25,off.y), 0.88,0.72,0.14, roof.darkened(0.22), 10); cyl(p+Vector3(off.x,3.62,off.y), 0.62,0.46,0.14, roof.darkened(0.22), 10)
 		for ts in 3: box(p+Vector3(off.x+0.63,1.0+float(ts)*0.8,off.y), Vector3(0.1,0.65,0.34), stone.darkened(0.15))
 	for cx in [-1.9,-1.15,-0.4,0.4,1.15,1.9]: box(p+Vector3(cx,2.15,1.82), Vector3(0.42,0.35,0.18), stone)
@@ -516,7 +507,7 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	# lean-to (side alternates by variant; vi==1 also reads L-shaped)
 	box(Vector3(lean*(1.16*wf+0.42),0.55,0), Vector3(0.95,1.1,1.6), Color("e0cfa8"), 0,0,0, "plaster")
 	box(Vector3(lean*(1.16*wf+0.42),1.2,0), Vector3(1.15,0.09,1.85), Color("9c4a34"), 0, lean*0.20, 0)
-	roof2(Vector3(0,top,0), 3.0*wf, 2.5, [1.15, 0.95, 1.35][vi], 0.18, roof)
+	roof2(Vector3(0,top,0), 3.0*wf, 2.5, [1.32, 1.10, 1.55][vi], 0.18, roof)
 	box(Vector3(-0.62*wf,top+0.67,0.68), Vector3(0.52,0.52,0.42), Color("e8d9b8"), 0,0,0, "plaster")
 	box(Vector3(-0.62*wf,top+0.77,0.90), Vector3(0.34,0.3,0.05), Color("ffd98a"))
 	box(Vector3(-0.62*wf,top+1.01,0.68), Vector3(0.68,0.1,0.56), roof)
