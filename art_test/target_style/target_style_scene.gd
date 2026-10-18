@@ -102,7 +102,9 @@ func _h(x: float, z: float) -> float:
 	var sd := Vector2(x-9.0, z+8.8).length(); var shoulder := clampf(1.0 - sd/3.6, 0.0, 1.0); shoulder = shoulder * shoulder
 	var east := clampf((x - 16.0) / 6.0, 0.0, 1.0)
 	var lobe := east * east * clampf(1.0 - absf(z + 4.0) / 18.0, 0.0, 1.0) * 7.0 * (0.75 + 0.45 * (0.5 + 0.5*sin(-z*0.9 + x*0.3)))
-	return mask * roll + hill + lobe + left * left * 1.6 * mask + jag + crag * (1.0 - shoulder*0.85) + shoulder * 1.15
+	var ne := clampf((x - 13.0) / 8.0, 0.0, 1.0); var nf := clampf((-z - 7.0) / 9.0, 0.0, 1.0)
+	var nemass := ne * ne * nf * nf * 10.0 * (0.80 + 0.40 * (0.5 + 0.5*sin(x*0.4 - z*0.3)))
+	return mask * roll + hill + lobe + nemass + left * left * 1.6 * mask + jag + crag * (1.0 - shoulder*0.85) + shoulder * 1.15
 var _canopy_sphere: ArrayMesh = null
 func canopy_sphere() -> ArrayMesh:
 	if _canopy_sphere != null: return _canopy_sphere
@@ -234,7 +236,7 @@ func _build_terrain() -> void:
 	for ni in norms.size(): norms[ni] = -norms[ni].normalized()
 	var arrays := []; arrays.resize(Mesh.ARRAY_MAX); arrays[Mesh.ARRAY_VERTEX]=verts; arrays[Mesh.ARRAY_NORMAL]=norms; arrays[Mesh.ARRAY_TEX_UV]=uvs; arrays[Mesh.ARRAY_COLOR]=cols; arrays[Mesh.ARRAY_INDEX]=idx
 	var tmesh := ArrayMesh.new(); tmesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	var up2 := MeshInstance3D.new(); var bm3 := BoxMesh.new(); bm3.size = Vector3(400, 0.1, 400); up2.mesh = bm3; up2.position = Vector3(0, -0.30, 0); var um2 := StandardMaterial3D.new(); um2.albedo_texture = load(PT + "detail_noise.png"); um2.set("texture_repeat", 1); um2.uv1_scale = Vector3(120,120,1); um2.albedo_color = Color(0.36,0.46,0.29); um2.roughness = 1.0; up2.material_override = um2; up2.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(up2)
+	var up2 := MeshInstance3D.new(); var bm3 := BoxMesh.new(); bm3.size = Vector3(400, 0.1, 400); up2.mesh = bm3; up2.position = Vector3(0, -0.60, 0); var um2 := StandardMaterial3D.new(); um2.albedo_texture = load(PT + "detail_noise.png"); um2.set("texture_repeat", 1); um2.uv1_scale = Vector3(120,120,1); um2.albedo_color = Color(0.38,0.42,0.27); um2.roughness = 1.0; up2.material_override = um2; up2.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(up2)
 	var mi := MeshInstance3D.new(); mi.mesh = tmesh; var m := StandardMaterial3D.new(); m.vertex_color_use_as_albedo = true; m.albedo_texture = load(PT + "detail_noise.png"); m.albedo_color = Color(0.55,0.63,0.49); m.roughness = 1.0; m.cull_mode = BaseMaterial3D.CULL_DISABLED; m.set("texture_repeat", 1); mi.material_override = m; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mi)
 	# outer trees sit on terrain
 func _setup() -> void:
@@ -587,7 +589,7 @@ func _fill_more() -> void:
 		for cr5 in 5: box(Vector3(lx6-1.9+float(cr5)*0.95, 0.14, lz6), Vector3(0.55,0.09,1.7), Color("3f7020") if lf%2==0 else Color("96683c"), 0.3)
 	_build_tree(Vector3(-15.5,0,4.5), Color("79c24d"), Color("a9dd77")); _build_tree(Vector3(-11,0,12), Color("79c24d"), Color("a9dd77"))
 func _top_band() -> void:
-	for tp8 in [Vector3(10,0,-16), Vector3(14,0,-17), Vector3(18,0,-16), Vector3(21.5,0,-14.5), Vector3(8,0,-11.8), Vector3(15,0,-13.8), Vector3(19,0,-11)]:
+	for tp8 in [Vector3(10,0,-16), Vector3(18,0,-16), Vector3(8,0,-11.8)]:
 		_build_tree(tp8, Color("79c24d"), Color("a9dd77"))
 	for sd2 in 5:
 		var sx9 := 10.0+float(sd2)*2.6; var sz9 := -15.8+fmod(float(sd2)*0.9,1.6)
