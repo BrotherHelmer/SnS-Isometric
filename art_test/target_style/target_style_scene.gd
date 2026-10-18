@@ -553,11 +553,11 @@ func _summit() -> void:
 func _upper_fill() -> void:
 	for mf in 4:
 		var mx := 7.0+float(mf)*3.6; var mz := -10.8 - float(mf%2)*1.6; var my := _h(mx,mz)+0.05
-		box(Vector3(mx, my, mz), Vector3(4.2,0.14,1.5), Color("86b83e") if mf%2==0 else Color("a89a80"), 0.18)
-		for cr4 in 4: box(Vector3(mx-1.4+float(cr4)*0.9, my+0.1, mz), Vector3(0.5,0.09,1.3), Color("4e7d26") if mf%2==0 else Color("7e7668"), 0.18)
-	for tp5 in [Vector3(8.5,0,-12), Vector3(13,0,-11), Vector3(19.5,0,-12.8), Vector3(11.5,0,-14.5), Vector3(22,0,-9)]:
+		box(Vector3(mx, my, mz), Vector3(4.2,0.14,1.5), Color("86b83e") if mf%2==0 else Color("b08d55"), 0.18)
+		for cr4 in 4: box(Vector3(mx-1.4+float(cr4)*0.9, my+0.1, mz), Vector3(0.5,0.09,1.3), Color("4e7d26") if mf%2==0 else Color("96683c"), 0.18)
+	for tp5 in [Vector3(8.5,0,-12), Vector3(13,0,-11), Vector3(24,0,-12), Vector3(11.5,0,-14.5), Vector3(22,0,-9)]:
 		_build_tree(tp5, Color("79c24d"), Color("a9dd77"))
-	_build_hut(Vector3(22.0, _h(22.0,-13.8)-0.1, -13.8), Color("9d9584"))
+	_build_hut(Vector3(18.5, _h(18.5,-8.0)-0.1, -8.0), Color("9d9584"))
 	var net := [Vector2(10.5,-8.5), Vector2(12.5,-9.8), Vector2(14.2,-8.2), Vector2(15.0,-11.0), Vector2(19.0,-11.6)]
 	for ni in net.size()-1:
 		var a5: Vector2 = net[ni]; var b5: Vector2 = net[ni+1]; var mid5 := (a5+b5)*0.5; var dir5 := b5-a5
@@ -597,14 +597,18 @@ func _top_band() -> void:
 		blob(Vector3(sx9+1.1, _h(sx9+1.1,sz9)+0.14, sz9), Vector3(0.5,0.36,0.5), Color("8f7a5f"))
 	box(Vector3(15.5, _h(15.5,-15.2)+0.05, -15.2), Vector3(5.2,0.14,1.6), Color("8f7a5f"), 0.15)
 	# worked terraces on the east mass face
-	for tfi in 3:
-		var tfx: float = [20.0, 21.5, 19.0][tfi]; var tfz: float = [-3.0, -7.0, -10.5][tfi]; var tfy := _h(tfx,tfz)+0.06
+	for tfi in 7:
+		var tfx: float = [20.0, 21.5, 19.0, 18.0, 22.0, 17.5, 23.0][tfi]; var tfz: float = [-3.0, -7.0, -10.5, -1.5, -11.0, -6.0, -4.0][tfi]; var tfy := _h(tfx,tfz)+0.06
 		box(Vector3(tfx, tfy, tfz), Vector3(3.6,0.14,1.35), Color("86b83e") if tfi%2==0 else Color("b08d55"), 0.15, 0, 0, "dirt" if tfi%2==1 else "")
 		for cr2 in 4: box(Vector3(tfx-1.2+float(cr2)*0.8, tfy+0.09, tfz), Vector3(0.45,0.08,1.1), Color("3f7020") if tfi%2==0 else Color("96683c"), 0.15)
+	for etp in [Vector3(20.5,0,-5.5), Vector3(22.5,0,-9.5)]:
+		_build_tree(etp, Color("79c24d"), Color("a9dd77"))
+	for epp in [Vector3(19.5,_h(19.5,-4.2),-4.2), Vector3(21.8,_h(21.8,-8.2),-8.2)]:
+		box(epp+Vector3(0,0.25,0), Vector3(0.5,0.5,0.5), Color("a67c4e"), 0.4); cyl(epp+Vector3(0.6,0.28,0.3), 0.22,0.25,0.55, Color("8a5f36"), 7)
 	# corner rock mass covering far-plane transition bottom-right
-	blob(Vector3(26, _h(26,-1)+0.25, -1), Vector3(2.3,0.9,1.9), Color("6e6355"))
-	blob(Vector3(23.5, _h(23.5,3)+0.2, 3), Vector3(1.6,0.7,1.3), Color("6e6355"))
-	blob(Vector3(28, _h(28,-4)+0.2, -4), Vector3(1.8,0.8,1.5), Color("6e6355"))
+	add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.3,0.7,0.2)).scaled(Vector3(1.9,1.05,1.6)), Vector3(26, _h(26,-1)+0.25, -1)), Color("6e665c"), "rock"); tri_total += 128
+	add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(-0.2,1.9,0.4)).scaled(Vector3(1.35,0.75,1.1)), Vector3(23.5, _h(23.5,3)+0.2, 3)), Color("6e665c"), "rock"); tri_total += 128
+	add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.5,2.8,-0.3)).scaled(Vector3(1.5,0.85,1.25)), Vector3(28, _h(28,-4)+0.2, -4)), Color("6e665c"), "rock"); tri_total += 128
 	for cf4 in 2:
 		var cx9 := 6.5+float(cf4)*7.0; var cz9 := -13.6
 		box(Vector3(cx9, _h(cx9,cz9)+0.05, cz9), Vector3(5.2,0.14,1.6), Color("86b83e") if cf4%2==0 else Color("b08d55"), 0.14)
