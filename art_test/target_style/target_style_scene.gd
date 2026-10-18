@@ -131,6 +131,8 @@ func _build_terrain() -> void:
 				var c: Color = g1.lerp(g2, n).lerp(Color("69a83a"), patch * 0.42)
 				if patch > 0.70: c = c.lerp(Color("b08d55"), (patch-0.70) * 1.3)
 				if patch < 0.26: c = c.lerp(Color("7fae4a"), (0.26-patch) * 1.2)
+				var sunface := clampf(0.5 - ((_h(v.x+0.8, v.y)-_h(v.x-0.8, v.y)) * 0.9 + (_h(v.x, v.y+0.8)-_h(v.x, v.y-0.8)) * 0.6) * 0.5, 0.0, 1.0)
+				c = c.darkened(sunface * 0.16)
 				var gshade := 0.5 + 0.5*sin(v.x*0.53-1.0) * sin(v.y*0.47+0.6)
 				var gsf := 0.74 + 0.40 * gshade
 				c = Color(c.r*gsf, c.g*gsf, c.b*gsf)
@@ -146,12 +148,12 @@ func _build_terrain() -> void:
 					c = Color(clampf(c.r*cf,0,1), clampf(c.g*cf,0,1), clampf(c.b*cf,0,1))
 					var crack := clampf(1.0 - absf(sin(v.x*5.3 + v.y*3.9 + sin(v.y*7.0))) / 0.22, 0.0, 1.0)
 					c = c.darkened(crack * 0.30)
-					var lich := 0.5 + 0.5*sin(v.x*2.2-0.5) * sin(v.y*1.8+2.1)
-					if lich > 0.55: c = c.lerp(Color("6f8a48"), clampf((lich-0.55)*1.6,0,0.75))
+					var lich := 0.5 + 0.5*sin(v.x*1.4-0.5) * sin(v.y*1.1+2.1)
+					if lich > 0.52: c = c.lerp(Color("5f8140"), clampf((lich-0.52)*1.8,0,0.85))
 				var snowpatch := 0.5 + 0.5*sin(v.x*1.9+1.3) * sin(v.y*1.4-0.7)
-				if h > 2.7 and slope <= 1.10:
+				if h > 2.7 and slope <= 0.90:
 					var sf := clampf((snowpatch-0.34)*4.0, 0.0, 1.0) * clampf((h-2.7)*2.5, 0.0, 1.0)
-					c = c.lerp(Color("bccbd8"), sf)
+					c = c.lerp(Color("9fb2c2"), sf)
 				st.set_color(c); st.set_uv(Vector2(v.x*0.09, h*0.09) if slope > 0.55 else v*0.07); st.add_vertex(Vector3(v.x, h, v.y))
 	st.generate_normals()
 	var mi := MeshInstance3D.new(); mi.mesh = st.commit(); var m := StandardMaterial3D.new(); m.vertex_color_use_as_albedo = true; m.albedo_texture = load(PT + "detail_noise.png"); m.albedo_color = Color(0.55,0.63,0.49); m.roughness = 1.0; mi.material_override = m; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mi)
@@ -169,7 +171,7 @@ func _setup() -> void:
 	var sky := Sky.new(); var smat := ProceduralSkyMaterial.new(); smat.sky_top_color = Color("8fc3e8"); smat.sky_horizon_color = Color("f2e3c2"); smat.ground_bottom_color = Color("5d6b46"); smat.ground_horizon_color = Color("d9c9a4"); sky.sky_material = smat; env.sky = sky
 	env.background_mode = Environment.BG_SKY
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY; env.ambient_light_energy = amb * 0.55; env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
-	env.fog_enabled = true; env.fog_light_color = Color("f2e3c2"); env.fog_density = 0.0028; env.tonemap_mode = Environment.TONE_MAPPER_ACES; env.adjustment_enabled = true; env.adjustment_saturation = 1.24; env.adjustment_contrast = 1.02; env.adjustment_brightness = 1.02; env.glow_enabled = true; env.glow_bloom = 0.04; env.glow_strength = 0.3; env.glow_hdr_threshold = 1.25; env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT;
+	env.fog_enabled = true; env.fog_light_color = Color("f2e3c2"); env.fog_density = 0.0028; env.tonemap_mode = Environment.TONE_MAPPER_ACES; env.adjustment_enabled = true; env.adjustment_saturation = 1.24; env.adjustment_contrast = 1.02; env.adjustment_brightness = 1.02; env.glow_enabled = false; env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT;
 	we.environment = env; add_child(we)
 	var pool := OmniLight3D.new(); pool.position = Vector3(0,4.5,1); pool.light_color = Color("ffd9a0"); pool.light_energy = 0.6; pool.omni_range = 14.0; pool.shadow_enabled = false; add_child(pool)
 	var fill := DirectionalLight3D.new(); fill.rotation_degrees = Vector3(-38, 125, 0); fill.light_energy = 0.20; fill.light_color = Color("cfe6ff"); fill.shadow_enabled = false; add_child(fill)
@@ -201,15 +203,15 @@ func _setup() -> void:
 		box(Vector3(-8.0+float(mi)*8.0, 1.6+float(mi)*0.5, -14.5), Vector3(13,0.9,1.6), Color(1,1,1,0.05))
 	for bi in 12:
 		var bx := -10.0+fmod(float(bi)*4.37,22.0); var bz := -12.0+fmod(float(bi)*3.13,10.0)
-		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0,float(bi),0)).scaled(Vector3(0.7,0.5,0.6)), Vector3(bx, _h(bx,bz)+0.15, bz)), Color("a3987f")); tri_total += 128
+		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0,float(bi),0)).scaled(Vector3(0.7,0.5,0.6)), Vector3(bx, _h(bx,bz)+0.15, bz)), Color("8f846c")); tri_total += 128
 	for si9 in 15:
 		var sx9 := 8.5 + fmod(float(si9)*3.17, 12.5); var sz9 := -8.0 - fmod(float(si9)*2.43, 7.5)
 		var ss9 := 1.1 + fmod(float(si9)*0.41, 1.1)
-		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.3,float(si9)*1.7,0.15)).scaled(Vector3(ss9,ss9*0.72,ss9*0.85)), Vector3(sx9, _h(sx9,sz9)+ss9*0.22, sz9)), Color("7a6f5e") if si9%2==0 else Color("c9bda6")); tri_total += 128
+		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.3,float(si9)*1.7,0.15)).scaled(Vector3(ss9,ss9*0.72,ss9*0.85)), Vector3(sx9, _h(sx9,sz9)+ss9*0.22, sz9)), Color("6e6355") if si9%2==0 else Color("a89a80")); tri_total += 128
 	for ti9 in 13:
 		var tx9 := 6.5 + fmod(float(ti9)*2.61, 14.5); var tz9 := -6.2 - fmod(float(ti9)*1.37, 3.2)
 		var ts9 := 0.55 + fmod(float(ti9)*0.39, 0.6)
-		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(ti9)*2.1,0.1)).scaled(Vector3(ts9,ts9*0.62,ts9*0.8)), Vector3(tx9, _h(tx9,tz9)+ts9*0.18, tz9)), Color("8d8172") if ti9%3==0 else (Color("a08b6d") if ti9%3==1 else Color("c4b9a4"))); tri_total += 128
+		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(ti9)*2.1,0.1)).scaled(Vector3(ts9,ts9*0.62,ts9*0.8)), Vector3(tx9, _h(tx9,tz9)+ts9*0.18, tz9)), Color("776c5c") if ti9%3==0 else (Color("8a785e") if ti9%3==1 else Color("a89a80"))); tri_total += 128
 	for ei in 10:
 		var ex := -11.0+fmod(float(ei)*4.91,23.0); var ez := -6.0+fmod(float(ei)*5.37,17.0)
 		cyl(Vector3(ex,0.03,ez), 0.62,0.62,0.025, Color("9a7c4e") if ei%2==0 else Color("bfae6a"), 8)
@@ -387,6 +389,7 @@ func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 	if vi == 1: a = Color("65b04a"); b = Color("9bd06e")
 	elif vi == 2: a = Color("74ba52"); b = Color("b5d878")
 	if Vector2(p.x,p.z).length() > 11.0: p.y = _h(p.x, p.z) - 0.1
+	cyl(p+Vector3(0,0.035,0), 1.7,1.7,0.02, Color(0.09,0.15,0.04,0.32), 12)
 	cyl(p+Vector3(0,0.9,0), 0.22,0.32,1.8, Color("6b4423"), 7)
 	if vi == 1:
 		for pi in 4:
