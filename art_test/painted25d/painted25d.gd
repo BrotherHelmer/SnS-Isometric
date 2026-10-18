@@ -1,5 +1,5 @@
 extends Node3D
-# Painted 2.5D prototype P3 (hero castle/pine, house variants, terrain mid-detail): painted sprites on a smooth painted ground slope.
+# Painted 2.5D prototype P4 (hero castle/pine, house variants, terrain mid-detail): painted sprites on a smooth painted ground slope.
 # R68 low-poly scene untouched; fixed iso camera identical to R68; no post/FX.
 func gy(x: float, z: float) -> float:
 	var e: float = clampf((x - 4.0) / 18.0, 0.0, 1.0)
@@ -45,6 +45,10 @@ func _ready() -> void:
 	_sprite("pine.png", Vector3(-6.8, 0, -6.2), 4.8, 650.0, 680.0, true, Color.WHITE)
 	_sprite("pine.png", Vector3(8.8, 0, 5.8), 4.2, 650.0, 680.0, false, Color.WHITE)
 	_sprite("pine.png", Vector3(-11.5, 0, 0.5), 5.2, 650.0, 680.0, false, Color.WHITE)
+	_sprite("house3.png", Vector3(11.5, 0, -0.5), 3.9, 578.0, 620.0, true, Color(0.94, 0.96, 1.0))
+	_sprite("house2.png", Vector3(-13.0, 0, 2.0), 3.4, 478.0, 520.0, false, Color(1.02, 0.99, 0.94))
+	_sprite("house.png", Vector3(2.8, 0, 8.8), 3.0, 520.0, 560.0, false, Color(0.96, 0.94, 0.90))
+	_sprite("house3.png", Vector3(-4.8, 0, -3.8), 3.7, 578.0, 620.0, false, Color(0.97, 0.97, 0.97))
 	_sprite("boulder.png", Vector3(10.5, 0, -2.0), 1.15, 235.0, 260.0, false, Color.WHITE)
 	_sprite("boulder.png", Vector3(13.5, 0, 1.8), 0.95, 235.0, 260.0, true, Color.WHITE)
 	_standin(Vector3(-5.5, 0, 1.8), Vector3(3.2, 2.4, 2.2))

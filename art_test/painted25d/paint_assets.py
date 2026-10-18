@@ -246,16 +246,17 @@ for (tx, tw_, th, rh) in towers:
 # stone courses: individual shaded stones in offset rows (clipped to walls)
 lay = Image.new("RGBA", img.size, (0,0,0,0)); ld = ImageDraw.Draw(lay)
 rndc = random.Random(21)
-for ry in range(10):
-    y = 348 + ry*42
-    for cx in range(9):
-        x = 168 + cx*62 + (30 if ry % 2 else 0)
+for ry in range(8):
+    y = 348 + ry*56
+    for cx in range(8):
+        x = 168 + cx*74 + (36 if ry % 2 else 0)
         if x > 512: continue
-        c = rndc.choice([(186, 176, 156), (148, 138, 120), (198, 188, 168), (128, 118, 102), (170, 158, 140)])
-        ld.rounded_rectangle([(x*SS, y*SS), ((x+rndc.randint(44,58))*SS, (y+34)*SS)], 6*SS, fill=c+(255,), outline=(92, 84, 72, 200), width=2*SS)
-        ld.line([((x+5)*SS, (y+6)*SS), ((x+40)*SS, (y+6)*SS)], fill=(224, 216, 196, 120), width=2*SS)
+        c = rndc.choice([(216, 206, 186), (188, 176, 156), (148, 138, 120), (106, 98, 88), (170, 158, 140)])
+        ld.rounded_rectangle([(x*SS, y*SS), ((x+rndc.randint(56,72))*SS, (y+46)*SS)], 7*SS, fill=c+(255,), outline=(70, 62, 52, 230), width=3*SS)
+        ld.line([((x+6)*SS, (y+8)*SS), ((x+46)*SS, (y+8)*SS)], fill=(240, 232, 210, 150), width=3*SS)
+        ld.line([((x+6)*SS, (y+40)*SS), ((x+46)*SS, (y+40)*SS)], fill=(60, 54, 46, 130), width=3*SS)
 strokes(ld, (180, 335, 515, 770), 380, [(210, 200, 180), (128, 118, 104), (188, 176, 156)], 3, seed=23)
-ld.polygon(wob([(352,326),(505,322),(520,775),(356,778)], 5, 24), fill=(96, 90, 82, 64))       # shadow half
+ld.polygon(wob([(352,326),(505,322),(520,775),(356,778)], 5, 24), fill=(88, 82, 76, 42))       # shadow half
 ld.polygon(wob([(190,330),(300,328),(302,778),(175,780)], 5, 25), fill=(255, 244, 214, 52))    # lit edge
 ld.rectangle([170*SS, 738*SS, 525*SS, 780*SS], fill=(80, 66, 48, 84))                          # base AO
 for i in range(60):  # moss at base
@@ -271,7 +272,7 @@ for i in range(7):
 # tower roofs: shingled cones like hero house + tower shading, windows, flags
 for (tx, tw_, th, rh) in towers:
     top = 780 - th
-    d.polygon(wob([(tx+tw_*0.55, top+rh*0.4),(tx+tw_, top+rh*0.4),(tx+tw_-8, 778),(tx+tw_*0.55, 778)], 4, 14+tx), fill=(140, 130, 116, 85))
+    d.polygon(wob([(tx+tw_*0.55, top+rh*0.4),(tx+tw_, top+rh*0.4),(tx+tw_-8, 778),(tx+tw_*0.55, 778)], 4, 14+tx), fill=(140, 130, 116, 38))
     rp = wob([(tx-16, top+rh*0.45),(tx+tw_*0.5, top),(tx+tw_+16, top+rh*0.45)], 6, 15+tx)
     rm2 = Image.new("L", img.size, 0); ImageDraw.Draw(rm2).polygon(rp, fill=255)
     d.polygon(rp, fill=(146, 76, 46, 255))
@@ -297,7 +298,12 @@ for wx, wy in [(255, 500), (415, 485), (255, 590), (415, 580)]:
 for i in range(22):  # vine on left tower
     vx, vy = 150 + (i % 3)*9, 700 - i*13
     d.ellipse([(vx*SS, vy*SS), ((vx+11)*SS, (vy+8)*SS)], fill=(92, 120, 60, 180))
-finish(img, 700, 820, "castle.png", bright=0.90, sat=0.85)
+for ly in [452, 576, 692]:  # string courses across main wall
+    d.line([(182*SS, ly*SS), (514*SS, (ly-6)*SS)], fill=(72, 64, 54, 190), width=5*SS)
+    d.line([(182*SS, (ly+6)*SS), (514*SS, ly*SS)], fill=(228, 218, 196, 120), width=2*SS)
+d.line([(192*SS, 332*SS), (178*SS, 776*SS)], fill=(60, 52, 44, 200), width=4*SS)
+d.line([(503*SS, 326*SS), (517*SS, 772*SS)], fill=(60, 52, 44, 200), width=4*SS)
+finish(img, 700, 820, "castle.png", bright=0.92, sat=0.86)
 
 # ---------------- HERO PINE P3 (360x680, contact y~650): dense needle clusters ----------------
 img = canvas(360, 680); d = ImageDraw.Draw(img, 'RGBA')
@@ -346,6 +352,7 @@ img = canvas(1500, 950); d = ImageDraw.Draw(img, 'RGBA')
 shadow(d, 750, 922, 640, 26)
 sil = wob([(70,920),(210,640),(350,390),(505,190),(640,330),(800,110),(965,300),(1110,190),(1265,430),(1405,620),(1460,920)], 14, 71)
 mmask = Image.new("L", img.size, 0); ImageDraw.Draw(mmask).polygon(sil, fill=255)
+d.polygon(wob([(150,880),(300,560),(470,300),(610,120),(760,300),(900,180),(1060,360),(1240,300),(1380,560),(1420,880)], 16, 69), fill=(172, 178, 180, 255))  # far ridge, paler/hazier
 d.polygon(sil, fill=(134, 120, 104, 255))  # muted warm rock base
 lay = Image.new("RGBA", img.size, (0,0,0,0)); ld = ImageDraw.Draw(lay)
 # facet value modelling: lit planes left / shadow gullies right of each peak
@@ -393,6 +400,21 @@ for i in range(90):
     tx, ty = rndm.uniform(90, 1420), rndm.uniform(806, 892); th2 = rndm.uniform(12, 30)
     ld.polygon([((tx-7)*SS, ty*SS), (tx*SS, (ty-th2)*SS), ((tx+7)*SS, ty*SS)], fill=(44, 72, 36, 220))
 img.paste(Image.alpha_composite(img, lay), (0, 0), mmask); d = ImageDraw.Draw(img, 'RGBA')
+# painted haze: pale blue-grey bands, strongest at peaks, fading down (in the layer, not post)
+lay = Image.new("RGBA", img.size, (0,0,0,0)); ld = ImageDraw.Draw(lay)
+for i in range(30):
+    yy = 60 + i*15; aa = max(0, 120 - i*5)
+    ld.rectangle([0, yy*SS, 1500*SS, (yy+16)*SS], fill=(186, 196, 200, aa))
+img.paste(Image.alpha_composite(img, lay), (0, 0), mmask); d = ImageDraw.Draw(img, 'RGBA')
+for i in range(26):  # rocks + pines spilling below the base line onto the slope
+    bx, by = rndm.uniform(120, 1400), rndm.uniform(896, 934)
+    if i % 3: d.polygon([((bx-8)*SS, by*SS), (bx*SS, (by-rndm.uniform(14, 30))*SS), ((bx+8)*SS, by*SS)], fill=(42, 68, 34, 230))
+    else: d.ellipse([((bx-13)*SS, (by-8)*SS), ((bx+13)*SS, (by+7)*SS)], fill=(110, 100, 88, 235))
+alpha = img.split()[3]  # foot fade: alpha ramps down at the very base so it melts into terrain
+grad = Image.new("L", img.size, 255); gd = ImageDraw.Draw(grad)
+for yy in range(int(872*SS), img.size[1]):
+    gd.line([(0, yy), (img.size[0], yy)], fill=int(255 - 150*(yy-872*SS)/max(1, img.size[1]-872*SS)))
+img.putalpha(ImageChops.multiply(alpha, grad))
 finish(img, 1500, 950, "mountain.png", bright=0.94, sat=0.88)
 
 # ---------------- TERRAIN (2048x1200, top-down iso ground painting) ----------------
@@ -427,11 +449,20 @@ fields = [([(560,430),(800,430),(820,600),(580,620)], (168, 140, 88), (140, 116,
           ([(700,700),(1050,690),(1080,880),(730,900)], (86, 128, 54), (66, 106, 42)),
           ([(1150,300),(1480,290),(1500,450),(1170,460)], (172, 158, 100), (146, 132, 76)),
           ([(1250,760),(1580,740),(1600,920),(1280,940)], (150, 128, 78), (124, 104, 60))]
-for poly, fillc, rowc in fields:
+def broken(poly, seed):
+    rndb = random.Random(seed); out = []
+    for i in range(len(poly)):
+        x0, y0 = poly[i]; x1, y1 = poly[(i+1) % len(poly)]
+        for k in range(4):
+            tt = k/4.0
+            out.append((x0+(x1-x0)*tt + rndb.uniform(-13, 13), y0+(y1-y0)*tt + rndb.uniform(-13, 13)))
+    return out
+for fi, (poly0, fillc, rowc) in enumerate(fields):
+    poly = broken(poly0, 300+fi)
     d.polygon(poly, fill=fillc + (110,))
     fm = Image.new("L", img.size, 0); ImageDraw.Draw(fm).polygon(poly, fill=255)
     fl = Image.new("RGBA", img.size, (0,0,0,0)); fld = ImageDraw.Draw(fl)
-    for ry in range(min(p[1] for p in poly)+24, max(p[1] for p in poly), 34):
+    for ry in range(int(min(p[1] for p in poly))+24, int(max(p[1] for p in poly)), 34):
         fld.line([(min(p[0] for p in poly), ry), (max(p[0] for p in poly), ry+14)], fill=rowc + (95,), width=9)
     img.paste(fl, (0, 0), ImageChops.multiply(fm, fl.split()[3])); d = ImageDraw.Draw(img, 'RGBA')
     d.line(poly + [poly[0]], fill=(52, 84, 34, 170), width=10)
@@ -452,6 +483,29 @@ for i in range(90):
     py = path[seg][1]+(path[seg+1][1]-path[seg][1])*ft + random.uniform(-11, 11)
     r = random.uniform(12, 34)
     d.ellipse([px-r, py-r*0.5, px+r, py+r*0.5], fill=random.choice([(150, 118, 76), (216, 182, 124)]) + (66,))
+# --- path network connecting the actual buildings (world->texture mapping) + worn yards ---
+def T(x, z): return ((x+70)/148*2048, (z+48)/92*1200)
+nets = [[(0,-3.6),(-0.6,0.5),(-1.9,2.3)], [(-1.9,2.3),(-5.2,1.9)], [(-1.9,2.3),(4.7,2.9)],
+        [(-1.9,2.3),(-0.9,5.2)], [(-0.6,0.5),(3.2,-1.2),(8.0,-0.3),(11.2,-0.4)],
+        [(8.0,-0.3),(11.5,-4.0),(13.2,-8.5)], [(-1.9,2.3),(-7.8,5.2)], [(-5.2,1.9),(-11.0,-1.8)],
+        [(-1.9,2.3),(-3.2,6.8),(2.4,8.4)]]
+for net in nets:
+    pts = [T(x, z) for x, z in net]
+    d.line(pts, fill=(116, 92, 60, 88), width=32, joint="curve")
+    d.line(pts, fill=(204, 170, 112, 175), width=19, joint="curve")
+    for i in range(len(pts)-1):
+        for k in range(9):
+            tt = k/9.0; px = pts[i][0]+(pts[i+1][0]-pts[i][0])*tt; py = pts[i][1]+(pts[i+1][1]-pts[i][1])*tt
+            d.ellipse([px-5, py-3, px+5, py+3], fill=(140, 112, 76, 90))
+for (bx, bz) in [(0,-5.5),(-5.5,1.8),(5.0,2.8),(-0.8,5.6),(3.4,-1.6),(-8.2,5.4),(-11.5,-2.2),(8.6,6.4),(11.5,-0.5),(-13.0,2.0),(2.8,8.8),(-4.8,-3.8)]:
+    px, py = T(bx, bz+1.4)
+    d.ellipse([px-95, py-42, px+95, py+42], fill=(178, 148, 100, 62))
+for i in range(110):  # vegetated patches: dark blotch clusters at mid scale
+    vx, vy = random.uniform(480, 1720), random.uniform(240, 1060); vr = random.uniform(24, 68)
+    d.ellipse([vx-vr, vy-vr*0.55, vx+vr, vy+vr*0.55], fill=random.choice([(58, 104, 38), (72, 118, 46), (48, 92, 34)]) + (58,))
+    for k in range(7):
+        tx, ty = vx+random.uniform(-vr, vr), vy+random.uniform(-vr*0.4, vr*0.4)
+        d.line([tx, ty, tx+random.uniform(-4, 4), ty-random.uniform(8, 18)], fill=(52, 96, 36, 130), width=4)
 # worn plots under buildings + flower patches
 for (x, y, r) in [(560, 620, 150), (1180, 640, 165), (820, 330, 210), (420, 300, 110)]:
     d.ellipse([x-r, y-r*0.55, x+r, y+r*0.55], fill=(176, 148, 100, 72))
@@ -459,6 +513,12 @@ for (x, y) in [(300, 760), (1020, 860), (660, 180)]:
     for i in range(46):
         fx, fy = x + random.uniform(-95, 95), y + random.uniform(-45, 45)
         d.ellipse([fx-7, fy-5, fx+7, fy+5], fill=random.choice([(238, 96, 74), (255, 214, 84), (255, 168, 190)]) + (190,))
+for i in range(42):  # distant haze, painted into the texture (not post)
+    yy = i*15
+    d.rectangle([0, yy, 2048, yy+15], fill=(198, 206, 194, max(0, 66-i*2)))
+for i in range(18):  # richer foreground value at bottom
+    yy = 950+i*15
+    d.rectangle([0, yy, 2048, yy+15], fill=(46, 68, 36, i*2))
 img = img.filter(ImageFilter.GaussianBlur(1.2))
 img = ImageEnhance.Brightness(img).enhance(0.76)
 img = ImageEnhance.Color(img).enhance(0.68)
