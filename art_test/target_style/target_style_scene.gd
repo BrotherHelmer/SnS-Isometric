@@ -104,8 +104,16 @@ func _h(x: float, z: float) -> float:
 var _canopy_sphere: ArrayMesh = null
 func canopy_sphere() -> ArrayMesh:
 	if _canopy_sphere != null: return _canopy_sphere
-	var sm := SphereMesh.new(); sm.radial_segments = 12; sm.rings = 6; sm.radius = 1.0; sm.height = 2.0
+	var sm := SphereMesh.new(); sm.radial_segments = 9; sm.rings = 5; sm.radius = 1.0; sm.height = 2.0
 	var arrays: Array = sm.get_mesh_arrays(); var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]; var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var disp2 := {}
+	for dvi in verts.size():
+		var dv := verts[dvi]; var dk := str(dv)
+		if not disp2.has(dk):
+			var dn := dv.normalized()
+			var ds := 1.0 + 0.20*sin(dn.x*5.1+dn.y*3.3) + 0.16*sin(dn.y*7.2+dn.z*4.4) + 0.10*sin(dn.z*9.0-dn.x*5.0)
+			disp2[dk] = dv * ds
+		verts[dvi] = disp2[dk]
 	var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	if idx.size() == 0:
 		for i in range(0, verts.size()-2, 3): idx.append_array([i, i+1, i+2])
@@ -115,6 +123,17 @@ func canopy_sphere() -> ArrayMesh:
 		for vtx in [a,b,c2]: st.set_normal(n); st.set_uv(Vector2(vtx.x*0.5+0.5, vtx.y*0.5+0.5)); st.add_vertex(vtx)
 	_canopy_sphere = st.commit(); return _canopy_sphere
 var canopy_st: SurfaceTool = null
+var card_st: SurfaceTool = null
+func add_foliage_card(xf: Transform3D, c: Color) -> void:
+	if card_st == null: card_st = SurfaceTool.new(); card_st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for rot in [0.0, PI/2.0]:
+		var b := Basis.from_euler(Vector3(0, rot, 0))
+		var q := [Vector3(-1,-0.8,0), Vector3(1,-0.8,0), Vector3(1,0.9,0), Vector3(-1,0.9,0)]
+		var uvq := [Vector2(0,1), Vector2(1,1), Vector2(1,0), Vector2(0,0)]
+		var fn := xf.basis * (b * Vector3(0,0,1))
+		for idx2 in [0,1,2,0,2,3]:
+			card_st.set_normal(fn); card_st.set_color(c); card_st.set_uv(uvq[idx2]); card_st.add_vertex(xf * (b * q[idx2]))
+	tri_total += 4
 func add_canopy(xf: Transform3D, c: Color) -> void:
 	if canopy_st == null: canopy_st = SurfaceTool.new(); canopy_st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var arrays: Array = canopy_sphere().surface_get_arrays(0)
@@ -144,53 +163,67 @@ func flat_sphere() -> ArrayMesh:
 		for vtx in [a,b,c2]: st.set_normal(n); st.set_uv(Vector2(vtx.x*0.5+0.5, vtx.y*0.5+0.5)); st.add_vertex(vtx)
 	_flat_sphere = st.commit(); return _flat_sphere
 func _build_terrain() -> void:
-	var size := 64.0; var steps := 104; var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	# WELDED smooth-shaded heightfield: shared grid vertices, smooth normals,
+	# continuous (not per-cell) colour functions so facets stop reading.
+	var size := 64.0; var steps := 104
 	var g1 := Color("27631d"); var g2 := Color("3f842c"); var dirt := Color("9c7f52"); var rock := Color("8d8172"); var snow := Color("f4f6f2")
-	for iz in steps:
-		for ix in steps:
-			var x0 := -size/2 + size*float(ix)/steps; var x1 := -size/2 + size*float(ix+1)/steps
-			var z0 := -size/2 + size*float(iz)/steps; var z1 := -size/2 + size*float(iz+1)/steps
-			var chunk := 0.5 + 0.5*sin(float(ix)*12.9898 + float(iz)*78.233) * sin(float(ix)*3.7 - float(iz)*5.3)
-			var quad := [Vector2(x0,z0), Vector2(x1,z0), Vector2(x1,z1), Vector2(x0,z0), Vector2(x1,z1), Vector2(x0,z1)]
-			for v in quad:
-				var h := _h(v.x, v.y); var slope := absf(_h(v.x+0.8, v.y)-h) + absf(_h(v.x, v.y+0.8)-h)
-				var n := 0.5 + 0.28*sin(v.x*1.31 + sin(v.y*1.73)*2.1) + 0.22*sin(v.x*3.7 - v.y*2.9)
-				var patch := 0.5 + 0.5*sin(v.x*0.31+2.0) * sin(v.y*0.27-1.1)
-				var c: Color = g1.lerp(g2, n).lerp(Color("69a83a"), patch * 0.42)
-				if patch > 0.70: c = c.lerp(Color("b08d55"), (patch-0.70) * 1.3)
-				if patch < 0.26: c = c.lerp(Color("7fae4a"), (0.26-patch) * 1.2)
-				var sunface := clampf(0.5 - ((_h(v.x+0.8, v.y)-_h(v.x-0.8, v.y)) * 0.9 + (_h(v.x, v.y+0.8)-_h(v.x, v.y-0.8)) * 0.6) * 0.5, 0.0, 1.0)
-				c = c.darkened(sunface * 0.16)
-				var gshade := 0.5 + 0.5*sin(v.x*0.53-1.0) * sin(v.y*0.47+0.6)
-				var gsf := 0.74 + 0.40 * gshade
-				c = Color(c.r*gsf, c.g*gsf, c.b*gsf)
-				if slope > 0.30: c = dirt.lerp(rock, clampf((slope-0.30)*1.3,0,1))
-				if slope > 0.55:
-					c = rock.lerp(Color("6b5f50"), clampf((slope-0.55)*0.9,0,1))
-					if int(floor(h*1.6)) % 2 == 0: c = c.darkened(0.28)
-					var crev := 0.5 + 0.5*sin(v.x*7.3 - v.y*4.9) * sin(v.x*4.1 + v.y*2.7)
-					c = c.darkened(crev * 0.45)
-					var mot := 0.5 + 0.5*sin(v.x*23.7) * sin(v.y*19.3)
-					c = c.lerp(Color("c9bda6"), mot * 0.30)
-					var band := 0.5 + 0.5*sin(h*1.35 + v.x*0.32 - v.y*0.48)
-					if band > 0.55: c = c.lerp(Color("bfb096"), (band-0.55) * 0.55)
-					else: c = c.darkened((0.55-band) * 0.22)
-					var cf := 0.74 + 0.56 * chunk
-					c = Color(clampf(c.r*cf,0,1), clampf(c.g*cf,0,1), clampf(c.b*cf,0,1))
-					var crack := clampf(1.0 - absf(sin(v.x*5.3 + v.y*3.9 + sin(v.y*7.0))) / 0.22, 0.0, 1.0)
-					c = c.darkened(crack * 0.30)
-					var lich := 0.5 + 0.5*sin(v.x*1.4-0.5) * sin(v.y*1.1+2.1)
-					if lich > 0.52: c = c.lerp(Color("5f8140"), clampf((lich-0.52)*1.8,0,0.85))
-				for feat in [Vector2(10.5,-8.5), Vector2(14.2,-6.9), Vector2(9.0,-8.8)]:
-					var fd := Vector2(v.x-feat.x, v.y-feat.y).length()
-					if fd < 4.4: c = c.lerp(dirt, (1.0-fd/4.4) * 0.50)
-				var snowpatch := 0.5 + 0.5*sin(v.x*1.9+1.3) * sin(v.y*1.4-0.7)
-				if h > 2.7 and slope <= 0.90:
-					var sf := clampf((snowpatch-0.34)*4.0, 0.0, 1.0) * clampf((h-2.7)*2.5, 0.0, 1.0)
-					c = c.lerp(Color("9fb2c2"), sf)
-				st.set_color(c); st.set_uv(Vector2(v.x*0.09, h*0.09) if slope > 0.55 else v*0.07); st.add_vertex(Vector3(v.x, h, v.y))
-	st.generate_normals()
-	var mi := MeshInstance3D.new(); mi.mesh = st.commit(); var m := StandardMaterial3D.new(); m.vertex_color_use_as_albedo = true; m.albedo_texture = load(PT + "detail_noise.png"); m.albedo_color = Color(0.55,0.63,0.49); m.roughness = 1.0; mi.material_override = m; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mi)
+	var n1 := steps + 1
+	var verts := PackedVector3Array(); var cols := PackedColorArray(); var uvs := PackedVector2Array(); var norms := PackedVector3Array()
+	verts.resize(n1*n1); cols.resize(n1*n1); uvs.resize(n1*n1); norms.resize(n1*n1)
+	for iz in n1:
+		for ix in n1:
+			var vi := iz*n1 + ix
+			var v := Vector2(-size/2 + size*float(ix)/steps, -size/2 + size*float(iz)/steps)
+			var h := _h(v.x, v.y); var slope := absf(_h(v.x+0.8, v.y)-h) + absf(_h(v.x, v.y+0.8)-h)
+			var chunk := 0.5 + 0.5*sin(v.x*1.9 + v.y*1.3) * sin(v.x*0.7 - v.y*1.1)
+			var n := 0.5 + 0.28*sin(v.x*1.31 + sin(v.y*1.73)*2.1) + 0.22*sin(v.x*3.7 - v.y*2.9)
+			var patch := 0.5 + 0.5*sin(v.x*0.31+2.0) * sin(v.y*0.27-1.1)
+			var c: Color = g1.lerp(g2, n).lerp(Color("69a83a"), patch * 0.42)
+			if patch > 0.70: c = c.lerp(Color("b08d55"), (patch-0.70) * 1.3)
+			if patch < 0.26: c = c.lerp(Color("7fae4a"), (0.26-patch) * 1.2)
+			var sunface := clampf(0.5 - ((_h(v.x+0.8, v.y)-_h(v.x-0.8, v.y)) * 0.9 + (_h(v.x, v.y+0.8)-_h(v.x, v.y-0.8)) * 0.6) * 0.5, 0.0, 1.0)
+			c = c.darkened(sunface * 0.16)
+			var gshade := 0.5 + 0.5*sin(v.x*0.53-1.0) * sin(v.y*0.47+0.6)
+			var gsf := 0.74 + 0.40 * gshade
+			c = Color(c.r*gsf, c.g*gsf, c.b*gsf)
+			if slope > 0.30: c = dirt.lerp(rock, clampf((slope-0.30)*1.3,0,1))
+			if slope > 0.55:
+				c = rock.lerp(Color("6b5f50"), clampf((slope-0.55)*0.9,0,1))
+				if int(floor(h*1.6)) % 2 == 0: c = c.darkened(0.28)
+				var crev := 0.5 + 0.5*sin(v.x*7.3 - v.y*4.9) * sin(v.x*4.1 + v.y*2.7)
+				c = c.darkened(crev * 0.45)
+				var mot := 0.5 + 0.5*sin(v.x*23.7) * sin(v.y*19.3)
+				c = c.lerp(Color("c9bda6"), mot * 0.30)
+				var band := 0.5 + 0.5*sin(h*1.35 + v.x*0.32 - v.y*0.48)
+				if band > 0.55: c = c.lerp(Color("bfb096"), (band-0.55) * 0.55)
+				else: c = c.darkened((0.55-band) * 0.22)
+				var cf := 0.82 + 0.36 * chunk
+				c = Color(clampf(c.r*cf,0,1), clampf(c.g*cf,0,1), clampf(c.b*cf,0,1))
+				var crack := clampf(1.0 - absf(sin(v.x*5.3 + v.y*3.9 + sin(v.y*7.0))) / 0.22, 0.0, 1.0)
+				c = c.darkened(crack * 0.30)
+				var lich := 0.5 + 0.5*sin(v.x*1.4-0.5) * sin(v.y*1.1+2.1)
+				if lich > 0.52: c = c.lerp(Color("5f8140"), clampf((lich-0.52)*1.8,0,0.85))
+			for feat in [Vector2(10.5,-8.5), Vector2(14.2,-6.9), Vector2(9.0,-8.8)]:
+				var fd := Vector2(v.x-feat.x, v.y-feat.y).length()
+				if fd < 4.4: c = c.lerp(dirt, (1.0-fd/4.4) * 0.50)
+			var snowpatch := 0.5 + 0.5*sin(v.x*1.9+1.3) * sin(v.y*1.4-0.7)
+			if h > 2.7 and slope <= 0.90:
+				var sf := clampf((snowpatch-0.34)*4.0, 0.0, 1.0) * clampf((h-2.7)*2.5, 0.0, 1.0)
+				c = c.lerp(Color("9fb2c2"), sf)
+			verts[vi] = Vector3(v.x, h, v.y); cols[vi] = c
+			uvs[vi] = Vector2(v.x*0.09, h*0.09) if slope > 0.55 else v*0.07
+	var idx := PackedInt32Array()
+	for iz2 in steps:
+		for ix2 in steps:
+			var a := iz2*n1 + ix2; var b := a + 1; var c2 := a + n1; var d := c2 + 1
+			idx.append_array([a, b, d, a, d, c2])
+	for ti in range(0, idx.size(), 3):
+		var fn := (verts[idx[ti+1]]-verts[idx[ti]]).cross(verts[idx[ti+2]]-verts[idx[ti]])
+		for j in 3: norms[idx[ti+j]] = norms[idx[ti+j]] + fn
+	for ni in norms.size(): norms[ni] = -norms[ni].normalized()
+	var arrays := []; arrays.resize(Mesh.ARRAY_MAX); arrays[Mesh.ARRAY_VERTEX]=verts; arrays[Mesh.ARRAY_NORMAL]=norms; arrays[Mesh.ARRAY_TEX_UV]=uvs; arrays[Mesh.ARRAY_COLOR]=cols; arrays[Mesh.ARRAY_INDEX]=idx
+	var tmesh := ArrayMesh.new(); tmesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var mi := MeshInstance3D.new(); mi.mesh = tmesh; var m := StandardMaterial3D.new(); m.vertex_color_use_as_albedo = true; m.albedo_texture = load(PT + "detail_noise.png"); m.albedo_color = Color(0.55,0.63,0.49); m.roughness = 1.0; mi.material_override = m; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mi)
 	# outer trees sit on terrain
 func _setup() -> void:
 	get_viewport().screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA
@@ -340,6 +373,8 @@ func _setup() -> void:
 		var rmi := MeshInstance3D.new(); rmi.mesh = (roof_groups[rv2] as SurfaceTool).commit(); var rmat := StandardMaterial3D.new(); rmat.albedo_texture = load(TEX["roofp"]); rmat.albedo_color = [Color(0.88,0.88,0.88), Color(0.80,0.74,0.70), Color(0.92,0.84,0.74)][rv2]; rmat.roughness = 0.92; rmat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; rmi.material_override = rmat; rmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(rmi)
 	if canopy_st != null:
 		var cmi := MeshInstance3D.new(); cmi.mesh = canopy_st.commit(); var cm := StandardMaterial3D.new(); cm.albedo_texture = load(TEX["leafp"]); cm.vertex_color_use_as_albedo = true; cm.albedo_color = Color(1.0,1.0,0.98); cm.roughness = 1.0; cm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; cmi.material_override = cm; cmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(cmi)
+	if card_st != null:
+		var kmi := MeshInstance3D.new(); kmi.mesh = card_st.commit(); var km := StandardMaterial3D.new(); km.albedo_texture = load(PT + "foliage_card.png"); km.vertex_color_use_as_albedo = true; km.albedo_color = Color(1,1,1); km.roughness = 1.0; km.alpha_scissor_threshold = 0.45; km.cull_mode = BaseMaterial3D.CULL_DISABLED; km.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; kmi.material_override = km; kmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(kmi)
 	_spawn_tufts()
 	_spawn_carriers(); _spawn_statics()
 func _spawn_carriers() -> void:
@@ -542,7 +577,11 @@ func _top_band() -> void:
 		box(Vector3(cx9, _h(cx9,cz9)+0.05, cz9), Vector3(5.2,0.14,1.6), Color("86b83e") if cf4%2==0 else Color("b08d55"), 0.14)
 func _aprons() -> void:
 	for ap2 in [Vector3(10.5,_h(10.5,-8.5),-8.5), Vector3(14.2,_h(14.2,-6.9),-6.9), Vector3(19.0,_h(19.0,-13.8),-13.8)]:
-		cyl(ap2+Vector3(0,0.05,0), 3.1,3.1,0.05, Color("c9ab72"), 12, "dirt")
+		blob(ap2+Vector3(0,0.03,0), Vector3(3.1,0.055,2.5), Color("c9ab72"))
+		blob(ap2+Vector3(1.3,0.035,0.7), Vector3(2.0,0.05,1.6), Color("c9ab72"))
+		blob(ap2+Vector3(-1.5,0.03,-0.6), Vector3(1.8,0.05,1.5), Color("a8895a"))
+		blob(ap2+Vector3(2.3,0.025, -0.9), Vector3(1.3,0.045,1.1), Color("7fae4a"))
+		blob(ap2+Vector3(-2.4,0.025,1.0), Vector3(1.2,0.045,1.0), Color("7fae4a"))
 func _props2() -> void:
 	# log piles
 	for lp in [Vector3(-6.8,0,7.6), Vector3(8.8,0,6.2), Vector3(1.2,0,7.8)]:
