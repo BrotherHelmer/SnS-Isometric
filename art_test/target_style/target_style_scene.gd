@@ -82,11 +82,27 @@ func _h(x: float, z: float) -> float:
 	var d := Vector2(x, z).length()
 	var mask := clampf((d - 10.0) / 13.0, 0.0, 1.0); mask = mask * mask
 	var roll := 0.55 * sin(x * 0.23) * cos(z * 0.19) + 0.35 * sin(x * 0.09 + 1.7) * sin(z * 0.13)
-	var back := clampf((-z - 6.0) / 13.0, 0.0, 1.0); back = back * back
-	var hill := back * 11.0 * clampf(1.35 - absf(x - 17.0) / 21.0, 0.0, 1.0)
+	var back := clampf((-z - 6.0) / 10.0, 0.0, 1.0); back = back * back
+	var hill := back * 12.5 * clampf(1.35 - absf(x - 17.0) / 19.0, 0.0, 1.0)
 	var left := clampf(( -x - 14.0) / 16.0, 0.0, 1.0)
 	var jag := mask * (0.22*sin(x*1.9+z*0.7) + 0.14*sin(x*3.7-z*2.3)) * clampf(back*2.0,0.0,1.0)
-	return mask * roll + hill + left * left * 1.6 * mask + jag
+	var crag := back * (0.42*sin(x*4.1+z*2.7) + 0.28*sin(x*7.3-z*4.9) + 0.18*sin(x*11.0+z*8.0)) * clampf(hill/4.0, 0.0, 1.0)
+	return mask * roll + hill + left * left * 1.6 * mask + jag + crag
+var canopy_st: SurfaceTool = null
+func add_canopy(xf: Transform3D, c: Color) -> void:
+	if canopy_st == null: canopy_st = SurfaceTool.new(); canopy_st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var arrays: Array = flat_sphere().surface_get_arrays(0)
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]; var uvs: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
+	var seedv := xf.origin.x * 12.9898 + xf.origin.z * 78.233
+	for f in range(0, verts.size() - 2, 3):
+		var tv := [xf * verts[f], xf * verts[f+1], xf * verts[f+2]]
+		var fn: Vector3 = (tv[1]-tv[0]).cross(tv[2]-tv[0]).normalized()
+		var vary := 0.80 + 0.45 * (0.5 + 0.5 * sin(seedv + float(f) * 2.39))
+		var cc := Color(clampf(c.r*vary,0,1), clampf(c.g*vary,0,1), clampf(c.b*vary,0,1))
+		if fn.y > 0.45: cc = cc.lightened(0.18)
+		for j in 3:
+			canopy_st.set_normal(fn); canopy_st.set_color(cc); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j])
+	tri_total += 128
 var _flat_sphere: ArrayMesh = null
 func flat_sphere() -> ArrayMesh:
 	if _flat_sphere != null: return _flat_sphere
@@ -101,8 +117,8 @@ func flat_sphere() -> ArrayMesh:
 		for vtx in [a,b,c2]: st.set_normal(n); st.set_uv(Vector2(vtx.x*0.5+0.5, vtx.y*0.5+0.5)); st.add_vertex(vtx)
 	_flat_sphere = st.commit(); return _flat_sphere
 func _build_terrain() -> void:
-	var size := 64.0; var steps := 56; var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var g1 := Color("2f6b1f"); var g2 := Color("478c2e"); var dirt := Color("9c7f52"); var rock := Color("8a8175"); var snow := Color("f4f6f2")
+	var size := 64.0; var steps := 88; var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var g1 := Color("2f6b1f"); var g2 := Color("478c2e"); var dirt := Color("9c7f52"); var rock := Color("7d766b"); var snow := Color("f4f6f2")
 	for iz in steps:
 		for ix in steps:
 			var x0 := -size/2 + size*float(ix)/steps; var x1 := -size/2 + size*float(ix+1)/steps
@@ -112,9 +128,13 @@ func _build_terrain() -> void:
 				var h := _h(v.x, v.y); var slope := absf(_h(v.x+0.8, v.y)-h) + absf(_h(v.x, v.y+0.8)-h)
 				var n := 0.5 + 0.28*sin(v.x*1.31 + sin(v.y*1.73)*2.1) + 0.22*sin(v.x*3.7 - v.y*2.9)
 				var c: Color = g1.lerp(g2, n)
-				if slope > 0.32: c = dirt.lerp(rock, clampf((slope-0.32)*1.4,0,1))
-				if slope > 0.32 and int(h*3.0) % 2 == 0: c = c.darkened(0.13)
-				if h > 1.5: c = snow if h > 2.8 else c.lerp(snow, clampf((h-1.5)*1.0,0,1))
+				if slope > 0.30: c = dirt.lerp(rock, clampf((slope-0.30)*1.3,0,1))
+				if slope > 0.55:
+					c = rock.lerp(Color("6f675c"), clampf((slope-0.55)*0.9,0,1))
+					if int(floor(h*1.4)) % 2 == 0: c = c.darkened(0.20)
+					var crev := 0.5 + 0.5*sin(v.x*7.3 - v.y*4.9) * sin(v.x*4.1 + v.y*2.7)
+					c = c.darkened(crev * 0.30)
+				if h > 4.2 and slope <= 0.75: c = snow if h > 5.6 else c.lerp(snow, clampf((h-4.2)*0.8,0,1))
 				st.set_color(c); st.set_uv(v*0.5); st.add_vertex(Vector3(v.x, h, v.y))
 	st.generate_normals()
 	var mi := MeshInstance3D.new(); mi.mesh = st.commit(); var m := StandardMaterial3D.new(); m.vertex_color_use_as_albedo = true; m.albedo_texture = load(PT + "detail_noise.png"); m.roughness = 0.95; mi.material_override = m; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mi)
@@ -125,16 +145,16 @@ func _setup() -> void:
 	if round_no == 2:
 		grass = Color("69bd45"); grass2 = Color("86cc58"); stone = Color("c4bda9"); roof = Color("c2442c"); leaf = Color("4fae38"); leaf2 = Color("7cc24e"); light_e = 1.05; amb = 0.45
 	if round_no >= 3:
-		grass = Color("406e26"); grass2 = Color("4f7f2e"); stone = Color("9d9584"); roof = Color("bf3f27"); dirt = Color("cda96e"); leaf = Color("55a03c"); leaf2 = Color("8cc65e"); light_e = 0.95; amb = 0.42
+		grass = Color("406e26"); grass2 = Color("4f7f2e"); stone = Color("9d9584"); roof = Color("bf3f27"); dirt = Color("cda96e"); leaf = Color("79c24d"); leaf2 = Color("a9dd77"); light_e = 0.95; amb = 0.42
 	# environment + light + camera (game iso: ortho, pitch -38, yaw -45)
 	var we := WorldEnvironment.new(); var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR; env.background_color = Color("bfe3ef")
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR; env.ambient_light_color = Color(1,0.98,0.92); env.ambient_light_energy = amb
-	env.fog_enabled = true; env.fog_light_color = Color("f2e3c2"); env.fog_density = 0.0042; env.tonemap_mode = Environment.TONE_MAPPER_LINEAR; env.adjustment_enabled = true; env.adjustment_saturation = 1.22; env.adjustment_contrast = 1.12; env.adjustment_brightness = 1.02; env.glow_enabled = false;
+	env.fog_enabled = true; env.fog_light_color = Color("f2e3c2"); env.fog_density = 0.0060; env.tonemap_mode = Environment.TONE_MAPPER_LINEAR; env.adjustment_enabled = true; env.adjustment_saturation = 1.15; env.adjustment_contrast = 1.05; env.adjustment_brightness = 1.02; env.glow_enabled = false;
 	we.environment = env; add_child(we)
 	var pool := OmniLight3D.new(); pool.position = Vector3(0,4.5,1); pool.light_color = Color("ffd9a0"); pool.light_energy = 0.9; pool.omni_range = 14.0; pool.shadow_enabled = false; add_child(pool)
 	var fill := DirectionalLight3D.new(); fill.rotation_degrees = Vector3(-38, 125, 0); fill.light_energy = 0.20; fill.light_color = Color("cfe6ff"); fill.shadow_enabled = false; add_child(fill)
-	var sun := DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-52, -38, 0); sun.light_energy = light_e; sun.light_color = Color(1,0.96,0.88); sun.shadow_enabled = true; sun.shadow_opacity = 0.55; sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS; sun.shadow_blur = 4.5; add_child(sun)
+	var sun := DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-52, -38, 0); sun.light_energy = light_e; sun.light_color = Color(1,0.96,0.88); sun.shadow_enabled = true; sun.shadow_opacity = 0.45; sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS; sun.shadow_blur = 4.5; add_child(sun)
 	var cam := Camera3D.new(); cam.projection = Camera3D.PROJECTION_ORTHOGONAL; cam.size = 6.5 if OS.get_cmdline_user_args().has("--close") else (21.0 if round_no>=10 else 19.0); cam.look_at_from_position(Vector3(9.5,8,7.5) if OS.get_cmdline_user_args().has("--close") else Vector3(11,11,11), Vector3(2.6,0.6,-0.8) if OS.get_cmdline_user_args().has("--close") else Vector3(0,0.4,0), Vector3.UP); cam.current = true; add_child(cam)	# ground grass: big plane + lighter patches
 	_build_terrain()
 	for k in 26:
@@ -155,7 +175,7 @@ func _setup() -> void:
 		box(Vector3(-8.0+float(mi)*8.0, 1.6+float(mi)*0.5, -14.5), Vector3(13,0.9,1.6), Color(1,1,1,0.05))
 	for bi in 12:
 		var bx := -10.0+fmod(float(bi)*4.37,22.0); var bz := -12.0+fmod(float(bi)*3.13,10.0)
-		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0,float(bi),0)).scaled(Vector3(0.7,0.5,0.6)), Vector3(bx, _h(bx,bz)+0.15, bz)), Color("6f675c"), "rock"); tri_total += 128
+		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0,float(bi),0)).scaled(Vector3(0.7,0.5,0.6)), Vector3(bx, _h(bx,bz)+0.15, bz)), Color("8a8175"), "rock"); tri_total += 128
 	for ei in 10:
 		var ex := -11.0+fmod(float(ei)*4.91,23.0); var ez := -6.0+fmod(float(ei)*5.37,17.0)
 		cyl(Vector3(ex,0.03,ez), 0.62,0.62,0.025, Color("9a7c4e") if ei%2==0 else Color("bfae6a"), 8)
@@ -170,7 +190,6 @@ func _setup() -> void:
 	for li2 in 5:
 		var lx2 := 10.0+fmod(float(li2)*2.3,6.0); var lz2 := -8.0-fmod(float(li2)*1.1,4.0)
 		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(li2),0.1)).scaled(Vector3(1.1,0.65,0.9)), Vector3(lx2,_h(lx2,lz2)+0.3,lz2)), Color("6e665c"), "rock"); tri_total+=128
-	_spawn_cliffs()
 	# market stall: posts, striped canopy, crates
 	for mp in [Vector3(-4.6,0,5.9), Vector3(-3.4,0,5.9), Vector3(-4.6,0,7.0), Vector3(-3.4,0,7.0)]: box(mp+Vector3(0,0.75,0), Vector3(0.13,1.5,0.13), Color("6b4423"))
 	box(Vector3(-4.0,1.62,6.45), Vector3(1.9,0.14,1.9), Color("d43a2a")); box(Vector3(-4.0,1.58,6.45), Vector3(1.9,0.1,0.5), Color("f2ead8")); box(Vector3(-4.0,0.55,6.45), Vector3(1.6,0.5,1.2), Color("a67c4e"), 0,0,0, "timber")
@@ -200,7 +219,7 @@ func _setup() -> void:
 	for tp in [Vector3(-14,0,-8),Vector3(-15,0,2),Vector3(-13,0,9),Vector3(13,0,10),Vector3(15,0,-4),Vector3(11,0,-12),Vector3(-11,0,-11),Vector3(4,0,11),Vector3(-4,0,12),Vector3(14,0,5)]:
 		_build_tree(tp, leaf, leaf2)
 	for bs in [Vector3(-5,0,-7),Vector3(6,0,8),Vector3(-10,0,-3),Vector3(9,0,-8)]:
-		blob(bs+Vector3(0,0.5,0), Vector3(0.9,0.6,0.9), leaf, "forest")
+		add_canopy(Transform3D(Basis.IDENTITY.scaled(Vector3(0.9,0.6,0.9)), bs+Vector3(0,0.5,0)), leaf)
 	# stones
 	for p in [Vector3(4.8,0.25,-4),Vector3(-7.5,0.2,6),Vector3(7,0.2,-2)]: blob(p, Vector3(0.5,0.35,0.45), Color("9a968c"))
 	for ap in [Vector3(-1.5,0,-3.5), Vector3(3.2,0,-1.2), Vector3(-3.4,0,4.6), Vector3(6.2,0,4.2), Vector3(7.2,0,-3.8)]:
@@ -211,6 +230,8 @@ func _setup() -> void:
 		var mi := MeshInstance3D.new(); mi.mesh = mesh; mi.material_override = mat_for(key, Color.html(key.split("|")[0])); mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(mi)
 	for ri2 in roof_instances:
 		var rmi := MeshInstance3D.new(); rmi.mesh = ri2[0]; rmi.position = ri2[1]; var rmat := StandardMaterial3D.new(); rmat.albedo_texture = load(TEX["roofp"]); rmat.albedo_color = Color(0.88,0.88,0.88); rmat.roughness = 0.92; rmat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; rmi.material_override = rmat; rmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(rmi)
+	if canopy_st != null:
+		var cmi := MeshInstance3D.new(); cmi.mesh = canopy_st.commit(); var cm := StandardMaterial3D.new(); cm.albedo_texture = load(TEX["leafp"]); cm.vertex_color_use_as_albedo = true; cm.albedo_color = Color(1.15,1.15,1.1); cm.roughness = 1.0; cm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; cmi.material_override = cm; cmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(cmi)
 	_spawn_carriers(); _spawn_statics()
 func _spawn_carriers() -> void:
 	var chars := ["Farmer_B", "Farmer_A", "Rogue_Hooded", "Rogue"]
@@ -330,12 +351,12 @@ func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 	cyl(p+Vector3(0,0.9,0), 0.22,0.32,1.8, Color("6b4423"), 7)
 	if vi == 1:
 		for pi in 4:
-			add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0,float(pi)*0.8,0)).scaled(Vector3(0.85,1.05,0.85)), p+Vector3(0,1.9+float(pi)*0.62,0)), a if pi%2==0 else b, "forest"); tri_total+=128
+			add_canopy(Transform3D(Basis.from_euler(Vector3(0,float(pi)*0.8,0)).scaled(Vector3(0.85,1.05,0.85)), p+Vector3(0,1.9+float(pi)*0.62,0)), a if pi%2==0 else b)
 		return
 	for ci in 5:
 		var off: Vector3 = [Vector3(0,2.6,0), Vector3(0.85,2.05,0.3), Vector3(-0.85,2.15,-0.25), Vector3(0.1,3.25,-0.1), Vector3(-0.2,1.9,0.7)][ci]
 		var sc: float = [1.25,0.9,0.85,0.9,0.75][ci]
-		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0, float(ci)*0.62, 0)).scaled(Vector3(sc*1.15, sc*0.95, sc*1.15)), p+off), a if ci==0 else b, "leafp"); tri_total += 128
+		add_canopy(Transform3D(Basis.from_euler(Vector3(0, float(ci)*0.62, 0)).scaled(Vector3(sc*1.15, sc*0.95, sc*1.15)), p+off), a if ci==0 else b)
 func _build_carrier(p: Vector3) -> void:
 	box(p+Vector3(-0.16,0.35,0), Vector3(0.2,0.7,0.22), Color("4a3421")); box(p+Vector3(0.16,0.35,0), Vector3(0.2,0.7,0.22), Color("4a3421"))
 	box(p+Vector3(0,0.95,0), Vector3(0.62,0.65,0.4), Color("2f62b8"))
