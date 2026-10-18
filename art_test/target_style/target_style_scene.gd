@@ -94,8 +94,8 @@ func _h(x: float, z: float) -> float:
 	var d := Vector2(x, z).length()
 	var mask := clampf((d - 10.0) / 13.0, 0.0, 1.0); mask = mask * mask
 	var roll := 0.55 * sin(x * 0.23) * cos(z * 0.19) + 0.35 * sin(x * 0.09 + 1.7) * sin(z * 0.13)
-	var back := clampf((-z - 6.0) / 10.0, 0.0, 1.0); back = back * back
-	var hill := back * 12.5 * clampf(1.35 - absf(x - 14.0) / 19.0, 0.0, 1.0) * (0.80 + 0.40 * (0.5 + 0.5*sin(-z*1.05 + x*0.25)))
+	var back := clampf((-z - 6.0) / 7.0, 0.0, 1.0); back = back * back
+	var hill := back * 15.0 * clampf(1.35 - absf(x - 15.0) / 20.0, 0.0, 1.0) * (0.80 + 0.40 * (0.5 + 0.5*sin(-z*1.05 + x*0.25)))
 	var left := clampf(( -x - 14.0) / 16.0, 0.0, 1.0)
 	var jag := mask * (0.22*sin(x*1.9+z*0.7) + 0.14*sin(x*3.7-z*2.3)) * clampf(back*2.0,0.0,1.0)
 	var crag := back * (0.85*sin(x*4.1+z*2.7) + 0.55*sin(x*7.3-z*4.9) + 0.35*sin(x*12.0+z*9.0) + 0.22*sin(x*19.0-z*15.0)) * clampf(hill/4.0, 0.0, 1.0)
@@ -312,15 +312,24 @@ func _setup() -> void:
 	for mp in [Vector3(-4.6,0,5.9), Vector3(-3.4,0,5.9), Vector3(-4.6,0,7.0), Vector3(-3.4,0,7.0)]: box(mp+Vector3(0,0.75,0), Vector3(0.13,1.5,0.13), Color("6b4423"))
 	roof2(Vector3(-4.0,1.52,6.45), 2.3, 2.1, 0.55, 0.14, Color("d43a2a"))
 	box(Vector3(-4.0,0.55,6.45), Vector3(1.6,0.5,1.2), Color("a67c4e"), 0,0,0, "timber")
-	for fp2 in [Vector3(6.2,0,4.2), Vector3(-8.2,0,-2.6), Vector3(7.2,0,-3.8)]:
+	for fp2 in [Vector3(7.5,0,5.5), Vector3(-10.0,0,-3.5), Vector3(9.0,0,-4.5)]:
 		box(fp2+Vector3(0,2.2,0), Vector3(0.06,1.3,0.06), Color("4a3421")); box(fp2+Vector3(0.35,2.6,0), Vector3(0.65,0.38,0.04), Color("2f62b8") if fp2.x>0 else Color("d43a2a"))
+	for wpath in [[Vector2(-10.5,5.5),Vector2(-4.5,6.0),Vector2(0,3.2),Vector2(7.5,5.5),Vector2(12.0,2.5),Vector2(15.0,5.5)],[Vector2(-10.0,-3.5),Vector2(-5.0,-1.2),Vector2(-1.5,-3.3),Vector2(3.2,-1.2),Vector2(9.0,-4.5),Vector2(11.5,-6.2),Vector2(13.5,-7.5)],[Vector2(-1.5,-3.3),Vector2(1.5,-6.0),Vector2(5.0,-7.5),Vector2(9.0,-8.8)],[Vector2(-7.0,11.5),Vector2(-4.5,8.5),Vector2(-4.5,6.0)],[Vector2(7.5,5.5),Vector2(9.5,8.5),Vector2(14.0,12.0)]]:
+		for wi2 in wpath.size()-1:
+			var wa: Vector2 = wpath[wi2]; var wb: Vector2 = wpath[wi2+1]; var wlen := wa.distance_to(wb); var wsteps := int(wlen / 0.65)
+			for ws in wsteps+1:
+				var wt := float(ws)/float(maxi(wsteps,1)); var wp := wa.lerp(wb, wt)
+				var wdir := (wb-wa).normalized(); var wperp := Vector2(-wdir.y, wdir.x)
+				wp += wperp * sin(wt*5.0 + float(wi2)*1.7) * 0.35
+				var wy: float = 0.032 + (_h(wp.x,wp.y) if Vector2(wp.x,wp.y).length() > 11.0 else 0.0)
+				cyl(Vector3(wp.x, wy, wp.y), 0.82,0.82,0.035, dirt, 9)
 	# castle centre-back
 	_build_castle(Vector3(-1.5,0,-3.5), stone, roof)
 	_build_octstore(Vector3(3.2,0,-1.2), stone)
-	_build_hut(Vector3(6.2,0,4.2), stone)
-	_build_aframe(Vector3(-3.4,0,4.6), roof, stone)
-	_build_roundhouse(Vector3(7.2,0,-3.8), roof)
-	_build_hut(Vector3(-8.2,0,-2.6), stone)
+	_build_hut(Vector3(7.5,0,5.5), stone)
+	_build_aframe(Vector3(-4.5,0,6.0), roof, stone)
+	_build_roundhouse(Vector3(9.0,0,-4.5), roof)
+	_build_hut(Vector3(-10.0,0,-3.5), stone)
 	# props: barrels, crates, fence, rocks
 	for bp in [Vector3(5.4,0,-0.2), Vector3(-6.2,0,0.8), Vector3(1.8,0,-5.6)]:
 		cyl(bp+Vector3(0,0.45,0), 0.38,0.42,0.9, Color("8a5f36"), 9); box(bp+Vector3(0.8,0.35,0.2), Vector3(0.7,0.7,0.7), Color("a67c4e"), 0.4)
@@ -331,13 +340,13 @@ func _setup() -> void:
 	# trees
 	for p in [Vector3(-8,-0,-6),Vector3(6,0,-6),Vector3(8,0,1),Vector3(-9,0,3),Vector3(5.5,0,6.5),Vector3(-6.5,0,-4),Vector3(1.5,0,-7.5)]:
 		_build_tree(p, leaf, leaf2)
-	_build_roundbarn(Vector3(-8.6,0,4.8), roof)
-	_build_roundhouse(Vector3(9.6,0,1.8), roof)
+	_build_roundbarn(Vector3(-10.5,0,5.5), roof)
+	_build_roundhouse(Vector3(12.0,0,2.5), roof)
 	_build_aframe(Vector3(-6.5,0,-10.0), roof, stone)
-	_build_octstore(Vector3(12.5,0,11.0), stone)
-	_build_house(Vector3(-5.5,0,10.8), roof, stone)
-	_build_house(Vector3(13.5,0,4.5), roof, stone)
-	for tp in [Vector3(-14,0,-8),Vector3(-15,0,2),Vector3(-13,0,9),Vector3(13,0,10),Vector3(15,0,-4),Vector3(11,0,-12),Vector3(-11,0,-11),Vector3(4,0,11),Vector3(-4,0,12),Vector3(14,0,5)]:
+	_build_octstore(Vector3(14.0,0,12.5), stone)
+	_build_house(Vector3(-7.0,0,12.0), roof, stone)
+	_build_house(Vector3(15.0,0,5.5), roof, stone)
+	for tp in [Vector3(-14,0,-8),Vector3(-15,0,2),Vector3(-13,0,9),Vector3(13,0,10),Vector3(19,0,-7),Vector3(8,0,-15),Vector3(-11,0,-11),Vector3(4,0,11),Vector3(-4,0,12),Vector3(14,0,5)]:
 		_build_tree(tp, leaf, leaf2)
 	for bs2 in [Vector3(-2,0,9.5),Vector3(10,0,9),Vector3(-13,0,-1),Vector3(4,0,-9),Vector3(12,0,-3),Vector3(-8,0,-9)]:
 		add_canopy(Transform3D(Basis.IDENTITY.scaled(Vector3(0.8,0.55,0.8)), bs2+Vector3(0,0.45,0)), leaf)
@@ -345,7 +354,7 @@ func _setup() -> void:
 		add_canopy(Transform3D(Basis.IDENTITY.scaled(Vector3(0.9,0.6,0.9)), bs+Vector3(0,0.5,0)), leaf)
 	# stones
 	for p in [Vector3(4.8,0.25,-4),Vector3(-7.5,0.2,6),Vector3(7,0.2,-2)]: blob(p, Vector3(0.5,0.35,0.45), Color("9a968c"))
-	for ap in [Vector3(-1.5,0,-3.5), Vector3(3.2,0,-1.2), Vector3(-3.4,0,4.6), Vector3(6.2,0,4.2), Vector3(7.2,0,-3.8)]:
+	for ap in [Vector3(-1.5,0,-3.5), Vector3(3.2,0,-1.2), Vector3(-4.5,0,6.0), Vector3(7.5,0,5.5), Vector3(9.0,0,-4.5)]:
 		cyl(ap+Vector3(0,0.018,0), 2.6,2.6,0.015, Color(0.10,0.16,0.05,0.45), 14)
 	# coloured flower patches merged into existing colour meshes (blooms survive, no dots/instances)
 	var bloom_cols := [Color("e2543e"), Color("ffd94a"), Color("ff9db0"), Color("e2543e"), Color("ffd94a"), Color("f2f0e6")]
