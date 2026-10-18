@@ -123,6 +123,7 @@ func _build_terrain() -> void:
 		for ix in steps:
 			var x0 := -size/2 + size*float(ix)/steps; var x1 := -size/2 + size*float(ix+1)/steps
 			var z0 := -size/2 + size*float(iz)/steps; var z1 := -size/2 + size*float(iz+1)/steps
+			var chunk := 0.5 + 0.5*sin(float(ix)*12.9898 + float(iz)*78.233) * sin(float(ix)*3.7 - float(iz)*5.3)
 			var quad := [Vector2(x0,z0), Vector2(x1,z0), Vector2(x1,z1), Vector2(x0,z0), Vector2(x1,z1), Vector2(x0,z1)]
 			for v in quad:
 				var h := _h(v.x, v.y); var slope := absf(_h(v.x+0.8, v.y)-h) + absf(_h(v.x, v.y+0.8)-h)
@@ -135,9 +136,13 @@ func _build_terrain() -> void:
 					var crev := 0.5 + 0.5*sin(v.x*7.3 - v.y*4.9) * sin(v.x*4.1 + v.y*2.7)
 					c = c.darkened(crev * 0.45)
 					var mot := 0.5 + 0.5*sin(v.x*23.7) * sin(v.y*19.3)
-					c = c.lerp(Color("b2b5ba"), mot * 0.45)
+					c = c.lerp(Color("b2b5ba"), mot * 0.30)
+					var cf := 0.74 + 0.56 * chunk
+					c = Color(clampf(c.r*cf,0,1), clampf(c.g*cf,0,1), clampf(c.b*cf,0,1))
 				var snowpatch := 0.5 + 0.5*sin(v.x*3.1+1.3) * sin(v.y*2.3-0.7)
-				if h > 3.0 and slope <= 1.35 and snowpatch > 0.18: c = snow if h > 3.8 and snowpatch > 0.50 else c.lerp(snow, clampf((h-3.0)*1.0,0,1) * clampf((snowpatch-0.18)*2.2,0,1))
+				if h > 2.9 and slope <= 1.65:
+					var sf := clampf((snowpatch-0.40)*8.0, 0.0, 1.0) * clampf((h-2.9)*3.0, 0.0, 1.0)
+					c = c.lerp(Color("f8fafc"), sf)
 				st.set_color(c); st.set_uv(v*0.5); st.add_vertex(Vector3(v.x, h, v.y))
 	st.generate_normals()
 	var mi := MeshInstance3D.new(); mi.mesh = st.commit(); var m := StandardMaterial3D.new(); m.vertex_color_use_as_albedo = true; m.albedo_texture = load(PT + "detail_noise.png"); m.roughness = 0.95; mi.material_override = m; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mi)
@@ -153,7 +158,7 @@ func _setup() -> void:
 	var we := WorldEnvironment.new(); var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR; env.background_color = Color("bfe3ef")
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR; env.ambient_light_color = Color(1,0.98,0.92); env.ambient_light_energy = amb
-	env.fog_enabled = true; env.fog_light_color = Color("f2e3c2"); env.fog_density = 0.0045; env.tonemap_mode = Environment.TONE_MAPPER_LINEAR; env.adjustment_enabled = true; env.adjustment_saturation = 1.15; env.adjustment_contrast = 1.05; env.adjustment_brightness = 1.02; env.glow_enabled = false;
+	env.fog_enabled = true; env.fog_light_color = Color("f2e3c2"); env.fog_density = 0.0028; env.tonemap_mode = Environment.TONE_MAPPER_LINEAR; env.adjustment_enabled = true; env.adjustment_saturation = 1.15; env.adjustment_contrast = 1.05; env.adjustment_brightness = 1.02; env.glow_enabled = false;
 	we.environment = env; add_child(we)
 	var pool := OmniLight3D.new(); pool.position = Vector3(0,4.5,1); pool.light_color = Color("ffd9a0"); pool.light_energy = 0.9; pool.omni_range = 14.0; pool.shadow_enabled = false; add_child(pool)
 	var fill := DirectionalLight3D.new(); fill.rotation_degrees = Vector3(-38, 125, 0); fill.light_energy = 0.20; fill.light_color = Color("cfe6ff"); fill.shadow_enabled = false; add_child(fill)
@@ -179,6 +184,10 @@ func _setup() -> void:
 	for bi in 12:
 		var bx := -10.0+fmod(float(bi)*4.37,22.0); var bz := -12.0+fmod(float(bi)*3.13,10.0)
 		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0,float(bi),0)).scaled(Vector3(0.7,0.5,0.6)), Vector3(bx, _h(bx,bz)+0.15, bz)), Color("8a8175"), "rock"); tri_total += 128
+	for si9 in 15:
+		var sx9 := 8.5 + fmod(float(si9)*3.17, 12.5); var sz9 := -8.0 - fmod(float(si9)*2.43, 7.5)
+		var ss9 := 0.7 + fmod(float(si9)*0.37, 0.9)
+		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.3,float(si9)*1.7,0.15)).scaled(Vector3(ss9,ss9*0.72,ss9*0.85)), Vector3(sx9, _h(sx9,sz9)+ss9*0.10, sz9)), Color("54575e") if si9%2==0 else Color("90949a"), "rock"); tri_total += 128
 	for ei in 10:
 		var ex := -11.0+fmod(float(ei)*4.91,23.0); var ez := -6.0+fmod(float(ei)*5.37,17.0)
 		cyl(Vector3(ex,0.03,ez), 0.62,0.62,0.025, Color("9a7c4e") if ei%2==0 else Color("bfae6a"), 8)
