@@ -97,6 +97,11 @@ func _run() -> void:
 
 	game.queue_free()
 	await process_frame
+	# The audio director stops its players in _exit_tree, but the AudioServer
+	# drops their playbacks on the mix thread; quitting one frame later raced it
+	# ("9 resources still in use": Ogg/WAV playbacks) under CI.
+	await create_timer(0.25).timeout
+	await process_frame
 	print("T_GFX_B %s" % ("PASS" if failures.is_empty() else "FAIL"))
 	quit(0 if failures.is_empty() else 1)
 
