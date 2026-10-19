@@ -20,7 +20,9 @@ func _run() -> void:
 	await process_frame
 	_check(failures, game.minimap != null, "province minimap exists")
 	game._tick_minimap(0.2)
-	_check(failures, game.minimap.visible, "minimap is visible during play")
+	# 8c52985: the minimap opens collapsed to a MapToggle; either is on screen.
+	var map_toggle: Node = game.hud_root.find_child("MapToggle", true, false)
+	_check(failures, game.minimap.visible or (map_toggle != null and (map_toggle as Control).visible), "minimap is visible during play")
 	game._tick_audio(0.5)
 	var stems: Array = game.audio_director.evidence_snapshot().get("stems", [])
 	_check(failures, stems.has("day"), "day mix includes the pastoral score stem")
