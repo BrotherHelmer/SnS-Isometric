@@ -214,7 +214,8 @@ func add_canopy_low(xf: Transform3D, c: Color) -> void: # R125: add_canopy's R11
 		var sunf := clampf(fn.dot(Vector3(-0.45, 0.75, 0.50)) * 0.5 + 0.5, 0.0, 1.0)
 		cc = Color(clampf(cc.r*(0.90+0.28*sunf),0,1), clampf(cc.g*(0.95+0.12*sunf),0,1), clampf(cc.b*(1.06-0.26*sunf),0,1))
 		cc = Color(clampf(cc.r*2.1,0.0,1.1), clampf(cc.g*2.0,0.0,1.1), clampf(cc.b*2.1,0.0,1.1))
-		var cv131: float = maxf(cc.r, maxf(cc.g, cc.b)); cc = cc.lerp(Color(cv131,cv131,cv131), 0.55) # R131 canopy desat toward target (sat .958 vs .729), value-preserving so shade faces do not darken
+		var cv131: float = maxf(cc.r, maxf(cc.g, cc.b)); cc = cc.lerp(Color(cv131,cv131,cv131), 0.62) # R131 canopy desat
+		cc = Color(cc.r*1.20, cc.g*1.20, cc.b*1.20); var mx133: float = maxf(cc.r, maxf(cc.g, cc.b)); if mx133 > 1.1: cc = cc * (1.1 / mx133) # R133 value lift x1.20, proportional cap (steps/split kept, sat held) toward target (sat .958 vs .729), value-preserving so shade faces do not darken
 		for j in 3:
 			canopy_st.set_normal(fn); canopy_st.set_color(cc); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j])
 	tri_total += 48
@@ -248,7 +249,8 @@ func add_canopy(xf: Transform3D, c: Color) -> void:
 		var sunf := clampf(fn.dot(Vector3(-0.45, 0.75, 0.50)) * 0.5 + 0.5, 0.0, 1.0) # R98 warm sunlit / cool shaded clusters
 		cc = Color(clampf(cc.r*(0.90+0.28*sunf),0,1), clampf(cc.g*(0.95+0.12*sunf),0,1), clampf(cc.b*(1.06-0.26*sunf),0,1))
 		cc = Color(clampf(cc.r*2.1,0.0,1.1), clampf(cc.g*2.0,0.0,1.1), clampf(cc.b*2.1,0.0,1.1)) # R69: undo texture*vertex double-green
-		var cv131: float = maxf(cc.r, maxf(cc.g, cc.b)); cc = cc.lerp(Color(cv131,cv131,cv131), 0.55) # R131 canopy desat toward target (sat .958 vs .729), value-preserving, R114 steps kept
+		var cv131: float = maxf(cc.r, maxf(cc.g, cc.b)); cc = cc.lerp(Color(cv131,cv131,cv131), 0.62) # R131 canopy desat
+		cc = Color(cc.r*1.20, cc.g*1.20, cc.b*1.20); var mx133: float = maxf(cc.r, maxf(cc.g, cc.b)); if mx133 > 1.1: cc = cc * (1.1 / mx133) # R133 value lift x1.20, proportional cap (steps/split kept, sat held) toward target (sat .958 vs .729), value-preserving, R114 steps kept
 		for j in 3:
 			canopy_st.set_normal(fn); canopy_st.set_color(cc); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j]) # R114 flat cluster-cell normals (was smooth radial = lump)
 	tri_total += 90 # R126 9x5 sphere tris (was 128 at 13x7)
@@ -565,7 +567,7 @@ func _setup() -> void:
 	for rv2 in roof_groups:
 		var rmi := MeshInstance3D.new(); rmi.mesh = (roof_groups[rv2] as SurfaceTool).commit(); var rmat := ShaderMaterial.new(); rmat.shader = rsh2; rmat.set_shader_parameter("tex", load(TEX["roofp"])); rmat.set_shader_parameter("tint", [Color(0.94,0.80,0.68), Color(0.82,0.66,0.55), Color(0.74,0.63,0.55)][rv2]) # R122 per-building spread as shader tint; rmi.material_override = rmat; rmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(rmi)
 	if canopy_st != null:
-		var cmi := MeshInstance3D.new(); cmi.mesh = canopy_st.commit(); var cm := StandardMaterial3D.new(); cm.albedo_texture = load(TEX["leafp"]); cm.vertex_color_use_as_albedo = true; cm.albedo_color = Color(1.03,0.96,0.85); cm.roughness = 1.0; cm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; cmi.material_override = cm; cmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(cmi)
+		var cmi := MeshInstance3D.new(); cmi.mesh = canopy_st.commit(); var cm := StandardMaterial3D.new(); cm.albedo_texture = load(TEX["leafp"]); cm.vertex_color_use_as_albedo = true; cm.albedo_color = Color(1.28,1.19,1.05); cm.roughness = 1.0; cm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; cmi.material_override = cm; cmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(cmi)
 	if card_st != null:
 		var kmi := MeshInstance3D.new(); kmi.mesh = card_st.commit(); var km := StandardMaterial3D.new(); km.albedo_texture = load(PT + "foliage_card.png"); km.vertex_color_use_as_albedo = true; km.albedo_color = Color(1,1,1); km.roughness = 1.0; km.alpha_scissor_threshold = 0.45; km.cull_mode = BaseMaterial3D.CULL_DISABLED; km.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; kmi.material_override = km; kmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(kmi)
 	_spawn_tufts()
