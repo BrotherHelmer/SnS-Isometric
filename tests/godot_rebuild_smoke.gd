@@ -8,7 +8,7 @@ const RivalryTuning = preload("res://src/GodotClient/Scripts/one_shard_rivalry_t
 func _init() -> void:
 	var simulation = Simulation.new(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 246810, false)
 	var failures: Array[String] = []
-	check(simulation.map_size == Vector2i(70, 70), "province is 70x70 microtiles", failures)
+	check(simulation.map_size == Vector2i(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT), "province is MAP_WIDTH x MAP_HEIGHT microtiles (320x320 since 26209fa)", failures)
 	check(_count_tile(simulation, Defs.TILE_SHARD) == 1, "province contains exactly one Shard", failures)
 	check(_height_levels(simulation).size() >= 3, "terrain contains broad elevation levels", failures)
 	check(_resource_layers_are_exclusive(simulation), "forest and rock deposits never share a tile", failures)
@@ -319,7 +319,7 @@ func _init() -> void:
 	var saved_state: Dictionary = simulation._serialize_state().duplicate(true)
 	var restored = Simulation.new(12, 12, 13579, false, true)
 	restored._restore_state(saved_state)
-	check(restored.map_size == Vector2i(70, 70) and restored.height_map == simulation.height_map, "save state preserves the larger elevated province", failures)
+	check(restored.map_size == Vector2i(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT) and restored.height_map == simulation.height_map, "save state preserves the larger elevated province", failures)
 	check(restored.enemy_camps.size() == simulation.enemy_camps.size() and restored.soldiers_total == simulation.soldiers_total, "save state preserves camps and trained soldiers", failures)
 
 	var shelter_sim = Simulation.new(70, 70, 112233, false, true)
