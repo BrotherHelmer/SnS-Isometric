@@ -1239,7 +1239,9 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	box(Vector3(1.16*wf,cy,0), Vector3(0.07,wh+0.05,0.17), Color("54381f"), 0,0,0, "timber"); box(Vector3(-1.16*wf,cy,0), Vector3(0.07,wh+0.05,0.17), Color("54381f"), 0,0,0, "timber")
 	box(Vector3(0,0.82,0.99), Vector3(0.78,1.42,0.06), Color("8a6742"))
 	box(Vector3(wj*0.7,0.80,1.01), Vector3(0.54,1.28,0.06), Color("6e4a2c"))
-	box(Vector3(-0.68*wf+wj,1.22+wj*0.4,0.98), Vector3(0.52,0.60,0.06), Color("ffd98a")); box(Vector3(0.68*wf+wj,1.22-wj*0.3,0.98), Vector3(0.52,0.60,0.06), Color("ffd98a"))
+	box(Vector3(-0.68*wf+wj,1.22+wj*0.4,0.965), Vector3(0.64,0.72,0.05), Color("54381f"), 0,0,0, "timber"); box(Vector3(0.68*wf+wj,1.22-wj*0.3,0.965), Vector3(0.64,0.72,0.05), Color("54381f"), 0,0,0, "timber") # R106 window frames
+	box(Vector3(-0.68*wf+wj,1.22+wj*0.4,0.98), Vector3(0.52,0.60,0.06), Color("ffd98a") if rng105.randf() > 0.22 else Color("3d2b18")); box(Vector3(0.68*wf+wj,1.22-wj*0.3,0.98), Vector3(0.52,0.60,0.06), Color("ffd98a") if rng105.randf() > 0.22 else Color("3d2b18"))
+	box(Vector3(0,1.60,1.0), Vector3(0.98,0.15,0.11), Color("54381f"), 0,0,0, "timber"); box(Vector3(0,0.10,1.12), Vector3(0.95,0.11,0.38), stone, 0,0,0, "stone") # R106 door lintel + step
 	box(Vector3(-1.02*wf,1.22,0.97), Vector3(0.15,0.60,0.05), Color("5d7a34")); box(Vector3(-0.34*wf,1.22,0.97), Vector3(0.15,0.60,0.05), Color("5d7a34")); box(Vector3(0.34*wf,1.22,0.97), Vector3(0.15,0.60,0.05), Color("5d7a34")); box(Vector3(1.02*wf,1.22,0.97), Vector3(0.15,0.60,0.05), Color("5d7a34"))
 	if vi == 2:
 		box(Vector3(-0.68*wf,2.05,0.98), Vector3(0.48,0.54,0.06), Color("ffd98a")); box(Vector3(0.68*wf,2.05,0.98), Vector3(0.48,0.54,0.06), Color("ffd98a"))
@@ -1338,7 +1340,9 @@ func _build_roundhouse(p: Vector3, roof: Color) -> void:
 	var cone1 := CylinderMesh.new(); cone1.bottom_radius=1.62; cone1.top_radius=0.12; cone1.height=1.55 + 0.38*sin(p.x*1.9); cone1.radial_segments=12
 	add_mesh(cone1, Transform3D(Basis.from_euler(Vector3(sin(p.x*1.3)*0.07,0,cos(p.z*1.7)*0.07)), p+Vector3(sin(p.z)*0.08,3.25 + 0.19*sin(p.x*1.9),cos(p.x)*0.06)), roof, "roofp"); tri_total += 96
 	box(p+Vector3(0,0.95,1.2), Vector3(0.62,1.5,0.1), Color("6e4a2c"))
-	box(p+Vector3(0.85,1.6,0.95), Vector3(0.42,0.5,0.08), Color("ffd98a"))
+	box(p+Vector3(0,1.78,1.22), Vector3(0.78,0.14,0.11), Color("54381f"), 0,0,0, "timber") # R106 door lintel
+	box(p+Vector3(0.85,1.6,0.95), Vector3(0.54,0.62,0.06), Color("54381f"), 0.62, 0, 0, "timber"); box(p+Vector3(0.85,1.6,0.99), Vector3(0.42,0.5,0.08), Color("ffd98a"), 0.62)
+	box(p+Vector3(-0.82,1.52,0.90), Vector3(0.54,0.62,0.06), Color("54381f"), -0.65, 0, 0, "timber"); box(p+Vector3(-0.86,1.52,0.94), Vector3(0.42,0.5,0.08), Color("ffd98a") if rng105r.randf() > 0.25 else Color("3d2b18"), -0.65) # R106 second window
 	# R79: facade pattern on roundhouse front (stone base + plaster drum)
 	_face_patch(p+Vector3(0,0.32,1.30), Vector3(1,0,0), Vector3(0,1,0), 0.95, 0.42, 301+absi(int(p.x)), Color("9a968c"), "stone", 1)
 	_face_patch(p+Vector3(0,1.55,1.20), Vector3(1,0,0), Vector3(0,1,0), 0.85, 0.95, 317+absi(int(p.x)), Color("e8d9b8"), "plaster", 2)
@@ -1359,8 +1363,9 @@ func _build_roundbarn(p: Vector3, roof: Color) -> void:
 	var cone2 := CylinderMesh.new(); cone2.bottom_radius=1.78; cone2.top_radius=0.14; cone2.height=1.55; cone2.radial_segments=14
 	add_mesh(cone2, Transform3D(Basis.from_euler(Vector3(cos(p.x)*0.05,0,sin(p.z*1.4)*0.05)), p+Vector3(cos(p.z)*0.07,2.95,sin(p.x)*0.05)), roof, "roofp"); tri_total += 112
 	box(p+Vector3(0,0.95,1.5), Vector3(0.95,1.55,0.1), Color("54381f"))
-	box(p+Vector3(0.75,1.55,1.42), Vector3(0.4,0.42,0.08), Color("ffd98a"))
-	cyl(p+Vector3(-0.8,2.6,-0.5), 0.18,0.22,0.8, Color("9a968c"), 8, "stone")
+	box(p+Vector3(0.75,1.55,1.42), Vector3(0.52,0.54,0.06), Color("54381f"), 0.55, 0, 0, "timber"); box(p+Vector3(0.78,1.55,1.45), Vector3(0.4,0.42,0.08), Color("ffd98a"), 0.55)
+	box(p+Vector3(-0.75,1.55,1.42), Vector3(0.52,0.54,0.06), Color("54381f"), -0.55, 0, 0, "timber"); box(p+Vector3(-0.78,1.55,1.45), Vector3(0.4,0.42,0.08), Color("ffd98a"), -0.55) # R106 second window
+	cyl(p+Vector3(-0.8,2.6,-0.5), 0.18,0.22,0.8, Color("9a968c"), 8, "stone"); cyl(p+Vector3(-0.8,3.06,-0.5), 0.30,0.26,0.14, Color("9a968c"), 8, "stone") # R106 chimney cap
 func _build_octstore(p: Vector3, stone: Color) -> void:
 	cyl(p+Vector3(0,0.3,0), 1.45,1.5,0.6, stone, 8, "stone")
 	cyl(p+Vector3(0,1.55,0), 1.32,1.26,1.95, stone, 8, "stone")
@@ -1368,6 +1373,10 @@ func _build_octstore(p: Vector3, stone: Color) -> void:
 	add_mesh(cone3, Transform3D(Basis.from_euler(Vector3(sin(p.x*0.9)*0.06,0,cos(p.z)*0.06)), p+Vector3(0,2.72,0)), Color("9c4a34"), "roofp"); tri_total += 64
 	cyl(p+Vector3(0,3.25,0), 0.4,0.46,0.5, stone, 8, "stone")
 	box(p+Vector3(0,1.0,1.34), Vector3(0.8,1.7,0.1), Color("54381f"))
+	box(p+Vector3(0,1.95,1.36), Vector3(0.95,0.15,0.11), Color("54381f"), 0,0,0, "timber") # R106 door lintel
+	for ow106 in [-0.72, 0.72]:
+		box(p+Vector3(sin(ow106)*1.31, 1.72, cos(ow106)*1.31), Vector3(0.5,0.6,0.07), Color("54381f"), ow106, 0, 0, "timber")
+		box(p+Vector3(sin(ow106)*1.34, 1.72, cos(ow106)*1.34), Vector3(0.38,0.48,0.08), Color("ffd98a"), ow106) # R106 drum windows
 	box(p+Vector3(1.75,0.35,0.6), Vector3(0.6,0.6,0.6), Color("a67c4e"), 0.4); cyl(p+Vector3(1.7,0.42,-0.35), 0.3,0.34,0.85, Color("8a5f36"), 8)
 func _build_aframe(p: Vector3, roof: Color, stone: Color) -> void:
 	box(p+Vector3(0,0.15,0), Vector3(2.6,0.3,2.2), stone, 0,0,0, "stone")
@@ -1379,7 +1388,11 @@ func _build_aframe(p: Vector3, roof: Color, stone: Color) -> void:
 	_face_patch(p+Vector3(rng105a.randf_range(-0.3, 0.3), 0.58 + rng105a.randf_range(-0.08, 0.08), 0.97), Vector3(1,0,0), Vector3(0,1,0), rng105a.randf_range(1.3, 2.0), rng105a.randf_range(0.55, 0.8), 10700 + absi(int(p.x)), [Color("f5ecd2"), Color("d3bd96"), Color("d8c49c"), Color("bfa87e")][rng105a.randi_range(0, 3)], "plaster", 2)
 	roof2(p+Vector3(0,0.92,0), 3.3, 2.6, 2.15, 0.18, roof)
 	box(p+Vector3(0,0.75,1.02), Vector3(0.66,1.25,0.08), Color("6e4a2c"))
-	box(p+Vector3(0.62,2.9,-0.3), Vector3(0.36,0.9,0.36), stone, 0,0,0, "stone")
+	box(p+Vector3(0,1.44,1.03), Vector3(0.82,0.14,0.10), Color("54381f"), 0,0,0, "timber") # R106 door lintel
+	for aw106 in [-0.74, 0.74]:
+		box(p+Vector3(aw106, 0.66, 0.97), Vector3(0.56,0.64,0.06), Color("54381f"), 0,0,0, "timber")
+		box(p+Vector3(aw106, 0.66, 1.00), Vector3(0.44,0.52,0.07), Color("ffd98a") if rng105a.randf() > 0.22 else Color("3d2b18")) # R106 windows
+	box(p+Vector3(0.62,2.9,-0.3), Vector3(0.36,0.9,0.36), stone, 0,0,0, "stone"); box(p+Vector3(0.62,3.40,-0.3), Vector3(0.52,0.13,0.52), stone.darkened(0.15), 0,0,0, "stone") # R106 chimney cap
 func _build_hut(p: Vector3, stone: Color) -> void:
 	add_mesh(noised_box(2.0,1.4,1.8,0.09,p.x*1.3+p.z), Transform3D(Basis.IDENTITY, p+Vector3(0,0.7,0)), Color("cbb489")); tri_total += 108
 	var rng105h := RandomNumberGenerator.new(); rng105h.seed = 10670 + absi(int(p.x*23.0 + p.z*41.0)) # R105 irregular hut framing
@@ -1389,6 +1402,13 @@ func _build_hut(p: Vector3, stone: Color) -> void:
 	if rng105h.randf() > 0.3: box(p+Vector3(0, 0.72 + rng105h.randf_range(-0.16, 0.16), 0.86), Vector3(1.86, rng105h.randf_range(0.12, 0.19), 0.09), Color("54381f"), 0, rng105h.randf_range(-0.02, 0.02), 0, "timber")
 	_face_patch(p+Vector3(rng105h.randf_range(-0.28, 0.28), 0.72 + rng105h.randf_range(-0.1, 0.1), 0.92), Vector3(1,0,0), Vector3(0,1,0), rng105h.randf_range(1.1, 1.7), rng105h.randf_range(0.6, 0.95), 10750 + absi(int(p.x)), [Color("f5ecd2"), Color("d3bd96"), Color("d8c49c"), Color("bfa87e")][rng105h.randi_range(0, 3)], "plaster", 2)
 	box(p+Vector3(0,0.65,0.92), Vector3(0.65,1.1,0.08), Color("3d2b18"))
+	box(p+Vector3(0,1.26,0.93), Vector3(0.80,0.13,0.10), Color("54381f"), 0,0,0, "timber") # R106 door lintel
+	for hw106 in [-0.64, 0.64]:
+		box(p+Vector3(hw106, 0.88, 0.90), Vector3(0.52,0.60,0.06), Color("54381f"), 0,0,0, "timber")
+		box(p+Vector3(hw106, 0.88, 0.93), Vector3(0.40,0.48,0.07), Color("ffd98a") if rng105h.randf() > 0.22 else Color("3d2b18")) # R106 windows (hut was door-only)
+		box(p+Vector3(hw106 + (0.32 if hw106 > 0.0 else -0.32), 0.88, 0.91), Vector3(0.13,0.52,0.05), Color("5d7a34")) # shutter
+	if rng105h.randf() > 0.4: # R106 seeded stone chimney with cap through the thatch
+		box(p+Vector3(0.55,2.25,-0.35), Vector3(0.36,0.95,0.36), stone, 0,0,0, "stone"); box(p+Vector3(0.55,2.78,-0.35), Vector3(0.50,0.12,0.50), stone.darkened(0.15), 0,0,0, "stone")
 	var cone4 := CylinderMesh.new(); cone4.bottom_radius=1.75; cone4.top_radius=0.25; cone4.height=1.5; cone4.radial_segments=10
 	add_mesh(cone4, Transform3D(Basis.from_euler(Vector3(sin(p.x)*0.06,0,cos(p.z*1.2)*0.06)), p+Vector3(sin(p.z)*0.06,2.05,0)), Color("b98a35"), "thatch"); tri_total += 80
 	for ri in 3: cyl(p+Vector3(0,1.55+float(ri)*0.38,0), 1.55-float(ri)*0.38, 1.45-float(ri)*0.38, 0.12, Color("8f6a2a"), 10)
