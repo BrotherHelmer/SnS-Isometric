@@ -28,7 +28,13 @@ const PT := "res://art_test/target_style/textures_painted/"
 const TEX := {"meadow":PT+"grass_painted.png","dirt":PT+"dirt_painted.png","stone":PT+"stone_painted.png","plaster":PT+"plaster_painted.png","timber":PT+"wood_painted.png","slate":PT+"roof_painted.png","rock":PT+"rock_painted.png","thatch":PT+"thatch_painted.png","leafp":PT+"foliage_painted.png","roofp":PT+"roof_painted.png"}
 func mat_col(c: Color) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new(); m.albedo_color = c; m.roughness = 1.0; m.albedo_texture = load(PT + "grain_painted.png"); m.uv1_scale = Vector3(1.5,1.5,1); return m
-func mat_for(key: String, c: Color) -> StandardMaterial3D:
+func mat_for(key: String, c: Color) -> Material:
+	var tx0: String = surf_tex.get(key, "")
+	if tx0 == "stone": # R90 per-face warmth at material root (world-normal warm/cool, no overlay slabs)
+		var sm := ShaderMaterial.new(); var sh := Shader.new()
+		sh.code = "shader_type spatial;\nuniform sampler2D tex : source_color, repeat_enable, filter_linear_mipmap;\nuniform vec4 tint : source_color;\nvarying vec3 wn;\nvoid vertex() { wn = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz); }\nvoid fragment() { float lf = clamp(dot(normalize(wn), normalize(vec3(-0.45, 0.75, 0.50))) * 0.5 + 0.5, 0.0, 1.0); vec3 warm = mix(vec3(0.90, 0.96, 1.05), vec3(1.10, 1.01, 0.86), lf); ALBEDO = texture(tex, UV * 0.55).rgb * tint.rgb * warm; ROUGHNESS = 0.95; }"
+		sm.shader = sh; sm.set_shader_parameter("tex", load(TEX["stone"])); sm.set_shader_parameter("tint", Color(1.06,0.99,0.88).lerp(c, 0.45))
+		return sm
 	var m := mat_col(c); var tx: String = surf_tex.get(key, "")
 	if tx != "" and TEX.has(tx):
 		m.albedo_texture = load(TEX[tx]); m.uv1_scale = Vector3(3,3,1) if tx=="meadow" else (Vector3(0.55,0.55,1) if tx in ["stone","plaster"] else (Vector3(1,1,1) if tx in ["roofp","thatch","rock"] else Vector3(1.5,1.5,1))) # R77 larger face features; m.albedo_color = Color(0.88,0.87,0.85)
@@ -1020,7 +1026,7 @@ func _mini(mp: Vector3, tc: Color) -> void:
 func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 	add_mesh(noised_box(4.7,2.4,3.6,0.07,4.2), Transform3D(Basis.IDENTITY, p+Vector3(0,1.2,0)), stone, "stone"); tri_total += 108
 	for cy in [0.55, 1.05, 1.55]: box(p+Vector3(0,cy,1.82), Vector3(4.6,0.07,0.05), stone.darkened(0.12))
-	add_mesh(noised_box(1.9,2.7,1.9,0.06,7.9), Transform3D(Basis.IDENTITY, p+Vector3(0,2.35,0)), stone, "stone"); tri_total += 108
+	add_mesh(noised_box(1.9,2.7,1.9,0.06,7.9), Transform3D(Basis.IDENTITY, p+Vector3(0,2.35,0)), stone.lightened(0.06), "stone"); tri_total += 108 # R90 keep warmer family
 	# stepped side wing + deformed prism roof over rear keep: uneven central roofline
 	box(p+Vector3(2.95,0.85,0.55), Vector3(1.35,1.7,2.3), stone, 0,0,0, "stone")
 	cyl(p+Vector3(2.95,2.15,0.55), 0.98,0.08,0.9, roof, 9, "roofp")
@@ -1029,7 +1035,7 @@ func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 	var ths := [3.3, 3.75, 3.05, 3.5]
 	for oi2 in 4:
 		var off: Vector2 = [Vector2(-1.85,-1.45),Vector2(1.85,-1.45),Vector2(-1.85,1.45),Vector2(1.85,1.45)][oi2]
-		cyl(p+Vector3(off.x,ths[oi2]/2.0,off.y), 0.58,0.45,ths[oi2], stone, 8, "stone")
+		cyl(p+Vector3(off.x,ths[oi2]/2.0,off.y), 0.58,0.45,ths[oi2], stone.darkened(0.07), 8, "stone") # R90 towers cooler family
 		cyl(p+Vector3(off.x,3.95,off.y), 0.72,0.02,1.7, roof, 10, "roofp")
 		cyl(p+Vector3(off.x,3.25,off.y), 0.88,0.72,0.14, roof.darkened(0.22), 10); cyl(p+Vector3(off.x,3.62,off.y), 0.62,0.46,0.14, roof.darkened(0.22), 10)
 		for ts in 3: box(p+Vector3(off.x+0.63,1.0+float(ts)*0.8,off.y), Vector3(0.1,0.65,0.34), stone.darkened(0.12))
