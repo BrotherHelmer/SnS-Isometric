@@ -95,15 +95,15 @@ func _h(x: float, z: float) -> float:
 	var mask := clampf((d - 10.0) / 13.0, 0.0, 1.0); mask = mask * mask
 	var roll := 0.55 * sin(x * 0.23) * cos(z * 0.19) + 0.35 * sin(x * 0.09 + 1.7) * sin(z * 0.13)
 	var back := clampf((-z - 6.0) / 7.0, 0.0, 1.0); back = back * back
-	var hill := back * 15.0 * clampf(1.35 - absf(x - 15.0) / 20.0, 0.0, 1.0) * (0.80 + 0.40 * (0.5 + 0.5*sin(-z*1.05 + x*0.25)))
+	var hill := back * 14.0 * clampf(1.25 - absf(x - 19.5) / 15.0, 0.0, 1.0) * (0.80 + 0.40 * (0.5 + 0.5*sin(-z*1.05 + x*0.25))) # R70: mass shifted to NE corner
 	var left := clampf(( -x - 14.0) / 16.0, 0.0, 1.0)
 	var jag := mask * (0.22*sin(x*1.9+z*0.7) + 0.14*sin(x*3.7-z*2.3)) * clampf(back*2.0,0.0,1.0)
 	var crag := back * (0.85*sin(x*4.1+z*2.7) + 0.55*sin(x*7.3-z*4.9) + 0.35*sin(x*12.0+z*9.0) + 0.22*sin(x*19.0-z*15.0)) * clampf(hill/4.0, 0.0, 1.0)
 	var sd := Vector2(x-9.0, z+8.8).length(); var shoulder := clampf(1.0 - sd/3.6, 0.0, 1.0); shoulder = shoulder * shoulder
-	var east := clampf((x - 17.0) / 3.5, 0.0, 1.0)
-	var lobe := pow(east, 2.2) * clampf(1.0 - absf(z + 4.0) / 18.0, 0.0, 1.0) * 9.0 * (0.75 + 0.45 * (0.5 + 0.5*sin(-z*0.9 + x*0.3)))
-	var ne := clampf((x - 13.0) / 8.0, 0.0, 1.0); var nf := clampf((-z - 7.0) / 9.0, 0.0, 1.0)
-	var nemass := pow(ne, 2.4) * pow(nf, 2.0) * 11.0 * (0.80 + 0.40 * (0.5 + 0.5*sin(x*0.4 - z*0.3)))
+	var east := clampf((x - 20.0) / 4.5, 0.0, 1.0)
+	var lobe := pow(east, 2.0) * clampf(1.0 - absf(z + 10.0) / 11.0, 0.0, 1.0) * 3.2 * (0.75 + 0.45 * (0.5 + 0.5*sin(-z*0.9 + x*0.3))) # R70: former frame-cutting wall demoted to NE foothill
+	var ne := clampf((x - 10.5) / 9.5, 0.0, 1.0); var nf := clampf((-z - 6.0) / 10.0, 0.0, 1.0)
+	var nemass := pow(ne, 2.0) * pow(nf, 1.8) * 13.5 * (0.80 + 0.40 * (0.5 + 0.5*sin(x*0.4 - z*0.3))) # R70: one corner slope, peak receding NE
 	return mask * roll + hill + lobe + nemass + left * left * 1.6 * mask + jag + crag * (1.0 - shoulder*0.85) + shoulder * 1.15
 var _canopy_sphere: ArrayMesh = null
 func canopy_sphere() -> ArrayMesh:
@@ -217,14 +217,16 @@ func _build_terrain() -> void:
 				c = c.darkened(crack * 0.30)
 				var lich := 0.5 + 0.5*sin(v.x*1.4-0.5) * sin(v.y*1.1+2.1)
 				if lich > 0.52: c = c.lerp(Color("5f8140"), clampf((lich-0.52)*1.8,0,0.85))
-			for feat in [Vector2(10.5,-8.5), Vector2(14.2,-6.9), Vector2(9.0,-8.8)]:
+			for feat in [Vector2(14.5,-11.5), Vector2(17.0,-10.2), Vector2(13.0,-11.8)]:
 				var fd := Vector2(v.x-feat.x, v.y-feat.y).length()
 				if fd < 4.4: c = c.lerp(dirt, (1.0-fd/4.4) * 0.50)
 			var snowpatch := 0.5 + 0.5*sin(v.x*1.9+1.3) * sin(v.y*1.4-0.7)
-			if h > 4.2 and slope <= 0.55:
-				var sf := clampf((snowpatch-0.34)*4.0, 0.0, 1.0) * clampf((h-2.7)*2.5, 0.0, 1.0)
-				c = c.lerp(Color("9fb2c2"), sf)
+			if h > 4.6 and v.y < -7.0 and slope <= 0.50: # R70: pale slab was snow lerp on low SE plateau tops
+				var sf := clampf((snowpatch-0.34)*4.0, 0.0, 1.0) * clampf((h-3.4)*1.6, 0.0, 1.0)
+				c = c.lerp(Color("eef1ea"), sf * 0.85)
 			if v.x > 20.5 and h > 5.0: c = c.lerp(rock, 0.62)
+			var lum2 := (c.r + c.g + c.b) / 3.0 # R70 muted painted palette
+			c = Color(lerpf(c.r, lum2, 0.10), lerpf(c.g, lum2, 0.10), lerpf(c.b, lum2, 0.10))
 			verts[vi] = Vector3(v.x, h, v.y); cols[vi] = c
 			uvs[vi] = Vector2(v.x*0.15, h*0.15) if slope > 0.55 else v*0.07
 	var idx := PackedInt32Array()
@@ -256,7 +258,7 @@ func _setup() -> void:
 	var sky := Sky.new(); var smat := ProceduralSkyMaterial.new(); smat.sky_top_color = Color("8fc3e8"); smat.sky_horizon_color = Color("f2e3c2"); smat.ground_bottom_color = Color("5d6b46"); smat.ground_horizon_color = Color("d9c9a4"); sky.sky_material = smat; env.sky = sky
 	env.background_mode = Environment.BG_SKY
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY; env.ambient_light_energy = amb * 0.55; env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
-	env.fog_enabled = true; env.fog_light_color = Color("f2e3c2"); env.fog_density = 0.0005; env.tonemap_mode = Environment.TONE_MAPPER_ACES; env.adjustment_enabled = true; env.adjustment_saturation = 1.10; env.adjustment_contrast = 1.08; env.adjustment_brightness = 1.02; env.glow_enabled = false; env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT;
+	env.fog_enabled = true; env.fog_light_color = Color("f2e3c2"); env.fog_density = 0.0005; env.tonemap_mode = Environment.TONE_MAPPER_ACES; env.adjustment_enabled = true; env.adjustment_saturation = 0.93; env.adjustment_contrast = 1.04; env.adjustment_brightness = 1.00 # R70 muted toward target; env.glow_enabled = false; env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT;
 	we.environment = env; add_child(we)
 	var pool := OmniLight3D.new(); pool.position = Vector3(0,4.5,1); pool.light_color = Color("ffd9a0"); pool.light_energy = 0.6; pool.omni_range = 14.0; pool.shadow_enabled = false; add_child(pool)
 	var pool2 := OmniLight3D.new(); pool2.position = Vector3(17,8,-5); pool2.light_color = Color("ffd9a0"); pool2.light_energy = 0.55; pool2.omni_range = 13.0; pool2.shadow_enabled = false; add_child(pool2)
@@ -506,9 +508,9 @@ func _build_watchtower(tp: Vector3) -> void:
 	box(tp+Vector3(0,5.15,0.75), Vector3(0.44,0.5,0.06), Color("ffd98a"))
 	cyl(tp+Vector3(0,6.25,0), 1.35,0.04,1.15, Color("9c4a34"), 8, "roofp")
 func _hill_content() -> void:
-	_build_mine(Vector3(10.5, _h(10.5,-8.5)+0.55, -8.5))
+	_build_mine(Vector3(14.5, _h(14.5,-11.5)+0.55, -11.5)) # R70 mine on corner slope
 	_build_watchtower(Vector3(14.2, _h(14.2,-6.9)-0.15, -6.9))
-	var sw := [Vector2(2,-4.5), Vector2(6,-5.2), Vector2(5.2,-6.8), Vector2(8.6,-7.2), Vector2(10.2,-8.0)]
+	var sw := [Vector2(2,-4.5), Vector2(6,-5.2), Vector2(5.2,-6.8), Vector2(8.6,-7.6), Vector2(11.5,-9.3), Vector2(13.8,-11.0)] # R70 stone road to mine
 	for si in sw.size()-1:
 		var a3: Vector2 = sw[si]; var b3: Vector2 = sw[si+1]; var mid3 := (a3+b3)*0.5; var dir3 := b3-a3
 		box(Vector3(mid3.x, _h(mid3.x,mid3.y)+0.06, mid3.y), Vector3(1.15,0.07,dir3.length()+0.7), Color("c9ab72"), atan2(dir3.x,dir3.y), 0,0, "dirt")
