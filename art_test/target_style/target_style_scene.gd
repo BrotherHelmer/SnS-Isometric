@@ -245,6 +245,13 @@ func _build_terrain() -> void:
 				var sf := clampf((snowpatch-0.34)*4.0, 0.0, 1.0) * clampf((h-3.4)*1.6, 0.0, 1.0)
 				c = c.lerp(Color("eef1ea"), sf * 0.85)
 			if v.x > 20.5 and h > 5.0: c = c.lerp(rock, 0.62)
+			var sz120 := clampf((v.x - 7.0) / 9.0, 0.0, 1.0) * clampf((-v.y - 3.0) / 5.0, 0.0, 1.0) * clampf((h - 0.8) / 3.5, 0.0, 1.0) # R120 slope-only zone mask
+			if sz120 > 0.01:
+				var gully120 := 0.5 + 0.5 * sin(v.x*0.63 - v.y*0.91 + 1.4) * sin(v.x*0.21 + v.y*0.47 - 0.6)
+				var expose120 := 0.5 + 0.5 * sin(v.x*0.43 + v.y*0.78 - 1.1) * sin(v.x*1.13 - v.y*0.57 + 2.0)
+				if slope > 0.18: c = c.lerp(Color("8a6c42"), sz120 * clampf((slope - 0.18) * 1.25, 0.0, 0.80) * (0.35 + 0.65 * expose120)) # worn brown between grass and rock
+				if slope <= 0.42 and gully120 > 0.58: c = c.lerp(Color("5f8140"), sz120 * clampf((gully120 - 0.58) * 1.35, 0.0, 0.62)) # vegetation held in sheltered gullies
+				if h > 3.2 and slope <= 0.50 and expose120 > 0.68: c = c.lerp(Color("a89a80"), sz120 * clampf((expose120 - 0.68) * 0.90, 0.0, 0.30)) # pale scree wash below snow, not snow itself
 			var lum2 := (c.r + c.g + c.b) / 3.0 # R70 muted painted palette
 			c = Color(lerpf(c.r, lum2, 0.10), lerpf(c.g, lum2, 0.10), lerpf(c.b, lum2, 0.10))
 			verts[vi] = Vector3(v.x, h, v.y); cols[vi] = c
@@ -800,6 +807,41 @@ func _ground_patch(cx: float, cz: float, r: float, seedv: int, cbase: Color, csu
 	for si in 2: # small seated stones/clumps inside patch
 		var soff := dir * rng.randf_range(-r*0.5, r*0.5) + perp * rng.randf_range(-r*0.4, r*0.4)
 		blob(Vector3(cx+soff.x, _h(cx+soff.x, cz+soff.y) + 0.05, cz+soff.y), Vector3(0.20, 0.10, 0.18), Color("8f7355"))
+func _slope_fan(cx: float, cz: float, r: float, seedv: int, c: Color, elong := 1.8, lift := 0.0, clasts := false, tx := "") -> void:
+	# R120: large soft slope zone - jagged four-ring fan elongated down the local fall line.
+	# Every ring vertex is seated on displaced _h (R101); the rings keep the sheet following
+	# the slope instead of chord-cutting it (v1 single-ring fans buried on convex ground).
+	var rng := RandomNumberGenerator.new(); rng.seed = seedv
+	var grad := Vector2(_h(cx+0.7,cz)-_h(cx-0.7,cz), _h(cx,cz+0.7)-_h(cx,cz-0.7))
+	var fall := -grad.normalized() if grad.length() > 0.01 else Vector2(-0.35, 0.94)
+	var side := Vector2(-fall.y, fall.x)
+	var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var n := 18; var rings: Array = []
+	for ri in 4:
+		var rf: float = [0.30, 0.58, 0.82, 1.0][ri]
+		var ring: Array = []
+		for i in n:
+			var a := TAU * float(i) / float(n)
+			var jr := rng.randf_range(0.68, 1.16) if ri == 3 else rng.randf_range(0.86, 1.08)
+			var dir: Vector2 = (side * (cos(a) * r * 0.86) + fall * (sin(a) * r * elong)) * rf * jr
+			ring.append(Vector3(cx + dir.x, _h(cx + dir.x, cz + dir.y) + float([0.100, 0.088, 0.076, 0.064][ri]) + lift, cz + dir.y))
+		rings.append(ring)
+	var c0 := Vector3(cx, _h(cx, cz) + 0.112 + lift, cz)
+	for i in n:
+		var i2 := (i + 1) % n
+		var tris: Array = [[c0, rings[0][i2], rings[0][i]]]
+		for ri in 3:
+			tris.append([rings[ri][i], rings[ri+1][i2], rings[ri+1][i]])
+			tris.append([rings[ri][i], rings[ri][i2], rings[ri+1][i2]])
+		for tri in tris:
+			var fn: Vector3 = (tri[1] - tri[0]).cross(tri[2] - tri[0]).normalized()
+			if fn.y < 0.0: fn = -fn
+			for v in tri: st.set_normal(fn); st.set_uv(Vector2(0.5, 0.5)); st.add_vertex(v)
+	add_mesh(st.commit(), Transform3D.IDENTITY, c, tx); tri_total += n * 7
+	if clasts:
+		for ci in 3:
+			var coff := fall * rng.randf_range(-r * 0.9, r * 1.15) + side * rng.randf_range(-r * 0.45, r * 0.45)
+			blob(Vector3(cx + coff.x, _h(cx + coff.x, cz + coff.y) + 0.07, cz + coff.y), Vector3(rng.randf_range(0.18, 0.34), 0.10, rng.randf_range(0.16, 0.30)), Color("8f7355") if ci % 2 == 0 else Color("9a968c"))
 func _face_patch(o: Vector3, right: Vector3, up: Vector3, w: float, h: float, seedv: int, cbase: Color, tx := "", pattern := 0) -> void:
 	# R78: painted face patch - jagged multi-layer fan (irregular stepped edge, internal sub-tones), UV-mapped so stone/plaster texture shows inside
 	var rng := RandomNumberGenerator.new(); rng.seed = seedv
@@ -1018,6 +1060,34 @@ func _top_band() -> void:
 	for cf4 in 2:
 		var cx9 := 6.5+float(cf4)*7.0; var cz9 := -13.6
 		_terrace(cx9, cz9, 5.2, 1.6, Color("86b83e") if cf4%2==0 else Color("b08d55"), "")
+	_slope_zones() # R120: scree/exposure/grass/snow-approach/mine-apron zones seated over this slope content
+func _slope_zones() -> void:
+	# R120 slope surface zones (all seated on _h, merged into existing keys, no building/tree moves)
+	# Exposed-rock washes following the fall line between ledge clusters.
+	for rp120 in [Vector3(19.2,-5.7,2.4), Vector3(22.7,-7.2,2.8), Vector3(18.3,-11.8,2.5), Vector3(24.6,-12.8,2.9), Vector3(16.2,-8.6,2.1), Vector3(26.8,-9.2,2.4)]:
+		_slope_fan(rp120.x, rp120.y, rp120.z, int(12100.0 + rp120.x * 13.0 - rp120.y * 7.0), Color("8f7355"), 1.9, 0.0, true, "rock")
+		_slope_fan(rp120.x, rp120.y, rp120.z * 0.56, int(12200.0 + rp120.x * 17.0), Color("6e5638"), 1.7, 0.018, false)
+	# Scree fans directly downhill of the R102/R103 shattered ledges (same centres, offset down-slope).
+	for li120 in [Vector3(18.0,-6.5,1.9), Vector3(21.5,-7.5,1.7), Vector3(25.0,-8.5,2.1), Vector3(17.0,-9.0,1.6), Vector3(20.5,-10.0,2.2), Vector3(24.0,-11.0,1.8), Vector3(17.5,-12.5,1.9), Vector3(21.0,-13.0,2.0), Vector3(25.5,-13.5,1.6), Vector3(9.0,-8.0,1.6), Vector3(11.0,-13.5,2.0), Vector3(27.0,-10.5,1.9), Vector3(19.0,-14.5,1.7), Vector3(23.0,-15.0,2.0)]:
+		var scc: Color = [Color("a89a80"), Color("9a8a76"), Color("8a7a66")][int(absf(li120.x + li120.y)) % 3]
+		_slope_fan(li120.x - 0.4, li120.y + 0.95, li120.z, int(12300.0 + li120.x * 19.0 - li120.y * 11.0), Color("c9b18a"), 1.65, 0.006, true)
+		_slope_fan(li120.x - 0.4, li120.y + 0.95, li120.z * 0.55, int(12350.0 + li120.x * 19.0 - li120.y * 11.0), scc, 1.55, 0.024, false)
+	# Grass encroachment tongues climbing gullies from the slope foot (kept off the mine itself).
+	for gt120 in [Vector3(15.6,-3.8,1.25), Vector3(20.2,-9.2,1.45), Vector3(23.2,-11.8,1.35), Vector3(14.8,-14.2,1.20), Vector3(25.9,-6.8,1.30), Vector3(12.8,-6.2,1.10)]:
+		_slope_fan(gt120.x, gt120.y, gt120.z, int(12400.0 + gt120.x * 23.0 - gt120.y * 13.0), Color("7fae4a"), 2.15, 0.010, false)
+		_slope_fan(gt120.x, gt120.y, gt120.z * 0.55, int(12500.0 + gt120.x * 29.0), Color("4e7d26"), 1.95, 0.026, false)
+	# Pale scree approach below the crest snow (rock wash, snow geometry untouched).
+	for sn120 in [Vector3(20.5,-14.8,1.45), Vector3(25.2,-13.8,1.30), Vector3(17.8,-15.4,1.20), Vector3(27.5,-12.0,1.35)]:
+		_slope_fan(sn120.x, sn120.y, sn120.z, int(12600.0 + sn120.x * 31.0 - sn120.y * 17.0), Color("a89a80"), 1.55, 0.012, true)
+		_slope_fan(sn120.x, sn120.y, sn120.z * 0.52, int(12700.0 + sn120.x * 37.0), Color("9a968c"), 1.45, 0.028, false)
+	# Camera-facing southwest face: talus below the cliff planes + scree on the open face band.
+	for tf120 in [Vector3(9.0,-9.6,1.8), Vector3(14.0,-10.6,2.0), Vector3(6.0,-8.8,1.5), Vector3(16.8,-4.6,1.7), Vector3(19.2,-8.9,1.9), Vector3(17.0,-11.6,1.8)]:
+		_slope_fan(tf120.x, tf120.y, tf120.z, int(12900.0 + tf120.x * 41.0 - tf120.y * 19.0), Color("c9b18a"), 1.70, 0.008, true)
+		_slope_fan(tf120.x, tf120.y, tf120.z * 0.55, int(12950.0 + tf120.x * 43.0), Color("9a8a76"), 1.60, 0.026, false)
+	_slope_fan(13.4, -4.6, 1.20, 12980, Color("7fae4a"), 2.05, 0.010, false) # grass tongue on the open face
+	# Worn mine apron downhill of the entrance/cart, tying mine to the stone road.
+	_slope_fan(14.3, -10.1, 2.05, 12801, Color("8a6c42"), 1.75, 0.014, true)
+	_slope_fan(14.3, -10.1, 1.15, 12802, Color("a8895a"), 1.60, 0.030, false)
 func _aprons() -> void:
 	for ap2 in [Vector3(10.5,_h(10.5,-8.5),-8.5), Vector3(14.2,_h(14.2,-6.9),-6.9), Vector3(19.0,_h(19.0,-13.8),-13.8)]:
 		blob(ap2+Vector3(0,0.03,0), Vector3(3.1,0.055,2.5), Color("8a6c42"))
