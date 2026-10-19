@@ -31,7 +31,9 @@ func _run() -> void:
 	var simulation = game.simulation_host.simulation
 	for resource_type in [Defs.RESOURCE_WOOD, Defs.RESOURCE_PLANKS, Defs.RESOURCE_STONE]:
 		simulation.central_inventory[resource_type] = maxi(50, int(simulation.central_inventory.get(resource_type, 0)))
-	var build_button: Button = game.build_buttons.get(Defs.BUILDING_LUMBER_CAMP)
+	# build_buttons maps each type to every Button for it (palette + strip).
+	var lumber_buttons: Array = game.build_buttons.get(Defs.BUILDING_LUMBER_CAMP, [])
+	var build_button: Button = lumber_buttons[0] if not lumber_buttons.is_empty() else null
 	_check(failures, build_button != null and String(build_button.tooltip_text).contains("Cost"), "build palette button carries cost and purpose guidance")
 	build_button.pressed.emit()
 	_check(failures, game.placement_type == Defs.BUILDING_LUMBER_CAMP and game.placement_ghost.visible, "build button enters readable placement mode")
