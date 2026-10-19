@@ -64,15 +64,20 @@ func blob(p: Vector3, s: Vector3, c: Color, tx := "") -> void:
 	var xf3 := Transform3D(Basis.IDENTITY.scaled(s), p)
 	if house_mode: xf3 = house_xf * xf3
 	add_mesh(m, xf3, c, tx)
-func roof2(p: Vector3, w: float, d: float, h: float, thick: float, c: Color) -> void:
+func roof2(p: Vector3, w: float, d: float, h: float, thick: float, c: Color, v121 := 0.0) -> void:
 	# DEFORMED prism: sagged ridge, uneven eaves/ridge ends, slight twist. v: 0 eave -> 1 ridge
 	var hw := w/2.0
 	var org := house_xf.origin if house_mode else p
 	var seedv := org.x*1.71 + org.z*2.37
 	var e1 := sin(seedv*1.7)*0.12; var e2 := cos(seedv*1.31)*0.12; var tw := sin(seedv*0.9)*0.10
 	var ec0 := sin(seedv)*0.08; var ec1 := cos(seedv*2.1)*0.08; var ec2 := sin(seedv*1.2+2.0)*0.08; var ec3 := cos(seedv*0.7+1.0)*0.08
+	var rng121 := RandomNumberGenerator.new(); rng121.seed = 12100 + absi(int(org.x*41.0 + org.z*67.0)) # R121 seeded roof-form variety
+	var sag121 := 0.13
+	if v121 > 0.0:
+		sag121 = rng121.randf_range(0.06, 0.24); tw *= rng121.randf_range(0.7, 1.9)
+		ec0 *= rng121.randf_range(0.8, 2.1); ec1 *= rng121.randf_range(0.8, 2.1); ec2 *= rng121.randf_range(0.8, 2.1); ec3 *= rng121.randf_range(0.8, 2.1)
 	var A := Vector3(-hw,ec0,-d/2); var B := Vector3(-hw,ec3,d/2); var E := Vector3(hw,ec1,-d/2); var F := Vector3(hw,ec2,d/2)
-	var C := Vector3(tw,h+e1,-d/2); var D := Vector3(-tw,h+e2,d/2); var M := Vector3(0,h+(e1+e2)*0.5-0.13,0)
+	var C := Vector3(tw,h+e1,-d/2); var D := Vector3(-tw,h+e2,d/2); var M := Vector3(0,h+(e1+e2)*0.5-sag121,0)
 	var Am := Vector3(-hw,(ec0+ec3)*0.5,0); var Em := Vector3(hw,(ec1+ec2)*0.5,0)
 	var verts := PackedVector3Array(); var norms := PackedVector3Array(); var uvs := PackedVector2Array(); var cols := PackedColorArray()
 	var quads := [[A,C,M,Am,0.0],[Am,M,D,B,1.0],[F,D,M,Em,0.0],[Em,M,C,E,1.0]]
@@ -89,6 +94,15 @@ func roof2(p: Vector3, w: float, d: float, h: float, thick: float, c: Color) -> 
 		var n2: Vector3 = (tri[1]-tri[0]).cross(tri[2]-tri[0]).normalized()
 		for idx in 3: gs.set_normal(n2); gs.set_uv(Vector2(0.5,0.5)); gs.add_vertex(tri[idx])
 	add_mesh(gs.commit(), house_xf * Transform3D(Basis.IDENTITY, p) if house_mode else Transform3D(Basis.IDENTITY, p), Color("e8d9b8"), "plaster"); tri_total += 2
+	if v121 > 0.0: # R121 gable timber (king post + seeded brace) on the plaster gable ends
+		for gz in [-d/2.0, d/2.0]:
+			box(p+Vector3(tw*0.5, h*0.40, gz), Vector3(0.10, h*0.76, 0.08), Color("54381f"), 0, 0, 0, "timber")
+			if rng121.randf() > 0.35: box(p+Vector3(tw*0.5, h*0.58, gz), Vector3(0.09, h*0.52, 0.07), Color("54381f"), 0, rng121.randf_range(0.45, 0.7) * (1.0 if gz > 0.0 else -1.0), 0, "timber")
+	if v121 > 1.5: # R121 segmented ridge cap following the sag (aframes had none)
+		for rz2 in [-0.30, 0.02, 0.32]:
+			var t01: float = rz2 + 0.5
+			var ry121: float = lerpf(h + e1, h + e2, t01) - sag121 * sin(PI * t01) * 0.7
+			box(p+Vector3(tw*(t01-0.5), ry121 + 0.07, rz2*d), Vector3(0.17, 0.09, d*0.30), c.darkened(0.35))
 	# eave shadow line
 	box(p+Vector3(0,0.02,0), Vector3(w+0.18,0.17,d+0.18), c.darkened(0.35))
 func flat_mesh(mesh: Mesh) -> ArrayMesh:
@@ -1365,9 +1379,10 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	# lean-to (side alternates by variant; vi==1 also reads L-shaped)
 	box(Vector3(lean*(1.16*wf+0.42),0.55,0), Vector3(0.95,1.1,1.6), Color("e0cfa8"), 0,0,0, "plaster")
 	box(Vector3(lean*(1.16*wf+0.42),1.2,0), Vector3(1.15,0.09,1.85), Color("9c4a34"), 0, lean*0.20, 0)
-	var pitch2: float = [1.32, 1.10, 1.55][vi]
-	roof2(Vector3(0,top,0), 3.62*wf, 2.8, pitch2, 0.18, roof)
-	box(Vector3(0,top+pitch2+0.03,-0.7), Vector3(0.15,0.1,1.1), roof.darkened(0.15)); box(Vector3(0,top+pitch2+0.07,0.45), Vector3(0.15,0.1,1.2), roof.darkened(0.15))
+	var pitch2: float = [1.32, 1.10, 1.55][vi] * rng105.randf_range(0.92, 1.08) # R121 per-house pitch
+	var rw121 := 3.62*wf * rng105.randf_range(0.94, 1.08); var rd121 := 2.8 * rng105.randf_range(0.95, 1.06) # R121 overhang/plan variety
+	roof2(Vector3(0,top,0), rw121, rd121, pitch2, 0.18, roof, 1.0)
+	box(Vector3(0,top+pitch2+0.03,-0.7 + rng105.randf_range(-0.25, 0.25)), Vector3(0.15,0.1,rng105.randf_range(0.8, 1.4)), roof.darkened(0.15)); box(Vector3(0,top+pitch2+0.07,0.45 + rng105.randf_range(-0.25, 0.25)), Vector3(0.15,0.1,rng105.randf_range(0.8, 1.4)), roof.darkened(0.15))
 	box(Vector3(0,top+pitch2+0.13,0), Vector3(0.09,0.05,2.62), roof.lightened(0.15))
 	# modelled shingle rows: thin offset slabs following both slopes
 	var hw2 := 1.5*wf; var sang := atan2(pitch2, hw2)
@@ -1417,7 +1432,7 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 		box(Vector3(-1.21*wf, 0.40 + rng85.randf_range(-0.03, 0.03), -0.55+float(fb84)*0.55), Vector3(rng85.randf_range(0.05, 0.10), rng85.randf_range(0.22, 0.36), rng85.randf_range(0.34, 0.50)), stone.lightened(0.07) if fb84%2==0 else stone.darkened(0.12), 0,0,0, "stone")
 	box(Vector3(-(0.16 + rng105.randf_range(0.0, 0.34))*wf, cy, 1.01), Vector3(rng105.randf_range(0.11, 0.16), wh*0.92, 0.06), Color("54381f"), 0, rng105.randf_range(-0.025, 0.025), 0, "timber")
 	if dense105 > 0.18: box(Vector3((0.16 + rng105.randf_range(0.0, 0.34))*wf, cy, 1.01), Vector3(rng105.randf_range(0.11, 0.16), wh*0.92, 0.06), Color("54381f"), 0, rng105.randf_range(-0.025, 0.025), 0, "timber")
-	box(Vector3(0, top+0.02, 1.43), Vector3(3.05*wf, 0.10, 0.13), roof.darkened(0.35))
+	box(Vector3(0, top+0.02, rd121/2.0 + 0.03), Vector3(rw121*0.84, 0.10, 0.13), roof.darkened(0.35)) # R121 eave trim follows varied plan
 	box(Vector3(-0.62*wf,top+0.67,0.68), Vector3(0.52,0.52,0.42), Color("e8d9b8"), 0,0,0, "plaster")
 	box(Vector3(-0.62*wf,top+0.77,0.90), Vector3(0.34,0.3,0.05), Color("ffd98a"))
 	box(Vector3(-0.62*wf,top+1.01,0.68), Vector3(0.68,0.1,0.56), roof)
@@ -1450,6 +1465,7 @@ func _build_roundhouse(p: Vector3, roof: Color) -> void:
 	box(p+Vector3(0,2.42,0), Vector3(2.5,0.16,2.5), Color("54381f"))
 	var cone1 := CylinderMesh.new(); cone1.bottom_radius=1.62; cone1.top_radius=0.12; cone1.height=1.55 + 0.38*sin(p.x*1.9); cone1.radial_segments=12
 	add_mesh(cone1, Transform3D(Basis.from_euler(Vector3(sin(p.x*1.3)*0.07,0,cos(p.z*1.7)*0.07)), p+Vector3(sin(p.z)*0.08,3.25 + 0.19*sin(p.x*1.9),cos(p.x)*0.06)), roof, "roofp"); tri_total += 96
+	_cone_relief(p+Vector3(sin(p.z)*0.08, 3.25 + 0.19*sin(p.x*1.9), cos(p.x)*0.06), cone1.height, 1.62, 0.12, roof, 12100 + absi(int(p.x*7.0 + p.z*3.0)), false) # R121 village cone tile rings
 	box(p+Vector3(0,0.95,1.2), Vector3(0.62,1.5,0.1), Color("6e4a2c"))
 	box(p+Vector3(0,1.78,1.22), Vector3(0.78,0.14,0.11), Color("54381f"), 0,0,0, "timber") # R106 door lintel
 	box(p+Vector3(0.85,1.6,0.95), Vector3(0.54,0.62,0.06), Color("54381f"), 0.62, 0, 0, "timber"); box(p+Vector3(0.85,1.6,0.99), Vector3(0.42,0.5,0.08), Color("ffd98a"), 0.62)
@@ -1471,8 +1487,9 @@ func _build_roundbarn(p: Vector3, roof: Color) -> void:
 	cyl(p+Vector3(0,0.25,0), 1.62,1.68,0.5, Color("9a968c"), 14, "stone")
 	cyl(p+Vector3(0,1.25,0), 1.52,1.44,1.55, Color("a8875e"), 14, "timber")
 	box(p+Vector3(0,2.12,0), Vector3(3.2,0.15,3.2), Color("54381f"))
-	var cone2 := CylinderMesh.new(); cone2.bottom_radius=1.78; cone2.top_radius=0.14; cone2.height=1.55; cone2.radial_segments=14
-	add_mesh(cone2, Transform3D(Basis.from_euler(Vector3(cos(p.x)*0.05,0,sin(p.z*1.4)*0.05)), p+Vector3(cos(p.z)*0.07,2.95,sin(p.x)*0.05)), roof, "roofp"); tri_total += 112
+	var cone2 := CylinderMesh.new(); cone2.bottom_radius=1.78; cone2.top_radius=0.14; cone2.height=1.55 + 0.30*sin(p.x*1.7 + p.z*0.9); cone2.radial_segments=14 # R121 barn cone height variety
+	add_mesh(cone2, Transform3D(Basis.from_euler(Vector3(cos(p.x)*0.05,0,sin(p.z*1.4)*0.05)), p+Vector3(cos(p.z)*0.07,2.95 + (cone2.height-1.55)*0.5,sin(p.x)*0.05)), roof, "roofp"); tri_total += 112
+	_cone_relief(p+Vector3(cos(p.z)*0.07, 2.95 + (cone2.height-1.55)*0.5, sin(p.x)*0.05), cone2.height, 1.78, 0.14, roof, 12130 + absi(int(p.x*7.0 + p.z*3.0)), false) # R121
 	box(p+Vector3(0,0.95,1.5), Vector3(0.95,1.55,0.1), Color("54381f"))
 	box(p+Vector3(0.75,1.55,1.42), Vector3(0.52,0.54,0.06), Color("54381f"), 0.55, 0, 0, "timber"); box(p+Vector3(0.78,1.55,1.45), Vector3(0.4,0.42,0.08), Color("ffd98a"), 0.55)
 	box(p+Vector3(-0.75,1.55,1.42), Vector3(0.52,0.54,0.06), Color("54381f"), -0.55, 0, 0, "timber"); box(p+Vector3(-0.78,1.55,1.45), Vector3(0.4,0.42,0.08), Color("ffd98a"), -0.55) # R106 second window
@@ -1480,9 +1497,11 @@ func _build_roundbarn(p: Vector3, roof: Color) -> void:
 func _build_octstore(p: Vector3, stone: Color) -> void:
 	cyl(p+Vector3(0,0.3,0), 1.45,1.5,0.6, stone, 8, "stone")
 	cyl(p+Vector3(0,1.55,0), 1.32,1.26,1.95, stone, 8, "stone")
-	var cone3 := CylinderMesh.new(); cone3.bottom_radius=1.58; cone3.top_radius=0.95; cone3.height=0.75; cone3.radial_segments=8
-	add_mesh(cone3, Transform3D(Basis.from_euler(Vector3(sin(p.x*0.9)*0.06,0,cos(p.z)*0.06)), p+Vector3(0,2.72,0)), Color("9c4a34"), "roofp"); tri_total += 64
-	cyl(p+Vector3(0,3.25,0), 0.4,0.46,0.5, stone, 8, "stone")
+	var cone3 := CylinderMesh.new(); cone3.bottom_radius=1.58; cone3.top_radius=0.95; cone3.height=0.75 + 0.18*sin(p.x*2.3 + p.z); cone3.radial_segments=8 # R121 store cap height variety
+	var cy121 := 2.72 + (cone3.height-0.75)*0.5
+	add_mesh(cone3, Transform3D(Basis.from_euler(Vector3(sin(p.x*0.9)*0.06,0,cos(p.z)*0.06)), p+Vector3(0,cy121,0)), Color("9c4a34"), "roofp"); tri_total += 64
+	_cone_relief(p+Vector3(0,cy121,0), cone3.height, 1.58, 0.95, Color("a15f43"), 12150 + absi(int(p.x*7.0 + p.z*3.0)), false) # R121 relief in existing roof-tone keys
+	cyl(p+Vector3(0,cy121 + cone3.height/2.0 + 0.16,0), 0.4,0.46,0.5, stone, 8, "stone") # R121 cap reseated on varied cone
 	box(p+Vector3(0,1.0,1.34), Vector3(0.8,1.7,0.1), Color("54381f"))
 	box(p+Vector3(0,1.95,1.36), Vector3(0.95,0.15,0.11), Color("54381f"), 0,0,0, "timber") # R106 door lintel
 	for ow106 in [-0.72, 0.72]:
@@ -1497,7 +1516,15 @@ func _build_aframe(p: Vector3, roof: Color, stone: Color) -> void:
 		box(p+Vector3(ax105 + rng105a.randf_range(-0.04, 0.04), 0.60, 0.93), Vector3(rng105a.randf_range(0.20, 0.30), 1.18, 0.11), Color("54381f"), 0, rng105a.randf_range(-0.03, 0.03), 0, "timber")
 	box(p+Vector3(0, 0.62 + rng105a.randf_range(-0.14, 0.14), 0.94), Vector3(2.24, rng105a.randf_range(0.13, 0.20), 0.09), Color("54381f"), 0, rng105a.randf_range(-0.02, 0.02), 0, "timber")
 	_face_patch(p+Vector3(rng105a.randf_range(-0.3, 0.3), 0.58 + rng105a.randf_range(-0.08, 0.08), 0.97), Vector3(1,0,0), Vector3(0,1,0), rng105a.randf_range(1.3, 2.0), rng105a.randf_range(0.55, 0.8), 10700 + absi(int(p.x)), [Color("f5ecd2"), Color("d3bd96"), Color("d8c49c"), Color("bfa87e")][rng105a.randi_range(0, 3)], "plaster", 2)
-	roof2(p+Vector3(0,0.92,0), 3.3, 2.6, 2.15, 0.18, roof)
+	roof2(p+Vector3(0,0.92,0), 3.3, 2.6, 2.15, 0.18, roof, 2.0)
+	var sang121 := atan2(2.15, 1.65); var tones121 := [roof.darkened(0.22), roof.lightened(0.15), roof.darkened(0.46), roof]
+	for side121 in [-1.0, 1.0]: # R121 shingle rows following the aframe slopes (existing house keys)
+		var nrm121 := Vector3(side121*2.15, 1.65, 0).normalized()
+		for rw121 in 3:
+			var tt121: float = [0.25, 0.52, 0.78][rw121]
+			var sp121 := p + Vector3(side121*1.65*(1.0-tt121), 0.92 + 2.15*tt121, 0) + nrm121*0.035
+			for sg121 in [-0.62, 0.62]:
+				box(sp121 + Vector3(0, 0, sg121), Vector3(0.52, 0.05, 1.12), tones121[(rw121*2 + (1 if sg121 > 0.0 else 0) + int(rng105a.randf()*2.0)) % 4], 0, -side121*sang121, 0)
 	box(p+Vector3(0,0.75,1.02), Vector3(0.66,1.25,0.08), Color("6e4a2c"))
 	box(p+Vector3(0,1.44,1.03), Vector3(0.82,0.14,0.10), Color("54381f"), 0,0,0, "timber") # R106 door lintel
 	for aw106 in [-0.74, 0.74]:
@@ -1520,14 +1547,19 @@ func _build_hut(p: Vector3, stone: Color) -> void:
 		box(p+Vector3(hw106 + (0.32 if hw106 > 0.0 else -0.32), 0.88, 0.91), Vector3(0.13,0.52,0.05), Color("5d7a34")) # shutter
 	if rng105h.randf() > 0.4: # R106 seeded stone chimney with cap through the thatch
 		box(p+Vector3(0.55,2.25,-0.35), Vector3(0.36,0.95,0.36), stone, 0,0,0, "stone"); box(p+Vector3(0.55,2.78,-0.35), Vector3(0.50,0.12,0.50), stone.darkened(0.15), 0,0,0, "stone")
-	var cone4 := CylinderMesh.new(); cone4.bottom_radius=1.75; cone4.top_radius=0.25; cone4.height=1.5; cone4.radial_segments=10
-	add_mesh(cone4, Transform3D(Basis.from_euler(Vector3(sin(p.x)*0.06,0,cos(p.z*1.2)*0.06)), p+Vector3(sin(p.z)*0.06,2.05,0)), Color("b98a35"), "thatch"); tri_total += 80
-	for ri in 3: cyl(p+Vector3(0,1.55+float(ri)*0.38,0), 1.55-float(ri)*0.38, 1.45-float(ri)*0.38, 0.12, Color("8f6a2a"), 10)
-	cyl(p+Vector3(0,1.38,0), 1.82,1.88,0.2, Color("7d5c26"), 10)
+	var th121 := 1.5 * rng105h.randf_range(0.88, 1.18); var cy121h := 2.05 + (th121-1.5)*0.5 # R121 per-hut thatch height
+	var cone4 := CylinderMesh.new(); cone4.bottom_radius=1.75; cone4.top_radius=0.25; cone4.height=th121; cone4.radial_segments=10
+	add_mesh(cone4, Transform3D(Basis.from_euler(Vector3(sin(p.x)*0.06,0,cos(p.z*1.2)*0.06)), p+Vector3(sin(p.z)*0.06,cy121h,0)), Color("b98a35"), "thatch"); tri_total += 80
+	for ri in 3: # R121 thatch rings follow the varied cone (fraction heights/radii)
+		var t121h: float = [0.16, 0.45, 0.72][ri]; var rr121h := lerpf(1.75, 0.25, t121h) + 0.04
+		cyl(p+Vector3(0, cy121h - th121*0.5 + th121*t121h, 0), rr121h, rr121h-0.10, 0.12, Color("8f6a2a"), 10)
+	cyl(p+Vector3(0,cy121h - th121*0.5 + 0.08,0), 1.82,1.88,0.2, Color("7d5c26"), 10)
+	var bo121 := rng105h.randf() * TAU # R121 battens: seeded rotation, one sometimes missing
 	for bi2 in 8:
-		var ba := float(bi2) * PI / 4.0
-		box(p+Vector3(sin(ba)*1.58, 1.78, cos(ba)*1.58), Vector3(0.22,0.95,0.12), Color("a87c34") if bi2%2==0 else Color("c49a48"), ba, 0, 0)
-	cyl(p+Vector3(0,2.92,0), 0.3,0.36,0.22, Color("8f6a2a"), 8)
+		if bi2 == 3 and rng105h.randf() < 0.5: continue
+		var ba := bo121 + float(bi2) * PI / 4.0
+		box(p+Vector3(sin(ba)*1.58, cy121h - th121*0.5 + 0.48, cos(ba)*1.58), Vector3(0.22,0.95,0.12), Color("a87c34") if bi2%2==0 else Color("c49a48"), ba, 0, 0)
+	cyl(p+Vector3(0,cy121h + th121*0.5 + 0.12,0), 0.3,0.36,0.22, Color("8f6a2a"), 8) # R121 cap reseated
 func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 	if absi(int(p.x*7.31 + p.z*13.17)) % 10 >= 5: return # R69: ~half the trees culled (Black #1)
 	var tsc := (0.85 + 0.45 * (0.5 + 0.5*sin(p.x*2.7 + p.z*1.9))) * 0.64
