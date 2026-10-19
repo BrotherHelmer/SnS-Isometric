@@ -40,7 +40,7 @@ func mat_for(key: String, c: Color) -> Material:
 		m.albedo_texture = load(TEX[tx]); m.uv1_scale = Vector3(3,3,1) if tx=="meadow" else (Vector3(0.55,0.55,1) if tx in ["stone","plaster"] else (Vector3(1,1,1) if tx in ["roofp","thatch","rock"] else Vector3(1.5,1.5,1))) # R77 larger face features; m.albedo_color = Color(0.88,0.87,0.85)
 		if tx == "rock": m.albedo_color = Color(1.06,0.97,0.87).lerp(c, 0.50) # R73: warm rock, tint was being overridden grey
 		if tx == "stone": m.albedo_color = Color(1.06,0.99,0.88).lerp(c, 0.45) # R89 warmer stone tint-through base
-		if tx == "roofp": m.albedo_color = Color(0.93,0.84,0.75).lerp(c, 0.28) # R78 muted terracotta tint-through
+		if tx == "roofp": m.albedo_color = Color(0.93,0.84,0.75).lerp(c, 0.24) # R78 muted terracotta tint-through
 		if tx == "forest": m.albedo_color = Color(1,1,1).lerp(c, 0.30)
 		m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	if c.a < 0.99: m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -293,7 +293,7 @@ func _setup() -> void:
 	if round_no == 2:
 		grass = Color("69bd45"); grass2 = Color("86cc58"); stone = Color("c4bda9"); roof = Color("a85f43"); leaf = Color("4fae38"); leaf2 = Color("7cc24e"); light_e = 1.05; amb = 0.45
 	if round_no >= 3:
-		grass = Color("406e26"); grass2 = Color("4f7f2e"); stone = Color("a5917a"); roof = Color("a15f43"); dirt = Color("cda96e"); leaf = Color("407828"); leaf2 = Color("5e9638"); light_e = 1.16; amb = 0.37 # R107 warmer sun, deeper leaf family
+		grass = Color("406e26"); grass2 = Color("4f7f2e"); stone = Color("a5917a"); roof = Color("a8664e"); # R122 roof desat toward target (measured sat .79 vs .41, hue/value already matched) dirt = Color("cda96e"); leaf = Color("407828"); leaf2 = Color("5e9638"); light_e = 1.16; amb = 0.37 # R107 warmer sun, deeper leaf family
 	# environment + light + camera (game iso: ortho, pitch -38, yaw -45)
 	var we := WorldEnvironment.new(); var env := Environment.new()
 	var sky := Sky.new(); var smat := ProceduralSkyMaterial.new(); smat.sky_top_color = Color("8fc3e8"); smat.sky_horizon_color = Color("f2e3c2"); smat.ground_bottom_color = Color("5d6b46"); smat.ground_horizon_color = Color("d9c9a4"); sky.sky_material = smat; env.sky = sky
@@ -384,7 +384,7 @@ func _setup() -> void:
 		box(sp9+Vector3(0,0.16,0), Vector3(0.36,0.32,0.36), Color("a67c4e"), 0.3); cyl(sp9+Vector3(0.42,0.20,0.18), 0.17,0.19,0.4, Color("8a5f36"), 7)
 	# market stall: posts, striped canopy, crates
 	for mp in [Vector3(-3.0,0,5.9), Vector3(-1.8,0,5.9), Vector3(-3.0,0,7.0), Vector3(-1.8,0,7.0)]: box(mp+Vector3(0,0.75,0), Vector3(0.13,1.5,0.13), Color("6b4423"))
-	roof2(Vector3(-2.4,1.52,6.45), 2.3, 2.1, 0.55, 0.14, Color("9c4a34")) # R78 roof eave muted (was flag-red)
+	roof2(Vector3(-2.4,1.52,6.45), 2.3, 2.1, 0.55, 0.14, Color("a05a44")) # R78 roof eave muted (was flag-red)
 	box(Vector3(-2.4,0.55,6.45), Vector3(1.6,0.5,1.2), Color("a67c4e"), 0,0,0, "timber")
 	for pp2 in [Vector3(0.9,0,3.1), Vector3(-4.2,0,6.3), Vector3(3.5,0,-0.9), Vector3(7.8,0,5.2), Vector3(-9.7,0,-3.2), Vector3(9.3,0,-4.2), Vector3(-1.6,0,-3.0)]: # R69 territory pennants (Black #7)
 		box(pp2+Vector3(0,1.05,0), Vector3(0.06,2.1,0.06), Color("4a3421")); box(pp2+Vector3(0.32,1.85,0), Vector3(0.6,0.34,0.04), Color("2f62b8") if int(pp2.x) % 2 == 0 else Color("d43a2a"))
@@ -475,7 +475,7 @@ func _setup() -> void:
 		if not roof_groups.has(rv): roof_groups[rv] = SurfaceTool.new(); (roof_groups[rv] as SurfaceTool).begin(Mesh.PRIMITIVE_TRIANGLES)
 		(roof_groups[rv] as SurfaceTool).append_from(ri2[0], 0, ri2[1])
 	for rv2 in roof_groups:
-		var rmi := MeshInstance3D.new(); rmi.mesh = (roof_groups[rv2] as SurfaceTool).commit(); var rmat := StandardMaterial3D.new(); rmat.albedo_texture = load(TEX["roofp"]); rmat.albedo_color = [Color(0.88,0.76,0.66), Color(0.78,0.64,0.54), Color(0.74,0.68,0.62)][rv2] # R78 muted terracotta roof families; rmat.roughness = 0.92; rmat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; rmi.material_override = rmat; rmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(rmi)
+		var rmi := MeshInstance3D.new(); rmi.mesh = (roof_groups[rv2] as SurfaceTool).commit(); var rmat := StandardMaterial3D.new(); rmat.albedo_texture = load(TEX["roofp"]); rmat.albedo_color = [Color(0.94,0.80,0.68), Color(0.82,0.66,0.55), Color(0.74,0.63,0.55)][rv2] # R122 per-building spread, warm end kept (v2: v1 tints read muddy); rmat.roughness = 0.92; rmat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; rmi.material_override = rmat; rmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(rmi)
 	if canopy_st != null:
 		var cmi := MeshInstance3D.new(); cmi.mesh = canopy_st.commit(); var cm := StandardMaterial3D.new(); cm.albedo_texture = load(TEX["leafp"]); cm.vertex_color_use_as_albedo = true; cm.albedo_color = Color(1.03,0.96,0.85); cm.roughness = 1.0; cm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; cmi.material_override = cm; cmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(cmi)
 	if card_st != null:
@@ -495,7 +495,7 @@ func _detail_pass() -> void:
 					var lm := CylinderMesh.new(); lm.bottom_radius=0.13; lm.top_radius=0.13; lm.height=1.05; lm.radial_segments=7
 					add_mesh(lm, Transform3D(Basis.from_euler(Vector3(0, ang, PI/2.0)), hp + side*2.3 + fwd*(float(li%3)*0.3-0.3) + Vector3(0, 0.16+0.26*float(li/3), 0)), Color("8a6742")); tri_total += 28
 			1: # lean-to: sloped roof on posts + barrel under
-				box(hp + side*2.0 + Vector3(0, 1.05, 0), Vector3(1.7, 0.10, 1.4), Color("9c4a34"), ang, 0, 0.30)
+				box(hp + side*2.0 + Vector3(0, 1.05, 0), Vector3(1.7, 0.10, 1.4), Color("a05a44"), ang, 0, 0.30)
 				box(hp + side*2.55 + Vector3(0, 0.5, 0) + fwd*0.55, Vector3(0.11, 1.0, 0.11), Color("54381f")); box(hp + side*2.55 + Vector3(0, 0.5, 0) - fwd*0.55, Vector3(0.11, 1.0, 0.11), Color("54381f"))
 				cyl(hp + side*2.0 + Vector3(0, 0.38, 0), 0.32, 0.36, 0.76, Color("8a5f36"), 8)
 			2: # crates + sacks + barrel cluster
@@ -505,7 +505,7 @@ func _detail_pass() -> void:
 				cyl(hp + side*1.7 + fwd*1.1 + Vector3(0, 0.36, 0), 0.30, 0.34, 0.72, Color("7a5a36"), 8)
 			3: # dormer window on the roof + window box flowers
 				box(hp + Vector3(0, 2.55, 0) + fwd*0.55, Vector3(0.62, 0.62, 0.5), Color("e8d9b8"), 0, 0, 0, "plaster")
-				box(hp + Vector3(0, 2.98, 0) + fwd*0.55, Vector3(0.78, 0.12, 0.66), Color("9c4a34"))
+				box(hp + Vector3(0, 2.98, 0) + fwd*0.55, Vector3(0.78, 0.12, 0.66), Color("a05a44"))
 				box(hp + Vector3(0, 2.5, 0) + fwd*0.86, Vector3(0.34, 0.4, 0.06), Color("ffd98a"))
 		# door-side lantern + step stones at every home
 		box(hp + fwd*1.6 + side*0.8 + Vector3(0, 0.95, 0), Vector3(0.07, 0.9, 0.07), Color("4a3421")); box(hp + fwd*1.6 + side*0.8 + Vector3(0, 1.32, 0), Vector3(0.17, 0.2, 0.17), Color("ffd98a"))
@@ -651,7 +651,7 @@ func _build_watchtower(tp: Vector3) -> void:
 	box(tp+Vector3(0,4.3,0), Vector3(1.8,0.18,1.8), Color("7a5a36"))
 	box(tp+Vector3(0,5.05,0), Vector3(1.45,1.35,1.45), Color("a8875e"), 0,0,0, "timber")
 	box(tp+Vector3(0,5.15,0.75), Vector3(0.44,0.5,0.06), Color("ffd98a"))
-	cyl(tp+Vector3(0,6.25,0), 1.35,0.04,1.15, Color("9c4a34"), 8, "roofp")
+	cyl(tp+Vector3(0,6.25,0), 1.35,0.04,1.15, Color("a05a44"), 8, "roofp")
 func _terrace(cx: float, cz: float, w: float, d: float, c: Color, tx: String) -> void:
 	# R71: 4 stepped segments conforming to _h, retaining skirt where slope falls (+z edge + ends)
 	var segs := 4
@@ -1134,7 +1134,7 @@ func _props2() -> void:
 	var wp := Vector3(-5.6,0,-4.6)
 	cyl(wp+Vector3(0,0.42,0), 0.62,0.68,0.85, Color("9a968c"), 9, "stone")
 	box(wp+Vector3(-0.62,1.25,0), Vector3(0.13,1.7,0.13), Color("6b4a2c")); box(wp+Vector3(0.62,1.25,0), Vector3(0.13,1.7,0.13), Color("6b4a2c"))
-	box(wp+Vector3(-0.35,2.32,0), Vector3(0.95,0.09,0.8), Color("9c4a34"), 0, 0.42, 0); box(wp+Vector3(0.35,2.32,0), Vector3(0.95,0.09,0.8), Color("9c4a34"), 0, -0.42, 0)
+	box(wp+Vector3(-0.35,2.32,0), Vector3(0.95,0.09,0.8), Color("a05a44"), 0, 0.42, 0); box(wp+Vector3(0.35,2.32,0), Vector3(0.95,0.09,0.8), Color("a05a44"), 0, -0.42, 0)
 	# sacks + crates near houses/market
 	for sp in [Vector3(-1.5,0,7.1), Vector3(2.6,0,0.6), Vector3(6.8,0,-2.4), Vector3(-7.8,0,3.6)]:
 		blob(sp+Vector3(0,0.28,0), Vector3(0.34,0.3,0.34), Color("a67c4e")); blob(sp+Vector3(0.3,0.2,0.15), Vector3(0.26,0.22,0.26), Color("a67c4e"))
@@ -1378,7 +1378,7 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	box(Vector3(0,1.58,1.22), Vector3(1.5,0.09,0.95), Color("8a6742"), 0, 0, 0.22)
 	# lean-to (side alternates by variant; vi==1 also reads L-shaped)
 	box(Vector3(lean*(1.16*wf+0.42),0.55,0), Vector3(0.95,1.1,1.6), Color("e0cfa8"), 0,0,0, "plaster")
-	box(Vector3(lean*(1.16*wf+0.42),1.2,0), Vector3(1.15,0.09,1.85), Color("9c4a34"), 0, lean*0.20, 0)
+	box(Vector3(lean*(1.16*wf+0.42),1.2,0), Vector3(1.15,0.09,1.85), Color("a05a44"), 0, lean*0.20, 0)
 	var pitch2: float = [1.32, 1.10, 1.55][vi] * rng105.randf_range(0.92, 1.08) # R121 per-house pitch
 	var rw121 := 3.62*wf * rng105.randf_range(0.94, 1.08); var rd121 := 2.8 * rng105.randf_range(0.95, 1.06) # R121 overhang/plan variety
 	roof2(Vector3(0,top,0), rw121, rd121, pitch2, 0.18, roof, 1.0)
@@ -1443,7 +1443,7 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	if vi == 0:
 		# long low barn extension behind (long footprint reads from iso)
 		box(Vector3(0,0.58,-1.55), Vector3(2.5,1.15,1.05), [Color("e8d9b8"), Color("f0e2c4"), Color("e0cfa8")][vi], 0,0,0, "plaster")
-		box(Vector3(0,1.28,-1.55), Vector3(2.7,0.1,1.3), Color("9c4a34"), 0, 0, 0.16)
+		box(Vector3(0,1.28,-1.55), Vector3(2.7,0.1,1.3), Color("a05a44"), 0, 0, 0.16)
 	elif vi == 1:
 		# deep side wing: footprint reads L-shaped in plan
 		box(Vector3(lean*(1.16*wf+0.42),1.62,0), Vector3(1.0,1.05,2.35), [Color("e8d9b8"), Color("f0e2c4"), Color("e0cfa8")][vi], 0,0,0, "plaster")
@@ -1499,8 +1499,8 @@ func _build_octstore(p: Vector3, stone: Color) -> void:
 	cyl(p+Vector3(0,1.55,0), 1.32,1.26,1.95, stone, 8, "stone")
 	var cone3 := CylinderMesh.new(); cone3.bottom_radius=1.58; cone3.top_radius=0.95; cone3.height=0.75 + 0.18*sin(p.x*2.3 + p.z); cone3.radial_segments=8 # R121 store cap height variety
 	var cy121 := 2.72 + (cone3.height-0.75)*0.5
-	add_mesh(cone3, Transform3D(Basis.from_euler(Vector3(sin(p.x*0.9)*0.06,0,cos(p.z)*0.06)), p+Vector3(0,cy121,0)), Color("9c4a34"), "roofp"); tri_total += 64
-	_cone_relief(p+Vector3(0,cy121,0), cone3.height, 1.58, 0.95, Color("a15f43"), 12150 + absi(int(p.x*7.0 + p.z*3.0)), false) # R121 relief in existing roof-tone keys
+	add_mesh(cone3, Transform3D(Basis.from_euler(Vector3(sin(p.x*0.9)*0.06,0,cos(p.z)*0.06)), p+Vector3(0,cy121,0)), Color("a05a44"), "roofp"); tri_total += 64
+	_cone_relief(p+Vector3(0,cy121,0), cone3.height, 1.58, 0.95, Color("a8664e"), 12150 + absi(int(p.x*7.0 + p.z*3.0)), false) # R121 relief in existing roof-tone keys
 	cyl(p+Vector3(0,cy121 + cone3.height/2.0 + 0.16,0), 0.4,0.46,0.5, stone, 8, "stone") # R121 cap reseated on varied cone
 	box(p+Vector3(0,1.0,1.34), Vector3(0.8,1.7,0.1), Color("54381f"))
 	box(p+Vector3(0,1.95,1.36), Vector3(0.95,0.15,0.11), Color("54381f"), 0,0,0, "timber") # R106 door lintel
