@@ -32,6 +32,7 @@ func mat_for(key: String, c: Color) -> StandardMaterial3D:
 	var m := mat_col(c); var tx: String = surf_tex.get(key, "")
 	if tx != "" and TEX.has(tx):
 		m.albedo_texture = load(TEX[tx]); m.uv1_scale = Vector3(3,3,1) if tx=="meadow" else (Vector3(1,1,1) if tx in ["roofp","stone","plaster","thatch","rock"] else Vector3(1.5,1.5,1)); m.albedo_color = Color(0.88,0.87,0.85)
+		if tx == "rock": m.albedo_color = Color(1.06,0.97,0.87).lerp(c, 0.50) # R73: warm rock, tint was being overridden grey
 		if tx == "forest": m.albedo_color = Color(1,1,1).lerp(c, 0.30)
 		m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	if c.a < 0.99: m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -295,11 +296,11 @@ func _setup() -> void:
 	for si9 in 15:
 		var sx9 := 8.5 + fmod(float(si9)*3.17, 12.5); var sz9 := -8.0 - fmod(float(si9)*2.43, 7.5)
 		var ss9 := 1.1 + fmod(float(si9)*0.41, 1.1)
-		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.3,float(si9)*1.7,0.15)).scaled(Vector3(ss9,ss9*0.72,ss9*0.85)), Vector3(sx9, _h(sx9,sz9)+ss9*0.22, sz9)), Color("6e6355") if si9%2==0 else Color("a89a80")); tri_total += 128
+		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.3,float(si9)*1.7,0.15)).scaled(Vector3(ss9,ss9*0.72,ss9*0.85)), Vector3(sx9, _h(sx9,sz9)+ss9*0.22, sz9)), Color("87704f") if si9%2==0 else Color("a89a80")); tri_total += 128
 	for ti9 in 13:
 		var tx9 := 6.5 + fmod(float(ti9)*2.61, 14.5); var tz9 := -6.2 - fmod(float(ti9)*1.37, 3.2)
 		var ts9 := 0.55 + fmod(float(ti9)*0.39, 0.6)
-		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(ti9)*2.1,0.1)).scaled(Vector3(ts9,ts9*0.62,ts9*0.8)), Vector3(tx9, _h(tx9,tz9)+ts9*0.18, tz9)), Color("6e6355") if ti9%3==0 else (Color("a89a80") if ti9%3==1 else Color("a89a80"))); tri_total += 128
+		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(ti9)*2.1,0.1)).scaled(Vector3(ts9,ts9*0.62,ts9*0.8)), Vector3(tx9, _h(tx9,tz9)+ts9*0.18, tz9)), Color("87704f") if ti9%3==0 else (Color("a89a80") if ti9%3==1 else Color("a89a80"))); tri_total += 128
 	for ei in 10:
 		var ex := -11.0+fmod(float(ei)*4.91,23.0); var ez := -6.0+fmod(float(ei)*5.37,17.0)
 		cyl(Vector3(ex,0.03,ez), 0.62,0.62,0.025, Color("9a7c4e") if ei%2==0 else Color("b08d55"), 8)
@@ -313,7 +314,7 @@ func _setup() -> void:
 		box(Vector3(mid2.x,0.028,mid2.y), Vector3(0.95,0.035,dir2.length()+0.8), Color("d6b878"), atan2(dir2.x,dir2.y), 0,0, "dirt")
 	for li2 in 5:
 		var lx2 := 10.0+fmod(float(li2)*2.3,6.0); var lz2 := -8.0-fmod(float(li2)*1.1,4.0)
-		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(li2),0.1)).scaled(Vector3(1.1,0.65,0.9)), Vector3(lx2,_h(lx2,lz2)+0.3,lz2)), Color("6e665c"), "rock"); tri_total+=128
+		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(li2),0.1)).scaled(Vector3(1.1,0.65,0.9)), Vector3(lx2,_h(lx2,lz2)+0.3,lz2)), Color("8f7355"), "rock"); tri_total+=128
 	_hill_content(); _hill_props(); _hill_fields(); _summit(); _upper_fill(); _fill_more(); _top_band(); _aprons(); _props2()
 	for uw in [[Vector3(-4.2,0,7.6), Color("d43a2a")], [Vector3(2.8,0,8.8), Color("2f62b8")], [Vector3(-9.8,0,5.6), Color("2f62b8")], [Vector3(4.4,_h(4.4,-6.2),-6.2), Color("d43a2a")], [Vector3(13.2,_h(13.2,-12.4),-12.4), Color("2f62b8")], [Vector3(-13.2,0,9.2), Color("d43a2a")], [Vector3(5.0,_h(5.0,-6.4),-6.4), Color("2f62b8")], [Vector3(8.2,_h(8.2,-10.1),-10.1), Color("d43a2a")], [Vector3(11.5,_h(11.5,-11.2),-11.2), Color("2f62b8")], [Vector3(15.0,_h(15.0,-13.6),-13.6), Color("d43a2a")], [Vector3(6.8,_h(6.8,-13.4),-13.4), Color("2f62b8")]]:
 		_mini(uw[0], uw[1])
@@ -489,7 +490,7 @@ func _spawn_cliffs() -> void:
 		var mi := MeshInstance3D.new(); mi.mesh = _cliff_mesh(float(df[2]), float(df[3]), 40+i2*7); mi.position = pos; mi.rotation = Vector3(-0.52, float(df[1]), 0.05); mi.material_override = rmat; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(mi)
 		for si3 in 3:
 			var bp := pos + Vector3(float(si3)*1.3-1.3, -float(df[3])*0.3, 1.8)
-			add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0,float(si3),0)).scaled(Vector3(0.6,0.42,0.55)), Vector3(bp.x, _h(bp.x,bp.z)+0.12, bp.z)), Color("6e665c"), "rock"); tri_total += 128
+			add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0,float(si3),0)).scaled(Vector3(0.6,0.42,0.55)), Vector3(bp.x, _h(bp.x,bp.z)+0.12, bp.z)), Color("8f7355"), "rock"); tri_total += 128
 func _build_mine(mp: Vector3) -> void:
 	# R72: enlarged timber headframe (was 1.9 tall, drowned by crest rocks) - warm timber, dark iron
 	box(mp+Vector3(0,0.10,0.6), Vector3(3.4,0.22,2.6), Color("6e4a28")) # timber platform
@@ -633,6 +634,25 @@ func _fill_more() -> void:
 		_terrace(lx6, lz6, 5.2, 2.0, Color("86b83e") if lf%2==0 else Color("b08d55"), "")
 		for cr5 in 5: box(Vector3(lx6-1.9+float(cr5)*0.95, 0.14, lz6), Vector3(0.55,0.09,1.7), Color("3f7020") if lf%2==0 else Color("96683c"), 0.3)
 	_build_tree(Vector3(-15.5,0,4.5), Color("79c24d"), Color("a9dd77")); _build_tree(Vector3(-11,0,12), Color("79c24d"), Color("a9dd77"))
+func _snow_patch(cx: float, cz: float, r: float, seedv: int, c: Color) -> void:
+	# R73: jagged star patch, elongated along downhill (fall line from _h gradient), seated per-vertex
+	var rng := RandomNumberGenerator.new(); rng.seed = seedv
+	var grad := Vector2(_h(cx+0.7,cz)-_h(cx-0.7,cz), _h(cx,cz+0.7)-_h(cx,cz-0.7))
+	var fall := -grad.normalized() if grad.length() > 0.01 else Vector2(0.6, 0.8)
+	var side := Vector2(-fall.y, fall.x)
+	var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var n := 11; var pts: Array = []
+	for i in n:
+		var a := TAU * float(i) / float(n)
+		var rr := r * rng.randf_range(0.42, 1.28)
+		var dir := side * (cos(a) * rr) + fall * (sin(a) * rr * 1.9)
+		pts.append(Vector3(cx + dir.x, _h(cx + dir.x, cz + dir.y) + 0.07, cz + dir.y))
+	var c0 := Vector3(cx, _h(cx, cz) + 0.09, cz)
+	for i in n:
+		var p1: Vector3 = pts[i]; var p2: Vector3 = pts[(i+1) % n]
+		var fn := (p1-c0).cross(p2-c0).normalized(); if fn.y < 0.0: fn = -fn
+		for v in [c0, p1, p2]: st.set_normal(fn); st.set_uv(Vector2(0.5,0.5)); st.add_vertex(v)
+	add_mesh(st.commit(), Transform3D.IDENTITY, c); tri_total += n
 func _top_band() -> void:
 	for tp8 in [Vector3(10,0,-16), Vector3(18,0,-16), Vector3(8,0,-11.8)]:
 		_build_tree(tp8, Color("79c24d"), Color("a9dd77"))
@@ -653,19 +673,19 @@ func _top_band() -> void:
 	# painted cliff ledges: geometry bands across east face
 	for ldi in 4:
 		var ldx: float = [18.5, 19.5, 19.0, 20.5][ldi]; var ldz: float = [-4.5, -7.5, -10.0, -12.0][ldi]
-		_terrace(ldx, ldz, 4.6, 0.85, Color("6e665c"), "rock")
-		_terrace(ldx+0.4, ldz-1.1, 3.4, 0.7, Color("6e665c"), "rock")
+		_terrace(ldx, ldz, 4.6, 0.85, Color("8f7355"), "rock")
+		_terrace(ldx+0.4, ldz-1.1, 3.4, 0.7, Color("8f7355"), "rock")
 	# jagged crest silhouette on NE ridge, snow only in crevices
 	for cri in 7:
 		var crx := 15.5 + float(cri)*1.35; var crz := -14.8 - fmod(float(cri)*0.8, 1.8); var cry := _h(crx,crz)
 		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.3,float(cri)*1.3,0.2)).scaled(Vector3(1.45,1.05,1.25)), Vector3(crx, cry+0.35, crz)), Color("96795c"), "rock") # R72 warm crest rocks; tri_total += 128
 		if cri % 2 == 0: blob(Vector3(crx+0.55, cry+0.12, crz+0.3), Vector3(0.34,0.13,0.3), Color("eef2f4"))
-	# R72: geometry snow patches on the camera-facing (SE) face, seated on _h like terraces
+	# R73: irregular gully snow on the camera-facing (SE) face (replaces R72 ovals, same areas)
 	for snp3 in [Vector2(18,-4), Vector2(20,-6), Vector2(22,-5), Vector2(19,-8), Vector2(21,-9), Vector2(23,-8), Vector2(18.5,-11), Vector2(21,-12), Vector2(24,-11), Vector2(20,-3), Vector2(23,-13), Vector2(17,-6.5), Vector2(22,-2.5), Vector2(25,-7), Vector2(19.5,-13.5), Vector2(24.5,-4)]:
 		var ssx: float = snp3.x; var ssz: float = snp3.y
-		var sss := 1.1 + fmod(absf(ssx*1.37 + ssz*2.11), 1.2)
-		blob(Vector3(ssx, _h(ssx,ssz)+0.06, ssz), Vector3(sss, 0.20, sss*0.72), Color("eef2f4"))
-		blob(Vector3(ssx+0.7, _h(ssx+0.7,ssz+0.5)+0.05, ssz+0.5), Vector3(sss*0.55, 0.15, sss*0.42), Color("e4e9ec"))
+		var sss := 0.95 + fmod(absf(ssx*1.37 + ssz*2.11), 0.9)
+		_snow_patch(ssx, ssz, sss, int(ssx*17.0 + ssz*31.0), Color("eef2f4"))
+		_snow_patch(ssx+0.8, ssz+0.6, sss*0.55, int(ssx*23.0 - ssz*13.0), Color("e4e9ec"))
 	# talus cones + outcrops breaking the wall plane (merged rock key)
 	for tli in 6:
 		var tlx: float = [16.8, 17.5, 16.5, 18.0, 17.0, 18.5][tli]; var tlz: float = [-2.0, -5.0, -8.0, -10.0, -12.0, -3.5][tli]
@@ -673,7 +693,7 @@ func _top_band() -> void:
 		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2, float(tli)*1.1, 0.15)).scaled(Vector3(tls, tls*0.48, tls*0.8)), Vector3(tlx, _h(tlx,tlz)+0.12, tlz)), Color("8f7355"), "rock"); tri_total += 128
 	for ldi2 in 3:
 		var ldx2: float = [20.0, 20.5, 19.8][ldi2]; var ldz2: float = [-6.0, -9.0, -12.0][ldi2]
-		_terrace(ldx2, ldz2, 3.8, 1.1, Color("6e665c"), "rock")
+		_terrace(ldx2, ldz2, 3.8, 1.1, Color("8f7355"), "rock")
 	# BIG ribs: stepped large rocks base->mid->upper at 3 face lines + big talus fan
 	for rbi in 3:
 		var rbz: float = [-5.0, -8.5, -12.0][rbi]
@@ -685,19 +705,19 @@ func _top_band() -> void:
 		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.15, float(tfi2)*1.9, 0.1)).scaled(Vector3(3.1, 1.35, 2.5)), Vector3(tfx2, _h(tfx2,tfz2)+0.1, tfz2)), Color("8f7355"), "rock"); tri_total += 128
 	for ldi3 in 2:
 		var ldx3: float = [19.5, 20.0][ldi3]; var ldz3: float = [-7.0, -11.0][ldi3]
-		_terrace(ldx3, ldz3, 5.6, 1.8, Color("6e665c"), "rock")
+		_terrace(ldx3, ldz3, 5.6, 1.8, Color("8f7355"), "rock")
 	# CAMERA-FACING south-east plane breaks (the wall filling frame right edge)
 	for sri in 3:
 		var srx: float = [23.0, 25.5, 28.0][sri]
 		for sst in 3:
 			var srz: float = [-2.0, 1.0, 4.0][sst]; var srs: float = [2.0, 1.7, 1.4][sst]
-			add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(-0.3, float(sri)*1.6+float(sst)*0.8, 0.25)).scaled(Vector3(srs, srs*0.85, srs)), Vector3(srx, _h(srx,srz)+0.15, srz)), Color("6e665c"), "rock"); tri_total += 128
+			add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(-0.3, float(sri)*1.6+float(sst)*0.8, 0.25)).scaled(Vector3(srs, srs*0.85, srs)), Vector3(srx, _h(srx,srz)+0.15, srz)), Color("8f7355"), "rock"); tri_total += 128
 	for sli in 2:
 		var slx: float = [24.0, 26.0][sli]; var slz: float = [2.0, -1.5][sli]
-		_terrace(slx, slz, 5.2, 1.7, Color("6e665c"), "rock")
+		_terrace(slx, slz, 5.2, 1.7, Color("8f7355"), "rock")
 	for stf in 3:
 		var stx: float = [23.0, 26.0, 21.0][stf]; var stz: float = [8.0, 6.0, 10.0][stf]
-		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2, float(stf)*2.2, 0.1)).scaled(Vector3(2.9, 1.25, 2.3)), Vector3(stx, _h(stx,stz)+0.1, stz)), Color("6e665c"), "rock"); tri_total += 128
+		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2, float(stf)*2.2, 0.1)).scaled(Vector3(2.9, 1.25, 2.3)), Vector3(stx, _h(stx,stz)+0.1, stz)), Color("8f7355"), "rock"); tri_total += 128
 	# switchback shelf on the south-east face, retaining edge toward camera (+z)
 	var ssp := [Vector2(20.0,4.5), Vector2(23.0,1.5), Vector2(21.5,-1.5), Vector2(24.5,-4.5)]
 	for ssi in ssp.size()-1:
@@ -706,7 +726,7 @@ func _top_band() -> void:
 		var ssperp := Vector2(-ssdir.normalized().y, ssdir.normalized().x)
 		if ssperp.y < 0.0: ssperp = -ssperp
 		box(Vector3(ssmid.x, ssy, ssmid.y), Vector3(1.9,0.22,ssdir.length()+0.7), Color("b99a68"), atan2(ssdir.x, ssdir.y), 0, 0, "dirt")
-		box(Vector3(ssmid.x+ssperp.x*0.95, ssy-0.28, ssmid.y+ssperp.y*0.95), Vector3(0.32,0.55,ssdir.length()+0.6), Color("6e665c"), atan2(ssdir.x, ssdir.y), 0, 0, "rock")
+		box(Vector3(ssmid.x+ssperp.x*0.95, ssy-0.28, ssmid.y+ssperp.y*0.95), Vector3(0.32,0.55,ssdir.length()+0.6), Color("8f7355"), atan2(ssdir.x, ssdir.y), 0, 0, "rock")
 	for smw in [[Vector3(22.0,0,2.0), Color("d43a2a")], [Vector3(24.0,0,-3.0), Color("2f62b8")]]:
 		var smp: Vector3 = smw[0]; smp.y = _h(smp.x, smp.z) + 0.25; _mini(smp, smw[1])
 	# UPPER third breaks: plateau-edge ribs/ledges (z<-4)
@@ -714,10 +734,10 @@ func _top_band() -> void:
 		var urx: float = [23.0, 25.5, 24.0][uri]; var urz: float = [-7.0, -10.0, -13.0][uri]
 		for ust in 2:
 			var urs: float = [1.9, 1.5][ust]
-			add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(-0.25, float(uri)*1.8+float(ust), 0.3)).scaled(Vector3(urs, urs*0.85, urs)), Vector3(urx+float(ust)*1.2, _h(urx+float(ust)*1.2,urz)+0.15, urz)), Color("6e665c"), "rock"); tri_total += 128
+			add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(-0.25, float(uri)*1.8+float(ust), 0.3)).scaled(Vector3(urs, urs*0.85, urs)), Vector3(urx+float(ust)*1.2, _h(urx+float(ust)*1.2,urz)+0.15, urz)), Color("8f7355"), "rock"); tri_total += 128
 	for uli in 2:
 		var ulx: float = [24.0, 26.0][uli]; var ulz: float = [-8.0, -12.0][uli]
-		_terrace(ulx, ulz, 5.0, 1.7, Color("6e665c"), "rock")
+		_terrace(ulx, ulz, 5.0, 1.7, Color("8f7355"), "rock")
 	# wall-foot blend: climbing fields + base trees between village and wall
 	for bfi in 3:
 		var bfx: float = [15.0, 16.0, 14.0][bfi]; var bfz: float = [-1.0, 2.0, 4.0][bfi]; var bfy := _h(bfx,bfz)+0.06
@@ -733,14 +753,14 @@ func _top_band() -> void:
 		var sang := atan2(sdir.x, sdir.y)
 		box(Vector3(smid.x, sy, smid.y), Vector3(1.9,0.22,sdir.length()+0.7), Color("b99a68"), sang, 0, 0, "dirt")
 		var sperp2 := Vector2(-sdir.normalized().y, sdir.normalized().x)
-		box(Vector3(smid.x+sperp2.x*0.95, sy-0.28, smid.y+sperp2.y*0.95), Vector3(0.32,0.55,sdir.length()+0.6), Color("6e665c"), sang, 0, 0, "rock")
+		box(Vector3(smid.x+sperp2.x*0.95, sy-0.28, smid.y+sperp2.y*0.95), Vector3(0.32,0.55,sdir.length()+0.6), Color("8f7355"), sang, 0, 0, "rock")
 		blob(Vector3(sa.x, _h(sa.x,sa.y)+0.3, sa.y), Vector3(0.2,0.13,0.17), Color("9a968c")); blob(Vector3(sb.x, _h(sb.x,sb.y)+0.3, sb.y), Vector3(0.2,0.13,0.17), Color("9a968c"))
 	for fmw in [[Vector3(17.6,0,-4.0), Color("d43a2a")], [Vector3(18.8,0,-8.0), Color("2f62b8")], [Vector3(17.8,0,-11.0), Color("3f7d3a")], [Vector3(16.4,0,-2.0), Color("2f62b8")], [Vector3(19.4,0,-12.6), Color("d43a2a")]]:
 		var fmp: Vector3 = fmw[0]; fmp.y = _h(fmp.x, fmp.z) + 0.05; _mini(fmp, fmw[1])
 	# corner rock mass covering far-plane transition bottom-right
-	add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.3,0.7,0.2)).scaled(Vector3(1.9,1.05,1.6)), Vector3(26, _h(26,-1)+0.25, -1)), Color("6e665c"), "rock"); tri_total += 128
-	add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(-0.2,1.9,0.4)).scaled(Vector3(1.35,0.75,1.1)), Vector3(23.5, _h(23.5,3)+0.2, 3)), Color("6e665c"), "rock"); tri_total += 128
-	add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.5,2.8,-0.3)).scaled(Vector3(1.5,0.85,1.25)), Vector3(28, _h(28,-4)+0.2, -4)), Color("6e665c"), "rock"); tri_total += 128
+	add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.3,0.7,0.2)).scaled(Vector3(1.9,1.05,1.6)), Vector3(26, _h(26,-1)+0.25, -1)), Color("8f7355"), "rock"); tri_total += 128
+	add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(-0.2,1.9,0.4)).scaled(Vector3(1.35,0.75,1.1)), Vector3(23.5, _h(23.5,3)+0.2, 3)), Color("8f7355"), "rock"); tri_total += 128
+	add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.5,2.8,-0.3)).scaled(Vector3(1.5,0.85,1.25)), Vector3(28, _h(28,-4)+0.2, -4)), Color("8f7355"), "rock"); tri_total += 128
 	for cf4 in 2:
 		var cx9 := 6.5+float(cf4)*7.0; var cz9 := -13.6
 		_terrace(cx9, cz9, 5.2, 1.6, Color("86b83e") if cf4%2==0 else Color("b08d55"), "")
