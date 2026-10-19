@@ -298,12 +298,22 @@ func _setup() -> void:
 		cyl(Vector3(px,0.012,pz), 0.55,0.55,0.015, grass2 if k%2==0 else grass.darkened(0.15), 8)
 	# dirt path winding: flat discs/boxes along curve
 	var path_pts := [Vector2(-11,6),Vector2(-7,4),Vector2(-4,2.5),Vector2(-1,1.5),Vector2(2,2.5),Vector2(5,4),Vector2(8,6),Vector2(3,-1),Vector2(2,-4),Vector2(1,-8)]
+	var rng117 := RandomNumberGenerator.new(); rng117.seed = 11701 # R117 per-segment worn variation
 	for i in path_pts.size()-1:
 		var a: Vector2 = path_pts[i]; var b: Vector2 = path_pts[i+1]
 		if i == 6: continue
 		var mid := (a+b)*0.5; var dir := b-a; var ang := atan2(dir.x, dir.y)
-		box(Vector3(mid.x,0.03,mid.y), Vector3(1.05,0.04,dir.length()+1.2), dirt, ang, 0,0, "dirt")
-	for pt in path_pts: cyl(Vector3(pt.x,0.035,pt.y), 0.58,0.58,0.04, dirt, 10)
+		var w117 := rng117.randf_range(1.25, 1.55)
+		box(Vector3(mid.x,0.022,mid.y), Vector3(w117+0.60,0.03,dir.length()+1.35), Color("a8895a"), ang) # soft worn underlay (halo edge)
+		box(Vector3(mid.x,0.038,mid.y), Vector3(w117,0.04,dir.length()+1.2), dirt, ang, 0,0, "dirt")
+		if rng117.randf() > 0.35: # cart ruts on most segments (existing worn key)
+			for r117 in [-0.34, 0.34]:
+				box(Vector3(mid.x + cos(ang)*r117, 0.046, mid.y - sin(ang)*r117), Vector3(0.15,0.045,dir.length()*0.92), Color("8a6c42"), ang)
+		for cj117 in [0.33, 0.66]: # worn light centres
+			var cp117 := a.lerp(b, cj117); cyl(Vector3(cp117.x,0.045,cp117.y), 0.30,0.30,0.03, Color("d9ba7c"), 9)
+	for pt in path_pts:
+		cyl(Vector3(pt.x,0.024,pt.y), 0.98,0.98,0.03, Color("a8895a"), 10)
+		cyl(Vector3(pt.x,0.040,pt.y), 0.80,0.80,0.04, dirt, 10)
 	# LANDSCAPE: rolling plateau back, cliff rocks, distant hills, mist bands
 
 
@@ -362,7 +372,9 @@ func _setup() -> void:
 				var wdir := (wb-wa).normalized(); var wperp := Vector2(-wdir.y, wdir.x)
 				wp += wperp * sin(wt*5.0 + float(wi2)*1.7) * 0.35
 				var wy: float = 0.032 + (_h(wp.x,wp.y) if Vector2(wp.x,wp.y).length() > 11.0 else 0.0)
-				cyl(Vector3(wp.x, wy, wp.y), 0.60,0.60,0.035, Color("d9ba7c"), 9)
+				var wr117 := 0.56 + 0.17 * (0.5 + 0.5 * sin(float(ws)*1.7 + float(wi2)*2.3)) # R117 worn width variation along branch
+				cyl(Vector3(wp.x, wy-0.006, wp.y), wr117+0.30, wr117+0.30, 0.03, Color("a8895a"), 9) # soft edge underlay
+				cyl(Vector3(wp.x, wy, wp.y), wr117, wr117, 0.035, Color("d9ba7c"), 9)
 				if ws % 2 == 0: # R69 stone edging (Black #3)
 					blob(Vector3(wp.x+wperp.x*0.68, wy+0.01, wp.y+wperp.y*0.68), Vector3(0.13,0.09,0.13), Color("9a968c"))
 					blob(Vector3(wp.x-wperp.x*0.68, wy+0.01, wp.y-wperp.y*0.68), Vector3(0.13,0.09,0.13), Color("9a968c"))
