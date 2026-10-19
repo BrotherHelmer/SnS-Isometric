@@ -33,7 +33,7 @@ func mat_for(key: String, c: Color) -> StandardMaterial3D:
 	if tx != "" and TEX.has(tx):
 		m.albedo_texture = load(TEX[tx]); m.uv1_scale = Vector3(3,3,1) if tx=="meadow" else (Vector3(0.55,0.55,1) if tx in ["stone","plaster"] else (Vector3(1,1,1) if tx in ["roofp","thatch","rock"] else Vector3(1.5,1.5,1))) # R77 larger face features; m.albedo_color = Color(0.88,0.87,0.85)
 		if tx == "rock": m.albedo_color = Color(1.06,0.97,0.87).lerp(c, 0.50) # R73: warm rock, tint was being overridden grey
-		if tx == "stone": m.albedo_color = Color(1.04,1.00,0.94).lerp(c, 0.45) # R77 stone tint-through
+		if tx == "stone": m.albedo_color = Color(1.06,0.99,0.88).lerp(c, 0.45) # R89 warmer stone tint-through base
 		if tx == "roofp": m.albedo_color = Color(0.93,0.84,0.75).lerp(c, 0.28) # R78 muted terracotta tint-through
 		if tx == "forest": m.albedo_color = Color(1,1,1).lerp(c, 0.30)
 		m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
@@ -255,7 +255,7 @@ func _setup() -> void:
 	if round_no == 2:
 		grass = Color("69bd45"); grass2 = Color("86cc58"); stone = Color("c4bda9"); roof = Color("a85f43"); leaf = Color("4fae38"); leaf2 = Color("7cc24e"); light_e = 1.05; amb = 0.45
 	if round_no >= 3:
-		grass = Color("406e26"); grass2 = Color("4f7f2e"); stone = Color("9d9584"); roof = Color("a15f43"); dirt = Color("cda96e"); leaf = Color("4e8f33"); leaf2 = Color("7cb54f"); light_e = 1.04; amb = 0.37
+		grass = Color("406e26"); grass2 = Color("4f7f2e"); stone = Color("a5917a"); roof = Color("a15f43"); dirt = Color("cda96e"); leaf = Color("4e8f33"); leaf2 = Color("7cb54f"); light_e = 1.04; amb = 0.37
 	# environment + light + camera (game iso: ortho, pitch -38, yaw -45)
 	var we := WorldEnvironment.new(); var env := Environment.new()
 	var sky := Sky.new(); var smat := ProceduralSkyMaterial.new(); smat.sky_top_color = Color("8fc3e8"); smat.sky_horizon_color = Color("f2e3c2"); smat.ground_bottom_color = Color("5d6b46"); smat.ground_horizon_color = Color("d9c9a4"); sky.sky_material = smat; env.sky = sky
@@ -629,7 +629,7 @@ func _hill_fields() -> void:
 		for cr3 in 5: box(Vector3(fx6-1.6+float(cr3)*0.8, _h(fx6-1.6+float(cr3)*0.8, fz6)+0.16, fz6), Vector3(0.5,0.09,1.4), Color("4e7d26") if fi3%2==0 else Color("96683c"), 0.1)
 	for tp3 in [Vector3(4.5,0,-11.5), Vector3(11,0,-12.5), Vector3(20,0,-9.5), Vector3(7.5,0,-13), Vector3(17,0,-13.5)]:
 		_build_tree(tp3, Color("79c24d"), Color("a9dd77"))
-	_build_hut(Vector3(8.2, _h(8.2,-11.2)-0.1, -11.2), Color("9d9584"))
+	_build_hut(Vector3(8.2, _h(8.2,-11.2)-0.1, -11.2), Color("a5917a"))
 	var sh := Vector3(12.5, _h(12.5,-9.8), -9.8)
 	box(sh+Vector3(0,0.65,0), Vector3(1.7,1.3,1.5), Color("cbb489"))
 	cyl(sh+Vector3(0,1.75,0), 1.45,0.2,1.2, Color("b98a35"), 8, "thatch")
@@ -671,7 +671,7 @@ func _upper_fill() -> void:
 		for cr4 in 4: box(Vector3(mx-1.4+float(cr4)*0.9, _h(mx-1.4+float(cr4)*0.9, mz)+0.16, mz), Vector3(0.5,0.09,1.3), Color("4e7d26") if mf%2==0 else Color("96683c"), 0.18)
 	for tp5 in [Vector3(8.5,0,-12), Vector3(13,0,-11), Vector3(24,0,-12), Vector3(11.5,0,-14.5), Vector3(22,0,-9)]:
 		_build_tree(tp5, Color("79c24d"), Color("a9dd77"))
-	_build_hut(Vector3(18.5, _h(18.5,-8.0)-0.1, -8.0), Color("9d9584"))
+	_build_hut(Vector3(18.5, _h(18.5,-8.0)-0.1, -8.0), Color("a5917a"))
 	var net := [Vector2(10.5,-8.5), Vector2(12.5,-9.8), Vector2(14.2,-8.2), Vector2(15.0,-11.0), Vector2(19.0,-11.6)]
 	for ni in net.size()-1:
 		var a5: Vector2 = net[ni]; var b5: Vector2 = net[ni+1]; var mid5 := (a5+b5)*0.5; var dir5 := b5-a5
@@ -1236,11 +1236,11 @@ func _build_roundhouse(p: Vector3, roof: Color) -> void:
 	# R83 relief: foundation arc stones (existing castle relief keys)
 	for rb83 in 5:
 		var aa83 := -0.6 + float(rb83)*0.3 + fmod(float(rb83)*0.17, 0.08) - 0.04
-		box(p+Vector3(sin(aa83)*1.31, 0.32 + fmod(float(rb83)*0.11, 0.06) - 0.03, cos(aa83)*1.31), Vector3(0.30 + fmod(float(rb83)*0.13, 0.20), 0.20 + fmod(float(rb83)*0.09, 0.14), 0.06 + fmod(float(rb83)*0.05, 0.05)), Color("9d9584").darkened(0.12) if rb83%2==0 else Color("9d9584").lightened(0.07), aa83, 0, 0, "stone")
+		box(p+Vector3(sin(aa83)*1.31, 0.32 + fmod(float(rb83)*0.11, 0.06) - 0.03, cos(aa83)*1.31), Vector3(0.30 + fmod(float(rb83)*0.13, 0.20), 0.20 + fmod(float(rb83)*0.09, 0.14), 0.06 + fmod(float(rb83)*0.05, 0.05)), Color("a5917a").darkened(0.12) if rb83%2==0 else Color("a5917a").lightened(0.07), aa83, 0, 0, "stone")
 	# R84: second staggered course + timber ring relief on the drum
 	for rb84 in 5:
 		var aa84 := -0.45 + float(rb84)*0.3 + fmod(float(rb84)*0.13, 0.08) - 0.04
-		box(p+Vector3(sin(aa84)*1.33, 0.58 + fmod(float(rb84)*0.07, 0.05) - 0.02, cos(aa84)*1.33), Vector3(0.26 + fmod(float(rb84)*0.11, 0.18), 0.14 + fmod(float(rb84)*0.07, 0.10), 0.06 + fmod(float(rb84)*0.04, 0.05)), Color("9d9584").lightened(0.07) if rb84%2==0 else Color("9d9584").darkened(0.12), aa84, 0, 0, "stone")
+		box(p+Vector3(sin(aa84)*1.33, 0.58 + fmod(float(rb84)*0.07, 0.05) - 0.02, cos(aa84)*1.33), Vector3(0.26 + fmod(float(rb84)*0.11, 0.18), 0.14 + fmod(float(rb84)*0.07, 0.10), 0.06 + fmod(float(rb84)*0.04, 0.05)), Color("a5917a").lightened(0.07) if rb84%2==0 else Color("a5917a").darkened(0.12), aa84, 0, 0, "stone")
 	cyl(p+Vector3(0,1.45,0), 1.21, 1.21, 0.11, Color("54381f"), 12, "timber")
 	cyl(p+Vector3(0.55,3.3,-0.4), 0.2,0.24,0.9, Color("9a968c"), 8, "stone")
 func _build_roundbarn(p: Vector3, roof: Color) -> void:
