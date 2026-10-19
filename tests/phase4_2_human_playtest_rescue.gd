@@ -33,7 +33,7 @@ func check(ok: bool, label: String, failures: Array[String]) -> void:
 
 
 func _test_clear_and_build(failures: Array[String]) -> void:
-	var sim: Simulation = Simulation.new(70, 70, 260821, false, true)
+	var sim: Simulation = Simulation.new(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 260821, false, true)
 	sim.population_current = 8
 	sim.housing_capacity = 10
 	sim.central_inventory[Defs.RESOURCE_WOOD] = 40
@@ -70,7 +70,7 @@ func _test_clear_and_build(failures: Array[String]) -> void:
 
 
 func _test_storage_storehouse(failures: Array[String]) -> void:
-	var sim: Simulation = Simulation.new(70, 70, 260821, false, true)
+	var sim: Simulation = Simulation.new(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 260821, false, true)
 	sim.population_current = 8
 	sim.housing_capacity = 10
 	for resource_type in [Defs.RESOURCE_WOOD, Defs.RESOURCE_PLANKS, Defs.RESOURCE_STONE]:
@@ -94,7 +94,7 @@ func _test_tree_cadence(failures: Array[String]) -> void:
 	var interval := float(Defs.PRODUCTION_DEFS[Defs.BUILDING_LUMBER_CAMP].get("interval", 9.0))
 	var yield_amount := int(Defs.PRODUCTION_DEFS[Defs.BUILDING_LUMBER_CAMP].get("output_amount", 9))
 	check(interval <= 2.01 and yield_amount == 1, "lumber cadence is 2s / 1 wood", failures)
-	var sim: Simulation = Simulation.new(70, 70, 707171, false, true)
+	var sim: Simulation = Simulation.new(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 707171, false, true)
 	var lumber_position := sim.town_hall_position + Vector2i(2, 0)
 	sim._clear_area(lumber_position, Simulation.LUMBER_REACH)
 	var tree := lumber_position + Vector2i(2, 0)
@@ -112,7 +112,7 @@ func _test_tree_cadence(failures: Array[String]) -> void:
 
 
 func _test_objective_guidance(failures: Array[String]) -> void:
-	var sim: Simulation = Simulation.new(70, 70, 260821, false, true)
+	var sim: Simulation = Simulation.new(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 260821, false, true)
 	sim._add_completed_building(Defs.BUILDING_HOUSE, sim.town_hall_position + Vector2i(6, 0))
 	sim._add_completed_building(Defs.BUILDING_LUMBER_CAMP, sim.town_hall_position + Vector2i(6, 4))
 	sim._add_completed_building(Defs.BUILDING_FARM, sim.town_hall_position + Vector2i(6, 8))
@@ -126,9 +126,11 @@ func _test_objective_guidance(failures: Array[String]) -> void:
 
 
 func _test_notices(failures: Array[String]) -> void:
-	var sim: Simulation = Simulation.new(70, 70, 260821, false, true)
+	var sim: Simulation = Simulation.new(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 260821, false, true)
+	# 8c850da (Director TEST #20) collapses an identical notice re-fired
+	# within 10 s, so queue two distinct notices.
 	sim.push_notice("economy", "STORAGE FULL", "Build a Storehouse or free capacity.", "warning")
-	sim.push_notice("economy", "STORAGE FULL", "Build a Storehouse or free capacity.", "warning")
+	sim.push_notice("economy", "HOUSING FULL", "Build a House to grow the settlement.", "warning")
 	var pending: Array = sim.consume_pending_notices()
 	check(pending.size() == 2, "notices queue for the toast layer", failures)
 	check(sim.get_notice_log().size() >= 2, "event log retains dismissed toast content", failures)
@@ -143,7 +145,10 @@ func _test_nights(failures: Array[String]) -> void:
 	check(int(night2.get("size", 0)) == 5, "Night 2 uses a real encounter budget", failures)
 	check(night2.get("roster", []).has(Wyrdfall.ENEMY_MARAUDER), "Night 2 includes Marauders", failures)
 	check(float(night2.get("baseline", 0.0)) > 0.0, "Night 2 includes a night baseline", failures)
-	var sim: Simulation = Simulation.new(70, 70, 260821, false, true)
+	var sim: Simulation = Simulation.new(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 260821, false, true)
+	# ca9967c (demo balance): raids stay at Night 1 size until a Barracks
+	# stands; Night 2's five is the ceiling once it does.
+	sim._add_completed_building(Defs.BUILDING_BARRACKS, sim.town_hall_position + Vector2i(8, 0))
 	sim.day_count = 2
 	sim.is_night = true
 	sim._spawn_wave()
@@ -158,7 +163,7 @@ func _test_nights(failures: Array[String]) -> void:
 func _test_combat_matrix(failures: Array[String]) -> void:
 	check(Simulation.TOWER_RANGE == 8 and Simulation.TOWER_DAMAGE == 5, "tower range/damage were reduced", failures)
 	check(Simulation.GUARD_DAMAGE == 4, "guard damage was reduced", failures)
-	var sim: Simulation = Simulation.new(70, 70, 260821, false, true)
+	var sim: Simulation = Simulation.new(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 260821, false, true)
 	sim.is_night = true
 	sim._reveal_radius(sim.town_hall_position, 20)
 	var guard := sim._create_patrol_worker(0, "matrix")
@@ -171,7 +176,7 @@ func _test_combat_matrix(failures: Array[String]) -> void:
 	check(int(sim.enemies[0]["hp"]) < start_hp, "1 guard vs 1 Raider exchanges damage instead of instantly deleting", failures)
 	check(int(sim.enemies[0]["hp"]) > 0, "a single exchange does not finish a Raider", failures)
 
-	var tower_sim: Simulation = Simulation.new(70, 70, 260821, false, true)
+	var tower_sim: Simulation = Simulation.new(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 260821, false, true)
 	tower_sim.is_night = true
 	tower_sim.soldiers_total = 1
 	var tower := tower_sim._create_building(Defs.BUILDING_WATCHTOWER, tower_sim.town_hall_position + Vector2i(1, 0))
@@ -189,7 +194,7 @@ func _test_combat_matrix(failures: Array[String]) -> void:
 	if not tower_sim.enemies.is_empty():
 		check(int(tower_sim.enemies[0]["hp"]) >= 30 - Simulation.TOWER_DAMAGE, "one tower shot wounds rather than deleting a Night 2 Raider", failures)
 
-	var night2: Simulation = Simulation.new(70, 70, 260821, false, true)
+	var night2: Simulation = Simulation.new(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 260821, false, true)
 	night2.soldiers_total = 1
 	var n2_tower := night2._add_completed_building(Defs.BUILDING_WATCHTOWER, night2.town_hall_position + Vector2i(2, 0))
 	n2_tower["connected"] = true
@@ -215,7 +220,7 @@ func _test_combat_matrix(failures: Array[String]) -> void:
 
 
 func _test_tower_guard_presentation(failures: Array[String]) -> void:
-	var sim: Simulation = Simulation.new(70, 70, 260821, false, true)
+	var sim: Simulation = Simulation.new(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 260821, false, true)
 	sim.soldiers_total = 1
 	var tower := sim._add_completed_building(Defs.BUILDING_WATCHTOWER, sim.town_hall_position + Vector2i(2, 0))
 	tower["soldiers_assigned"] = 1
@@ -237,7 +242,7 @@ func _test_tower_guard_presentation(failures: Array[String]) -> void:
 
 
 func _test_founding_apron(failures: Array[String]) -> void:
-	var sim: Simulation = Simulation.new(70, 70, 260821, false, true)
+	var sim: Simulation = Simulation.new(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 260821, false, true)
 	var center := sim._footprint_center(sim.town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
 	var grass := 0
 	var trees := 0
