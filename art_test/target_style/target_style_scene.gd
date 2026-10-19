@@ -242,7 +242,7 @@ func _build_terrain() -> void:
 	var tmesh := ArrayMesh.new(); tmesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	var up2 := MeshInstance3D.new(); var bm3 := BoxMesh.new(); bm3.size = Vector3(400, 0.1, 400); up2.mesh = bm3; up2.position = Vector3(0, -0.60, 0); var um2 := StandardMaterial3D.new(); um2.albedo_texture = load(PT + "detail_noise.png"); um2.set("texture_repeat", 1); um2.uv1_scale = Vector3(120,120,1); um2.albedo_color = Color(0.38,0.42,0.27); um2.roughness = 1.0; up2.material_override = um2; up2.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(up2)
 	var mi := MeshInstance3D.new(); mi.mesh = tmesh
-	var tsh := Shader.new(); tsh.code = "shader_type spatial;\nrender_mode cull_disabled;\nuniform sampler2D meadow_tex : source_color, repeat_enable;\nuniform sampler2D rock_tex : source_color, repeat_enable;\nvarying vec3 v_c;\nvarying vec3 v_wp;\nvarying vec3 v_wn;\nvoid vertex() { v_c = COLOR.rgb; v_wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; v_wn = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz); }\nvoid fragment() { float steep = smoothstep(0.74, 0.54, v_wn.y); vec3 md = texture(meadow_tex, v_wp.xz * 0.07).rgb; vec2 ruv = abs(v_wn.x) > abs(v_wn.z) ? vec2(v_wp.z * 0.13, v_wp.y * 0.13) : vec2(v_wp.x * 0.13, v_wp.y * 0.13); vec3 rk = texture(rock_tex, ruv).rgb; vec3 grass_c = v_c * md * 1.02; vec3 rock_c = rk * vec3(1.06, 0.88, 0.66) * (0.30 + 0.50 * v_c) * mix(0.68, 1.0, clamp(v_wp.y / 8.0, 0.0, 1.0)); ALBEDO = mix(grass_c, rock_c, steep); ROUGHNESS = 1.0; }"
+	var tsh := Shader.new(); tsh.code = "shader_type spatial;\nrender_mode cull_disabled;\nuniform sampler2D meadow_tex : source_color, repeat_enable;\nuniform sampler2D rock_tex : source_color, repeat_enable;\nvarying vec3 v_c;\nvarying vec3 v_wp;\nvarying vec3 v_wn;\nvoid vertex() { v_c = COLOR.rgb; v_wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; v_wn = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz); }\nvoid fragment() { float steep = smoothstep(0.74, 0.54, v_wn.y); vec3 md = texture(meadow_tex, v_wp.xz * 0.07).rgb; vec2 ruv = abs(v_wn.x) > abs(v_wn.z) ? vec2(v_wp.z * 0.13, v_wp.y * 0.13) : vec2(v_wp.x * 0.13, v_wp.y * 0.13); vec3 rk = texture(rock_tex, ruv).rgb; vec3 grass_c = v_c * md * 1.02; vec3 rock_c = rk * vec3(1.06, 0.88, 0.66) * (0.30 + 0.50 * v_c) * mix(0.68, 1.0, clamp(v_wp.y / 8.0, 0.0, 1.0)); ALBEDO = mix(grass_c, rock_c, steep); float snp = 0.5 + 0.5*sin(v_wp.x*1.9+1.3)*sin(v_wp.z*1.4-0.7); float snw = smoothstep(2.8, 5.0, v_wp.y) * smoothstep(0.30, 0.58, v_wn.y) * smoothstep(0.32, 0.58, snp); ALBEDO = mix(ALBEDO, vec3(0.93,0.94,0.92), snw * 0.92); ROUGHNESS = 1.0; }"
 	var m := ShaderMaterial.new(); m.shader = tsh; m.set_shader_parameter("meadow_tex", load(PT + "detail_noise.png")); m.set_shader_parameter("rock_tex", load(PT + "rock_painted.png")); mi.material_override = m; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mi)
 	# outer trees sit on terrain
 func _setup() -> void:
@@ -491,14 +491,17 @@ func _spawn_cliffs() -> void:
 			var bp := pos + Vector3(float(si3)*1.3-1.3, -float(df[3])*0.3, 1.8)
 			add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0,float(si3),0)).scaled(Vector3(0.6,0.42,0.55)), Vector3(bp.x, _h(bp.x,bp.z)+0.12, bp.z)), Color("6e665c"), "rock"); tri_total += 128
 func _build_mine(mp: Vector3) -> void:
-	var wm := CylinderMesh.new(); wm.bottom_radius=0.55; wm.top_radius=0.55; wm.height=0.10; wm.radial_segments=12; add_mesh(wm, Transform3D(Basis.from_euler(Vector3(PI/2.0,0,0)), mp+Vector3(0,2.02,0.22)), Color("4c4c50")); tri_total += 48 # R69 headframe wheel
+	var wm := CylinderMesh.new(); wm.bottom_radius=0.55; wm.top_radius=0.55; wm.height=0.10; wm.radial_segments=12; add_mesh(wm, Transform3D(Basis.from_euler(Vector3(PI/2.0,0,0)), mp+Vector3(0,2.02,0.22)), Color("2f2d2d")); tri_total += 48 # R69 headframe wheel
 	box(mp+Vector3(0,0.75,-0.15), Vector3(1.5,1.5,0.18), Color("17110b"))
-	box(mp+Vector3(-0.82,0.85,0), Vector3(0.2,1.9,0.24), Color("6b4a2c")); box(mp+Vector3(0.82,0.85,0), Vector3(0.2,1.9,0.24), Color("6b4a2c"))
-	box(mp+Vector3(0,1.85,0), Vector3(1.95,0.24,0.26), Color("7a5a36"))
+	box(mp+Vector3(-0.82,0.85,0), Vector3(0.22,1.9,0.26), Color("7c4c22")); box(mp+Vector3(0.82,0.85,0), Vector3(0.22,1.9,0.26), Color("7c4c22")) # R71 warm timber vs rock
+	box(mp+Vector3(0,1.85,0), Vector3(1.95,0.26,0.28), Color("8a5f30"))
+	box(mp+Vector3(0,1.28,0.05), Vector3(1.7,0.16,0.18), Color("5d3a1e"), 0, 0, 0.6); box(mp+Vector3(0,1.28,0.05), Vector3(1.7,0.16,0.18), Color("5d3a1e"), 0, 0, -0.6)
 	box(mp+Vector3(-0.45,0.45,0), Vector3(0.14,1.1,0.14), Color("54381f"))
+	box(mp+Vector3(1.06,1.62,0.28), Vector3(0.2,0.24,0.08), Color("ffd98a")) # lantern
+	box(mp+Vector3(0,2.62,0), Vector3(0.06,0.85,0.06), Color("4a3421")); box(mp+Vector3(0.34,2.9,0), Vector3(0.62,0.34,0.04), Color("d43a2a")) # mine pennant
 	for rz in 2: box(mp+Vector3(-0.32+float(rz)*0.64, -0.55, 1.5), Vector3(0.09,0.06,2.6), Color("4c4c50"))
 	for sl in 4: box(mp+Vector3(0, -0.62, 0.55+float(sl)*0.62), Vector3(0.95,0.07,0.16), Color("6b4a2c"))
-	box(mp+Vector3(0,-0.25,2.1), Vector3(0.78,0.42,1.0), Color("54381f")); box(mp+Vector3(0,0.02,2.1), Vector3(0.66,0.2,0.84), Color("4c4c50"))
+	box(mp+Vector3(0,-0.25,2.1), Vector3(0.78,0.42,1.0), Color("6b4423")); box(mp+Vector3(0,0.02,2.1), Vector3(0.66,0.2,0.84), Color("2f2d2d")) # R71 wood cart, dark iron
 func _build_watchtower(tp: Vector3) -> void:
 	for lx in [-0.55, 0.55]:
 		for lz in [-0.55, 0.55]: box(tp+Vector3(lx,2.1,lz), Vector3(0.17,4.2,0.17), Color("6b4a2c"))
@@ -507,6 +510,19 @@ func _build_watchtower(tp: Vector3) -> void:
 	box(tp+Vector3(0,5.05,0), Vector3(1.45,1.35,1.45), Color("a8875e"), 0,0,0, "timber")
 	box(tp+Vector3(0,5.15,0.75), Vector3(0.44,0.5,0.06), Color("ffd98a"))
 	cyl(tp+Vector3(0,6.25,0), 1.35,0.04,1.15, Color("9c4a34"), 8, "roofp")
+func _terrace(cx: float, cz: float, w: float, d: float, c: Color, tx: String) -> void:
+	# R71: 4 stepped segments conforming to _h, retaining skirt where slope falls (+z edge + ends)
+	var segs := 4
+	for s in segs:
+		var sx := cx - w/2.0 + w*(float(s)+0.5)/float(segs)
+		var sy := _h(sx, cz) + 0.05
+		box(Vector3(sx, sy, cz), Vector3(w/float(segs)+0.07, 0.16, d), c, 0, 0, 0, tx)
+		var ey := _h(sx, cz + d/2.0 + 0.25)
+		box(Vector3(sx, (sy+ey)*0.5 - 0.12, cz + d/2.0), Vector3(w/float(segs)+0.05, absf(sy-ey)+0.42, 0.18), Color("7a6a50"))
+		var xy := _h(cx - w/2.0 - 0.25, cz) if s == 0 else _h(cx + w/2.0 + 0.25, cz)
+		if s == 0 or s == segs-1:
+			var ex := cx - w/2.0 if s == 0 else cx + w/2.0
+			box(Vector3(ex, (sy+xy)*0.5 - 0.12, cz), Vector3(0.18, absf(sy-xy)+0.42, d), Color("7a6a50"))
 func _hill_content() -> void:
 	_build_mine(Vector3(14.5, _h(14.5,-11.5)+0.55, -11.5)) # R70 mine on corner slope
 	_build_watchtower(Vector3(14.2, _h(14.2,-6.9)-0.15, -6.9))
@@ -517,9 +533,8 @@ func _hill_content() -> void:
 	for ti in 6:
 		var tx2 := 4.2+float(ti)*2.0; var tz2 := -6.2-float(ti)*0.6
 		var ty2 := _h(tx2,tz2)+0.05
-		box(Vector3(tx2, ty2, tz2), Vector3(4.4,0.16,1.5), Color("86b83e") if ti%2==0 else Color("b08d55"), 0.15, 0, 0, "dirt" if ti%2==1 else "")
-		box(Vector3(tx2, ty2-0.06, tz2+0.82), Vector3(4.5,0.22,0.18), Color("8a7a5c"), 0.15)
-		for cr in 5: box(Vector3(tx2-1.5+float(cr)*0.75, ty2+0.10, tz2), Vector3(0.5,0.09,1.25), Color("3f7020") if ti%2==0 else Color("96683c"), 0.15)
+		_terrace(tx2, tz2, 4.4, 1.5, Color("86b83e") if ti%2==0 else Color("b08d55"), "dirt" if ti%2==1 else "")
+		for cr in 5: box(Vector3(tx2-1.5+float(cr)*0.75, _h(tx2-1.5+float(cr)*0.75, tz2)+0.16, tz2), Vector3(0.5,0.09,1.25), Color("3f7020") if ti%2==0 else Color("96683c"), 0.15)
 	for stp in [Vector3(8,0,-9.5), Vector3(16.5,0,-12.5), Vector3(22,0,-11), Vector3(15,0,-13.5)]:
 		_build_tree(stp, Color("79c24d"), Color("a9dd77"))
 func _hill_props() -> void:
@@ -530,13 +545,13 @@ func _hill_props() -> void:
 func _hill_fields() -> void:
 	for fi2 in 2:
 		var fx5 := 3.4+float(fi2)*3.4; var fz5 := -5.6-float(fi2)*0.4; var fy5 := _h(fx5,fz5)+0.05
-		box(Vector3(fx5, fy5, fz5), Vector3(4.6,0.15,1.7), Color("86b83e") if fi2%2==0 else Color("b08d55"), 0.12, 0, 0, "" if fi2%2==0 else "dirt")
-		for cr2 in 5: box(Vector3(fx5-1.6+float(cr2)*0.8, fy5+0.1, fz5), Vector3(0.5,0.09,1.45), Color("3f7020") if fi2%2==0 else Color("96683c"), 0.12)
-		for fp4 in 4: box(Vector3(fx5-2.1+float(fp4)*1.4, fy5+0.35, fz5+0.95), Vector3(0.09,0.7,0.09), Color("6b4a2c"))
+		_terrace(fx5, fz5, 4.6, 1.7, Color("86b83e") if fi2%2==0 else Color("b08d55"), "" if fi2%2==0 else "dirt")
+		for cr2 in 5: box(Vector3(fx5-1.6+float(cr2)*0.8, _h(fx5-1.6+float(cr2)*0.8, fz5)+0.16, fz5), Vector3(0.5,0.09,1.45), Color("3f7020") if fi2%2==0 else Color("96683c"), 0.12)
+		for fp4 in 4: box(Vector3(fx5-2.1+float(fp4)*1.4, _h(fx5-2.1+float(fp4)*1.4, fz5+0.95)+0.35, fz5+0.95), Vector3(0.09,0.7,0.09), Color("6b4a2c"))
 	for fi3 in 6:
 		var fx6 := 2.2+float(fi3)*1.9; var fz6 := -5.0 - float(fi3%3)*0.95; var fy6 := _h(fx6,fz6)+0.05
-		box(Vector3(fx6, fy6, fz6), Vector3(4.8,0.15,1.6), Color("7fae4a") if fi3%2==0 else Color("a67c4e"), 0.1, 0, 0, "" if fi3%2==0 else "dirt")
-		for cr3 in 5: box(Vector3(fx6-1.6+float(cr3)*0.8, fy6+0.1, fz6), Vector3(0.5,0.09,1.4), Color("4e7d26") if fi3%2==0 else Color("96683c"), 0.1)
+		_terrace(fx6, fz6, 4.8, 1.6, Color("7fae4a") if fi3%2==0 else Color("a67c4e"), "" if fi3%2==0 else "dirt")
+		for cr3 in 5: box(Vector3(fx6-1.6+float(cr3)*0.8, _h(fx6-1.6+float(cr3)*0.8, fz6)+0.16, fz6), Vector3(0.5,0.09,1.4), Color("4e7d26") if fi3%2==0 else Color("96683c"), 0.1)
 	for tp3 in [Vector3(4.5,0,-11.5), Vector3(11,0,-12.5), Vector3(20,0,-9.5), Vector3(7.5,0,-13), Vector3(17,0,-13.5)]:
 		_build_tree(tp3, Color("79c24d"), Color("a9dd77"))
 	_build_hut(Vector3(8.2, _h(8.2,-11.2)-0.1, -11.2), Color("9d9584"))
@@ -568,7 +583,7 @@ func _summit() -> void:
 		_build_tree(tp4, Color("79c24d"), Color("a9dd77"))
 	for rf in 3:
 		var rx4 := 9.0+float(rf)*4.2; var rz4 := -13.5-float(rf)*0.8
-		box(Vector3(rx4, _h(rx4,rz4)+0.05, rz4), Vector3(3.6,0.13,1.4), Color("8d8172"), 0.2, 0, 0, "rock")
+		_terrace(rx4, rz4, 3.6, 1.4, Color("8d8172"), "rock")
 		for sb in 4: blob(Vector3(rx4-1.2+float(sb)*0.8, _h(rx4,rz4)+0.16, rz4), Vector3(0.3,0.2,0.3), Color("a89a80"))
 	for sd in 4:
 		var sx5 := 9.5+float(sd)*2.0; var sz5 := -14.5-fmod(float(sd)*1.1,2.0)
@@ -576,8 +591,8 @@ func _summit() -> void:
 func _upper_fill() -> void:
 	for mf in 4:
 		var mx := 7.0+float(mf)*3.6; var mz := -10.8 - float(mf%2)*1.6; var my := _h(mx,mz)+0.05
-		box(Vector3(mx, my, mz), Vector3(4.2,0.14,1.5), Color("86b83e") if mf%2==0 else Color("b08d55"), 0.18)
-		for cr4 in 4: box(Vector3(mx-1.4+float(cr4)*0.9, my+0.1, mz), Vector3(0.5,0.09,1.3), Color("4e7d26") if mf%2==0 else Color("96683c"), 0.18)
+		_terrace(mx, mz, 4.2, 1.5, Color("86b83e") if mf%2==0 else Color("b08d55"), "")
+		for cr4 in 4: box(Vector3(mx-1.4+float(cr4)*0.9, _h(mx-1.4+float(cr4)*0.9, mz)+0.16, mz), Vector3(0.5,0.09,1.3), Color("4e7d26") if mf%2==0 else Color("96683c"), 0.18)
 	for tp5 in [Vector3(8.5,0,-12), Vector3(13,0,-11), Vector3(24,0,-12), Vector3(11.5,0,-14.5), Vector3(22,0,-9)]:
 		_build_tree(tp5, Color("79c24d"), Color("a9dd77"))
 	_build_hut(Vector3(18.5, _h(18.5,-8.0)-0.1, -8.0), Color("9d9584"))
@@ -593,22 +608,22 @@ func _fill_more() -> void:
 		_build_tree(tp6, Color("79c24d"), Color("a9dd77"))
 	for cf in 3:
 		var cx6 := 8.5+float(cf)*5.0; var cz6 := -12.8-float(cf)*0.5
-		box(Vector3(cx6, _h(cx6,cz6)+0.05, cz6), Vector3(5.6,0.15,1.8), Color("b08d55") if cf%2==0 else Color("86b83e"), 0.15)
-		for oc in 3: blob(Vector3(cx6-1.6+float(oc)*1.5, _h(cx6,cz6)+0.2, cz6+0.6), Vector3(0.5,0.35,0.5), Color("a89a80"))
+		_terrace(cx6, cz6, 5.6, 1.8, Color("b08d55") if cf%2==0 else Color("86b83e"), "")
+		for oc in 3: blob(Vector3(cx6-1.6+float(oc)*1.5, _h(cx6-1.6+float(oc)*1.5,cz6+0.6)+0.2, cz6+0.6), Vector3(0.5,0.35,0.5), Color("a89a80"))
 	for cf2 in 3:
 		var cx7 := 7.5+float(cf2)*5.2; var cz7 := -9.9-float(cf2)*0.3
-		box(Vector3(cx7, _h(cx7,cz7)+0.05, cz7), Vector3(5.8,0.15,1.7), Color("86b83e") if cf2%2==0 else Color("b08d55"), 0.12)
-		for cr6 in 5: box(Vector3(cx7-1.9+float(cr6)*0.95, _h(cx7,cz7)+0.15, cz7), Vector3(0.55,0.09,1.5), Color("3f7020") if cf2%2==0 else Color("96683c"), 0.12)
+		_terrace(cx7, cz7, 5.8, 1.7, Color("86b83e") if cf2%2==0 else Color("b08d55"), "")
+		for cr6 in 5: box(Vector3(cx7-1.9+float(cr6)*0.95, _h(cx7-1.9+float(cr6)*0.95, cz7)+0.16, cz7), Vector3(0.55,0.09,1.5), Color("3f7020") if cf2%2==0 else Color("96683c"), 0.12)
 	for tp7 in [Vector3(6.5,0,-10.5), Vector3(17.5,0,-10.2), Vector3(5.5,0,-12.8), Vector3(21.5,0,-14.5)]:
 		_build_tree(tp7, Color("79c24d"), Color("a9dd77"))
 	for cf3 in 2:
 		var cx8 := 5.5+float(cf3)*7.5; var cz8 := -11.6
-		box(Vector3(cx8, _h(cx8,cz8)+0.05, cz8), Vector3(5.4,0.14,1.6), Color("b08d55") if cf3%2==0 else Color("86b83e"), 0.14)
-		for fp6 in 4: box(Vector3(cx8-2.2+float(fp6)*1.45, _h(cx8,cz8)+0.45, cz8+0.9), Vector3(0.09,0.75,0.09), Color("6b4a2c"))
+		_terrace(cx8, cz8, 5.4, 1.6, Color("b08d55") if cf3%2==0 else Color("86b83e"), "")
+		for fp6 in 4: box(Vector3(cx8-2.2+float(fp6)*1.45, _h(cx8-2.2+float(fp6)*1.45, cz8+0.9)+0.38, cz8+0.9), Vector3(0.09,0.75,0.09), Color("6b4a2c"))
 	# lower-left farm: fields + trees + fence (fills reframed meadow)
 	for lf in 2:
 		var lx6 := -13.5+float(lf)*0.4; var lz6 := 8.5+float(lf)*2.2
-		box(Vector3(lx6, 0.05, lz6), Vector3(5.2,0.12,2.0), Color("86b83e") if lf%2==0 else Color("b08d55"), 0.3)
+		_terrace(lx6, lz6, 5.2, 2.0, Color("86b83e") if lf%2==0 else Color("b08d55"), "")
 		for cr5 in 5: box(Vector3(lx6-1.9+float(cr5)*0.95, 0.14, lz6), Vector3(0.55,0.09,1.7), Color("3f7020") if lf%2==0 else Color("96683c"), 0.3)
 	_build_tree(Vector3(-15.5,0,4.5), Color("79c24d"), Color("a9dd77")); _build_tree(Vector3(-11,0,12), Color("79c24d"), Color("a9dd77"))
 func _top_band() -> void:
@@ -622,8 +637,8 @@ func _top_band() -> void:
 	# worked terraces on the east mass face
 	for tfi in 7:
 		var tfx: float = [16.5, 17.5, 18.0, 16.0, 18.5, 15.5, 19.0][tfi]; var tfz: float = [-3.0, -7.0, -10.5, -1.5, -11.0, -6.0, -4.0][tfi]; var tfy := _h(tfx,tfz)+0.06
-		box(Vector3(tfx, tfy, tfz), Vector3(3.6,0.14,1.35), Color("86b83e") if tfi%2==0 else Color("b08d55"), 0.15, 0, 0, "dirt" if tfi%2==1 else "")
-		for cr2 in 4: box(Vector3(tfx-1.2+float(cr2)*0.8, tfy+0.09, tfz), Vector3(0.45,0.08,1.1), Color("3f7020") if tfi%2==0 else Color("96683c"), 0.15)
+		_terrace(tfx, tfz, 3.6, 1.35, Color("86b83e") if tfi%2==0 else Color("b08d55"), "dirt" if tfi%2==1 else "")
+		for cr2 in 4: box(Vector3(tfx-1.2+float(cr2)*0.8, _h(tfx-1.2+float(cr2)*0.8, tfz)+0.15, tfz), Vector3(0.45,0.08,1.1), Color("3f7020") if tfi%2==0 else Color("96683c"), 0.15)
 	for etp in [Vector3(20.5,0,-5.5), Vector3(22.5,0,-9.5)]:
 		_build_tree(etp, Color("79c24d"), Color("a9dd77"))
 	for epp in [Vector3(19.5,_h(19.5,-4.2),-4.2), Vector3(21.8,_h(21.8,-8.2),-8.2)]:
@@ -631,8 +646,8 @@ func _top_band() -> void:
 	# painted cliff ledges: geometry bands across east face
 	for ldi in 4:
 		var ldx: float = [18.5, 19.5, 19.0, 20.5][ldi]; var ldz: float = [-4.5, -7.5, -10.0, -12.0][ldi]
-		box(Vector3(ldx, _h(ldx,ldz)+0.12, ldz), Vector3(4.6,0.34,0.85), Color("6e665c"), 0.15, 0, 0, "rock")
-		box(Vector3(ldx+0.4, _h(ldx+0.4,ldz-1.1)+0.10, ldz-1.1), Vector3(3.4,0.28,0.7), Color("6e665c"), 0.15, 0, 0, "rock")
+		_terrace(ldx, ldz, 4.6, 0.85, Color("6e665c"), "rock")
+		_terrace(ldx+0.4, ldz-1.1, 3.4, 0.7, Color("6e665c"), "rock")
 	# jagged crest silhouette on NE ridge, snow only in crevices
 	for cri in 7:
 		var crx := 15.5 + float(cri)*1.35; var crz := -14.8 - fmod(float(cri)*0.8, 1.8); var cry := _h(crx,crz)
@@ -645,7 +660,7 @@ func _top_band() -> void:
 		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2, float(tli)*1.1, 0.15)).scaled(Vector3(tls, tls*0.48, tls*0.8)), Vector3(tlx, _h(tlx,tlz)+0.12, tlz)), Color("6e665c"), "rock"); tri_total += 128
 	for ldi2 in 3:
 		var ldx2: float = [20.0, 20.5, 19.8][ldi2]; var ldz2: float = [-6.0, -9.0, -12.0][ldi2]
-		box(Vector3(ldx2, _h(ldx2,ldz2)+0.15, ldz2), Vector3(3.8,0.5,1.1), Color("6e665c"), 0.3*float(ldi2), 0.10, 0, "rock")
+		_terrace(ldx2, ldz2, 3.8, 1.1, Color("6e665c"), "rock")
 	# BIG ribs: stepped large rocks base->mid->upper at 3 face lines + big talus fan
 	for rbi in 3:
 		var rbz: float = [-5.0, -8.5, -12.0][rbi]
@@ -657,7 +672,7 @@ func _top_band() -> void:
 		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.15, float(tfi2)*1.9, 0.1)).scaled(Vector3(3.1, 1.35, 2.5)), Vector3(tfx2, _h(tfx2,tfz2)+0.1, tfz2)), Color("6e665c"), "rock"); tri_total += 128
 	for ldi3 in 2:
 		var ldx3: float = [19.5, 20.0][ldi3]; var ldz3: float = [-7.0, -11.0][ldi3]
-		box(Vector3(ldx3, _h(ldx3,ldz3)+0.2, ldz3), Vector3(5.6,0.65,1.8), Color("6e665c"), 0.2, 0.08, 0, "rock")
+		_terrace(ldx3, ldz3, 5.6, 1.8, Color("6e665c"), "rock")
 	# CAMERA-FACING south-east plane breaks (the wall filling frame right edge)
 	for sri in 3:
 		var srx: float = [23.0, 25.5, 28.0][sri]
@@ -666,7 +681,7 @@ func _top_band() -> void:
 			add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(-0.3, float(sri)*1.6+float(sst)*0.8, 0.25)).scaled(Vector3(srs, srs*0.85, srs)), Vector3(srx, _h(srx,srz)+0.15, srz)), Color("6e665c"), "rock"); tri_total += 128
 	for sli in 2:
 		var slx: float = [24.0, 26.0][sli]; var slz: float = [2.0, -1.5][sli]
-		box(Vector3(slx, _h(slx,slz)+0.2, slz), Vector3(5.2,0.6,1.7), Color("6e665c"), 0.12, 0.06, 0, "rock")
+		_terrace(slx, slz, 5.2, 1.7, Color("6e665c"), "rock")
 	for stf in 3:
 		var stx: float = [23.0, 26.0, 21.0][stf]; var stz: float = [8.0, 6.0, 10.0][stf]
 		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2, float(stf)*2.2, 0.1)).scaled(Vector3(2.9, 1.25, 2.3)), Vector3(stx, _h(stx,stz)+0.1, stz)), Color("6e665c"), "rock"); tri_total += 128
@@ -689,12 +704,12 @@ func _top_band() -> void:
 			add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(-0.25, float(uri)*1.8+float(ust), 0.3)).scaled(Vector3(urs, urs*0.85, urs)), Vector3(urx+float(ust)*1.2, _h(urx+float(ust)*1.2,urz)+0.15, urz)), Color("6e665c"), "rock"); tri_total += 128
 	for uli in 2:
 		var ulx: float = [24.0, 26.0][uli]; var ulz: float = [-8.0, -12.0][uli]
-		box(Vector3(ulx, _h(ulx,ulz)+0.2, ulz), Vector3(5.0,0.6,1.7), Color("6e665c"), 0.12, 0.06, 0, "rock")
+		_terrace(ulx, ulz, 5.0, 1.7, Color("6e665c"), "rock")
 	# wall-foot blend: climbing fields + base trees between village and wall
 	for bfi in 3:
 		var bfx: float = [15.0, 16.0, 14.0][bfi]; var bfz: float = [-1.0, 2.0, 4.0][bfi]; var bfy := _h(bfx,bfz)+0.06
-		box(Vector3(bfx, bfy, bfz), Vector3(3.4,0.13,1.3), Color("86b83e") if bfi%2==0 else Color("b08d55"), 0.18, 0, 0, "dirt" if bfi%2==1 else "")
-		for bcr in 4: box(Vector3(bfx-1.15+float(bcr)*0.75, bfy+0.09, bfz), Vector3(0.42,0.08,1.05), Color("3f7020") if bfi%2==0 else Color("96683c"), 0.18)
+		_terrace(bfx, bfz, 3.4, 1.3, Color("86b83e") if bfi%2==0 else Color("b08d55"), "dirt" if bfi%2==1 else "")
+		for bcr in 4: box(Vector3(bfx-1.15+float(bcr)*0.75, _h(bfx-1.15+float(bcr)*0.75, bfz)+0.15, bfz), Vector3(0.42,0.08,1.05), Color("3f7020") if bfi%2==0 else Color("96683c"), 0.18)
 	for btp in [Vector3(16.5,0,-3.5), Vector3(18.0,0,0.5)]:
 		_build_tree(btp, Color("79c24d"), Color("a9dd77"))
 	# switchback path ON the face + workers
@@ -715,7 +730,7 @@ func _top_band() -> void:
 	add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.5,2.8,-0.3)).scaled(Vector3(1.5,0.85,1.25)), Vector3(28, _h(28,-4)+0.2, -4)), Color("6e665c"), "rock"); tri_total += 128
 	for cf4 in 2:
 		var cx9 := 6.5+float(cf4)*7.0; var cz9 := -13.6
-		box(Vector3(cx9, _h(cx9,cz9)+0.05, cz9), Vector3(5.2,0.14,1.6), Color("86b83e") if cf4%2==0 else Color("b08d55"), 0.14)
+		_terrace(cx9, cz9, 5.2, 1.6, Color("86b83e") if cf4%2==0 else Color("b08d55"), "")
 func _aprons() -> void:
 	for ap2 in [Vector3(10.5,_h(10.5,-8.5),-8.5), Vector3(14.2,_h(14.2,-6.9),-6.9), Vector3(19.0,_h(19.0,-13.8),-13.8)]:
 		blob(ap2+Vector3(0,0.03,0), Vector3(3.1,0.055,2.5), Color("8a6c42"))
