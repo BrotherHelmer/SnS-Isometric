@@ -9,6 +9,8 @@ extends SceneTree
 var shot_on := ""
 var shot_off := ""
 var wide := false
+var night := false
+var show_map := false
 
 
 func _init() -> void:
@@ -25,6 +27,10 @@ func _init() -> void:
 			shot_off = args[i + 1]
 		if args[i] == "--dio-wide":
 			wide = true
+		if args[i] == "--dio-night":
+			night = true
+		if args[i] == "--dio-map":
+			show_map = true
 	call_deferred("_run")
 
 
@@ -37,8 +43,15 @@ func _run() -> void:
 	# Frame the founding settlement (midpoint of Town Hall and Lumber Camp)
 	# at midday, the same presentation state the built-in evidence capture
 	# uses when it pins the clock for its shots.
-	sim.is_night = false
-	sim.phase_time = 60.0
+	if night:
+		# M3 evidence: hold the settlement in early night (raids may or
+		# may not arrive inside the capture window; the lighting state
+		# is what this shot is for).
+		sim.is_night = true
+		sim.phase_time = 30.0
+	else:
+		sim.is_night = false
+		sim.phase_time = 60.0
 	var th_id := -1
 	var camp_id := -1
 	for b in sim.buildings:
@@ -56,6 +69,10 @@ func _run() -> void:
 	if wide:
 		# M2 evidence: pull to the rig's strategic zoom for a family view.
 		game.get_node("IsometricCameraRig").set_zoom_preset("strategic")
+	if show_map:
+		# M3 evidence: open the province map through its real toggle.
+		if not game.minimap_expanded:
+			game._toggle_minimap()
 	await create_timer(4.0).timeout
 	print("CAPTURE founded=", sim.is_town_hall_founded(), " buildings=", sim.buildings.size(), " workers=", sim.workers.size())
 	print("CAPTURE counts TH=", _count(sim, "TOWN_HALL"), " HOUSE=", _count(sim, "HOUSE"), " LUMBER=", _count(sim, "LUMBER_CAMP"))
