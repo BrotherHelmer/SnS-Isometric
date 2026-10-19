@@ -155,7 +155,7 @@ func _h(x: float, z: float) -> float:
 var _canopy_sphere: ArrayMesh = null
 func canopy_sphere() -> ArrayMesh:
 	if _canopy_sphere != null: return _canopy_sphere
-	var sm := SphereMesh.new(); sm.radial_segments = 13; sm.rings = 7; sm.radius = 1.0; sm.height = 2.0 # R98 denser canopy
+	var sm := SphereMesh.new(); sm.radial_segments = 9; sm.rings = 5; sm.radius = 1.0; sm.height = 2.0 # R126 near canopy 9x5 (was 13x7; 8x5 rejected - facets coarsen on FG crowns)
 	var arrays: Array = sm.get_mesh_arrays(); var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]; var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
 	var disp2 := {}
 	for dvi in verts.size():
@@ -249,7 +249,7 @@ func add_canopy(xf: Transform3D, c: Color) -> void:
 		cc = Color(clampf(cc.r*2.1,0.0,1.1), clampf(cc.g*2.0,0.0,1.1), clampf(cc.b*2.1,0.0,1.1)) # R69: undo texture*vertex double-green
 		for j in 3:
 			canopy_st.set_normal(fn); canopy_st.set_color(cc); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j]) # R114 flat cluster-cell normals (was smooth radial = lump)
-	tri_total += 128
+	tri_total += 90 # R126 9x5 sphere tris (was 128 at 13x7)
 var _flat_sphere: ArrayMesh = null
 func flat_sphere() -> ArrayMesh:
 	if _flat_sphere != null: return _flat_sphere
