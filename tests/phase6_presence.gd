@@ -31,7 +31,9 @@ func _run() -> void:
 		if String(game.world_view.nature_views[key_value]) == Defs.TILE_GRASS:
 			grass_in_trees += 1
 	_check(failures, grass_in_trees == 0, "grass is not rebuilt with every tree mesh")
-	_check(failures, game.world_view.grass_root != null and game.world_view.grass_root.get_child_count() > 0, "revealed yards have a dedicated grass layer")
+	# 26209fa: on the chunked province (>80 tiles) grass is built per near chunk
+	# (_build_chunk_grass -> "Composed_<grass asset>" MultiMeshes), not in grass_root.
+	_check(failures, _grass_instances(game.world_view) > 0, "revealed yards have a dedicated grass layer")
 	var fog: Dictionary = game.world_view.fog_configuration()
 	_check(failures, bool(fog.get("volume_mesh", false)), "fog of war is a covering volume")
 	_check(failures, game.world_view.fog_plane != null and game.world_view.fog_skirts.size() >= 4, "fog sheet and skirts cover the island edge")
@@ -61,3 +63,18 @@ func _check(failures: Array[String], ok: bool, label: String) -> void:
 	print("%s %s" % ["PASS" if ok else "FAIL", label])
 	if not ok:
 		failures.append(label)
+
+
+func _grass_instances(view: Node) -> int:
+	var grass_names: Dictionary = {}
+	for path_value in view.Catalog.GRASS:
+		grass_names["Composed_%s" % String(path_value).get_file().get_basename()] = true
+	var count := 0
+	if view.grass_root != null:
+		count += view.grass_root.get_child_count()
+	if view.chunk_root != null:
+		for node in view.chunk_root.find_children("Composed_*", "MultiMeshInstance3D", true, false):
+			var instance := node as MultiMeshInstance3D
+			if grass_names.has(String(instance.name)) and instance.multimesh != null and instance.multimesh.instance_count > 0:
+				count += instance.multimesh.instance_count
+	return count
