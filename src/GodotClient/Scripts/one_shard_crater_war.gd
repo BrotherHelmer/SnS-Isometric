@@ -78,7 +78,15 @@ const CHANNEL_COOLDOWN := 20.0
 const CHANNEL_REPAIR_HP := 40
 const SHELTER_TENTS := 3
 
-var simulation
+# Weak back-reference (same pattern as the rivalry rules): a strong one
+# formed a RefCounted cycle with the simulation, so neither was ever
+# freed ("resources still in use at exit").
+var _simulation_ref: WeakRef
+var simulation:
+	get:
+		return _simulation_ref.get_ref() if _simulation_ref != null else null
+	set(value):
+		_simulation_ref = weakref(value) if value != null else null
 var fissure_tiles: Array = []
 var primary_fissure := Vector2i(-1, -1)
 var secondary_fissure := Vector2i(-1, -1)
