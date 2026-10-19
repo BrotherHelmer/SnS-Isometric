@@ -183,7 +183,8 @@ func _init() -> void:
 	simulation.hidden_threat_level = 3
 	simulation.day_count = 3
 	simulation._spawn_wave()
-	check(simulation.enemies.size() >= 3 and simulation.enemies.size() <= 10 and int(simulation.enemies[0]["hp"]) < 40, "night waves stay at a readable, bounded size", failures)
+	# Black 19/10: waves are capped at Night-1 size (2) until a Barracks (ca9967c).
+	check(simulation.enemies.size() >= 2 and simulation.enemies.size() <= 5 and int(simulation.enemies[0]["hp"]) < 40, "night waves stay at a readable, bounded size", failures)
 	simulation._retreat_enemies_at_dawn()
 	check(bool(simulation.enemies[0].get("retreating", false)), "surviving raiders retreat toward fog at dawn", failures)
 
