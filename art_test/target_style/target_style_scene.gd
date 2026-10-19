@@ -159,7 +159,7 @@ func add_canopy(xf: Transform3D, c: Color) -> void:
 	for f in range(0, verts.size() - 2, 3):
 		var tv := [xf * verts[f], xf * verts[f+1], xf * verts[f+2]]
 		var fn: Vector3 = (tv[1]-tv[0]).cross(tv[2]-tv[0]).normalized()
-		var vary := 0.92 + 0.30 * (0.5 + 0.5 * sin(seedv + float(f) * 2.39))
+		var vary: float = 0.84 + 0.12 * floor((0.5 + 0.5 * sin(seedv + float(f) * 2.39)) * 3.99) # R114 quantized cluster-cell tones (4 steps)
 		var cc := Color(clampf(c.r*vary,0,1), clampf(c.g*vary,0,1), clampf(c.b*vary,0,1))
 		if fn.y > 0.45: cc = cc.lightened(0.22)
 		if fn.y < 0.1: cc = cc.darkened(0.16)
@@ -170,8 +170,7 @@ func add_canopy(xf: Transform3D, c: Color) -> void:
 		cc = Color(clampf(cc.r*(0.90+0.28*sunf),0,1), clampf(cc.g*(0.95+0.12*sunf),0,1), clampf(cc.b*(1.06-0.26*sunf),0,1))
 		cc = Color(clampf(cc.r*2.1,0.0,1.1), clampf(cc.g*2.0,0.0,1.1), clampf(cc.b*2.1,0.0,1.1)) # R69: undo texture*vertex double-green
 		for j in 3:
-			var sn2: Vector3 = (tv[j] - xf.origin).normalized()
-			canopy_st.set_normal(sn2); canopy_st.set_color(cc); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j])
+			canopy_st.set_normal(fn); canopy_st.set_color(cc); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j]) # R114 flat cluster-cell normals (was smooth radial = lump)
 	tri_total += 128
 var _flat_sphere: ArrayMesh = null
 func flat_sphere() -> ArrayMesh:
