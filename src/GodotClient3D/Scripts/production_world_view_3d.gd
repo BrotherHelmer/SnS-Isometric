@@ -1039,7 +1039,7 @@ func _build_chunk_terrain(host: Node3D, coord: Vector2i, lod: int, rebuild_colli
 			var p10 := Vector3(c00.x + half, heights[j * verts + i + 1], c00.z - half)
 			var p11 := Vector3(c00.x + half, heights[(j + 1) * verts + i + 1], c00.z + half)
 			var p01 := Vector3(c00.x - half, heights[(j + 1) * verts + i], c00.z + half)
-			_add_quad_colored(surface, p00, p10, p11, p01, Vector3.UP, colors[j * verts + i], colors[j * verts + i + 1], colors[(j + 1) * verts + i + 1], colors[(j + 1) * verts + i])
+			_add_quad_terrain(surface, p00, p10, p11, p01, _terrain_vertex_normal(heights, verts, i, j), _terrain_vertex_normal(heights, verts, i + 1, j), _terrain_vertex_normal(heights, verts, i + 1, j + 1), _terrain_vertex_normal(heights, verts, i, j + 1), colors[j * verts + i], colors[j * verts + i + 1], colors[(j + 1) * verts + i + 1], colors[(j + 1) * verts + i])
 	var mesh := surface.commit()
 	if mesh == null:
 		return
@@ -1430,7 +1430,7 @@ func _rebake_job_step(job: Dictionary, started: int) -> bool:
 				var p10 := Vector3(c00.x + half, heights[j * verts + i + 1], c00.z - half)
 				var p11 := Vector3(c00.x + half, heights[(j + 1) * verts + i + 1], c00.z + half)
 				var p01 := Vector3(c00.x - half, heights[(j + 1) * verts + i], c00.z + half)
-				_add_quad_colored(surface, p00, p10, p11, p01, Vector3.UP, colors[j * verts + i], colors[j * verts + i + 1], colors[(j + 1) * verts + i + 1], colors[(j + 1) * verts + i])
+				_add_quad_terrain(surface, p00, p10, p11, p01, _terrain_vertex_normal(heights, verts, i, j), _terrain_vertex_normal(heights, verts, i + 1, j), _terrain_vertex_normal(heights, verts, i + 1, j + 1), _terrain_vertex_normal(heights, verts, i, j + 1), colors[j * verts + i], colors[j * verts + i + 1], colors[(j + 1) * verts + i + 1], colors[(j + 1) * verts + i])
 			j += 1
 			if Time.get_ticks_usec() - started >= REBAKE_BUDGET_USEC:
 				break
@@ -2049,6 +2049,30 @@ func _road_dip_at(xz: Vector2) -> float:
 
 func _add_quad(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, normal: Vector3, color: Color) -> void:
 	_add_quad_colored(surface, a, b, c, d, normal, color, color, color, color)
+
+
+# M1 diorama-world: smooth-shaded terrain. Vertex normals come from the same
+# sim-height grid the vertices use, so slopes take the unified sun like the
+# diorama heightfield instead of the old flat up-normal.
+func _terrain_vertex_normal(heights: PackedFloat32Array, verts: int, i: int, j: int) -> Vector3:
+	var il := maxi(i - 1, 0)
+	var ir := mini(i + 1, verts - 1)
+	var ju := maxi(j - 1, 0)
+	var jd := mini(j + 1, verts - 1)
+	var cell := ScaleProfile.LOGICAL_CELL_METRES
+	var sx := (heights[j * verts + ir] - heights[j * verts + il]) / (float(maxi(ir - il, 1)) * cell)
+	var sz := (heights[jd * verts + i] - heights[ju * verts + i]) / (float(maxi(jd - ju, 1)) * cell)
+	return Vector3(-sx, 1.0, -sz).normalized()
+
+
+func _add_quad_terrain(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, na: Vector3, nb: Vector3, nc: Vector3, nd: Vector3, ca: Color, cb: Color, cc: Color, cd: Color) -> void:
+	var quad_verts := [a, b, c, a, c, d]
+	var quad_norms := [na, nb, nc, na, nc, nd]
+	var quad_cols := [ca, cb, cc, ca, cc, cd]
+	for k in quad_verts.size():
+		surface.set_normal(quad_norms[k])
+		surface.set_color((quad_cols[k] as Color).srgb_to_linear())
+		surface.add_vertex(quad_verts[k])
 
 
 func _add_quad_colored(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, normal: Vector3, ca: Color, cb: Color, cc: Color, cd: Color) -> void:

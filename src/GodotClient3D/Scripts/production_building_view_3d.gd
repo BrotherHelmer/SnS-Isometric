@@ -5,6 +5,7 @@ const Catalog = preload("res://src/GodotClient3D/Scripts/production_asset_catalo
 const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_profile.gd")
 const ContactAO = preload("res://src/GodotClient3D/Scripts/production_contact_ao.gd")
 const BuildingMaterials = preload("res://src/GodotClient3D/Scripts/production_building_materials.gd")
+const DioramaBuildings = preload("res://src/GodotClient3D/Scripts/production_diorama_buildings.gd")
 
 var entity_id := 0
 ## Beta: set from the quality profile; Low (0.6) thins chimney smoke.
@@ -196,8 +197,13 @@ func _create_completed_model() -> void:
 	if building_type == "WALL":
 		_create_wall_model()
 		return
-	if building_type == "TOWN_HALL":
-		_create_founding_hall_model()
+	# M1 diorama-world: the approved diorama builders own the founding-loop
+	# types. CASTLE (the barracks upgrade) keeps the authored keep view.
+	if building_type in ["TOWN_HALL", "HOUSE", "LUMBER_CAMP"]:
+		model_root = DioramaBuildings.build(building_type, entity_id)
+		model_root.name = "SemanticModel_%s" % building_type
+		model_root.position.z = _model_offset_z()
+		add_child(model_root)
 		return
 	var packed := load(Catalog.building_path(building_type)) as PackedScene
 	if packed == null:
