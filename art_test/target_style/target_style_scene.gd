@@ -26,6 +26,16 @@ func _ready() -> void:
 var surf_tex := {}
 const PT := "res://art_test/target_style/textures_painted/"
 const TEX := {"meadow":PT+"grass_painted.png","dirt":PT+"dirt_painted.png","stone":PT+"stone_painted.png","plaster":PT+"plaster_painted.png","timber":PT+"wood_painted.png","slate":PT+"roof_painted.png","rock":PT+"rock_painted.png","thatch":PT+"thatch_painted.png","leafp":PT+"foliage_painted.png","roofp":PT+"roof_painted.png"}
+func _is_roof_tone(c: Color) -> bool: # R123: exact roof-derived relief tones (roof roots and their darkened/lightened variants only)
+	for base in [Color("a8664e"), Color("a05a44")]:
+		if c == base: return true
+		for f in [0.12, 0.15, 0.22, 0.28, 0.35, 0.46]:
+			if c == base.darkened(f): return true
+		for f2 in [0.15, 0.30]:
+			if c == base.lightened(f2): return true
+	var dk: Color = Color("a8664e").darkened(0.46); var dg := (dk.r + dk.g + dk.b) / 3.0
+	if c == dk.lerp(Color(dg, dg, dg), 0.35): return true
+	return false
 func mat_col(c: Color) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new(); m.albedo_color = c; m.roughness = 1.0; m.albedo_texture = load(PT + "grain_painted.png"); m.uv1_scale = Vector3(1.5,1.5,1); return m
 func mat_for(key: String, c: Color) -> Material:
@@ -35,7 +45,18 @@ func mat_for(key: String, c: Color) -> Material:
 		sh.code = "shader_type spatial;\nuniform sampler2D tex : source_color, repeat_enable, filter_linear_mipmap;\nuniform vec4 tint : source_color;\nvarying vec3 wn;\nvoid vertex() { wn = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz); }\nvoid fragment() { float lf = clamp(dot(normalize(wn), normalize(vec3(-0.45, 0.75, 0.50))) * 0.5 + 0.5, 0.0, 1.0); vec3 warm = mix(vec3(0.90, 0.96, 1.05), vec3(1.10, 1.01, 0.86), lf); ALBEDO = texture(tex, UV * 0.55).rgb * tint.rgb * warm; ROUGHNESS = 0.95; }"
 		sm.shader = sh; sm.set_shader_parameter("tex", load(TEX["stone"])); sm.set_shader_parameter("tint", Color(1.06,0.99,0.88).lerp(c, 0.45))
 		return sm
-	var m := mat_col(c); var tx: String = surf_tex.get(key, "")
+	var tx: String = surf_tex.get(key, "")
+	if tx == "roofp": # R123 face-aware roof shader (R90 spirit): lit faces = R122 calibration, shaded faces desaturated+deepened
+		var rm := ShaderMaterial.new(); var rsh := Shader.new()
+		rsh.code = "shader_type spatial;\nuniform sampler2D tex : source_color, repeat_enable, filter_linear_mipmap;\nuniform vec4 tint : source_color;\nvarying vec3 wn;\nvoid vertex() { wn = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz); }\nvoid fragment() { vec3 alb = texture(tex, UV).rgb * tint.rgb; float lf = clamp(dot(normalize(wn), normalize(vec3(-0.45, 0.75, 0.50))) * 0.5 + 0.5, 0.0, 1.0); float sh = 1.0 - smoothstep(0.50, 0.88, lf); float grey = dot(alb, vec3(0.333)); vec3 shaded = mix(alb, vec3(grey), 0.52) * vec3(0.55, 0.57, 0.63); ALBEDO = mix(alb, shaded, sh * 0.97); ROUGHNESS = 0.93; }"
+		rm.shader = rsh; rm.set_shader_parameter("tex", load(TEX["roofp"])); rm.set_shader_parameter("tint", Color(0.93,0.84,0.75).lerp(c, 0.24))
+		return rm
+	if tx == "" and _is_roof_tone(c): # R123 face-aware shader on roof relief tones (grain base, same shading law)
+		var gm := ShaderMaterial.new(); var gsh := Shader.new()
+		gsh.code = "shader_type spatial;\nuniform sampler2D tex : source_color, repeat_enable, filter_linear_mipmap;\nuniform vec4 tint : source_color;\nvarying vec3 wn;\nvoid vertex() { wn = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz); }\nvoid fragment() { vec3 alb = texture(tex, UV).rgb * tint.rgb; float lf = clamp(dot(normalize(wn), normalize(vec3(-0.45, 0.75, 0.50))) * 0.5 + 0.5, 0.0, 1.0); float sh = 1.0 - smoothstep(0.50, 0.88, lf); float grey = dot(alb, vec3(0.333)); vec3 shaded = mix(alb, vec3(grey), 0.52) * vec3(0.55, 0.57, 0.63); ALBEDO = mix(alb, shaded, sh * 0.97); ROUGHNESS = 0.93; }"
+		gm.shader = gsh; gm.set_shader_parameter("tex", load(PT + "grain_painted.png")); gm.set_shader_parameter("tint", c)
+		return gm
+	var m := mat_col(c)
 	if tx != "" and TEX.has(tx):
 		m.albedo_texture = load(TEX[tx]); m.uv1_scale = Vector3(3,3,1) if tx=="meadow" else (Vector3(0.55,0.55,1) if tx in ["stone","plaster"] else (Vector3(1,1,1) if tx in ["roofp","thatch","rock"] else Vector3(1.5,1.5,1))) # R77 larger face features; m.albedo_color = Color(0.88,0.87,0.85)
 		if tx == "rock": m.albedo_color = Color(1.06,0.97,0.87).lerp(c, 0.50) # R73: warm rock, tint was being overridden grey
@@ -474,8 +495,9 @@ func _setup() -> void:
 		var rv := absi(int(ri2[1].origin.x*5.0 + ri2[1].origin.z*3.0)) % 3
 		if not roof_groups.has(rv): roof_groups[rv] = SurfaceTool.new(); (roof_groups[rv] as SurfaceTool).begin(Mesh.PRIMITIVE_TRIANGLES)
 		(roof_groups[rv] as SurfaceTool).append_from(ri2[0], 0, ri2[1])
+	var rsh2 := Shader.new(); rsh2.code = "shader_type spatial;\nuniform sampler2D tex : source_color, repeat_enable, filter_linear_mipmap;\nuniform vec4 tint : source_color;\nvarying vec3 wn;\nvoid vertex() { wn = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz); }\nvoid fragment() { vec3 alb = texture(tex, UV).rgb * tint.rgb; float lf = clamp(dot(normalize(wn), normalize(vec3(-0.45, 0.75, 0.50))) * 0.5 + 0.5, 0.0, 1.0); float sh = 1.0 - smoothstep(0.50, 0.88, lf); float grey = dot(alb, vec3(0.333)); vec3 shaded = mix(alb, vec3(grey), 0.52) * vec3(0.55, 0.57, 0.63); ALBEDO = mix(alb, shaded, sh * 0.97); ROUGHNESS = 0.93; }" # R123 shared face-aware roof shader
 	for rv2 in roof_groups:
-		var rmi := MeshInstance3D.new(); rmi.mesh = (roof_groups[rv2] as SurfaceTool).commit(); var rmat := StandardMaterial3D.new(); rmat.albedo_texture = load(TEX["roofp"]); rmat.albedo_color = [Color(0.94,0.80,0.68), Color(0.82,0.66,0.55), Color(0.74,0.63,0.55)][rv2] # R122 per-building spread, warm end kept (v2: v1 tints read muddy); rmat.roughness = 0.92; rmat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; rmi.material_override = rmat; rmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(rmi)
+		var rmi := MeshInstance3D.new(); rmi.mesh = (roof_groups[rv2] as SurfaceTool).commit(); var rmat := ShaderMaterial.new(); rmat.shader = rsh2; rmat.set_shader_parameter("tex", load(TEX["roofp"])); rmat.set_shader_parameter("tint", [Color(0.94,0.80,0.68), Color(0.82,0.66,0.55), Color(0.74,0.63,0.55)][rv2]) # R122 per-building spread as shader tint; rmi.material_override = rmat; rmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(rmi)
 	if canopy_st != null:
 		var cmi := MeshInstance3D.new(); cmi.mesh = canopy_st.commit(); var cm := StandardMaterial3D.new(); cm.albedo_texture = load(TEX["leafp"]); cm.vertex_color_use_as_albedo = true; cm.albedo_color = Color(1.03,0.96,0.85); cm.roughness = 1.0; cm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; cmi.material_override = cm; cmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(cmi)
 	if card_st != null:
@@ -1195,7 +1217,7 @@ func _mini(mp: Vector3, tc: Color) -> void:
 func _cone_relief(cc: Vector3, h: float, rb: float, rt: float, roofc: Color, seedv: int, tiles: bool) -> void:
 	# R95: rings broken into staggered gapped tile segments (no continuous bands) + denser irregular tiles (existing keys)
 	var rng := RandomNumberGenerator.new(); rng.seed = seedv
-	var tones := [roofc.darkened(0.22), roofc.lightened(0.15), roofc.darkened(0.46), roofc]
+	var tones := [roofc.darkened(0.22), roofc.lightened(0.15), roofc.darkened(0.46).lerp(Color((roofc.darkened(0.46).r+roofc.darkened(0.46).g+roofc.darkened(0.46).b)/3.0, (roofc.darkened(0.46).r+roofc.darkened(0.46).g+roofc.darkened(0.46).b)/3.0, (roofc.darkened(0.46).r+roofc.darkened(0.46).g+roofc.darkened(0.46).b)/3.0), 0.35), roofc] # R123 darkest relief tone desaturated toward its grey
 	var slope := atan2(rb - rt, h)
 	for t in [0.16, 0.36, 0.56, 0.76, 0.90]:
 		var ry: float = cc.y + (t - 0.5) * h; var rr: float = lerpf(rb, rt, t)
