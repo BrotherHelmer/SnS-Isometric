@@ -167,8 +167,16 @@ const GRASS := [ROOT + "/opening_style/grass.tscn"]
 const FLOWERS := [ROOT + "/opening_style/flowers.tscn"]
 
 # GFX-M: Poly Haven / ambientCG 1024² CC0 splat textures.
+# M1 diorama-world: approved Nordic diorama painted textures (muted seamless
+# derivatives of Black's paintings; originals in art_test/nordic_diorama).
+const DIORAMA_TEXTURES := {
+	"grass": ROOT + "/gfx/diorama/grass_rich.png",
+	"stone": ROOT + "/gfx/diorama/stone_rich.png",
+	"thatch": ROOT + "/gfx/diorama/thatch_rich.png",
+}
+
 const TERRAIN_TEXTURES := {
-	"meadow": ROOT + "/gfx/terrain/meadow_diff.jpg",
+	"meadow": ROOT + "/gfx/diorama/grass_rich.png",
 	"forest": ROOT + "/gfx/terrain/forest_diff.jpg",
 	"dirt": ROOT + "/gfx/terrain/dirt_diff.jpg",
 	"rock": ROOT + "/gfx/terrain/rock_diff.jpg",
