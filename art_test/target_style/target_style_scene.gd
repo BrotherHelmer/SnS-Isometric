@@ -874,12 +874,18 @@ func _top_band() -> void:
 		var sss := 0.95 + fmod(absf(ssx*1.37 + ssz*2.11), 0.9)
 		_snow_patch(ssx, ssz, sss, int(ssx*17.0 + ssz*31.0), Color("eef2f4"))
 		_snow_patch(ssx+0.8, ssz+0.6, sss*0.55, int(ssx*23.0 - ssz*13.0), Color("e4e9ec"))
-	# R101 seated rock ledges/benches: elongated half-buried steps following the slope (flat-shaded, break silhouette)
-	for li in 10:
-		var lx: float = [9.5,12.5,16.0,20.0,24.0,8.0,14.0,18.5,22.5,11.0][li]
-		var lz: float = [-9.0,-10.5,-9.2,-10.0,-11.0,-11.5,-13.0,-12.5,-13.5,-12.2][li]
-		var lw: float = [2.6,3.2,2.4,3.4,2.8,2.2,3.0,2.5,3.1,2.3][li]
-		box(Vector3(lx, _h(lx,lz)+0.10, lz), Vector3(lw, 0.5, 1.0 + 0.4*fmod(float(li)*0.7,1.0)), [Color("8a6a4e"),Color("7d5f43"),Color("967554"),Color("6f5138")][li%4], 0.12*sin(float(li)*2.3), 0.06*sin(float(li)*1.7), 0.05*cos(float(li)*1.3))
+	# R102 sharp judge-scale rock ledges (replace R101 small benches): large angular flat-shaded slabs,
+	# staggered down the fall line, irregular width/angle/height - shattered strata, not stairs/banding.
+	# Flat slope-matching grey-tan colours (rock texture x brown tint read as timber - rejected in review). Kept clear of mine/watchtower/switchback.
+	for li in 14:
+		var lx: float = [18.0,21.5,25.0,17.0,20.5,24.0,17.5,21.0,25.5,9.0,11.0,27.0,19.0,23.0][li]
+		var lz: float = [-6.5,-7.5,-8.5,-9.0,-10.0,-11.0,-12.5,-13.0,-13.5,-8.0,-13.5,-10.5,-14.5,-15.0][li]
+		var lw: float = [4.2,3.4,4.6,2.8,5.0,3.2,3.8,4.4,2.6,3.0,4.0,3.6,3.0,4.2][li]
+		var lh: float = 0.7 + 0.45*fmod(float(li)*0.61, 1.0)
+		var lc: Color = [Color("9a8a76"), Color("8a7a66"), Color("a89478")][li%3]
+		box(Vector3(lx, _h(lx,lz)+lh*0.18, lz), Vector3(lw, lh, 1.3 + 0.7*fmod(float(li)*0.47,1.0)), lc, 0.30*sin(float(li)*2.1), 0.10*sin(float(li)*1.9), 0.09*cos(float(li)*1.4))
+		if li % 3 == 0: # stacked sub-slab, offset - shattered step, same colour key
+			box(Vector3(lx+0.5*sin(float(li)*3.1), _h(lx,lz)+lh*0.85, lz+0.3*cos(float(li)*2.7)), Vector3(lw*0.55, lh*0.6, 1.0), lc, 0.30*sin(float(li)*2.1)+0.18, 0.08, 0.06)
 	# R100: broken outcrop relief on the face (existing rock keys, seated, away from mine focal area)
 	for oc in [[17.2,-3.2,2.2],[19.8,-5.6,1.7],[21.5,-8.4,2.4],[18.6,-10.8,1.6],[23.8,-11.5,1.9],[16.4,-7.6,1.5],[22.8,-3.8,1.4],[20.4,-13.2,2.0]]:
 		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.25, oc[0]*1.37, 0.18)).scaled(Vector3(oc[2], oc[2]*0.42, oc[2]*0.66)), Vector3(oc[0], _h(oc[0], oc[1])-0.18, oc[1])), Color("8f7355") if int(oc[0]) % 2 == 0 else Color("96795c"), "rock"); tri_total += 128
