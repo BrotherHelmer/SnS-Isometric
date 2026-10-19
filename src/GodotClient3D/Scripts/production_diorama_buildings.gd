@@ -73,6 +73,14 @@ static func _build_fresh(building_type: String, seed_id: int) -> Node3D:
 			return _build_watchtower()
 		"BARRACKS":
 			return _build_barracks()
+		"LUMEN_PILLAR":
+			return _build_lumen_pillar()
+		"CLAIMANT_OUTPOST":
+			return _build_claimant_outpost()
+		"WYRD_HARVESTER":
+			return _build_wyrd_harvester()
+		"WYRD_REFINER":
+			return _build_wyrd_refiner()
 	return Node3D.new()
 
 
@@ -85,6 +93,20 @@ static func _tex_mat(key: String, tint: Color, uv: float) -> StandardMaterial3D:
 	m.albedo_color = tint
 	m.uv1_scale = Vector3(uv, uv, uv)
 	m.roughness = 0.95
+	_mat_cache[cache_key] = m
+	return m
+
+
+static func _emit_mat(key: String, c: Color, energy: float = 1.6) -> StandardMaterial3D:
+	var cache_key := "emit:" + key
+	if _mat_cache.has(cache_key):
+		return _mat_cache[cache_key]
+	var m := StandardMaterial3D.new()
+	m.albedo_color = c.darkened(0.35)
+	m.emission_enabled = true
+	m.emission = c
+	m.emission_energy_multiplier = energy
+	m.roughness = 0.4
 	_mat_cache[cache_key] = m
 	return m
 
@@ -485,6 +507,95 @@ static func _build_barracks() -> Node3D:
 	_cyl(b, wood_dark, 0.05, 0.05, 3.6, Vector3(4.9, 1.8, 2.2), 8)
 	_box(b, terra, Vector3(0.75, 0.42, 0.05), Vector3(5.28, 3.3, 2.2))
 	var root := b.build_root("DioramaBarracks")
+	return root
+
+
+static func _build_lumen_pillar() -> Node3D:
+	var b := Batch.new()
+	var stone := _stone()
+	var lumen := _emit_mat("lumen", Color("#9fe7ff"), 1.8)
+	_box(b, stone, Vector3(2.2, 0.35, 2.2), Vector3(0, 0.18, 0))
+	_box(b, stone, Vector3(1.7, 0.35, 1.7), Vector3(0, 0.52, 0))
+	_cyl(b, stone, 0.34, 0.52, 3.4, Vector3(0, 2.4, 0), 4, Basis(Vector3.UP, PI * 0.25))
+	_box(b, stone, Vector3(1.15, 0.28, 1.15), Vector3(0, 4.22, 0))
+	# Floating lumen crystal: two four-sided cones tip to tip.
+	_cyl(b, lumen, 0.02, 0.34, 0.95, Vector3(0, 4.85, 0), 4, Basis(Vector3.UP, PI * 0.25))
+	_cyl(b, lumen, 0.34, 0.02, 0.95, Vector3(0, 5.75, 0), 4, Basis(Vector3.UP, PI * 0.25))
+	var root := b.build_root("DioramaLumenPillar")
+	return root
+
+
+static func _build_claimant_outpost() -> Node3D:
+	var b := Batch.new()
+	var stone := _stone()
+	var wood := _plain_mat("wood", Color(0.52, 0.40, 0.29))
+	var wood_dark := _plain_mat("wood_dark", Color(0.38, 0.29, 0.21))
+	var dark := _plain_mat("dark", Color(0.16, 0.12, 0.10))
+	var terra := _plain_mat("terra", Color(0.60, 0.31, 0.24))
+	var rival_red := _plain_mat("rival_red", Color(0.42, 0.16, 0.14))
+	_box(b, stone, Vector3(3.9, 1.1, 3.9), Vector3(0, 0.55, 0))
+	for lx in [-1.25, 1.25]:
+		for lz in [-1.25, 1.25]:
+			_box(b, wood_dark, Vector3(0.24, 3.1, 0.24), Vector3(lx, 2.6, lz))
+	_box(b, wood, Vector3(3.6, 0.24, 3.6), Vector3(0, 4.25, 0))
+	_box(b, wood, Vector3(3.1, 1.6, 3.1), Vector3(0, 5.15, 0))
+	_box(b, dark, Vector3(0.6, 0.7, 0.14), Vector3(0, 5.2, 1.58))
+	_cyl(b, terra, 0.05, 2.6, 1.7, Vector3(0, 6.8, 0), 4, Basis(Vector3.UP, PI * 0.25))
+	# Palisade stakes leaning out around the base.
+	for sx in [-1.9, -0.65, 0.65, 1.9]:
+		_cyl(b, wood_dark, 0.02, 0.09, 1.5, Vector3(sx, 0.7, 2.15), 6, Basis(Vector3.RIGHT, 0.28))
+		_cyl(b, wood_dark, 0.02, 0.09, 1.5, Vector3(sx, 0.7, -2.15), 6, Basis(Vector3.RIGHT, -0.28))
+	_cyl(b, wood_dark, 0.05, 0.06, 3.4, Vector3(2.05, 3.2, -1.4), 8)
+	_box(b, rival_red, Vector3(0.08, 0.85, 1.25), Vector3(2.05, 4.35, -0.72))
+	var root := b.build_root("DioramaClaimantOutpost")
+	return root
+
+
+static func _build_wyrd_harvester() -> Node3D:
+	var b := Batch.new()
+	var stone := _stone()
+	var wood_dark := _plain_mat("wood_dark", Color(0.38, 0.29, 0.21))
+	var wyrd := _emit_mat("wyrd", Color("#6bcfe0"), 1.5)
+	var rockface := _rockface()
+	_cyl(b, stone, 2.3, 2.45, 0.4, Vector3(0, 0.2, 0), 14)
+	_sculpted_rock(b, rockface, 0.55, Vector3(3, 7, 2), Vector3(-1.5, 0.45, -0.9), Vector3(0.8, 1.25, 0.8))
+	_sculpted_rock(b, rockface, 0.5, Vector3(8, 1, 4), Vector3(1.55, 0.42, -0.75), Vector3(0.75, 1.1, 0.75))
+	_sculpted_rock(b, rockface, 0.48, Vector3(5, 3, 9), Vector3(0.2, 0.4, -1.6), Vector3(0.85, 1.0, 0.7))
+	# Crystal cluster under a timber A-frame harvesting rig.
+	_cyl(b, wyrd, 0.02, 0.3, 1.5, Vector3(0, 1.1, 0.3), 4, Basis(Vector3.UP, PI * 0.25))
+	_cyl(b, wyrd, 0.02, 0.2, 1.0, Vector3(-0.55, 0.85, -0.2), 4, Basis(Vector3.RIGHT, 0.22) * Basis(Vector3.UP, PI * 0.25))
+	_cyl(b, wyrd, 0.02, 0.18, 0.85, Vector3(0.6, 0.78, -0.1), 4, Basis(Vector3.RIGHT, -0.2) * Basis(Vector3.UP, PI * 0.25))
+	_box(b, wood_dark, Vector3(0.18, 2.9, 0.18), Vector3(-1.05, 1.8, 0.15), 0.0)
+	_box(b, wood_dark, Vector3(0.18, 2.9, 0.18), Vector3(1.05, 1.8, 0.15), 0.0)
+	_box(b, wood_dark, Vector3(2.5, 0.2, 0.2), Vector3(0, 3.2, 0.15))
+	_cyl(b, wood_dark, 0.04, 0.04, 0.8, Vector3(0, 2.75, 0.18), 6)
+	var root := b.build_root("DioramaWyrdHarvester")
+	return root
+
+
+static func _build_wyrd_refiner() -> Node3D:
+	var b := Batch.new()
+	var stone := _stone()
+	var wood_dark := _plain_mat("wood_dark", Color(0.38, 0.29, 0.21))
+	var dark := _plain_mat("dark", Color(0.16, 0.12, 0.10))
+	var terra := _plain_mat("terra", Color(0.60, 0.31, 0.24))
+	var wyrd := _emit_mat("wyrd", Color("#6bcfe0"), 1.5)
+	_box(b, stone, Vector3(5.6, 3.0, 4.2), Vector3(-0.6, 1.5, 0))
+	_roof_prism(b, _thatch(), Vector3(5.0, 2.2, 6.4), Vector3(-0.6, 4.1, 0))
+	_box(b, stone, Vector3(0.8, 2.2, 0.8), Vector3(-2.2, 4.6, -1.2))
+	_box(b, dark, Vector3(0.95, 0.25, 0.95), Vector3(-2.2, 5.8, -1.2))
+	_box(b, wood_dark, Vector3(1.25, 2.3, 0.2), Vector3(-0.6, 1.15, 2.15))
+	_box(b, dark, Vector3(0.6, 0.6, 0.14), Vector3(-1.9, 2.0, 2.13))
+	_box(b, dark, Vector3(0.6, 0.6, 0.14), Vector3(0.7, 2.0, 2.13))
+	# Refining vat with a charged crystal held over it.
+	_cyl(b, terra, 0.85, 0.65, 1.15, Vector3(2.35, 0.58, 0.9), 12)
+	_box(b, wood_dark, Vector3(0.16, 2.5, 0.16), Vector3(1.55, 1.25, 0.9))
+	_box(b, wood_dark, Vector3(0.16, 2.5, 0.16), Vector3(3.15, 1.25, 0.9))
+	_box(b, wood_dark, Vector3(1.9, 0.18, 0.18), Vector3(2.35, 2.5, 0.9))
+	_cyl(b, wyrd, 0.02, 0.3, 1.05, Vector3(2.35, 1.65, 0.9), 4, Basis(Vector3.UP, PI * 0.25))
+	_cyl(b, wyrd, 0.3, 0.02, 1.05, Vector3(2.35, 2.6, 0.9), 4, Basis(Vector3.UP, PI * 0.25))
+	var root := b.build_root("DioramaWyrdRefiner")
+	root.scale = Vector3.ONE * 0.98
 	return root
 
 

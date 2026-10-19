@@ -237,7 +237,7 @@ func _create_completed_model() -> void:
 		return
 	# M1 diorama-world: the approved diorama builders own the founding-loop
 	# types. CASTLE (the barracks upgrade) keeps the authored keep view.
-	if building_type in ["TOWN_HALL", "HOUSE", "LUMBER_CAMP", "SAWMILL", "FARM", "BAKERY", "STOREHOUSE", "QUARRY", "WATCHTOWER", "BARRACKS"]:
+	if building_type in ["TOWN_HALL", "HOUSE", "LUMBER_CAMP", "SAWMILL", "FARM", "BAKERY", "STOREHOUSE", "QUARRY", "WATCHTOWER", "BARRACKS", "LUMEN_PILLAR", "CLAIMANT_OUTPOST", "WYRD_HARVESTER", "WYRD_REFINER"]:
 		model_root = DioramaBuildings.build(building_type, entity_id)
 		model_root.name = "SemanticModel_%s" % building_type
 		model_root.position.z = _model_offset_z()
@@ -469,13 +469,16 @@ func _create_wall_model() -> void:
 		segment.rotation.y = float(index) * PI * 0.5
 		segment.material_override = stone
 		model_root.add_child(segment)
+		# Cap slab is a sibling of the segment, not a child: the segment's
+		# own children stay exactly its three merlons.
 		var cap := MeshInstance3D.new()
 		var cap_mesh := BoxMesh.new()
 		cap_mesh.size = Vector3(0.88, 0.16, 2.32)
 		cap.mesh = cap_mesh
-		cap.position = Vector3(0.0, 1.03, 0.0)
+		cap.position = segment.position + Vector3(0.0, 1.03, 0.0)
+		cap.rotation.y = segment.rotation.y
 		cap.material_override = stone
-		segment.add_child(cap)
+		model_root.add_child(cap)
 		for merlon_index in 3:
 			var merlon := MeshInstance3D.new()
 			merlon.name = "Crenellation"
