@@ -1050,6 +1050,15 @@ func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 		for cz3 in 5:
 			if (cz3 + ry3) % 2 == 0: continue
 			box(p+Vector3(2.36, 0.55+float(ry3)*0.5, -1.2+float(cz3)*0.6), Vector3(0.07,0.34,0.46), stone.darkened(0.12), 0,0,0, "stone")
+	# R83: modelled stone relief - keep front blocks + tower front stones (real shadow gaps, existing keys)
+	for ry83 in 3:
+		for cx83 in 3:
+			if (cx83 + ry83) % 3 == 1: continue
+			box(p+Vector3(-0.62+float(cx83)*0.62, 2.45+float(ry83)*0.48, 0.99), Vector3(0.50, 0.34, 0.08), stone.darkened(0.12) if (cx83+ry83)%2==0 else stone.lightened(0.07), 0,0,0, "stone")
+	for oi83 in 4:
+		var off83: Vector2 = [Vector2(-1.85,-1.45),Vector2(1.85,-1.45),Vector2(-1.85,1.45),Vector2(1.85,1.45)][oi83]
+		for sy83 in 5:
+			box(p+Vector3(off83.x + (float(sy83%2)*0.24-0.12), 0.65+float(sy83)*0.55, off83.y+0.57), Vector3(0.34, 0.30, 0.09), stone.darkened(0.12) if sy83%2==0 else stone.lightened(0.07), 0,0,0, "stone")
 	# R78: castle patches as jagged textured fans (R77 flat rectangles replaced); tower shadow strips with internal stone insets
 	for pp7 in [[-1.45, 0.95, 1.35, 0.90, 101], [0.55, 1.35, 1.10, 0.75, 113], [1.55, 0.62, 0.90, 0.60, 127], [-0.35, 0.55, 1.00, 0.55, 139]]:
 		_face_patch(p+Vector3(pp7[0], pp7[1], 1.845), Vector3(1,0,0), Vector3(0,1,0), pp7[2], pp7[3], int(pp7[4]), stone.darkened(0.17), "stone", 1)
@@ -1155,7 +1164,7 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 			var sp2 := Vector3(side2*hw2*(1.0-tt), top+pitch2*tt, 0)
 			box(sp2 + nrm2*0.012, Vector3(0.52,0.045,2.80), roof.darkened(0.46), 0, -side2*sang, 0)
 			for sg2 in 3:
-				box(sp2 + nrm2*0.048 + Vector3(0,0,-0.93+float(sg2)*0.93), Vector3(0.46,0.06,0.86), roof.darkened(0.22) if (rw+sg2)%2==0 else roof.lightened(0.15), 0, -side2*sang, 0)
+				box(sp2 + nrm2*0.048 + Vector3(0,0,-0.93+float(sg2)*0.93), Vector3(0.48,0.085,0.88), roof.darkened(0.22) if (rw+sg2)%2==0 else roof.lightened(0.15), 0, -side2*sang, 0) # R83 chunkier shingle relief
 	# R78: roof wear as jagged slope fans (R77 flat boxes replaced, same base keys)
 	var hs78 := 200 + vi*17 + absi(int(p.x*3.0 + p.z))
 	var wp_tt := 0.48; var wp_nrm := Vector3(pitch2, hw2, 0).normalized()
@@ -1173,6 +1182,11 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	_face_patch(Vector3(1.14*wf, cy, 0), Vector3(0,0,-1), Vector3(0,1,0), 1.80, wh*0.88, hs78+13, Color("d8c49c"), "plaster", 2)
 	# stone foundation skirt
 	box(Vector3(0,0.40,0), Vector3(2.40*wf,0.58,2.0), stone, 0,0,0, "stone")
+	# R83 relief: foundation stone blocks + diagonal timber braces (existing keys)
+	for fb83 in 4:
+		box(Vector3(-0.84*wf+float(fb83)*0.56*wf, 0.40, 1.03), Vector3(0.44, 0.30, 0.07), stone.darkened(0.12) if fb83%2==0 else stone.lightened(0.07), 0,0,0, "stone")
+	box(Vector3(-0.88*wf, 1.05, 1.01), Vector3(0.13, 0.72, 0.06), Color("54381f"), 0, 0.55, 0, "timber")
+	box(Vector3(0.88*wf, 1.05, 1.01), Vector3(0.13, 0.72, 0.06), Color("54381f"), 0, -0.55, 0, "timber")
 	box(Vector3(-0.62*wf,top+0.67,0.68), Vector3(0.52,0.52,0.42), Color("e8d9b8"), 0,0,0, "plaster")
 	box(Vector3(-0.62*wf,top+0.77,0.90), Vector3(0.34,0.3,0.05), Color("ffd98a"))
 	box(Vector3(-0.62*wf,top+1.01,0.68), Vector3(0.68,0.1,0.56), roof)
@@ -1207,6 +1221,10 @@ func _build_roundhouse(p: Vector3, roof: Color) -> void:
 	# R79: facade pattern on roundhouse front (stone base + plaster drum)
 	_face_patch(p+Vector3(0,0.32,1.30), Vector3(1,0,0), Vector3(0,1,0), 0.95, 0.42, 301+absi(int(p.x)), Color("9a968c"), "stone", 1)
 	_face_patch(p+Vector3(0,1.55,1.20), Vector3(1,0,0), Vector3(0,1,0), 0.85, 0.95, 317+absi(int(p.x)), Color("e8d9b8"), "plaster", 2)
+	# R83 relief: foundation arc stones (existing castle relief keys)
+	for rb83 in 5:
+		var aa83 := -0.6 + float(rb83)*0.3
+		box(p+Vector3(sin(aa83)*1.31, 0.32, cos(aa83)*1.31), Vector3(0.40, 0.26, 0.08), Color("9d9584").darkened(0.12) if rb83%2==0 else Color("9d9584").lightened(0.07), aa83, 0, 0, "stone")
 	cyl(p+Vector3(0.55,3.3,-0.4), 0.2,0.24,0.9, Color("9a968c"), 8, "stone")
 func _build_roundbarn(p: Vector3, roof: Color) -> void:
 	cyl(p+Vector3(0,0.25,0), 1.62,1.68,0.5, Color("9a968c"), 14, "stone")
