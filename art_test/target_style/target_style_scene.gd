@@ -1024,19 +1024,27 @@ func _mini(mp: Vector3, tc: Color) -> void:
 	cyl(mp+Vector3(0,1.16,0), 0.24,0.26,0.07, Color("c9a86a"), 8)
 	box(mp+Vector3(0.30,0.66,0.08), Vector3(0.08,0.52,0.08), Color("6b4a2c"), 0, 0.5, 0)
 func _cone_relief(cc: Vector3, h: float, rb: float, rt: float, roofc: Color, seedv: int, tiles: bool) -> void:
-	# R94: stepped shingle rings following cone curvature + irregular front-arc tiles (existing roof keys only)
+	# R95: rings broken into staggered gapped tile segments (no continuous bands) + denser irregular tiles (existing keys)
 	var rng := RandomNumberGenerator.new(); rng.seed = seedv
-	for t in [0.20, 0.45, 0.70, 0.88]:
+	var tones := [roofc.darkened(0.22), roofc.lightened(0.15), roofc.darkened(0.46), roofc]
+	var slope := atan2(rb - rt, h)
+	for t in [0.16, 0.36, 0.56, 0.76, 0.90]:
 		var ry: float = cc.y + (t - 0.5) * h; var rr: float = lerpf(rb, rt, t)
-		cyl(Vector3(cc.x, ry, cc.z), rr + 0.055, rr + 0.035, 0.085, roofc.darkened(0.22), 10)
+		var nseg := clampi(int(6.283 * rr / 0.30), 5, 10)
+		var off95 := rng.randf() * TAU
+		for k in nseg:
+			if rng.randf() < 0.14: continue # gap where individual tiles take over
+			var th := off95 + TAU * float(k) / float(nseg) + rng.randf_range(-0.05, 0.05)
+			var tp := Vector3(cc.x + sin(th) * (rr + 0.028), ry + rng.randf_range(-0.035, 0.035), cc.z + cos(th) * (rr + 0.028))
+			box(tp, Vector3(TAU * rr / float(nseg) * rng.randf_range(0.72, 1.0), 0.055, rng.randf_range(0.13, 0.19)), tones[(k + int(t * 10.0)) % 4], th, rng.randf_range(-0.05, 0.05), -slope)
 	if tiles:
-		var tones := [roofc.darkened(0.22), roofc.lightened(0.15), roofc.darkened(0.46), roofc]
-		for t in [0.28, 0.55, 0.80]:
+		for t in [0.24, 0.44, 0.64, 0.84]:
 			var ty: float = cc.y + (t - 0.5) * h; var tr2: float = lerpf(rb, rt, t)
-			for k in 5:
-				var th := -1.05 + float(k) * 0.52 + rng.randf_range(-0.07, 0.07)
-				var tp := Vector3(cc.x + sin(th) * (tr2 + 0.04), ty + rng.randf_range(-0.03, 0.03), cc.z + cos(th) * (tr2 + 0.04))
-				box(tp, Vector3(rng.randf_range(0.17, 0.27), 0.055, rng.randf_range(0.13, 0.20)), tones[(k + int(t * 10.0)) % 4], th, rng.randf_range(-0.05, 0.05), -0.38)
+			for k in 7:
+				if rng.randf() < 0.10: continue
+				var th := -1.25 + float(k) * 0.47 + rng.randf_range(-0.07, 0.07)
+				var tp := Vector3(cc.x + sin(th) * (tr2 + 0.045), ty + rng.randf_range(-0.03, 0.03), cc.z + cos(th) * (tr2 + 0.045))
+				box(tp, Vector3(rng.randf_range(0.17, 0.28), 0.06, rng.randf_range(0.13, 0.21)), tones[(k + int(t * 10.0) + 1) % 4], th, rng.randf_range(-0.06, 0.06), -slope)
 func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 	add_mesh(noised_box(4.7,2.4,3.6,0.07,4.2), Transform3D(Basis.IDENTITY, p+Vector3(0,1.2,0)), stone, "stone"); tri_total += 108
 	for cy in [0.55, 1.05, 1.55]: box(p+Vector3(0,cy,1.82), Vector3(4.6,0.07,0.05), stone.darkened(0.12))
