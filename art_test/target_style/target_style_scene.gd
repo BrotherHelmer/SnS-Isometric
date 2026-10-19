@@ -519,6 +519,11 @@ func _setup() -> void:
 		_build_tree_far(Vector3(-21.0 + float(i125c % 2)*0.8, 0, -10.0 + float(i125c)*3.2), leaf, leaf2)
 	for i125d in 4: # left front far row
 		_build_tree_far(Vector3(-18.8, 0, -9.0 + float(i125d)*5.0), leaf, leaf2)
+	# R127 nestling: clusters in outer gaps between buildings (screened, apron/path rules kept; near pass builder cull)
+	for ftp127 in [Vector3(-13.5,0,-6.5), Vector3(-4,0,-12.5), Vector3(-9,0,10.5), Vector3(14,0,10.5), Vector3(10,0,10.5), Vector3(-9.5,0,-8), Vector3(15.5,0,1.5)]:
+		_build_tree(ftp127, leaf, leaf2)
+	for ftp127f in [Vector3(6.5,0,-8.5), Vector3(5,0,-9), Vector3(8.5,0,-7.5), Vector3(19,0,10.5), Vector3(-15,0,8.5), Vector3(-12.5,0,-12), Vector3(7,0,-11.5), Vector3(2,0,-13), Vector3(-10.5,0,-6)]:
+		_build_tree_far(ftp127f, leaf, leaf2)
 	for bs2 in [Vector3(-13,0,-1),Vector3(4,0,-9),Vector3(12,0,-3),Vector3(-8,0,-9)]:
 		add_canopy(Transform3D(Basis.IDENTITY.scaled(Vector3(0.55,0.4,0.55)), bs2+Vector3(0,0.45,0)), leaf)
 	for bs in [Vector3(6,0,8),Vector3(-10,0,-3),Vector3(9,0,-8)]:
