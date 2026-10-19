@@ -623,7 +623,20 @@ func _setup() -> void:
 	if canopy_st != null:
 		var cmi := MeshInstance3D.new(); cmi.mesh = canopy_st.commit(); var cm := StandardMaterial3D.new(); cm.albedo_texture = load(TEX["leafp"]); cm.vertex_color_use_as_albedo = true; cm.albedo_color = Color(1.36,1.26,1.10); cm.roughness = 1.0; cm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; cmi.material_override = cm; cmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(cmi)
 	if card_st != null:
-		var kmi := MeshInstance3D.new(); kmi.mesh = card_st.commit(); var km := StandardMaterial3D.new(); km.albedo_texture = load(PT + "foliage_card.png"); km.vertex_color_use_as_albedo = true; km.albedo_color = Color(1,1,1); km.roughness = 1.0; km.alpha_scissor_threshold = 0.45; km.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED # R146: painted shading lives in the texture (lambert gave binary dark slabs on flat quads) km.cull_mode = BaseMaterial3D.CULL_DISABLED; km.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; kmi.material_override = km; kmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(kmi) # R146: cards do not cast (draw cap - see scorecard shadow finding)
+		var kmi := MeshInstance3D.new()
+		kmi.mesh = card_st.commit()
+		var km := StandardMaterial3D.new()
+		km.albedo_texture = load(PT + "foliage_card.png")
+		km.vertex_color_use_as_albedo = true
+		km.albedo_color = Color(1, 1, 1)
+		km.roughness = 1.0
+		km.alpha_scissor_threshold = 0.45
+		km.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED # R147 FIX: R146 mid-line comment had killed cull/filter/material/cast/add_child - cards never rendered in round222
+		km.cull_mode = BaseMaterial3D.CULL_DISABLED
+		km.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		kmi.material_override = km
+		kmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON # R147: alpha-scissor shadow casting ON for card main masses
+		add_child(kmi)
 	_spawn_tufts()
 	_spawn_carriers(); _spawn_statics()
 func _worked_yard(p: Vector3, dir2: Vector2, seedv: int, slope: bool) -> void:
