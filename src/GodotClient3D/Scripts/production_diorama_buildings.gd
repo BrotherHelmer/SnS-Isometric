@@ -13,7 +13,43 @@ const Catalog = preload("res://src/GodotClient3D/Scripts/production_asset_catalo
 static var _mat_cache := {}
 
 
+static var _build_cache := {}
+
+
+## M3 performance pass: every instance of a building type shares the same
+## merged meshes and materials (they were rebuilt per building before).
+## The wrapper nodes stay per-building (lifecycle, selection, demolition
+## are per-building); only the geometry resources are shared. A fresh
+## build whose root is not purely mesh instances is returned uncached.
 static func build(building_type: String, seed_id: int) -> Node3D:
+	var key := building_type + ":" + str(absi(seed_id) % 3 if building_type == "HOUSE" else 0)
+	if _build_cache.has(key):
+		var entry: Dictionary = _build_cache[key]
+		var root := Node3D.new()
+		root.name = String(entry["name"])
+		root.scale = entry["scale"]
+		for pair in entry["pairs"]:
+			var mi := MeshInstance3D.new()
+			mi.mesh = pair[0]
+			mi.material_override = pair[1]
+			mi.transform = pair[2]
+			root.add_child(mi)
+		return root
+	var fresh := _build_fresh(building_type, seed_id)
+	var pairs := []
+	var cacheable := true
+	for child in fresh.get_children():
+		var mi := child as MeshInstance3D
+		if mi == null or mi.mesh == null:
+			cacheable = false
+			break
+		pairs.append([mi.mesh, mi.material_override, mi.transform])
+	if cacheable and not pairs.is_empty():
+		_build_cache[key] = {"name": fresh.name, "scale": fresh.scale, "pairs": pairs}
+	return fresh
+
+
+static func _build_fresh(building_type: String, seed_id: int) -> Node3D:
 	match building_type:
 		"TOWN_HALL":
 			return _build_town_hall()

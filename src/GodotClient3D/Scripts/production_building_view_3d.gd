@@ -154,6 +154,7 @@ func _rebuild() -> void:
 	_create_ownership_banner()
 	_create_contact_ao()
 	_merge_static_trim()
+	_merge_grounding_discs()
 
 
 ## R31 draw calls: the principal trim is 10-25 small BoxMesh nodes per
@@ -191,6 +192,43 @@ func _merge_static_trim() -> void:
 		inst.material_override = mats[key]
 		inst.cast_shadow = shadows[key]
 		add_child(inst)
+
+
+## M3 performance pass: the workyard dirt, apron and contact-AO discs are
+## three static ground quads under every building. Bake them into one mesh
+## (one surface per disc material, bottom-to-top): same picture, two fewer
+## mesh instances per building. Anything unexpected leaves the discs as-is.
+func _merge_grounding_discs() -> void:
+	var discs: Array[MeshInstance3D] = []
+	for node_name in ["WorkyardDirt", "WorkyardApron", "ContactAO"]:
+		var found := find_child(node_name, true, false) as MeshInstance3D
+		if found != null and found.mesh != null and found.get_child_count() == 0:
+			discs.append(found)
+	if discs.size() < 2:
+		return
+	var merged := ArrayMesh.new()
+	for disc in discs:
+		var xform := Transform3D.IDENTITY
+		var node: Node = disc
+		while node != null and node != self:
+			xform = (node as Node3D).transform * xform
+			node = node.get_parent()
+		var st := SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		st.append_from(disc.mesh, 0, xform)
+		var baked := st.commit()
+		if baked == null:
+			return
+		merged.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, baked.surface_get_arrays(0))
+		merged.surface_set_material(merged.get_surface_count() - 1, disc.material_override)
+	var instance := MeshInstance3D.new()
+	instance.name = "GroundingMerged"
+	instance.mesh = merged
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(instance)
+	for disc in discs:
+		disc.get_parent().remove_child(disc)
+		disc.queue_free()
 
 
 func _create_completed_model() -> void:
