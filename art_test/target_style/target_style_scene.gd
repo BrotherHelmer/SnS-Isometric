@@ -1213,6 +1213,8 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	wf *= 0.84; wh *= 0.94
 	var hang: float = [0.0, PI/2.0, PI, -PI/2.0][absi(int(p.x*7.0 + p.z*13.0)) % 4]
 	house_xf = Transform3D(Basis.from_euler(Vector3(0, hang, 0)), p); house_mode = true; roof_tilt = sin(float(vi)*2.1 + p.x) * 0.035
+	var rng105 := RandomNumberGenerator.new(); rng105.seed = 10500 + absi(int(p.x*37.0 + p.z*53.0)) # R105 per-house hand-made irregularity
+	var dense105 := rng105.randf() # framing density varies per house (sparse <-> dense)
 	box(Vector3(0,0.15,0), Vector3(2.5*wf,0.3,2.0), Color("9a968c"))
 	if vi == 1:
 		var wm := CylinderMesh.new(); wm.bottom_radius = 1.0; wm.top_radius = 0.90; wm.height = wh; wm.radial_segments = 4; wm.rings = 1
@@ -1220,15 +1222,19 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	else:
 		add_mesh(noised_box(2.3*wf, wh, 1.9, 0.11, float(vi+1)*3.7), house_xf * Transform3D(Basis.IDENTITY, Vector3(0,cy,0)), [Color("e8d9b8"), Color("f0e2c4"), Color("e0cfa8")][vi], "plaster"); tri_total += 108
 	for sx in [-1.09, 1.09]:
-		box(Vector3(sx*wf,cy,0.96), Vector3(0.31,wh+0.05,0.12), Color("54381f"), 0,0,0, "timber")
-		box(Vector3(sx*wf,cy,-0.96), Vector3(0.31,wh+0.05,0.12), Color("54381f"), 0,0,0, "timber")
-	# R104 timber-frame grid at frame scale: mid rails + side diagonals (existing timber key, shadow-gapped)
-	box(Vector3(0,0.98,0.97), Vector3(2.32*wf,0.18,0.09), Color("54381f"), 0,0,0, "timber")
-	box(Vector3(0,0.98,-0.97), Vector3(2.32*wf,0.18,0.09), Color("54381f"), 0,0,0, "timber")
-	box(Vector3(1.16*wf,0.98,0), Vector3(0.08,0.18,1.92), Color("54381f"), 0,0,0, "timber")
-	box(Vector3(-1.16*wf,0.98,0), Vector3(0.08,0.18,1.92), Color("54381f"), 0,0,0, "timber")
-	box(Vector3(1.17*wf,1.08,0), Vector3(0.07,0.95,0.14), Color("54381f"), 0, 0, 0.62, "timber")
-	box(Vector3(-1.17*wf,1.08,0), Vector3(0.07,0.95,0.14), Color("54381f"), 0, 0, -0.62, "timber")
+		var pw105 := rng105.randf_range(0.22, 0.38)
+		box(Vector3(sx*wf + rng105.randf_range(-0.04, 0.04), cy, 0.96), Vector3(pw105, wh+0.05, 0.12), Color("54381f"), 0, rng105.randf_range(-0.03, 0.03), 0, "timber")
+		box(Vector3(sx*wf + rng105.randf_range(-0.04, 0.04), cy, -0.96), Vector3(pw105*0.92, wh+0.05, 0.12), Color("54381f"), 0, rng105.randf_range(-0.03, 0.03), 0, "timber")
+	# R104/R105 timber framing, per-house irregular: rail heights/widths jittered, elements
+	# dropped on sparse houses, extra stud on dense ones (existing timber key, shadow-gapped)
+	box(Vector3(0, 0.98 + rng105.randf_range(-0.24, 0.24), 0.97), Vector3(2.32*wf, rng105.randf_range(0.14, 0.21), 0.09), Color("54381f"), 0, rng105.randf_range(-0.02, 0.02), 0, "timber")
+	if dense105 > 0.28: box(Vector3(0, 0.98 + rng105.randf_range(-0.26, 0.20), -0.97), Vector3(2.32*wf, rng105.randf_range(0.14, 0.20), 0.09), Color("54381f"), 0, 0, 0, "timber")
+	if dense105 > 0.15:
+		box(Vector3(1.16*wf, 0.98 + rng105.randf_range(-0.20, 0.20), 0), Vector3(0.08, rng105.randf_range(0.14, 0.20), 1.92), Color("54381f"), 0,0,0, "timber")
+		box(Vector3(-1.16*wf, 0.98 + rng105.randf_range(-0.20, 0.20), 0), Vector3(0.08, rng105.randf_range(0.14, 0.20), 1.92), Color("54381f"), 0,0,0, "timber")
+	if dense105 > 0.38: box(Vector3(1.17*wf, 1.08 + rng105.randf_range(-0.08, 0.08), rng105.randf_range(-0.2, 0.2)), Vector3(0.07, rng105.randf_range(0.8, 1.05), 0.14), Color("54381f"), 0, 0, rng105.randf_range(0.48, 0.74), "timber")
+	if dense105 > 0.55: box(Vector3(-1.17*wf, 1.08 + rng105.randf_range(-0.08, 0.08), rng105.randf_range(-0.2, 0.2)), Vector3(0.07, rng105.randf_range(0.8, 1.05), 0.14), Color("54381f"), 0, 0, -rng105.randf_range(0.48, 0.74), "timber")
+	if dense105 > 0.62: box(Vector3(rng105.randf_range(-0.15, 0.15)*wf, cy, 1.01), Vector3(rng105.randf_range(0.10, 0.15), wh*0.9, 0.06), Color("54381f"), 0, rng105.randf_range(-0.02, 0.02), 0, "timber")
 	box(Vector3(0,top-0.05,0.97), Vector3(2.32*wf,0.21,0.08), Color("54381f"), 0,0,0, "timber"); box(Vector3(0,0.24,0.97), Vector3(2.32*wf,0.21,0.08), Color("54381f"), 0,0,0, "timber")
 	box(Vector3(1.16*wf,cy,0), Vector3(0.07,wh+0.05,0.17), Color("54381f"), 0,0,0, "timber"); box(Vector3(-1.16*wf,cy,0), Vector3(0.07,wh+0.05,0.17), Color("54381f"), 0,0,0, "timber")
 	box(Vector3(0,0.82,0.99), Vector3(0.78,1.42,0.06), Color("8a6742"))
@@ -1279,24 +1285,25 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	box(Vector3(0,top-0.10,0), Vector3(2.36*wf,0.13,1.96), Color("f0e2c4"), 0,0,0, "plaster")
 	box(Vector3(-0.62*wf,cy,0.99), Vector3(0.72,wh*0.62,0.045), Color("e0cfa8"), 0,0,0, "plaster"); box(Vector3(0.62*wf,cy,0.99), Vector3(0.72,wh*0.62,0.045), Color("e0cfa8"), 0,0,0, "plaster")
 	# R78: plaster value modelling as jagged textured fans (R77 flat boxes replaced, same base keys)
-	_face_patch(Vector3(-0.58*wf, top-0.38, 0.99), Vector3(1,0,0), Vector3(0,1,0), 1.05, 0.58, hs78, Color("f5ecd2"), "plaster", 2)
-	_face_patch(Vector3(0.66*wf, 0.72, 0.99), Vector3(1,0,0), Vector3(0,1,0), 0.90, 0.60, hs78+7, Color("d3bd96"), "plaster", 2)
-	_face_patch(Vector3(1.14*wf, cy, 0), Vector3(0,0,-1), Vector3(0,1,0), 1.80, wh*0.88, hs78+13, Color("d8c49c"), "plaster", 2)
-	_face_patch(Vector3(-1.14*wf, cy, 0), Vector3(0,0,1), Vector3(0,1,0), 1.85, wh*0.90, hs78+41, Color("bfa87e"), "plaster", 2) # R104 shade side: cooler/darker large story
+	var pal105 := [Color("f5ecd2"), Color("d3bd96"), Color("d8c49c"), Color("bfa87e")] # existing keys only
+	_face_patch(Vector3(-0.58*wf + rng105.randf_range(-0.28, 0.28)*wf, top-0.38 + rng105.randf_range(-0.16, 0.16), 0.99), Vector3(1,0,0), Vector3(0,1,0), 1.05*rng105.randf_range(0.80, 1.50), 0.58*rng105.randf_range(0.80, 1.40), hs78, pal105[rng105.randi_range(0, 3)], "plaster", 2)
+	_face_patch(Vector3(0.66*wf + rng105.randf_range(-0.24, 0.24)*wf, 0.72 + rng105.randf_range(-0.18, 0.20), 0.99), Vector3(1,0,0), Vector3(0,1,0), 0.90*rng105.randf_range(0.80, 1.50), 0.60*rng105.randf_range(0.80, 1.40), hs78+7, pal105[rng105.randi_range(0, 3)], "plaster", 2)
+	_face_patch(Vector3(1.14*wf, cy + rng105.randf_range(-0.14, 0.14), rng105.randf_range(-0.45, 0.45)), Vector3(0,0,-1), Vector3(0,1,0), 1.80*rng105.randf_range(0.82, 1.38), wh*0.88*rng105.randf_range(0.85, 1.18), hs78+13, pal105[rng105.randi_range(0, 2)], "plaster", 2) # sun side: light half of palette
+	_face_patch(Vector3(-1.14*wf, cy + rng105.randf_range(-0.14, 0.14), rng105.randf_range(-0.45, 0.45)), Vector3(0,0,1), Vector3(0,1,0), 1.85*rng105.randf_range(0.82, 1.38), wh*0.90*rng105.randf_range(0.85, 1.18), hs78+41, pal105[1 + rng105.randi_range(0, 2)], "plaster", 2) # R104/R105 shade side: darker half, irregular
 	# stone foundation skirt
 	box(Vector3(0,0.40,0), Vector3(2.40*wf,0.58,2.0), stone, 0,0,0, "stone")
 	# R83 relief: foundation stone blocks + diagonal timber braces (existing keys)
 	var rng85 := RandomNumberGenerator.new(); rng85.seed = hs78*3 + 8500
 	for fb83 in 4:
 		box(Vector3(-0.84*wf+float(fb83)*0.56*wf + rng85.randf_range(-0.03, 0.03), 0.40 + rng85.randf_range(-0.03, 0.03), 1.03), Vector3(rng85.randf_range(0.34, 0.52), rng85.randf_range(0.22, 0.36), rng85.randf_range(0.05, 0.10)), stone.darkened(0.12) if fb83%2==0 else stone.lightened(0.07), 0, rng85.randf_range(-0.04, 0.04), 0, "stone")
-	box(Vector3(-0.88*wf, 1.05, 1.01), Vector3(0.13, 0.72, 0.06), Color("54381f"), 0, 0.55, 0, "timber")
-	box(Vector3(0.88*wf, 1.05, 1.01), Vector3(0.13, 0.72, 0.06), Color("54381f"), 0, -0.55, 0, "timber")
+	box(Vector3(-0.88*wf + rng105.randf_range(-0.06, 0.06), 1.05 + rng105.randf_range(-0.07, 0.07), 1.01), Vector3(rng105.randf_range(0.11, 0.16), rng105.randf_range(0.52, 0.92), 0.06), Color("54381f"), 0, rng105.randf_range(0.34, 0.80), 0, "timber")
+	if dense105 > 0.22: box(Vector3(0.88*wf + rng105.randf_range(-0.06, 0.06), 1.05 + rng105.randf_range(-0.07, 0.07), 1.01), Vector3(rng105.randf_range(0.11, 0.16), rng105.randf_range(0.52, 0.92), 0.06), Color("54381f"), 0, -rng105.randf_range(0.34, 0.80), 0, "timber")
 	# R84 relief density: side foundation stones, centre timber posts, eave trim
 	for fb84 in 3:
 		box(Vector3(1.21*wf, 0.40 + rng85.randf_range(-0.03, 0.03), -0.55+float(fb84)*0.55), Vector3(rng85.randf_range(0.05, 0.10), rng85.randf_range(0.22, 0.36), rng85.randf_range(0.34, 0.50)), stone.darkened(0.12) if fb84%2==0 else stone.lightened(0.07), 0,0,0, "stone")
 		box(Vector3(-1.21*wf, 0.40 + rng85.randf_range(-0.03, 0.03), -0.55+float(fb84)*0.55), Vector3(rng85.randf_range(0.05, 0.10), rng85.randf_range(0.22, 0.36), rng85.randf_range(0.34, 0.50)), stone.lightened(0.07) if fb84%2==0 else stone.darkened(0.12), 0,0,0, "stone")
-	box(Vector3(-0.32*wf, cy, 1.01), Vector3(0.13, wh*0.92, 0.06), Color("54381f"), 0,0,0, "timber")
-	box(Vector3(0.32*wf, cy, 1.01), Vector3(0.13, wh*0.92, 0.06), Color("54381f"), 0,0,0, "timber")
+	box(Vector3(-(0.16 + rng105.randf_range(0.0, 0.34))*wf, cy, 1.01), Vector3(rng105.randf_range(0.11, 0.16), wh*0.92, 0.06), Color("54381f"), 0, rng105.randf_range(-0.025, 0.025), 0, "timber")
+	if dense105 > 0.18: box(Vector3((0.16 + rng105.randf_range(0.0, 0.34))*wf, cy, 1.01), Vector3(rng105.randf_range(0.11, 0.16), wh*0.92, 0.06), Color("54381f"), 0, rng105.randf_range(-0.025, 0.025), 0, "timber")
 	box(Vector3(0, top+0.02, 1.43), Vector3(3.05*wf, 0.10, 0.13), roof.darkened(0.35))
 	box(Vector3(-0.62*wf,top+0.67,0.68), Vector3(0.52,0.52,0.42), Color("e8d9b8"), 0,0,0, "plaster")
 	box(Vector3(-0.62*wf,top+0.77,0.90), Vector3(0.34,0.3,0.05), Color("ffd98a"))
@@ -1321,9 +1328,12 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 func _build_roundhouse(p: Vector3, roof: Color) -> void:
 	cyl(p+Vector3(0,0.3,0), 1.28,1.34,0.6, Color("9a968c"), 12, "stone")
 	cyl(p+Vector3(0,1.45,0), 1.18,1.10,1.75, Color("e8d9b8"), 12, "plaster")
+	var rng105r := RandomNumberGenerator.new(); rng105r.seed = 10550 + absi(int(p.x*31.0 + p.z*47.0)) # R105 irregular roundhouse framing
 	for pa in 6:
-		var aa := float(pa) * TAU / 6.0
-		box(p+Vector3(sin(aa)*1.16,1.45,cos(aa)*1.16), Vector3(0.15,1.8,0.15), Color("54381f"), aa, 0, 0, "timber")
+		var aa := float(pa) * TAU / 6.0 + rng105r.randf_range(-0.07, 0.07)
+		var rr105 := rng105r.randf_range(1.12, 1.20)
+		box(p+Vector3(sin(aa)*rr105, 1.45 + rng105r.randf_range(-0.04, 0.04), cos(aa)*rr105), Vector3(rng105r.randf_range(0.12, 0.19), rng105r.randf_range(1.65, 1.95), 0.15), Color("54381f"), aa, rng105r.randf_range(-0.03, 0.03), 0, "timber")
+	if rng105r.randf() > 0.35: cyl(p+Vector3(0, 1.48 + rng105r.randf_range(-0.1, 0.1), 0), 1.21, 1.21, 0.13, Color("54381f"), 12, "timber")
 	box(p+Vector3(0,2.42,0), Vector3(2.5,0.16,2.5), Color("54381f"))
 	var cone1 := CylinderMesh.new(); cone1.bottom_radius=1.62; cone1.top_radius=0.12; cone1.height=1.55 + 0.38*sin(p.x*1.9); cone1.radial_segments=12
 	add_mesh(cone1, Transform3D(Basis.from_euler(Vector3(sin(p.x*1.3)*0.07,0,cos(p.z*1.7)*0.07)), p+Vector3(sin(p.z)*0.08,3.25 + 0.19*sin(p.x*1.9),cos(p.x)*0.06)), roof, "roofp"); tri_total += 96
@@ -1362,11 +1372,22 @@ func _build_octstore(p: Vector3, stone: Color) -> void:
 func _build_aframe(p: Vector3, roof: Color, stone: Color) -> void:
 	box(p+Vector3(0,0.15,0), Vector3(2.6,0.3,2.2), stone, 0,0,0, "stone")
 	box(p+Vector3(0,0.55,0), Vector3(2.3,0.85,1.9), Color("e8d9b8"), 0,0,0, "plaster")
+	var rng105a := RandomNumberGenerator.new(); rng105a.seed = 10610 + absi(int(p.x*29.0 + p.z*43.0)) # R105 irregular aframe framing
+	for ax105 in [-1.06, 1.06]:
+		box(p+Vector3(ax105 + rng105a.randf_range(-0.04, 0.04), 0.60, 0.93), Vector3(rng105a.randf_range(0.20, 0.30), 1.18, 0.11), Color("54381f"), 0, rng105a.randf_range(-0.03, 0.03), 0, "timber")
+	box(p+Vector3(0, 0.62 + rng105a.randf_range(-0.14, 0.14), 0.94), Vector3(2.24, rng105a.randf_range(0.13, 0.20), 0.09), Color("54381f"), 0, rng105a.randf_range(-0.02, 0.02), 0, "timber")
+	_face_patch(p+Vector3(rng105a.randf_range(-0.3, 0.3), 0.58 + rng105a.randf_range(-0.08, 0.08), 0.97), Vector3(1,0,0), Vector3(0,1,0), rng105a.randf_range(1.3, 2.0), rng105a.randf_range(0.55, 0.8), 10700 + absi(int(p.x)), [Color("f5ecd2"), Color("d3bd96"), Color("d8c49c"), Color("bfa87e")][rng105a.randi_range(0, 3)], "plaster", 2)
 	roof2(p+Vector3(0,0.92,0), 3.3, 2.6, 2.15, 0.18, roof)
 	box(p+Vector3(0,0.75,1.02), Vector3(0.66,1.25,0.08), Color("6e4a2c"))
 	box(p+Vector3(0.62,2.9,-0.3), Vector3(0.36,0.9,0.36), stone, 0,0,0, "stone")
 func _build_hut(p: Vector3, stone: Color) -> void:
 	add_mesh(noised_box(2.0,1.4,1.8,0.09,p.x*1.3+p.z), Transform3D(Basis.IDENTITY, p+Vector3(0,0.7,0)), Color("cbb489")); tri_total += 108
+	var rng105h := RandomNumberGenerator.new(); rng105h.seed = 10670 + absi(int(p.x*23.0 + p.z*41.0)) # R105 irregular hut framing
+	for hx105 in [-0.93, 0.93]:
+		for hz105 in [-0.83, 0.83]:
+			box(p+Vector3(hx105 + rng105h.randf_range(-0.03, 0.03), 0.70, hz105 + rng105h.randf_range(-0.03, 0.03)), Vector3(rng105h.randf_range(0.16, 0.26), rng105h.randf_range(1.25, 1.5), rng105h.randf_range(0.16, 0.26)), Color("54381f"), rng105h.randf_range(-0.05, 0.05), rng105h.randf_range(-0.03, 0.03), 0, "timber")
+	if rng105h.randf() > 0.3: box(p+Vector3(0, 0.72 + rng105h.randf_range(-0.16, 0.16), 0.86), Vector3(1.86, rng105h.randf_range(0.12, 0.19), 0.09), Color("54381f"), 0, rng105h.randf_range(-0.02, 0.02), 0, "timber")
+	_face_patch(p+Vector3(rng105h.randf_range(-0.28, 0.28), 0.72 + rng105h.randf_range(-0.1, 0.1), 0.92), Vector3(1,0,0), Vector3(0,1,0), rng105h.randf_range(1.1, 1.7), rng105h.randf_range(0.6, 0.95), 10750 + absi(int(p.x)), [Color("f5ecd2"), Color("d3bd96"), Color("d8c49c"), Color("bfa87e")][rng105h.randi_range(0, 3)], "plaster", 2)
 	box(p+Vector3(0,0.65,0.92), Vector3(0.65,1.1,0.08), Color("3d2b18"))
 	var cone4 := CylinderMesh.new(); cone4.bottom_radius=1.75; cone4.top_radius=0.25; cone4.height=1.5; cone4.radial_segments=10
 	add_mesh(cone4, Transform3D(Basis.from_euler(Vector3(sin(p.x)*0.06,0,cos(p.z*1.2)*0.06)), p+Vector3(sin(p.z)*0.06,2.05,0)), Color("b98a35"), "thatch"); tri_total += 80
