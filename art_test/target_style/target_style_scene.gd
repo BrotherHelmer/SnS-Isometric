@@ -528,6 +528,15 @@ func _detail_pass() -> void:
 	for bu in [Vector3(-12.5,0,-6.5), Vector3(6.8,0,9.8), Vector3(16.5,0,-3.5), Vector3(-15.5,0,6.0), Vector3(4.2,0,12.8), Vector3(-8.5,0,-12.5), Vector3(19.5,0,4.5), Vector3(0.5,0,-13.5)]:
 		var bp9: Vector3 = bu; if Vector2(bu.x, bu.z).length() > 11.0: bp9.y = _h(bu.x, bu.z)
 		add_canopy(Transform3D(Basis.IDENTITY.scaled(Vector3(0.62,0.45,0.62)), bp9+Vector3(0,0.42,0)), Color("4e8f33"))
+	# R119 merged carriers on main/branch path routes (existing keys, varied loads/clothing)
+	_build_carrier(Vector3(4.0,0,3.4), Color("d43a2a"), 1)
+	_build_carrier(Vector3(-5.5,0,3.2), Color("3f7d3a"), 0)
+	_build_carrier(Vector3(3.2,0,-6.7), Color("2f62b8"), 2)
+	for gi119 in 8: # shoulder goods at the GLB carrier positions (spawned later in _spawn_carriers)
+		var gp119: Vector3 = [Vector3(0.6,0.05,2.8), Vector3(-2.6,0.05,0.8), Vector3(5.2,0.05,1.6), Vector3(-6.4,0.05,-1.4), Vector3(-8.8,0.05,5.6), Vector3(8.6,0.05,4.6), Vector3(3.8,0.05,-4.2), Vector3(-9.5,0.05,1.5)][gi119]
+		var gl119 := CylinderMesh.new(); gl119.bottom_radius=0.09; gl119.top_radius=0.09; gl119.height=0.95; gl119.radial_segments=7
+		add_mesh(gl119, Transform3D(Basis.from_euler(Vector3(0,-0.7,PI/2.0)), gp119+Vector3(0,1.18,0)), Color("8a5f36")); tri_total += 28
+		if gi119 % 2 == 0: blob(gp119+Vector3(-0.32,0.86,0.1), Vector3(0.20,0.26,0.20), Color("c9b18a"))
 func _spawn_carriers() -> void:
 	var chars := ["Farmer_B", "Farmer_A", "Rogue_Hooded", "Rogue"]
 	var cps := [Vector3(0.6,0.05,2.8), Vector3(-2.6,0.05,0.8), Vector3(5.2,0.05,1.6), Vector3(-6.4,0.05,-1.4), Vector3(-8.8,0.05,5.6), Vector3(8.6,0.05,4.6), Vector3(3.8,0.05,-4.2), Vector3(-9.5,0.05,1.5)]
@@ -1090,11 +1099,15 @@ func _spawn_tufts() -> void:
 	# flowers/stones now painted into terrain texture (R27), no dot instances
 	tri_total += 1000 * 4
 func _mini(mp: Vector3, tc: Color) -> void:
-	box(mp+Vector3(-0.09,0.22,0), Vector3(0.13,0.44,0.15), Color("4a3421")); box(mp+Vector3(0.09,0.22,0), Vector3(0.13,0.44,0.15), Color("4a3421"))
-	box(mp+Vector3(0,0.62,0), Vector3(0.42,0.42,0.26), tc)
-	blob(mp+Vector3(0,1.02,0), Vector3(0.17,0.18,0.17), Color("e8b88a"))
-	cyl(mp+Vector3(0,1.16,0), 0.24,0.26,0.07, Color("c9a86a"), 8)
-	box(mp+Vector3(0.30,0.66,0.08), Vector3(0.08,0.52,0.08), Color("6b4a2c"), 0, 0.5, 0)
+	cyl(mp+Vector3(0,0.02,0), 0.36,0.36,0.02, Color(0.09,0.15,0.04,0.32), 10) # R119 contact disc (existing key)
+	box(mp+Vector3(-0.11,0.27,0), Vector3(0.16,0.54,0.18), Color("4a3421")); box(mp+Vector3(0.11,0.27,0), Vector3(0.16,0.54,0.18), Color("4a3421"))
+	box(mp+Vector3(0,0.76,0), Vector3(0.50,0.50,0.30), tc)
+	blob(mp+Vector3(0,1.24,0), Vector3(0.21,0.22,0.21), Color("e8b88a"))
+	cyl(mp+Vector3(0,1.41,0), 0.29,0.31,0.08, Color("c9a86a"), 8)
+	box(mp+Vector3(0.36,0.80,0.10), Vector3(0.09,0.62,0.09), Color("6b4a2c"), 0, 0.5, 0)
+	var g119 := absi(int(mp.x*7.0 + mp.z*13.0)) % 3 # R119 seeded carried goods (existing keys)
+	if g119 == 0: blob(mp+Vector3(-0.36,0.74,0.05), Vector3(0.20,0.25,0.20), Color("c9b18a"))
+	elif g119 == 1: box(mp+Vector3(0,0.80,-0.25), Vector3(0.38,0.38,0.18), Color("a67c4e"))
 func _cone_relief(cc: Vector3, h: float, rb: float, rt: float, roofc: Color, seedv: int, tiles: bool) -> void:
 	# R95: rings broken into staggered gapped tile segments (no continuous bands) + denser irregular tiles (existing keys)
 	var rng := RandomNumberGenerator.new(); rng.seed = seedv
@@ -1482,10 +1495,16 @@ func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 		var lsc := (0.30 + 0.13 * (0.5 + 0.5*sin(float(li99)*3.3))) * tsc
 		var lc99: Color = b.lightened(0.10) if li99 % 3 == 0 else (a.darkened(0.16) if li99 % 3 == 1 else a.lerp(b, 0.5))
 		add_canopy(Transform3D(Basis.from_euler(Vector3(0, la, 0)).scaled(Vector3(lsc, lsc*0.82, lsc)), p + loff * Vector3(1.28, tsc, 1.28)), lc99)
-func _build_carrier(p: Vector3) -> void:
+func _build_carrier(p: Vector3, tc := Color("2f62b8"), kind := 0) -> void:
+	cyl(p+Vector3(0,0.02,0), 0.44,0.44,0.02, Color(0.09,0.15,0.04,0.32), 10) # R119 contact disc
 	box(p+Vector3(-0.16,0.35,0), Vector3(0.2,0.7,0.22), Color("4a3421")); box(p+Vector3(0.16,0.35,0), Vector3(0.2,0.7,0.22), Color("4a3421"))
-	box(p+Vector3(0,0.95,0), Vector3(0.62,0.65,0.4), Color("2f62b8"))
+	box(p+Vector3(0,0.95,0), Vector3(0.62,0.65,0.4), tc)
 	blob(p+Vector3(0,1.55,0), Vector3(0.28,0.3,0.28), Color("e8b88a"))
-	var logm := CylinderMesh.new(); logm.bottom_radius=0.11; logm.top_radius=0.11; logm.height=1.05; logm.radial_segments=8; tri_total+=32
-	add_mesh(logm, Transform3D(Basis.from_euler(Vector3(0,0,PI/2.0)), p+Vector3(0,1.62,0)), Color("8a5f36"))
+	if kind == 0:
+		var logm := CylinderMesh.new(); logm.bottom_radius=0.11; logm.top_radius=0.11; logm.height=1.05; logm.radial_segments=8; tri_total+=32
+		add_mesh(logm, Transform3D(Basis.from_euler(Vector3(0,0,PI/2.0)), p+Vector3(0,1.62,0)), Color("8a5f36"))
+	elif kind == 1:
+		box(p+Vector3(0,1.02,-0.33), Vector3(0.54,0.54,0.26), Color("a67c4e")); box(p+Vector3(0,1.02,-0.20), Vector3(0.58,0.10,0.05), Color("6b4423"))
+	else:
+		blob(p+Vector3(-0.34,0.88,-0.08), Vector3(0.24,0.30,0.24), Color("c9b18a")); blob(p+Vector3(0.34,0.88,-0.08), Vector3(0.24,0.30,0.24), Color("c9b18a"))
 	box(p+Vector3(0.35,1.25,0), Vector3(0.55,0.16,0.16), Color("e8b88a"))
