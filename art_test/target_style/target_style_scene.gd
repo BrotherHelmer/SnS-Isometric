@@ -1107,12 +1107,14 @@ func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 	cyl(p+Vector3(2.95,2.15,0.55), 0.98,0.08,0.9, roof, 9, "roofp"); _cone_relief(p+Vector3(2.95,2.15,0.55), 0.9, 0.98, 0.08, roof, 9460, false)
 	roof2(p+Vector3(-0.6,2.38,-0.85), 3.6, 1.7, 0.95, 0.18, roof)
 	cyl(p+Vector3(0,4.85,0), 1.05,0.05,2.4, roof, 10, "roofp"); _cone_relief(p+Vector3(0,4.85,0), 2.4, 1.05, 0.05, roof, 9450, true)
-	var ths := [3.3, 3.75, 3.05, 3.5]
+	var ths := [3.15, 3.95, 2.85, 4.05] # R115 varied tower heights (was 3.05-3.75 near-uniform)
+	var cnh := [1.50, 1.90, 1.30, 2.00] # R115 varied cone heights/pitches, seated on each tower top
+	var cnr := [0.70, 0.76, 0.66, 0.80]
 	for oi2 in 4:
 		var off: Vector2 = [Vector2(-1.85,-1.45),Vector2(1.85,-1.45),Vector2(-1.85,1.45),Vector2(1.85,1.45)][oi2]
 		cyl(p+Vector3(off.x,ths[oi2]/2.0,off.y), 0.58,0.45,ths[oi2], stone.darkened(0.07), 8, "stone") # R90 towers cooler family
-		cyl(p+Vector3(off.x,3.95,off.y), 0.72,0.02,1.7, roof, 10, "roofp"); _cone_relief(p+Vector3(off.x,3.95,off.y), 1.7, 0.72, 0.02, roof, 9400+oi2, true)
-		cyl(p+Vector3(off.x,3.25,off.y), 0.88,0.72,0.14, roof.darkened(0.22), 10); cyl(p+Vector3(off.x,3.62,off.y), 0.62,0.46,0.14, roof.darkened(0.22), 10)
+		cyl(p+Vector3(off.x,ths[oi2]+cnh[oi2]*0.5-0.12,off.y), cnr[oi2],0.02,cnh[oi2], roof, 10, "roofp"); _cone_relief(p+Vector3(off.x,ths[oi2]+cnh[oi2]*0.5-0.12,off.y), cnh[oi2], cnr[oi2], 0.02, roof, 9400+oi2, true)
+		cyl(p+Vector3(off.x,ths[oi2]-0.35,off.y), 0.88,0.72,0.14, roof.darkened(0.22), 10); cyl(p+Vector3(off.x,ths[oi2]-0.02,off.y), 0.62,0.46,0.14, roof.darkened(0.22), 10)
 		for ts in 3: box(p+Vector3(off.x+0.63,1.0+float(ts)*0.8,off.y), Vector3(0.1,0.65,0.34), stone.darkened(0.12))
 	var mhs := [0.35,0.52,0.27,0.46,0.30,0.49]
 	for mi in 6: box(p+Vector3([-1.9,-1.15,-0.4,0.4,1.15,1.9][mi],2.02+mhs[mi]/2.0,1.82), Vector3(0.42,mhs[mi],0.18), stone)
@@ -1158,8 +1160,16 @@ func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 	for bz2 in [-1.2,-0.4,0.4,1.2]:
 		box(p+Vector3(2.32,2.52,bz2), Vector3(0.16,0.3,0.34), stone); box(p+Vector3(-2.32,2.52,bz2), Vector3(0.16,0.3,0.34), stone)
 	cyl(p+Vector3(0,3.62,0), 1.0,0.86,0.15, roof.darkened(0.22), 10)
-	for sp3 in [Vector2(-1.85,-1.45), Vector2(1.85,1.45)]:
-		cyl(p+Vector3(sp3.x,5.85,sp3.y), 0.10,0.13,0.8, stone, 6, "stone"); cyl(p+Vector3(sp3.x,6.45,sp3.y), 0.22,0.02,0.5, roof, 7, "roofp")
+	var tops115 := [4.53, 5.73, 4.03, 5.93] # cone apex per tower (ths + cone - overlap)
+	for sp3i in 2:
+		var sp3: Vector2 = [Vector2(-1.85,-1.45), Vector2(1.85,1.45)][sp3i]; var sty: float = tops115[[0, 3][sp3i]]
+		cyl(p+Vector3(sp3.x,sty+0.28,sp3.y), 0.10,0.13,0.8, stone, 6, "stone"); cyl(p+Vector3(sp3.x,sty+0.88,sp3.y), 0.22,0.02,0.5, roof, 7, "roofp")
+	for pn3i in 2: # R115 pennants on the remaining two cone tops (existing pole/pennant keys)
+		var pn3: Vector2 = [Vector2(1.85,-1.45), Vector2(-1.85,1.45)][pn3i]; var pty: float = tops115[[1, 2][pn3i]]
+		box(p+Vector3(pn3.x,pty+0.30,pn3.y), Vector3(0.06,0.72,0.06), Color("6b4423")); box(p+Vector3(pn3.x+0.30,pty+0.52,pn3.y), Vector3(0.55,0.32,0.04), Color("d43a2a"))
+	# R115 front-tower hanging banners (existing banner key, varied height/size) + keep-roof dormer turret
+	box(p+Vector3(-1.85,2.30,2.04), Vector3(0.50,1.05,0.06), Color("c22e22")); box(p+Vector3(1.85,1.95,2.04), Vector3(0.44,0.85,0.06), Color("c22e22"))
+	cyl(p+Vector3(-1.05,3.02,1.50), 0.30,0.26,1.15, stone, 8, "stone"); cyl(p+Vector3(-1.05,3.95,1.50), 0.44,0.02,0.80, roof, 8, "roofp")
 	cyl(p+Vector3(1.7,3.3,-1.0), 0.42,0.46,1.6, stone, 8, "stone"); cyl(p+Vector3(1.7,4.45,-1.0), 0.55,0.02,0.8, roof, 8, "roofp"); _cone_relief(p+Vector3(1.7,4.45,-1.0), 0.8, 0.55, 0.02, roof, 9470, false)
 	box(p+Vector3(-1.6,1.7,2.08), Vector3(0.55,1.15,0.07), Color("c22e22")); box(p+Vector3(1.6,1.7,2.08), Vector3(0.55,1.15,0.07), Color("c22e22"))
 	for bt in [Vector2(-2.55,-1.95),Vector2(2.55,-1.95),Vector2(-2.55,1.95),Vector2(2.55,1.95)]: box(p+Vector3(bt.x,0.55,bt.y), Vector3(0.55,1.1,0.55), stone.darkened(0.14), 0.4, 0, 0, "stone")
