@@ -1220,8 +1220,15 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	else:
 		add_mesh(noised_box(2.3*wf, wh, 1.9, 0.11, float(vi+1)*3.7), house_xf * Transform3D(Basis.IDENTITY, Vector3(0,cy,0)), [Color("e8d9b8"), Color("f0e2c4"), Color("e0cfa8")][vi], "plaster"); tri_total += 108
 	for sx in [-1.09, 1.09]:
-		box(Vector3(sx*wf,cy,0.96), Vector3(0.25,wh+0.05,0.11), Color("54381f"), 0,0,0, "timber")
-		box(Vector3(sx*wf,cy,-0.96), Vector3(0.25,wh+0.05,0.11), Color("54381f"), 0,0,0, "timber")
+		box(Vector3(sx*wf,cy,0.96), Vector3(0.31,wh+0.05,0.12), Color("54381f"), 0,0,0, "timber")
+		box(Vector3(sx*wf,cy,-0.96), Vector3(0.31,wh+0.05,0.12), Color("54381f"), 0,0,0, "timber")
+	# R104 timber-frame grid at frame scale: mid rails + side diagonals (existing timber key, shadow-gapped)
+	box(Vector3(0,0.98,0.97), Vector3(2.32*wf,0.18,0.09), Color("54381f"), 0,0,0, "timber")
+	box(Vector3(0,0.98,-0.97), Vector3(2.32*wf,0.18,0.09), Color("54381f"), 0,0,0, "timber")
+	box(Vector3(1.16*wf,0.98,0), Vector3(0.08,0.18,1.92), Color("54381f"), 0,0,0, "timber")
+	box(Vector3(-1.16*wf,0.98,0), Vector3(0.08,0.18,1.92), Color("54381f"), 0,0,0, "timber")
+	box(Vector3(1.17*wf,1.08,0), Vector3(0.07,0.95,0.14), Color("54381f"), 0, 0, 0.62, "timber")
+	box(Vector3(-1.17*wf,1.08,0), Vector3(0.07,0.95,0.14), Color("54381f"), 0, 0, -0.62, "timber")
 	box(Vector3(0,top-0.05,0.97), Vector3(2.32*wf,0.21,0.08), Color("54381f"), 0,0,0, "timber"); box(Vector3(0,0.24,0.97), Vector3(2.32*wf,0.21,0.08), Color("54381f"), 0,0,0, "timber")
 	box(Vector3(1.16*wf,cy,0), Vector3(0.07,wh+0.05,0.17), Color("54381f"), 0,0,0, "timber"); box(Vector3(-1.16*wf,cy,0), Vector3(0.07,wh+0.05,0.17), Color("54381f"), 0,0,0, "timber")
 	box(Vector3(0,0.82,0.99), Vector3(0.78,1.42,0.06), Color("8a6742"))
@@ -1275,6 +1282,7 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	_face_patch(Vector3(-0.58*wf, top-0.38, 0.99), Vector3(1,0,0), Vector3(0,1,0), 1.05, 0.58, hs78, Color("f5ecd2"), "plaster", 2)
 	_face_patch(Vector3(0.66*wf, 0.72, 0.99), Vector3(1,0,0), Vector3(0,1,0), 0.90, 0.60, hs78+7, Color("d3bd96"), "plaster", 2)
 	_face_patch(Vector3(1.14*wf, cy, 0), Vector3(0,0,-1), Vector3(0,1,0), 1.80, wh*0.88, hs78+13, Color("d8c49c"), "plaster", 2)
+	_face_patch(Vector3(-1.14*wf, cy, 0), Vector3(0,0,1), Vector3(0,1,0), 1.85, wh*0.90, hs78+41, Color("bfa87e"), "plaster", 2) # R104 shade side: cooler/darker large story
 	# stone foundation skirt
 	box(Vector3(0,0.40,0), Vector3(2.40*wf,0.58,2.0), stone, 0,0,0, "stone")
 	# R83 relief: foundation stone blocks + diagonal timber braces (existing keys)
