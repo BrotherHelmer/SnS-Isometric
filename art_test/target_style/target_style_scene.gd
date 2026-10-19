@@ -178,18 +178,20 @@ func _h(x: float, z: float) -> float:
 	var rdsp: float = 0.38*sin(x*2.9 + z*2.2) + 0.24*sin(x*5.7 - z*4.3) + 0.14*sin(x*7.3 + z*6.7) + 0.20*(abs(sin(x*1.7 - z*2.6)) - 0.5)
 	rdsp = lerpf(rdsp, floor(rdsp*2.8)/2.8, 0.65) # stepped ledges dominate over smooth displacement
 	return mask * roll + hill + lobe + nemass + left * left * 1.6 * mask + jag + crag * (1.0 - shoulder*0.85) + shoulder * 1.15 + rzm * rdsp * 1.15
-var _canopy_sphere: ArrayMesh = null
-func canopy_sphere() -> ArrayMesh:
-	if _canopy_sphere != null: return _canopy_sphere
-	var sm := SphereMesh.new(); sm.radial_segments = 10; sm.rings = 6; # R139 finer facet size at screen scale (was 9x5 R126; 12x7 tried, prims over ceiling in shadow pass) sm.radius = 1.0; sm.height = 2.0 # R126 near canopy 9x5 (was 13x7; 8x5 rejected - facets coarsen on FG crowns)
+var _canopy_variants := {}
+func canopy_sphere_var(rich: bool, variant: int) -> ArrayMesh: # R142: rich mesh for large (20-40px) lobes, 3 seeded silhouette variants per class
+	var key := ("r" if rich else "s") + str(variant)
+	if _canopy_variants.has(key): return _canopy_variants[key]
+	var sm := SphereMesh.new(); sm.radial_segments = 13 if rich else 10; sm.rings = 9 if rich else 6; sm.radius = 1.0; sm.height = 2.0
 	var arrays: Array = sm.get_mesh_arrays(); var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]; var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var ph := float(variant) * 2.13
 	var disp2 := {}
 	for dvi in verts.size():
 		var dv := verts[dvi]; var dk := str(dv)
 		if not disp2.has(dk):
 			var dn := dv.normalized()
-			var scp := sin(dn.x*16.0+dn.y*9.0) * sin(dn.y*14.0-dn.z*12.0) * sin(dn.z*18.0+dn.x*7.0)
-			var ds := 1.0 + 0.34*sin(dn.x*5.1+dn.y*3.3) + 0.26*sin(dn.y*7.2+dn.z*4.4) + 0.19*sin(dn.z*9.0-dn.x*5.0) + 0.13*sin(dn.x*13.7-dn.y*11.3) + scp*0.17 + 0.09*sin(dn.x*23.7-dn.y*13.1)*sin(dn.z*19.3+dn.x*11.7) # R99 scalloped lobes + R139 fine silhouette breakup
+			var scp := sin(dn.x*16.0+dn.y*9.0+ph) * sin(dn.y*14.0-dn.z*12.0+ph*1.3) * sin(dn.z*18.0+dn.x*7.0-ph)
+			var ds := 1.0 + 0.34*sin(dn.x*5.1+dn.y*3.3+ph) + 0.26*sin(dn.y*7.2+dn.z*4.4-ph*0.7) + 0.19*sin(dn.z*9.0-dn.x*5.0+ph*1.1) + 0.13*sin(dn.x*13.7-dn.y*11.3+ph) + scp*0.17 + 0.09*sin(dn.x*23.7-dn.y*13.1)*sin(dn.z*19.3+dn.x*11.7) + 0.15*sin(dn.x*2.2+ph*2.0)*sin(dn.z*1.8-ph) + 0.10*sin(dn.y*2.6+ph*1.7)
 			disp2[dk] = dv * ds
 		verts[dvi] = disp2[dk]
 	var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -199,11 +201,11 @@ func canopy_sphere() -> ArrayMesh:
 		var a: Vector3 = verts[idx[f]]; var b: Vector3 = verts[idx[f+1]]; var c2: Vector3 = verts[idx[f+2]]
 		var n := (b-a).cross(c2-a).normalized()
 		for vtx in [a,b,c2]: st.set_normal(n); st.set_uv(Vector2(vtx.x*0.7+0.5, vtx.y*0.7+0.5)); st.add_vertex(vtx)
-	_canopy_sphere = st.commit(); return _canopy_sphere
+	_canopy_variants[key] = st.commit(); return _canopy_variants[key]
 var _canopy_sphere_low: ArrayMesh = null
 func canopy_sphere_low() -> ArrayMesh: # R125 distant crown: 8x4 segments (vs 13x7 near), same scalloped lobes
 	if _canopy_sphere_low != null: return _canopy_sphere_low
-	var sm := SphereMesh.new(); sm.radial_segments = 9; sm.rings = 5; sm.radius = 1.0; sm.height = 2.0 # R139 far crowns finer (was 8x4)
+	var sm := SphereMesh.new(); sm.radial_segments = 8; sm.rings = 4; sm.radius = 1.0; sm.height = 2.0 # R142 TRADE: far crowns back to 8x4 (prim trade to near crowns, checked in treeline A/B)
 	var arrays: Array = sm.get_mesh_arrays(); var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]; var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
 	var disp2 := {}
 	for dvi in verts.size():
@@ -249,7 +251,7 @@ func add_canopy_low(xf: Transform3D, c: Color) -> void: # R125: add_canopy's R11
 			var vf141: float = lerpf(0.38, 1.45, m141)
 			var cc141 := Color(clampf(cc.r * vf141 * lerpf(0.85, 1.12, m141), 0.0, 1.18), clampf(cc.g * vf141 * lerpf(0.96, 1.04, m141), 0.0, 1.18), clampf(cc.b * vf141 * lerpf(1.20, 0.75, m141), 0.0, 1.18))
 			canopy_st.set_normal(bn139); canopy_st.set_color(cc141); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j])
-	tri_total += 80 # R139 9x5 low sphere
+	tri_total += 48 # R142 8x4 low sphere authored tris
 var canopy_st: SurfaceTool = null
 var card_st: SurfaceTool = null
 func add_foliage_card(xf: Transform3D, c: Color) -> void:
@@ -264,7 +266,9 @@ func add_foliage_card(xf: Transform3D, c: Color) -> void:
 	tri_total += 4
 func add_canopy(xf: Transform3D, c: Color) -> void:
 	if canopy_st == null: canopy_st = SurfaceTool.new(); canopy_st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var arrays: Array = canopy_sphere().surface_get_arrays(0)
+	var bs142: Vector3 = xf.basis.get_scale()
+	var rich142: bool = maxf(bs142.x, bs142.z) >= 0.51
+	var arrays: Array = canopy_sphere_var(rich142, absi(int((xf.origin.x * 12.9898 + xf.origin.z * 78.233) * 7.31)) % 3).surface_get_arrays(0)
 	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]; var uvs: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
 	var seedv := xf.origin.x * 12.9898 + xf.origin.z * 78.233
 	for f in range(0, verts.size() - 2, 3):
@@ -289,7 +293,7 @@ func add_canopy(xf: Transform3D, c: Color) -> void:
 			var vf141: float = lerpf(0.38, 1.45, m141)
 			var cc141 := Color(clampf(cc.r * vf141 * lerpf(0.85, 1.12, m141), 0.0, 1.18), clampf(cc.g * vf141 * lerpf(0.96, 1.04, m141), 0.0, 1.18), clampf(cc.b * vf141 * lerpf(1.20, 0.75, m141), 0.0, 1.18))
 			canopy_st.set_normal(bn139); canopy_st.set_color(cc141); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j])
-	tri_total += 100 # R139 10x6 sphere tris
+	tri_total += 208 if rich142 else 100 # R142 rich 13x9 / standard 10x6 authored tris
 var _flat_sphere: ArrayMesh = null
 func flat_sphere() -> ArrayMesh:
 	if _flat_sphere != null: return _flat_sphere
@@ -306,7 +310,7 @@ func flat_sphere() -> ArrayMesh:
 func _build_terrain() -> void:
 	# WELDED smooth-shaded heightfield: shared grid vertices, smooth normals,
 	# continuous (not per-cell) colour functions so facets stop reading.
-	var size := 120.0; var steps := 230
+	var size := 120.0; var steps := 180 # R142 TRADE: terrain grid 230->180 (prim trade to crowns; hill/colour A/B checked)
 	var g1 := Color("27631d"); var g2 := Color("3f842c"); var dirt := Color("9f9078"); var rock := Color("6e5638"); var snow := Color("f4f6f2") # R132 rock vertex deepened toward target (val .569 vs .463)
 	var n1 := steps + 1
 	var verts := PackedVector3Array(); var cols := PackedColorArray(); var uvs := PackedVector2Array(); var norms := PackedVector3Array()
