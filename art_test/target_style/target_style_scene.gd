@@ -42,20 +42,25 @@ func mat_for(key: String, c: Color) -> Material:
 	var tx0: String = surf_tex.get(key, "")
 	if tx0 == "stone": # R90 per-face warmth at material root (world-normal warm/cool, no overlay slabs)
 		var sm := ShaderMaterial.new(); var sh := Shader.new()
-		sh.code = "shader_type spatial;\nuniform sampler2D tex : source_color, repeat_enable, filter_linear_mipmap;\nuniform vec4 tint : source_color;\nvarying vec3 wn;\nvoid vertex() { wn = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz); }\nvoid fragment() { float lf = clamp(dot(normalize(wn), normalize(vec3(-0.45, 0.75, 0.50))) * 0.5 + 0.5, 0.0, 1.0); vec3 warm = mix(vec3(0.90, 0.96, 1.05), vec3(1.10, 1.01, 0.86), lf); ALBEDO = texture(tex, UV * 0.55).rgb * tint.rgb * warm; ROUGHNESS = 0.95; }"
+		sh.code = "shader_type spatial;\nuniform sampler2D tex : source_color, repeat_enable, filter_linear_mipmap;\nuniform vec4 tint : source_color;\nvarying vec3 wn;\nvarying vec3 wp;\nvoid vertex() { wn = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz); wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; }\nvoid fragment() { float lf = clamp(dot(normalize(wn), normalize(vec3(-0.45, 0.75, 0.50))) * 0.5 + 0.5, 0.0, 1.0); vec3 warm = mix(vec3(0.90, 0.96, 1.05), vec3(1.10, 1.01, 0.86), lf); vec3 col = texture(tex, UV * 0.55).rgb * tint.rgb * warm * mix(0.64, 1.20, lf); col *= 1.0 - 0.26 * smoothstep(1.8, 0.5, wp.y); ALBEDO = col; ROUGHNESS = 0.95; }"
 		sm.shader = sh; sm.set_shader_parameter("tex", load(TEX["stone"])); sm.set_shader_parameter("tint", Color(1.02,1.00,0.97).lerp(c, 0.45)) # R130 stone root neutralised (largest measured colour deviation)
 		return sm
 	var tx: String = surf_tex.get(key, "")
 	if tx == "roofp": # R123 face-aware roof shader (R90 spirit): lit faces = R122 calibration, shaded faces desaturated+deepened
 		var rm := ShaderMaterial.new(); var rsh := Shader.new()
-		rsh.code = "shader_type spatial;\nuniform sampler2D tex : source_color, repeat_enable, filter_linear_mipmap;\nuniform vec4 tint : source_color;\nvarying vec3 wn;\nvoid vertex() { wn = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz); }\nvoid fragment() { vec3 alb = texture(tex, UV).rgb * tint.rgb; float lf = clamp(dot(normalize(wn), normalize(vec3(-0.45, 0.75, 0.50))) * 0.5 + 0.5, 0.0, 1.0); float sh = 1.0 - smoothstep(0.50, 0.88, lf); float grey = dot(alb, vec3(0.333)); vec3 shaded = mix(alb, vec3(grey), 0.52) * vec3(0.55, 0.57, 0.63); ALBEDO = mix(alb, shaded, sh * 0.97); ROUGHNESS = 0.93; }"
+		rsh.code = "shader_type spatial;\nuniform sampler2D tex : source_color, repeat_enable, filter_linear_mipmap;\nuniform vec4 tint : source_color;\nvarying vec3 wn;\nvoid vertex() { wn = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz); }\nvoid fragment() { vec3 alb = texture(tex, UV).rgb * tint.rgb; float lf = clamp(dot(normalize(wn), normalize(vec3(-0.45, 0.75, 0.50))) * 0.5 + 0.5, 0.0, 1.0); float t = smoothstep(0.38, 0.90, lf); float grey = dot(alb, vec3(0.333)); vec3 col = alb * mix(vec3(0.50, 0.53, 0.62), vec3(1.12, 1.04, 0.90), t); col = mix(col, vec3(dot(col, vec3(0.333))) * vec3(0.88, 0.91, 1.02), (1.0 - t) * 0.45); ALBEDO = col; ROUGHNESS = 0.93; }"
 		rm.shader = rsh; rm.set_shader_parameter("tex", load(TEX["roofp"])); rm.set_shader_parameter("tint", Color(0.93,0.84,0.75).lerp(c, 0.24))
 		return rm
 	if tx == "" and _is_roof_tone(c): # R123 face-aware shader on roof relief tones (grain base, same shading law)
 		var gm := ShaderMaterial.new(); var gsh := Shader.new()
-		gsh.code = "shader_type spatial;\nuniform sampler2D tex : source_color, repeat_enable, filter_linear_mipmap;\nuniform vec4 tint : source_color;\nvarying vec3 wn;\nvoid vertex() { wn = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz); }\nvoid fragment() { vec3 alb = texture(tex, UV).rgb * tint.rgb; float lf = clamp(dot(normalize(wn), normalize(vec3(-0.45, 0.75, 0.50))) * 0.5 + 0.5, 0.0, 1.0); float sh = 1.0 - smoothstep(0.50, 0.88, lf); float grey = dot(alb, vec3(0.333)); vec3 shaded = mix(alb, vec3(grey), 0.52) * vec3(0.55, 0.57, 0.63); ALBEDO = mix(alb, shaded, sh * 0.97); ROUGHNESS = 0.93; }"
+		gsh.code = "shader_type spatial;\nuniform sampler2D tex : source_color, repeat_enable, filter_linear_mipmap;\nuniform vec4 tint : source_color;\nvarying vec3 wn;\nvoid vertex() { wn = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz); }\nvoid fragment() { vec3 alb = texture(tex, UV).rgb * tint.rgb; float lf = clamp(dot(normalize(wn), normalize(vec3(-0.45, 0.75, 0.50))) * 0.5 + 0.5, 0.0, 1.0); float t = smoothstep(0.38, 0.90, lf); float grey = dot(alb, vec3(0.333)); vec3 col = alb * mix(vec3(0.50, 0.53, 0.62), vec3(1.12, 1.04, 0.90), t); col = mix(col, vec3(dot(col, vec3(0.333))) * vec3(0.88, 0.91, 1.02), (1.0 - t) * 0.45); ALBEDO = col; ROUGHNESS = 0.93; }"
 		gm.shader = gsh; gm.set_shader_parameter("tex", load(PT + "grain_painted.png")); gm.set_shader_parameter("tint", c)
 		return gm
+	if tx in ["plaster", "thatch"]: # R141 face-aware modelled walls/thatch: warm lit face vs cool shade face + painted base shadow pocket (R90 precedent)
+		var wm := ShaderMaterial.new(); var wsh := Shader.new()
+		wsh.code = "shader_type spatial;\nuniform sampler2D tex : source_color, repeat_enable, filter_linear_mipmap;\nuniform vec4 tint : source_color;\nuniform float uvs;\nvarying vec3 wn;\nvarying vec3 wp;\nvoid vertex() { wn = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz); wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; }\nvoid fragment() { vec3 alb = texture(tex, UV * uvs).rgb * tint.rgb; float lf = clamp(dot(normalize(wn), normalize(vec3(-0.45, 0.75, 0.50))) * 0.5 + 0.5, 0.0, 1.0); float t = smoothstep(0.35, 0.90, lf); vec3 col = alb * mix(vec3(0.62, 0.68, 0.84), vec3(1.16, 1.07, 0.90), t); col *= 1.0 - 0.26 * smoothstep(1.7, 0.45, wp.y); ALBEDO = col; ROUGHNESS = 0.95; }"
+		wm.shader = wsh; wm.set_shader_parameter("tex", load(TEX[tx])); wm.set_shader_parameter("tint", Color(0.88, 0.87, 0.85)); wm.set_shader_parameter("uvs", 0.55 if tx == "plaster" else 1.0)
+		return wm
 	var m := mat_col(c)
 	if tx != "" and TEX.has(tx):
 		m.albedo_texture = load(TEX[tx]); m.uv1_scale = Vector3(3,3,1) if tx=="meadow" else (Vector3(0.55,0.55,1) if tx in ["stone","plaster"] else (Vector3(1,1,1) if tx in ["roofp","thatch","rock"] else Vector3(1.5,1.5,1))) # R77 larger face features; m.albedo_color = Color(0.88,0.87,0.85)
@@ -238,8 +243,12 @@ func add_canopy_low(xf: Transform3D, c: Color) -> void: # R125: add_canopy's R11
 		var cv131: float = maxf(cc.r, maxf(cc.g, cc.b)); cc = cc.lerp(Color(cv131,cv131,cv131), 0.62) # R131 canopy desat
 		cc = Color(cc.r*1.20, cc.g*1.20, cc.b*1.20); var mx133: float = maxf(cc.r, maxf(cc.g, cc.b)); if mx133 > 1.1: cc = cc * (1.1 / mx133) # R133 value lift x1.20, proportional cap (steps/split kept, sat held) toward target (sat .958 vs .729), value-preserving so shade faces do not darken
 		for j in 3:
-			var bn139: Vector3 = (fn*0.50 + (tv[j] - xf.origin).normalized()*0.50).normalized() # R139 blended normal (colour still on flat fn)
-			canopy_st.set_normal(bn139); canopy_st.set_color(cc); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j])
+			var bn139: Vector3 = (fn*0.50 + (tv[j] - xf.origin).normalized()*0.50).normalized()
+			var ld141: Vector3 = (tv[j] - xf.origin).normalized()
+			var m141: float = clampf((ld141.dot(Vector3(-0.45, 0.75, 0.50).normalized()) * 0.5 + 0.5) * 0.65 + (ld141.y * 0.5 + 0.5) * 0.35, 0.0, 1.0)
+			var vf141: float = lerpf(0.38, 1.45, m141)
+			var cc141 := Color(clampf(cc.r * vf141 * lerpf(0.85, 1.12, m141), 0.0, 1.18), clampf(cc.g * vf141 * lerpf(0.96, 1.04, m141), 0.0, 1.18), clampf(cc.b * vf141 * lerpf(1.20, 0.75, m141), 0.0, 1.18))
+			canopy_st.set_normal(bn139); canopy_st.set_color(cc141); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j])
 	tri_total += 80 # R139 9x5 low sphere
 var canopy_st: SurfaceTool = null
 var card_st: SurfaceTool = null
@@ -274,8 +283,12 @@ func add_canopy(xf: Transform3D, c: Color) -> void:
 		var cv131: float = maxf(cc.r, maxf(cc.g, cc.b)); cc = cc.lerp(Color(cv131,cv131,cv131), 0.62) # R131 canopy desat
 		cc = Color(cc.r*1.20, cc.g*1.20, cc.b*1.20); var mx133: float = maxf(cc.r, maxf(cc.g, cc.b)); if mx133 > 1.1: cc = cc * (1.1 / mx133) # R133 value lift x1.20, proportional cap (steps/split kept, sat held) toward target (sat .958 vs .729), value-preserving, R114 steps kept
 		for j in 3:
-			var bn139: Vector3 = (fn*0.50 + (tv[j] - xf.origin).normalized()*0.50).normalized() # R139: normal blended flat/radial - facet plates get gradient, R114 colour steps on fn unchanged
-			canopy_st.set_normal(bn139); canopy_st.set_color(cc); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j])
+			var bn139: Vector3 = (fn*0.50 + (tv[j] - xf.origin).normalized()*0.50).normalized()
+			var ld141: Vector3 = (tv[j] - xf.origin).normalized()
+			var m141: float = clampf((ld141.dot(Vector3(-0.45, 0.75, 0.50).normalized()) * 0.5 + 0.5) * 0.65 + (ld141.y * 0.5 + 0.5) * 0.35, 0.0, 1.0)
+			var vf141: float = lerpf(0.38, 1.45, m141)
+			var cc141 := Color(clampf(cc.r * vf141 * lerpf(0.85, 1.12, m141), 0.0, 1.18), clampf(cc.g * vf141 * lerpf(0.96, 1.04, m141), 0.0, 1.18), clampf(cc.b * vf141 * lerpf(1.20, 0.75, m141), 0.0, 1.18))
+			canopy_st.set_normal(bn139); canopy_st.set_color(cc141); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j])
 	tri_total += 100 # R139 10x6 sphere tris
 var _flat_sphere: ArrayMesh = null
 func flat_sphere() -> ArrayMesh:
@@ -588,11 +601,11 @@ func _setup() -> void:
 		var rv := absi(int(ri2[1].origin.x*5.0 + ri2[1].origin.z*3.0)) % 3
 		if not roof_groups.has(rv): roof_groups[rv] = SurfaceTool.new(); (roof_groups[rv] as SurfaceTool).begin(Mesh.PRIMITIVE_TRIANGLES)
 		(roof_groups[rv] as SurfaceTool).append_from(ri2[0], 0, ri2[1])
-	var rsh2 := Shader.new(); rsh2.code = "shader_type spatial;\nuniform sampler2D tex : source_color, repeat_enable, filter_linear_mipmap;\nuniform vec4 tint : source_color;\nvarying vec3 wn;\nvoid vertex() { wn = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz); }\nvoid fragment() { vec3 alb = texture(tex, UV).rgb * tint.rgb; float lf = clamp(dot(normalize(wn), normalize(vec3(-0.45, 0.75, 0.50))) * 0.5 + 0.5, 0.0, 1.0); float sh = 1.0 - smoothstep(0.50, 0.88, lf); float grey = dot(alb, vec3(0.333)); vec3 shaded = mix(alb, vec3(grey), 0.52) * vec3(0.55, 0.57, 0.63); ALBEDO = mix(alb, shaded, sh * 0.97); ROUGHNESS = 0.93; }" # R123 shared face-aware roof shader
+	var rsh2 := Shader.new(); rsh2.code = "shader_type spatial;\nuniform sampler2D tex : source_color, repeat_enable, filter_linear_mipmap;\nuniform vec4 tint : source_color;\nvarying vec3 wn;\nvoid vertex() { wn = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz); }\nvoid fragment() { vec3 alb = texture(tex, UV).rgb * tint.rgb; float lf = clamp(dot(normalize(wn), normalize(vec3(-0.45, 0.75, 0.50))) * 0.5 + 0.5, 0.0, 1.0); float t = smoothstep(0.38, 0.90, lf); float grey = dot(alb, vec3(0.333)); vec3 col = alb * mix(vec3(0.50, 0.53, 0.62), vec3(1.12, 1.04, 0.90), t); col = mix(col, vec3(dot(col, vec3(0.333))) * vec3(0.88, 0.91, 1.02), (1.0 - t) * 0.45); ALBEDO = col; ROUGHNESS = 0.93; }" # R123 shared face-aware roof shader
 	for rv2 in roof_groups:
 		var rmi := MeshInstance3D.new(); rmi.mesh = (roof_groups[rv2] as SurfaceTool).commit(); var rmat := ShaderMaterial.new(); rmat.shader = rsh2; rmat.set_shader_parameter("tex", load(TEX["roofp"])); rmat.set_shader_parameter("tint", [Color(0.94,0.80,0.68), Color(0.82,0.66,0.55), Color(0.74,0.63,0.55)][rv2]) # R122 per-building spread as shader tint; rmi.material_override = rmat; rmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(rmi)
 	if canopy_st != null:
-		var cmi := MeshInstance3D.new(); cmi.mesh = canopy_st.commit(); var cm := StandardMaterial3D.new(); cm.albedo_texture = load(TEX["leafp"]); cm.vertex_color_use_as_albedo = true; cm.albedo_color = Color(1.28,1.19,1.05); cm.roughness = 1.0; cm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; cmi.material_override = cm; cmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(cmi)
+		var cmi := MeshInstance3D.new(); cmi.mesh = canopy_st.commit(); var cm := StandardMaterial3D.new(); cm.albedo_texture = load(TEX["leafp"]); cm.vertex_color_use_as_albedo = true; cm.albedo_color = Color(1.36,1.26,1.10); cm.roughness = 1.0; cm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; cmi.material_override = cm; cmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(cmi)
 	if card_st != null:
 		var kmi := MeshInstance3D.new(); kmi.mesh = card_st.commit(); var km := StandardMaterial3D.new(); km.albedo_texture = load(PT + "foliage_card.png"); km.vertex_color_use_as_albedo = true; km.albedo_color = Color(1,1,1); km.roughness = 1.0; km.alpha_scissor_threshold = 0.45; km.cull_mode = BaseMaterial3D.CULL_DISABLED; km.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; kmi.material_override = km; kmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(kmi)
 	_spawn_tufts()
@@ -1773,7 +1786,9 @@ func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 		add_mesh(bm, Transform3D(Basis.from_euler(Vector3(0,0,bang)), p+Vector3(bang*0.45,1.55,0)), Color("6b4423")); tri_total += 24
 	if vi == 1:
 		for pi in 4:
-			add_canopy(Transform3D(Basis.from_euler(Vector3(0,float(pi)*0.8,0)).scaled(Vector3(0.85,1.05,0.85)), p+Vector3(0,1.9+float(pi)*0.62,0)), a if pi%2==0 else b)
+			var bc141: Color = a if pi % 2 == 0 else b
+			var bf141: float = lerpf(0.48, 1.34, float(pi) / 3.0)
+			add_canopy(Transform3D(Basis.from_euler(Vector3(0,float(pi)*0.8,0)).scaled(Vector3(0.85,1.05,0.85)), p+Vector3(0,1.9+float(pi)*0.62,0)), Color(clampf(bc141.r * bf141 * lerpf(0.88, 1.10, float(pi) / 3.0), 0.0, 1.0), clampf(bc141.g * bf141, 0.0, 1.0), clampf(bc141.b * bf141 * lerpf(1.16, 0.78, float(pi) / 3.0), 0.0, 1.0)))
 		return
 	for ci in 14:
 		var off: Vector3 = [Vector3(0,2.6,0), Vector3(0.85,2.05,0.3), Vector3(-0.85,2.15,-0.25), Vector3(0.1,3.25,-0.1), Vector3(-0.2,1.9,0.7), Vector3(1.15,2.7,-0.5), Vector3(-1.1,2.8,0.45), Vector3(1.3,2.2,0.6), Vector3(-1.3,2.3,-0.6), Vector3(0.5,3.6,0.5), Vector3(1.5,2.5,0.1), Vector3(-1.5,2.6,-0.2), Vector3(0.3,2.0,1.05), Vector3(-0.4,3.05,0.95)][ci]
@@ -1781,6 +1796,9 @@ func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 		var cc2: Color = a.lerp(b, clampf(float(ci)/7.0, 0.0, 1.0))
 		if ci % 3 == 2: cc2 = cc2.lightened(0.13)
 		if ci % 4 == 1: cc2 = cc2.darkened(0.32) # R99/R107 deeper shade sub-masses
+		var cm141: float = clampf(0.5 + (off.y - 2.65) * 0.38 + (off.x * -0.45 + off.z * 0.50) * 0.10, 0.0, 1.0)
+		var cf141: float = lerpf(0.40, 1.38, cm141)
+		cc2 = Color(clampf(cc2.r * cf141 * lerpf(0.88, 1.10, cm141), 0.0, 1.0), clampf(cc2.g * cf141, 0.0, 1.0), clampf(cc2.b * cf141 * lerpf(1.16, 0.78, cm141), 0.0, 1.0))
 		add_canopy(Transform3D(Basis.from_euler(Vector3(0, float(ci)*0.62, 0)).scaled(Vector3(sc*1.15*tsc, sc*0.95*tsc, sc*1.15*tsc)), p+off*Vector3(1.28,tsc,1.28)), cc2)
 	# R99: mini lobes on crown perimeter (leaf-cluster bumps, varied tone)
 	for li99 in 8: # R139 more, smaller perimeter lobes (silhouette breakup)
@@ -1788,6 +1806,9 @@ func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 		var loff := Vector3(cos(la) * (1.35 + 0.30*sin(float(li99)*2.1)), 2.15 + 0.55*sin(float(li99)*1.7 + 1.0), sin(la) * (1.35 + 0.30*cos(float(li99)*1.9)))
 		var lsc := (0.30 + 0.13 * (0.5 + 0.5*sin(float(li99)*3.3))) * tsc
 		var lc99: Color = b.lightened(0.10) if li99 % 3 == 0 else (a.darkened(0.16) if li99 % 3 == 1 else a.lerp(b, 0.5))
+		var lm141: float = clampf(0.5 + (loff.y - 2.15) * 0.55 + (loff.x * -0.45 + loff.z * 0.50) * 0.08, 0.0, 1.0)
+		var lf141: float = lerpf(0.48, 1.32, lm141)
+		lc99 = Color(clampf(lc99.r * lf141 * lerpf(0.88, 1.10, lm141), 0.0, 1.0), clampf(lc99.g * lf141, 0.0, 1.0), clampf(lc99.b * lf141 * lerpf(1.16, 0.78, lm141), 0.0, 1.0))
 		add_canopy(Transform3D(Basis.from_euler(Vector3(0, la, 0)).scaled(Vector3(lsc, lsc*0.82, lsc)), p + loff * Vector3(1.28, tsc, 1.28)), lc99)
 func _build_tree_far(p: Vector3, a: Color, b: Color) -> void: # R125 distant tree: 4 low crowns + thin trunk, hazier R80 treatment
 	var hd := Vector2(p.x, p.z).length()
@@ -1800,7 +1821,10 @@ func _build_tree_far(p: Vector3, a: Color, b: Color) -> void: # R125 distant tre
 	for mi125 in 4:
 		var off: Vector3 = [Vector3(0,2.1,0), Vector3(0.68,1.65,0.2), Vector3(-0.66,1.75,-0.18), Vector3(0.08,2.62,-0.08)][mi125]
 		var sc: float = [1.02, 0.78, 0.74, 0.60][mi125] * ts
-		add_canopy_low(Transform3D(Basis.from_euler(Vector3(0, float(mi125)*0.9 + p.x, 0)).scaled(Vector3(sc*1.15, sc*0.95, sc*1.15)), p + off*Vector3(1.25, ts, 1.25)), a if mi125 % 2 == 0 else b)
+		var fc141: Color = a if mi125 % 2 == 0 else b
+		var fm141: float = clampf(0.5 + (off.y - 2.05) * 0.42 + (off.x * -0.45 + off.z * 0.50) * 0.10, 0.0, 1.0)
+		var ff141: float = lerpf(0.45, 1.34, fm141)
+		add_canopy_low(Transform3D(Basis.from_euler(Vector3(0, float(mi125)*0.9 + p.x, 0)).scaled(Vector3(sc*1.15, sc*0.95, sc*1.15)), p + off*Vector3(1.25, ts, 1.25)), Color(clampf(fc141.r * ff141 * lerpf(0.88, 1.10, fm141), 0.0, 1.0), clampf(fc141.g * ff141, 0.0, 1.0), clampf(fc141.b * ff141 * lerpf(1.16, 0.78, fm141), 0.0, 1.0)))
 func _build_carrier(p: Vector3, tc := Color("2f62b8"), kind := 0) -> void:
 	cyl(p+Vector3(0,0.02,0), 0.44,0.44,0.02, Color(0.09,0.15,0.04,0.32), 10) # R119 contact disc
 	box(p+Vector3(-0.16,0.35,0), Vector3(0.2,0.7,0.22), Color("4a3421")); box(p+Vector3(0.16,0.35,0), Vector3(0.2,0.7,0.22), Color("4a3421"))
