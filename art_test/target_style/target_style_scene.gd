@@ -386,7 +386,7 @@ func _setup() -> void:
 		var px := -13.0 + fmod(float(k)*3.71, 26.0); var pz := -11.0 + fmod(float(k)*5.13, 22.0)
 		cyl(Vector3(px,0.012,pz), 0.55,0.55,0.015, grass2 if k%2==0 else grass.darkened(0.15), 8)
 	# dirt path winding: flat discs/boxes along curve
-	var path_pts := [Vector2(-15.5,8.8),Vector2(-12.8,10.5),Vector2(-9.5,12.8),Vector2(-6.5,10.2),Vector2(-3.0,8.0),Vector2(0.8,8.6),Vector2(4.2,10.4),Vector2(6.8,12.2),Vector2(9.5,13.5),Vector2(12.5,15.2),Vector2(-1.2,-1.2),Vector2(-1.0,2.8),Vector2(-0.2,5.5),Vector2(0.8,8.6)] # R137: A=southern main through west/SW/market/S groups, B=castle-gate branch joining A
+	var path_pts := [Vector2(-12.0,7.2),Vector2(-9.8,9.0),Vector2(-7.0,12.0),Vector2(-4.5,10.3),Vector2(-3.0,8.0),Vector2(0.8,8.6),Vector2(4.2,10.4),Vector2(6.8,12.2),Vector2(9.5,13.5),Vector2(12.5,15.2),Vector2(-1.2,-1.2),Vector2(-1.0,2.8),Vector2(-0.2,5.5),Vector2(0.8,8.6)] # R138: A west end re-tied to pulled-in barn/aframe fronts, B unchanged
 	var rng117 := RandomNumberGenerator.new(); rng117.seed = 11701 # R117 per-segment worn variation
 	for i in path_pts.size()-1:
 		var a: Vector2 = path_pts[i]; var b: Vector2 = path_pts[i+1]
@@ -433,20 +433,20 @@ func _setup() -> void:
 		if Vector2(fx2,fz).length() < 11.0:
 			for fo in 3: cyl(Vector3(fx2+float(fo)*0.09-0.09,0.04,fz+fmod(float(fo)*0.07,0.12)), 0.045,0.045,0.03, [Color("ffffff"),Color("ffd94a"),Color("ff9db0")][fi%3], 5)
 	# branch paths connecting buildings
-	for seg in [[Vector2(0.2,-2.8),Vector2(4.0,-1.2)],[Vector2(4.0,-1.2),Vector2(7.8,2.4)],[Vector2(4.0,-1.2),Vector2(10.0,-1.0)],[Vector2(10.0,-1.0),Vector2(13.8,0.0)],[Vector2(10.0,-1.0),Vector2(15.5,6.7)],[Vector2(-3.8,-2.8),Vector2(-9.0,-1.8)],[Vector2(-9.0,-1.8),Vector2(-14.5,1.2)],[Vector2(-4.5,-5.5),Vector2(-9.5,-9.3)],[Vector2(-9.0,-1.8),Vector2(-15.5,8.8)]]: # R137 branches: castle->centre-east/east, castle->west, castle->north group, west junction->barn
+	for seg in [[Vector2(0.2,-2.8),Vector2(4.0,-1.2)],[Vector2(4.0,-1.2),Vector2(10.5,-1.3)],[Vector2(4.0,-1.2),Vector2(12.0,0.0)],[Vector2(12.0,0.0),Vector2(18.0,3.2)],[Vector2(12.0,0.0),Vector2(13.5,9.2)],[Vector2(-3.8,-2.8),Vector2(-8.5,-1.8)],[Vector2(-8.5,-1.8),Vector2(-12.5,0.7)],[Vector2(-4.5,-5.5),Vector2(-9.5,-9.3)],[Vector2(-8.5,-1.8),Vector2(-12.0,7.2)]]: # R138 branches: castle->octCE(NE), castle->east junction(12,0)->roundE/roundE2 (opened), castle->west junction(-8.5,-1.8)->hut/barn (pulled in), castle->north
 		var a2: Vector2 = seg[0]; var b2: Vector2 = seg[1]; var mid2 := (a2+b2)*0.5; var dir2 := b2-a2
 		box(Vector3(mid2.x,0.028,mid2.y), Vector3(0.95,0.035,dir2.length()+0.8), Color("ddcdab"), atan2(dir2.x,dir2.y), 0,0, "dirt")
 	for li2 in 5:
 		var lx2 := 10.0+fmod(float(li2)*2.3,6.0); var lz2 := -8.0-fmod(float(li2)*1.1,4.0)
 		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(li2),0.1)).scaled(Vector3(1.25,0.42,1.0)), Vector3(lx2,_h(lx2,lz2)+0.08,lz2)), Color("8f7355"), "rock"); tri_total+=128 # R74 sunk/flattened
 	_hill_content(); _hill_props(); _hill_fields(); _summit(); _upper_fill(); _fill_more(); _top_band(); _aprons(); _props2()
-	for uw in [[Vector3(-3.0,0,8.6), Color("d43a2a")], [Vector3(3.5,0,9.5), Color("2f62b8")], [Vector3(-13.0,0,4.0), Color("2f62b8")], [Vector3(4.4,_h(4.4,-6.2),-6.2), Color("d43a2a")], [Vector3(13.2,_h(13.2,-12.4),-12.4), Color("2f62b8")], [Vector3(-11.0,0,12.0), Color("d43a2a")], [Vector3(5.0,_h(5.0,-6.4),-6.4), Color("2f62b8")], [Vector3(8.2,_h(8.2,-10.1),-10.1), Color("d43a2a")], [Vector3(11.5,_h(11.5,-11.2),-11.2), Color("2f62b8")], [Vector3(15.0,_h(15.0,-13.6),-13.6), Color("d43a2a")], [Vector3(6.8,_h(6.8,-13.4),-13.4), Color("2f62b8")]]:
+	for uw in [[Vector3(-3.0,0,8.6), Color("d43a2a")], [Vector3(3.5,0,9.5), Color("2f62b8")], [Vector3(-11.5,0,3.8), Color("2f62b8")], [Vector3(4.4,_h(4.4,-6.2),-6.2), Color("d43a2a")], [Vector3(13.2,_h(13.2,-12.4),-12.4), Color("2f62b8")], [Vector3(-4.5,0,11.5), Color("d43a2a")], [Vector3(5.0,_h(5.0,-6.4),-6.4), Color("2f62b8")], [Vector3(8.2,_h(8.2,-10.1),-10.1), Color("d43a2a")], [Vector3(11.5,_h(11.5,-11.2),-11.2), Color("2f62b8")], [Vector3(15.0,_h(15.0,-13.6),-13.6), Color("d43a2a")], [Vector3(6.8,_h(6.8,-13.4),-13.4), Color("2f62b8")]]:
 		_mini(uw[0], uw[1])
-	for gp in [Vector3(-3.6,0,6.2), Vector3(3.4,0,-3.4), Vector3(12.0,0,3.0), Vector3(-7.4,0,-1.6)]: # R137 sacks at junctions
+	for gp in [Vector3(-3.6,0,6.2), Vector3(3.4,0,-3.4), Vector3(14.5,0,3.2), Vector3(-7.4,0,-1.6)]: # R138 sacks on roundE route
 		blob(gp+Vector3(0,0.24,0), Vector3(0.3,0.26,0.3), Color("a67c4e")); blob(gp+Vector3(0.28,0.18,0.14), Vector3(0.24,0.2,0.24), Color("a67c4e")); cyl(gp+Vector3(-0.3,0.34,0.1), 0.24,0.27,0.68, Color("8a5f36"), 8)
 	for up2 in [Vector3(6.2,_h(6.2,-9.8),-9.8), Vector3(12.8,_h(12.8,-12.6),-12.6), Vector3(17.5,_h(17.5,-11.0),-11.0)]:
 		cyl(up2+Vector3(0,0.4,0), 0.3,0.34,0.8, Color("8a5f36"), 8); box(up2+Vector3(0.55,0.3,0.3), Vector3(0.55,0.55,0.55), Color("a67c4e"), 0.3)
-	for mw in [[Vector3(5.2,_h(5.2,-6.3),-6.3), Color("2f62b8")], [Vector3(7.2,_h(7.2,-7.0),-7.0), Color("d43a2a")], [Vector3(8.6,_h(8.6,-6.4),-6.4), Color("3f7d3a")], [Vector3(-2.2,0,8.6), Color("d43a2a")], [Vector3(14.0,0,6.0), Color("2f62b8")], [Vector3(-10.0,0,-2.5), Color("2f62b8")]]: _mini(mw[0], mw[1]) # R137
+	for mw in [[Vector3(5.2,_h(5.2,-6.3),-6.3), Color("2f62b8")], [Vector3(7.2,_h(7.2,-7.0),-7.0), Color("d43a2a")], [Vector3(8.6,_h(8.6,-6.4),-6.4), Color("3f7d3a")], [Vector3(-2.2,0,8.6), Color("d43a2a")], [Vector3(16.0,0,2.5), Color("2f62b8")], [Vector3(-10.0,0,-2.5), Color("2f62b8")]]: _mini(mw[0], mw[1]) # R137
 	for mw2 in [[Vector3(0.0,0,5.5), Color("3f7d3a")], [Vector3(-6.5,0,9.0), Color("2f62b8")], [Vector3(10.4,0,-1.8), Color("d43a2a")], [Vector3(-12.0,0,1.0), Color("3f7d3a")], [Vector3(4.8,0,9.6), Color("2f62b8")], [Vector3(12.6,_h(12.6,-9.6),-9.6), Color("d43a2a")], [Vector3(7.6,_h(7.6,-11.8),-11.8), Color("3f7d3a")], [Vector3(-4.8,0,-6.6), Color("2f62b8")]]: _mini(mw2[0], mw2[1])
 	for sp9 in [Vector3(2.2,0,4.4), Vector3(-7.8,0,7.2), Vector3(9.2,0,3.2), Vector3(-2.8,0,-1.8), Vector3(6.6,0,7.8), Vector3(-10.6,0,-5.2), Vector3(13.8,0,7.2), Vector3(0.4,0,11.6)]:
 		box(sp9+Vector3(0,0.16,0), Vector3(0.36,0.32,0.36), Color("a67c4e"), 0.3); cyl(sp9+Vector3(0.42,0.20,0.18), 0.17,0.19,0.4, Color("8a5f36"), 7)
@@ -456,10 +456,10 @@ func _setup() -> void:
 	box(Vector3(-2.4,0.55,6.45), Vector3(1.6,0.5,1.2), Color("a67c4e"), 0,0,0, "timber")
 	for pp2 in [Vector3(0.9,0,3.1), Vector3(-4.2,0,6.3), Vector3(3.5,0,-0.9), Vector3(7.8,0,5.2), Vector3(-9.7,0,-3.2), Vector3(9.3,0,-4.2), Vector3(-1.6,0,-3.0)]: # R69 territory pennants (Black #7)
 		box(pp2+Vector3(0,1.05,0), Vector3(0.06,2.1,0.06), Color("4a3421")); box(pp2+Vector3(0.32,1.85,0), Vector3(0.6,0.34,0.04), Color("2f62b8") if int(pp2.x) % 2 == 0 else Color("d43a2a"))
-	for sp8 in [Vector3(-1.0,0,3.5), Vector3(6.0,0,1.0), Vector3(-7.5,0,9.0), Vector3(4.2,0,-2.2), Vector3(-5.5,0,-2.5)]: _mini(sp8, Color("2f62b8") if int(sp8.x) % 2 == 0 else Color("d43a2a")) # R137 settlers on new paths
-	for fp2 in [Vector3(5.5,_h(5.5,10.8),10.8), Vector3(-14.5,_h(-14.5,-1.0),-1.0), Vector3(13.8,_h(13.8,-2.2),-2.2)]: # R137 tall flags follow huts/roundhouse
+	for sp8 in [Vector3(-1.0,0,3.5), Vector3(7.0,0,-1.0), Vector3(-7.5,0,9.0), Vector3(4.2,0,-2.2), Vector3(-5.5,0,-2.5)]: _mini(sp8, Color("2f62b8") if int(sp8.x) % 2 == 0 else Color("d43a2a")) # R138 settlers on new paths (one on octCE branch)
+	for fp2 in [Vector3(5.5,_h(5.5,10.8),10.8), Vector3(-12.5,_h(-12.5,-1.5),-1.5), Vector3(18.0,_h(18.0,1.0),1.0)]: # R138 tall flags follow
 		box(fp2+Vector3(0,2.2,0), Vector3(0.06,1.3,0.06), Color("4a3421")); box(fp2+Vector3(0.35,2.6,0), Vector3(0.65,0.38,0.04), Color("2f62b8") if fp2.x>0 else Color("d43a2a"))
-	for wpath in [[Vector2(-14.5,1.2),Vector2(-9.0,-1.8),Vector2(-1.5,-3.3),Vector2(4.0,-1.2),Vector2(7.8,0.8),Vector2(10.0,-1.0),Vector2(13.8,0.0)],[Vector2(-1.5,-3.3),Vector2(1.5,-6.0),Vector2(5.0,-7.5),Vector2(9.0,-8.8)],[Vector2(-11.5,11.6),Vector2(-12.8,10.5),Vector2(-9.5,12.8)],[Vector2(5.5,13.0),Vector2(8.0,13.8),Vector2(12.5,15.2)],[Vector2(15.5,6.7),Vector2(18.5,8.3),Vector2(20.5,5.7)]]: # R137 worn routes: west-castle-east, castle-hill, SW group, south group, east group
+	for wpath in [[Vector2(-12.5,0.7),Vector2(-8.5,-1.8),Vector2(-1.5,-3.3),Vector2(4.0,-1.2),Vector2(12.0,0.0),Vector2(18.0,3.2)],[Vector2(-1.5,-3.3),Vector2(1.5,-6.0),Vector2(5.0,-7.5),Vector2(9.0,-8.8)],[Vector2(-5.5,14.7),Vector2(-7.0,12.0),Vector2(-9.8,9.0)],[Vector2(5.5,13.0),Vector2(8.0,13.8),Vector2(12.5,15.2)],[Vector2(13.5,9.2),Vector2(18.0,9.5),Vector2(22.0,6.7)]]: # R138 worn: west-castle-east(opened), castle-hill, SW house->aframe->A, south, east roundE2->house(west door)->hill hut
 		for wi2 in wpath.size()-1:
 			var wa: Vector2 = wpath[wi2]; var wb: Vector2 = wpath[wi2+1]; var wlen := wa.distance_to(wb); var wsteps := int(wlen / 0.65)
 			for ws in wsteps+1:
@@ -474,7 +474,7 @@ func _setup() -> void:
 				if ws % 2 == 0: # R69 stone edging (Black #3)
 					blob(Vector3(wp.x+wperp.x*0.68, wy+0.01, wp.y+wperp.y*0.68), Vector3(0.13,0.09,0.13), Color("9a968c"))
 					blob(Vector3(wp.x-wperp.x*0.68, wy+0.01, wp.y-wperp.y*0.68), Vector3(0.13,0.09,0.13), Color("9a968c"))
-	for bp9 in [Vector2(7.8,0.8), Vector2(5.5,10.8), Vector2(-9.5,10.8), Vector2(13.8,-2.2), Vector2(-14.5,-1.0), Vector2(-15.5,6.5), Vector2(15.5,4.5), Vector2(12.5,14.2), Vector2(-11.5,13.8), Vector2(18.5,10.5), Vector2(-9.5,-11.5), Vector2(20.5,3.5)]: # R137 new homes
+	for bp9 in [Vector2(10.5,-3.5), Vector2(5.5,10.8), Vector2(-7.0,9.8), Vector2(18.0,1.0), Vector2(-12.5,-1.5), Vector2(-12.0,5.0), Vector2(13.5,7.0), Vector2(12.5,14.2), Vector2(-5.5,12.5), Vector2(20.0,9.5), Vector2(-9.5,-11.5), Vector2(22.0,4.5)]: # R138 homes
 		var by9: float = _h(bp9.x,bp9.y) if bp9.length() > 11.0 else 0.0
 		_ground_patch(bp9.x, bp9.y, 1.65, int(700.0 + bp9.x*7.0), Color("ac9b83"), Color("8b7b66")) # R76 worn yard
 		blob(Vector3(bp9.x, by9+0.045, bp9.y), Vector3(1.8,0.045,1.5), Color(0.10,0.16,0.05,0.42))
@@ -485,31 +485,33 @@ func _setup() -> void:
 	blob(Vector3(-1.5,0.045,-3.5), Vector3(2.8,0.05,2.3), Color(0.10,0.16,0.05,0.42))
 	# castle centre-back
 	_build_castle(Vector3(-1.5,0,-3.5), stone, roof)
-	_build_octstore(Vector3(7.8,0,0.8), stone) # R137 centre-east group
+	_build_octstore(Vector3(10.5,0,-3.5), stone) # R138 centre-east opened NE of castle (screen ~828,425)
 	_build_hut(Vector3(5.5,_h(5.5,10.8),10.8), stone) # R137 south group (market)
-	_build_aframe(Vector3(-9.5,_h(-9.5,10.8),10.8), roof, stone) # R137 SW group
-	_build_roundhouse(Vector3(13.8,_h(13.8,-2.2),-2.2), roof) # R137 east group
-	_build_hut(Vector3(-14.5,_h(-14.5,-1.0),-1.0), stone) # R137 west group
+	_build_aframe(Vector3(-7.0,_h(-7.0,9.8),9.8), roof, stone) # R138 SW pulled into frame (screen ~182,433)
+	_build_roundhouse(Vector3(18.0,_h(18.0,1.0),1.0), roof) # R138 east opened far right (screen ~930,546)
+	_build_hut(Vector3(-12.5,_h(-12.5,-1.5),-1.5), stone) # R138 west pulled in (screen ~246,245)
 	# props: barrels, crates, fence, rocks
-	for bp in [Vector3(7.8,0,1.0), Vector3(-6.2,0,0.8)]: # R137
+	for bp in [Vector3(10.5,0,-3.3), Vector3(-6.2,0,0.8)]: # R138 barrels follow octCE
 		cyl(bp+Vector3(0,0.45,0), 0.38,0.42,0.9, Color("8a5f36"), 9); box(bp+Vector3(0.8,0.35,0.2), Vector3(0.7,0.7,0.7), Color("a67c4e"), 0.4)
-	for fp in [Vector3(-1.5,0,-3.5), Vector3(7.8,0,0.8)]: # R137
+	for fp in [Vector3(-1.5,0,-3.5), Vector3(10.5,0,-3.5)]: # R138 flags follow octCE
 		box(fp+Vector3(0,4.6,0), Vector3(0.07,1.4,0.07), Color("4a3421")); box(fp+Vector3(0.4,5.1,0), Vector3(0.75,0.42,0.04), Color("d43a2a"))
 	# trees
-	for p in [Vector3(-11,0,-6),Vector3(11,0,6),Vector3(-15,0,2.8),Vector3(9,0,4),Vector3(-4,0,13)]: # R137 trees BETWEEN groups (west pair, east gap, centre-east, south meadow)
+	for p in [Vector3(-11,0,-6),Vector3(16,0,4.8),Vector3(-12.3,0,1.8),Vector3(11,0,1.5),Vector3(-1,0,12.5)]: # R138 trees BETWEEN opened groups (roundE pair, west pair, octCE gap, south meadow moved off bottom-left)
 		_build_tree(p, leaf, leaf2)
-	_build_roundbarn(Vector3(-15.5,_h(-15.5,6.5),6.5), roof) # R137 west group
-	_build_roundhouse(Vector3(15.5,_h(15.5,4.5),4.5), roof) # R137 east group
+	_build_roundbarn(Vector3(-12.0,_h(-12.0,5.0),5.0), roof) # R138 west pulled in (screen ~146,329)
+	_build_roundhouse(Vector3(13.5,_h(13.5,7.0),7.0), roof) # R138 east opened down-left (screen ~719,580)
 	_build_aframe(Vector3(-9.5,_h(-9.5,-11.5),-11.5), roof, stone) # R137 north group
 	_build_octstore(Vector3(12.5,_h(12.5,14.2),14.2), stone) # R137 SE group
-	_build_house(Vector3(-11.5,_h(-11.5,13.8),13.8), roof, stone) # R137 SW group
-	_build_house(Vector3(18.5,_h(18.5,10.5),10.5), roof, stone) # R137 east group
-	_build_hut(Vector3(20.5,_h(20.5,3.5),3.5), stone) # R137 hill-foot hut
-	for tp in [Vector3(-17,0,-8),Vector3(-18,0,2),Vector3(-16,0,11),Vector3(19,0,-7),Vector3(8,0,-15),Vector3(-13,0,-12),Vector3(6,0,14),Vector3(-5,0,15),Vector3(16,0,13)]: # R137 outer trees, clear of new homes/paths
+	_build_house(Vector3(-5.5,_h(-5.5,12.5),12.5), roof, stone) # R138 SW pulled into frame (was px6, now ~171; hang 0 = south door)
+	_build_house(Vector3(20.0,_h(20.0,9.5),9.5), roof, stone) # R138 east (hang -PI/2 = west door)
+	_build_hut(Vector3(22.0,_h(22.0,4.5),4.5), stone) # R138 hill-foot hut opened east
+	for tp in [Vector3(-17,0,-8),Vector3(-18,0,2),Vector3(-16,0,11),Vector3(19,0,-7),Vector3(8,0,-15),Vector3(-13,0,-12),Vector3(6,0,14),Vector3(-10.5,0,15.5),Vector3(16,0,13)]: # R138 outer trees (was R137): (-5,15) bottom-left crown moved to left edge frame, clear of new homes/paths
 		_build_tree(tp, leaf, leaf2)
 	# R124 forest framing (existing _build_tree language; positions screened in-frame, cull-passing, clear of buildings/paths/apron)
-	for ftp in [Vector3(-0.5,0,18), Vector3(0.8,0,17.2), Vector3(4,0,15.5), Vector3(8,0,18.5), Vector3(13,0,18), Vector3(20,0,9.5), Vector3(21.5,0,14), Vector3(20.3,0,13.2)]: # foreground bottom band + corner clusters
+	for ftp in [Vector3(20,0,9.5), Vector3(21.5,0,14), Vector3(20.3,0,13.2)]: # R138 foreground band reduced to right corner cluster (near)
 		_build_tree(ftp, leaf, leaf2)
+	for ftp138 in [Vector3(6.5,0,17.5), Vector3(8,0,18.5), Vector3(13,0,18)]: # R138 bottom band as far (low) crowns: framing stays, bottom-left occlusion goes (2 near crowns at px196/241 removed, (4,15.5) moved+lowered)
+		_build_tree_far(ftp138, leaf, leaf2)
 	for ftp2 in [Vector3(-18,0,-4), Vector3(-19,0,-6.5), Vector3(-13,0,-15), Vector3(-8.5,0,-14.5), Vector3(-4,0,-14.5), Vector3(5,0,-13.5)]: # left margin + background behind castle
 		_build_tree(ftp2, leaf, leaf2)
 	for ftp3 in [Vector3(14,0,-3), Vector3(18.5,0,-4), Vector3(21.5,0,-0.5)]: # village->hill transition (seated on _h by _build_tree)
@@ -524,7 +526,7 @@ func _setup() -> void:
 	for i125d in 4: # left front far row
 		_build_tree_far(Vector3(-18.8, 0, -9.0 + float(i125d)*5.0), leaf, leaf2)
 	# R127 nestling: clusters in outer gaps between buildings (screened, apron/path rules kept; near pass builder cull)
-	for ftp127 in [Vector3(-15,0,2.8), Vector3(-5.5,0,-7.5), Vector3(-11,0,13), Vector3(9,0,13.5), Vector3(14.7,0,1.2), Vector3(-8,0,-2.5), Vector3(10.8,0,-0.5)]: # R137 between-building trees
+	for ftp127 in [Vector3(-12.3,0,1.8), Vector3(-5.5,0,-7.5), Vector3(-10,0,8), Vector3(9,0,13.5), Vector3(17,0,5.5), Vector3(-8,0,-2.5), Vector3(12.5,0,2.8)]: # R138 between opened groups
 		_build_tree(ftp127, leaf, leaf2)
 	for ftp127f in [Vector3(6.5,0,-8.5), Vector3(5,0,-9), Vector3(8.5,0,-7.5), Vector3(19,0,13.5), Vector3(-17.5,0,8.5), Vector3(-12.5,0,-14), Vector3(7,0,-11.5), Vector3(2,0,-13), Vector3(-13,0,-6)]: # R137 far infill (updated clearances)
 		_build_tree_far(ftp127f, leaf, leaf2)
@@ -534,12 +536,12 @@ func _setup() -> void:
 		add_canopy(Transform3D(Basis.IDENTITY.scaled(Vector3(0.6,0.42,0.6)), bs+Vector3(0,0.5,0)), leaf)
 	# stones
 	for p in [Vector3(4.8,0.25,-4),Vector3(-7.5,0.2,6),Vector3(7,0.2,-2)]: blob(p, Vector3(0.5,0.35,0.45), Color("9a968c"))
-	for ap in [Vector3(-1.5,0,-3.5), Vector3(7.8,0,0.8), Vector3(-9.5,0,10.8), Vector3(5.5,0,10.8), Vector3(13.8,0,-2.2)]: # R137
+	for ap in [Vector3(-1.5,0,-3.5), Vector3(10.5,0,-3.5), Vector3(-7.0,0,9.8), Vector3(5.5,0,10.8), Vector3(18.0,0,1.0)]: # R138
 		cyl(ap+Vector3(0,0.018,0), 2.6,2.6,0.015, Color(0.10,0.16,0.05,0.45), 14)
 	# coloured flower patches merged into existing colour meshes (blooms survive, no dots/instances)
 	var bloom_cols := [Color("e2543e"), Color("ffd94a"), Color("ff9db0"), Color("e2543e"), Color("ffd94a"), Color("f2f0e6")]
 	for bc in 6:
-		var zone: Vector2 = [Vector2(-17,9), Vector2(0.5,12), Vector2(14,11), Vector2(-16,-5), Vector2(4,-10.5), Vector2(-6,-13)][bc] # R137
+		var zone: Vector2 = [Vector2(-17,9), Vector2(0.5,12), Vector2(15,12), Vector2(-16,-5), Vector2(4,-10.5), Vector2(-6,-13)][bc] # R137
 		blob(Vector3(zone.x,0.045,zone.y), Vector3(1.7,0.05,1.25), Color("7fae4a"))
 		for bb in 30:
 			var bpx := zone.x + fmod(float(bb)*0.61,3.0)-1.5; var bpz := zone.y + fmod(float(bb)*0.83,2.2)-1.1
@@ -627,7 +629,7 @@ func _worn_link(a: Vector2, b: Vector2, seedv: int, strength := 0.8) -> void:
 		if s % 3 == 0: blob(Vector3(pos.x + perp.x*(w + 0.35), wy + 0.028, pos.y + perp.y*(w + 0.35)), Vector3(0.42, 0.03, 0.34), Color("7fae4a")) # fringe break
 func _detail_pass() -> void:
 	# R75 scene-wide richness: per-building unique detail + patch-scale terrain detail (all seated, merged)
-	var homes := [Vector3(-1.5,0,-3.5), Vector3(7.8,0,0.8), Vector3(5.5,0,10.8), Vector3(-9.5,0,10.8), Vector3(13.8,0,-2.2), Vector3(-14.5,0,-1.0), Vector3(-15.5,0,6.5), Vector3(15.5,0,4.5), Vector3(-9.5,0,-11.5), Vector3(12.5,0,14.2), Vector3(-11.5,0,13.8), Vector3(18.5,0,10.5), Vector3(20.5,0,3.5)] # R137
+	var homes := [Vector3(-1.5,0,-3.5), Vector3(10.5,0,-3.5), Vector3(5.5,0,10.8), Vector3(-7.0,0,9.8), Vector3(18.0,0,1.0), Vector3(-12.5,0,-1.5), Vector3(-12.0,0,5.0), Vector3(13.5,0,7.0), Vector3(-9.5,0,-11.5), Vector3(12.5,0,14.2), Vector3(-5.5,0,12.5), Vector3(20.0,0,9.5), Vector3(22.0,0,4.5)] # R138
 	for hi in homes.size():
 		var hp: Vector3 = homes[hi]
 		if Vector2(hp.x, hp.z).length() > 11.0: hp.y = _h(hp.x, hp.z)
@@ -660,7 +662,7 @@ func _detail_pass() -> void:
 	box(ms+Vector3(0,0.55,0), Vector3(1.5,0.45,1.1), Color("a67c4e"), 0, 0, 0, "timber")
 	for gi in 6: blob(ms+Vector3(-0.55+fmod(float(gi)*0.4,1.1), 0.86, -0.35+fmod(float(gi)*0.33,0.7)), Vector3(0.17,0.13,0.17), [Color("e2543e"), Color("ffd94a"), Color("7fae4a")][gi%3])
 	# fence lines along two meadow edges (posts + double rail, seated)
-	for fl in [[Vector3(-17.5,0,3.0), Vector3(-17.0,0,9.0)], [Vector3(13.0,0,7.0), Vector3(17.0,0,9.0)], [Vector3(-4.0,0,11.0), Vector3(1.0,0,11.5)]]: # R137 meadow edges between groups
+	for fl in [[Vector3(-14.5,0,2.5), Vector3(-14.0,0,8.5)], [Vector3(15.0,0,10.5), Vector3(19.0,0,12.0)], [Vector3(-4.0,0,11.0), Vector3(1.0,0,11.5)]]: # R138 fences follow pulled-in west / opened east
 		var fa: Vector3 = fl[0]; var fb: Vector3 = fl[1]; var flen := fa.distance_to(fb); var fsteps := int(flen/1.1)
 		for fs in fsteps+1:
 			var fp9 := fa.lerp(fb, float(fs)/float(maxi(fsteps,1))); fp9.y = _h(fp9.x, fp9.z) if Vector2(fp9.x,fp9.z).length() > 11.0 else 0.0
@@ -693,39 +695,39 @@ func _detail_pass() -> void:
 		var bp9: Vector3 = bu; if Vector2(bu.x, bu.z).length() > 11.0: bp9.y = _h(bu.x, bu.z)
 		add_canopy(Transform3D(Basis.IDENTITY.scaled(Vector3(0.62,0.45,0.62)), bp9+Vector3(0,0.42,0)), Color("4e8f33"))
 	# R128 worked yards on every building's door side (castle/mine/watchtower already yarded - not doubled)
-	for yp128 in [Vector3(5.5,0,10.8), Vector3(-14.5,0,-1.0), Vector3(20.5,_h(20.5,3.5),3.5), Vector3(-9.5,0,10.8), Vector3(-9.5,0,-11.5), Vector3(13.8,0,-2.2), Vector3(15.5,0,4.5), Vector3(-15.5,0,6.5), Vector3(7.8,0,0.8), Vector3(12.5,0,14.2)]: # R137 door-side (+z) yards follow buildings
+	for yp128 in [Vector3(5.5,0,10.8), Vector3(-12.5,0,-1.5), Vector3(22.0,_h(22.0,4.5),4.5), Vector3(-7.0,0,9.8), Vector3(-9.5,0,-11.5), Vector3(18.0,0,1.0), Vector3(13.5,0,7.0), Vector3(-12.0,0,5.0), Vector3(10.5,0,-3.5), Vector3(12.5,0,14.2)]: # R138 door-side (+z) yards follow buildings
 		_worked_yard(yp128, Vector2(0, 1), 12800 + absi(int(yp128.x*31.0 + yp128.z*17.0)), Vector2(yp128.x, yp128.z).length() > 11.0)
 	for yp128h in [Vector3(8.2,_h(8.2,-11.2),-11.2), Vector3(18.5,_h(18.5,-8.0),-8.0)]: # hill huts had no yard
 		_worked_yard(yp128h, Vector2(0, 1), 12900 + absi(int(yp128h.x*31.0 + yp128h.z*17.0)), true)
-	for hp128 in [Vector3(-11.5,0,13.8), Vector3(18.5,0,10.5)]: # R137 houses: door follows the R105 hang rotation (recomputed at new pos)
+	for hp128 in [Vector3(-5.5,0,12.5), Vector3(20.0,0,9.5)]: # R138 houses: SW hang 0 (south door), east hang -PI/2 (west door), recomputed at new pos
 		var hang128: float = [0.0, PI/2.0, PI, -PI/2.0][absi(int(hp128.x*7.0 + hp128.z*13.0)) % 4]
 		_worked_yard(hp128, Vector2(sin(hang128), cos(hang128)), 12850 + absi(int(hp128.x*31.0 + hp128.z*17.0)), false)
 	# R129 continuous worn ground: desire lines yard->path and building->building + heavier working centre
 	_ground_patch(0.8, 8.6, 2.6, 13001, Color("ac9b83"), Color("8b7b66")) # R137 castle-branch/main junction
 	_ground_patch(4.2, 9.5, 2.2, 13002, Color("ac9b83"), Color("8b7b66")) # market node
-	_ground_patch(-9.0, -1.8, 1.9, 13003, Color("ac9b83"), Color("8b7b66")) # west junction
-	_ground_patch(10.0, -1.0, 1.8, 13004, Color("ac9b83"), Color("8b7b66")) # east junction
-	_worn_link(Vector2(7.8, 3.0), Vector2(6.2, 1.4), 13101, 0.9) # R137 octstore door -> castle-east branch
-	_worn_link(Vector2(13.8, 0.0), Vector2(10.0, -1.0), 13102, 0.85) # east roundhouse door -> east junction
+	_ground_patch(-8.5, -1.8, 1.9, 13003, Color("ac9b83"), Color("8b7b66")) # R138 west junction
+	_ground_patch(12.0, 0.0, 1.8, 13004, Color("ac9b83"), Color("8b7b66")) # R138 east junction (opened)
+	_worn_link(Vector2(10.5, -1.3), Vector2(8.0, -1.2), 13101, 0.9) # R138 octCE door -> castle-east branch
+	_worn_link(Vector2(18.0, 3.2), Vector2(12.0, 0.0), 13102, 0.85) # R138 roundE door -> east junction
 	_worn_link(Vector2(5.5, 13.0), Vector2(6.8, 12.2), 13103, 0.8) # south hut door -> main A
-	_worn_link(Vector2(-15.5, 8.8), Vector2(-12.8, 10.5), 13104, 0.75) # barn front is on A (link reinforces)
-	_worn_link(Vector2(-14.5, 1.2), Vector2(-12.0, 0.2), 13105, 0.7) # west hut door -> west branch
-	_worn_link(Vector2(-11.5, 11.6), Vector2(-12.8, 10.5), 13106, 0.8) # SW house door (hang PI, north) -> main A
-	_worn_link(Vector2(18.5, 8.3), Vector2(15.5, 6.7), 13107, 0.8) # east house door (hang PI, north) -> east branch end
+	_worn_link(Vector2(-12.0, 7.2), Vector2(-9.8, 9.0), 13104, 0.75) # R138 barn front is on A
+	_worn_link(Vector2(-12.5, 0.7), Vector2(-10.5, -0.5), 13105, 0.7) # R138 west hut door -> west branch
+	_worn_link(Vector2(-5.5, 14.7), Vector2(-7.0, 12.0), 13106, 0.8) # R138 SW house door (hang 0, south) -> aframe front/A
+	_worn_link(Vector2(18.0, 9.5), Vector2(15.0, 9.2), 13107, 0.8) # R138 east house door (hang -PI/2, west) -> roundE2 front route
 	_worn_link(Vector2(12.5, 16.4), Vector2(12.5, 15.2), 13108, 0.65) # SE octstore door -> main A end
-	_worn_link(Vector2(20.5, 5.7), Vector2(18.5, 8.3), 13109, 0.6) # hill-foot hut -> east house (light, edge)
+	_worn_link(Vector2(22.0, 6.7), Vector2(18.0, 9.5), 13109, 0.6) # R138 hill-foot hut -> east house door
 	# R119 merged carriers on main/branch path routes (existing keys, varied loads/clothing)
-	_build_carrier(Vector3(-6.5,0,8.8), Color("d43a2a"), 1) # R137 on main A
+	_build_carrier(Vector3(-6.0,0,10.8), Color("d43a2a"), 1) # R138 on main A (SW segment)
 	_build_carrier(Vector3(3.5,0,-1.8), Color("3f7d3a"), 0) # on castle-east branch
 	_build_carrier(Vector3(8.0,0,12.8), Color("2f62b8"), 2) # on main A south
 	for gi119 in 8: # shoulder goods at the GLB carrier positions (spawned later in _spawn_carriers)
-		var gp119: Vector3 = [Vector3(-11.0,0.05,10.2), Vector3(-3.0,0.05,8.2), Vector3(4.8,0.05,10.8), Vector3(10.0,0.05,13.8), Vector3(-1.0,0.05,2.8), Vector3(4.0,0.05,-1.2), Vector3(10.5,0.05,-0.8), Vector3(-9.0,0.05,-1.6)][gi119]
+		var gp119: Vector3 = [Vector3(-10.5,0.05,8.5), Vector3(-3.0,0.05,8.2), Vector3(4.8,0.05,10.8), Vector3(10.0,0.05,13.8), Vector3(-1.0,0.05,2.8), Vector3(4.0,0.05,-1.2), Vector3(8.5,0.05,-1.2), Vector3(-8.5,0.05,-1.8)][gi119]
 		var gl119 := CylinderMesh.new(); gl119.bottom_radius=0.09; gl119.top_radius=0.09; gl119.height=0.95; gl119.radial_segments=7
 		add_mesh(gl119, Transform3D(Basis.from_euler(Vector3(0,-0.7,PI/2.0)), gp119+Vector3(0,1.18,0)), Color("8a5f36")); tri_total += 28
 		if gi119 % 2 == 0: blob(gp119+Vector3(-0.32,0.86,0.1), Vector3(0.20,0.26,0.20), Color("c9b18a"))
 func _spawn_carriers() -> void:
 	var chars := ["Farmer_B", "Farmer_A", "Rogue_Hooded", "Rogue"]
-	var cps := [Vector3(-11.0,0.05,10.2), Vector3(-3.0,0.05,8.2), Vector3(4.8,0.05,10.8), Vector3(10.0,0.05,13.8), Vector3(-1.0,0.05,2.8), Vector3(4.0,0.05,-1.2), Vector3(10.5,0.05,-0.8), Vector3(-9.0,0.05,-1.6)]
+	var cps := [Vector3(-10.5,0.05,8.5), Vector3(-3.0,0.05,8.2), Vector3(4.8,0.05,10.8), Vector3(10.0,0.05,13.8), Vector3(-1.0,0.05,2.8), Vector3(4.0,0.05,-1.2), Vector3(8.5,0.05,-1.2), Vector3(-8.5,0.05,-1.8)]
 	for ci2 in cps.size():
 		var cp: Vector3 = cps[ci2]; var ps: PackedScene = load("res://assets/settlement3d/runtime/characters/" + chars[ci2 % chars.size()] + ".glb")
 		if ps == null: _build_carrier(cp); continue
@@ -744,7 +746,7 @@ func _spawn_carriers() -> void:
 		ap.advance(0.65)
 		# carrier log merged pre-commit in _setup (saves a draw per carrier)
 func _spawn_statics() -> void:
-	var defs := [["Farmer_A", Vector3(-13.0,0.05,1.8), "Tools_/Chopping"], ["Knight", Vector3(0.8,0.05,-5.6), "General_/Idle_A"], ["Farmer_B", Vector3(-8.0,0.05,12.8), "Tools_/Hammering"], ["Farmer_A", Vector3(9.6,_h(9.6,-7.0)+0.05,-7.0), "Tools_/Hammering"], ["Farmer_A", Vector3(6.0,_h(6.0,-6.8)+0.05,-6.8), "Tools_/Chopping"], ["Farmer_B", Vector3(11.0,_h(11.0,-11.0)+0.05,-11.0), "Tools_/Hammering"]]
+	var defs := [["Farmer_A", Vector3(-11.0,0.05,0.5), "Tools_/Chopping"], ["Knight", Vector3(0.8,0.05,-5.6), "General_/Idle_A"], ["Farmer_B", Vector3(-6.2,0.05,11.3), "Tools_/Hammering"], ["Farmer_A", Vector3(9.6,_h(9.6,-7.0)+0.05,-7.0), "Tools_/Hammering"], ["Farmer_A", Vector3(6.0,_h(6.0,-6.8)+0.05,-6.8), "Tools_/Chopping"], ["Farmer_B", Vector3(11.0,_h(11.0,-11.0)+0.05,-11.0), "Tools_/Hammering"]]
 	for df in defs:
 		var ps2: PackedScene = load("res://assets/settlement3d/runtime/characters/" + String(df[0]) + ".glb")
 		if ps2 == null: continue
@@ -1285,7 +1287,7 @@ func _aprons() -> void:
 			blob(ap2+loff, Vector3(1.05,0.04,0.85), Color("7fae4a") if lbi%2==0 else Color("ac9b83"))
 func _props2() -> void:
 	# log piles
-	for lp in [Vector3(-12.5,0,12.5), Vector3(11.5,0,6.5), Vector3(1.2,0,10.5)]: # R137
+	for lp in [Vector3(-9.5,0,13.5), Vector3(15.5,0,8.5), Vector3(1.2,0,10.5)]: # R138 log piles in group gaps
 		for li in 5:
 			var lm := CylinderMesh.new(); lm.bottom_radius=0.14; lm.top_radius=0.14; lm.height=1.15; lm.radial_segments=7
 			add_mesh(lm, Transform3D(Basis.from_euler(Vector3(0,0,PI/2.0)), lp+Vector3(0,0.15+0.27*float(li%3),-0.3+0.3*float(li/3))), Color("8a6742")); tri_total += 28
@@ -1301,14 +1303,14 @@ func _props2() -> void:
 	box(wp+Vector3(-0.62,1.25,0), Vector3(0.13,1.7,0.13), Color("6b4a2c")); box(wp+Vector3(0.62,1.25,0), Vector3(0.13,1.7,0.13), Color("6b4a2c"))
 	box(wp+Vector3(-0.35,2.32,0), Vector3(0.95,0.09,0.8), Color("a05a44"), 0, 0.42, 0); box(wp+Vector3(0.35,2.32,0), Vector3(0.95,0.09,0.8), Color("a05a44"), 0, -0.42, 0)
 	# sacks + crates near houses/market
-	for sp in [Vector3(3.2,0,8.2), Vector3(2.6,0,0.6), Vector3(9.0,0,-2.0), Vector3(-11.0,0,2.5)]: # R137 near market/junctions
+	for sp in [Vector3(3.2,0,8.2), Vector3(2.6,0,0.6), Vector3(11.0,0,-2.5), Vector3(-11.0,0,2.5)]: # R138 near octCE/market/junctions
 		blob(sp+Vector3(0,0.28,0), Vector3(0.34,0.3,0.34), Color("a67c4e")); blob(sp+Vector3(0.3,0.2,0.15), Vector3(0.26,0.22,0.26), Color("a67c4e"))
 		box(sp+Vector3(-0.45,0.3,-0.2), Vector3(0.55,0.55,0.55), Color("a67c4e"), 0.3)
 	# fence lines
 	for fx in 6: box(Vector3(-9.5+float(fx)*0.85,0.4,8.6), Vector3(0.12,0.8,0.12), Color("7a5a36"))
 	box(Vector3(-7.4,0.62,8.6), Vector3(4.6,0.1,0.1), Color("8a6742"))
 	# gardens + door stone paths at houses, laundry lines, scattered barrels/crates
-	var houses := [Vector3(7.8,0,0.8), Vector3(5.5,0,10.8), Vector3(13.8,0,-2.2), Vector3(-14.5,0,-1.0), Vector3(15.5,0,4.5), Vector3(-9.5,0,-11.5), Vector3(12.5,0,14.2), Vector3(-9.5,0,10.8), Vector3(18.5,0,10.5)] # R137 actual homes (gardens/door stones follow)
+	var houses := [Vector3(10.5,0,-3.5), Vector3(5.5,0,10.8), Vector3(18.0,0,1.0), Vector3(-12.5,0,-1.5), Vector3(13.5,0,7.0), Vector3(-9.5,0,-11.5), Vector3(12.5,0,14.2), Vector3(-7.0,0,9.8), Vector3(20.0,0,9.5)] # R138 actual homes
 	for hp in houses:
 		cyl(hp+Vector3(0,0.018,0), 2.7,2.7,0.015, Color(0.10,0.16,0.05,0.45), 14)
 		var hang2: float = [0.0, PI/2.0, PI, -PI/2.0][absi(int(hp.x*7.0 + hp.z*13.0)) % 4]
