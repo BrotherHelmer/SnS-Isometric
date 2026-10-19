@@ -1178,6 +1178,12 @@ func _build_chunk_nature(host: Node3D, coord: Vector2i, lod: int) -> void:
 				if _nature_suppressed_near_activity(tile):
 					continue
 				_append_nature_transform(transforms_by_path, "diorama://rock_a", tile, 0, 0.66, 0.70, 0.18)
+			elif tile_type == Defs.TILE_GRASS and lod == CHUNK_LOD_NEAR and float(simulation.tree_regrowth.get(_tile_key(tile), 1.0)) <= 0.0:
+				# Harvested-tree stump marker, same as the small-map path
+				# (_sync_nature "STUMP"); the chunked province lost it in 26209fa.
+				if _nature_suppressed_near_activity(tile):
+					continue
+				_append_nature_transform(transforms_by_path, String(Catalog.CARGO["wood"]), tile, 0, 0.18, 0.42, 0.06)
 	_spawn_nature_multimeshes(host, transforms_by_path, true)
 
 
