@@ -69,8 +69,8 @@ func _run() -> void:
 	var dusk_fill: Color = dusk_p["fill_color"]
 	var dusk_sun: Color = dusk_p["sun_color"]
 	_check(dusk_fill.b > dusk_fill.r and dusk_sun.r > dusk_sun.b, "dusk has a warm key against a cool fill")
-	if game.world_view.terrain_mesh_instance != null and game.world_view.terrain_mesh_instance.material_override is ShaderMaterial:
-		var ground := game.world_view.terrain_mesh_instance.material_override as ShaderMaterial
+	if game.world_view.representative_terrain() != null and game.world_view.representative_terrain().material_override is ShaderMaterial:
+		var ground := game.world_view.representative_terrain().material_override as ShaderMaterial
 		var macro_m := float(ground.get_shader_parameter("macro_metres"))
 		var detail_m := float(ground.get_shader_parameter("detail_metres"))
 		_check(macro_m >= 8.0 and macro_m <= 20.0, "terrain macro noise is 8–20 m")
@@ -97,24 +97,29 @@ func _run() -> void:
 			if child is MultiMeshInstance3D:
 				stamp_batches += 1
 	_check(stamp_batches <= 3, "road detail is 2–3 batched stamps, not per-tile Decals")
-	_check(game.sun_light.directional_shadow_mode == DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS, "sun uses PSSM 4-split")
+	# M1 (Black-signed): one orthogonal sun on every profile; PSSM cascades
+	# mis-fit the ortho camera on the diorama.
+	_check(game.sun_light.directional_shadow_mode == DirectionalLight3D.SHADOW_ORTHOGONAL, "sun uses the M1 orthogonal shadow mode")
 	_check(game.sun_light.directional_shadow_split_1 >= 0.10 and game.sun_light.directional_shadow_split_1 <= 0.20, "near cascade owns the settlement")
 	_check(is_equal_approx(game.environment_resource.ssao_sharpness, 0.98), "SSAO sharpness is the GFX-F 0.98")
-	_check(game.world_view.terrain_mesh_instance != null and game.world_view.terrain_mesh_instance.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "terrain does not cast")
+	_check(game.world_view.representative_terrain() != null and game.world_view.representative_terrain().cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "terrain does not cast")
 	_check(is_zero_approx(game.sun_light.light_angular_distance), "sun angular distance is 0 (no PCSS)")
-	_check(game.sun_light.directional_shadow_max_distance >= 54.0 and game.sun_light.directional_shadow_max_distance <= 60.0, "shadow distance covers the village")
+	_check(game.sun_light.directional_shadow_max_distance >= 54.0 and game.sun_light.directional_shadow_max_distance <= 60.0, "shadow distance covers the village (%.1f m, profile %s)" % [game.sun_light.directional_shadow_max_distance, String(game.quality_profile.get("name", "?"))])
 	var shadow_suns := 0
 	for child in game.lighting_rig.get_children():
 		if child is DirectionalLight3D and (child as DirectionalLight3D).shadow_enabled:
 			shadow_suns += 1
 	_check(shadow_suns == 1, "only the key sun casts directional shadows")
 	_check(game.fill_light != null and not game.fill_light.shadow_enabled, "cool fill stays shadowless")
-	_check(not game.environment_resource.ssao_enabled, "night cheap-path turns SSAO off")
+	# Beta r16: SSAO stays allocated at night (toggling cost a 230-270 ms
+	# frame at every phase change) and fades to a weak intensity instead.
+	_check(game.environment_resource.ssao_intensity <= 0.5, "night cheap-path fades SSAO (intensity %.2f)" % game.environment_resource.ssao_intensity)
 	_check(game.environment_resource.ssao_radius >= 0.35 and game.environment_resource.ssao_radius <= 1.20, "SSAO radius stays tight enough for form without a smear")
 	_check(game.environment_resource.ssao_light_affect <= 0.20, "SSAO direct-light influence stays low")
 	var contact_count := 0
 	for view in game.world_view.building_views.values():
-		if view.find_child("ContactAO", true, false) != null:
+		# M3 bakes ContactAO with the workyard discs into GroundingMerged.
+		if view.find_child("ContactAO", true, false) != null or view.find_child("GroundingMerged", true, false) != null:
 			contact_count += 1
 	_check(contact_count > 0, "buildings carry a contact-AO disc")
 	_check(BuildingMaterials.roughness_for("plaster") >= 0.79 and BuildingMaterials.roughness_for("plaster") <= 0.96, "plaster roughness is 0.80–0.95")

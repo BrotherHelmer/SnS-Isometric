@@ -38,6 +38,10 @@ func _run() -> void:
 	game.quality_select.select(0)
 	game._restore_display_settings()
 	check(game.quality_select.selected == 1, "display quality persists")
+	# Leave the shared user settings as found (later tests in the same user
+	# dir otherwise inherit the "high" profile).
+	game.quality_select.select(0)
+	game._save_display_settings()
 	game.queue_free()
 	await process_frame
 	await create_timer(0.5).timeout

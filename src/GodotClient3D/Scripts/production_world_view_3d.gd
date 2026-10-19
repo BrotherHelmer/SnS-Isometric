@@ -1617,6 +1617,19 @@ func _commit_terrain_mesh(rebuild_collision: bool) -> void:
 	terrain_occupation_signature = _calculate_occupation_signature()
 
 
+## Read-only: a terrain surface carrying the ground material. Small maps
+## (<= 80 tiles) use one ContinuousTerrain mesh; province maps stream
+## 32-tile chunks, each with its own "Terrain" instance.
+func representative_terrain() -> MeshInstance3D:
+	if terrain_mesh_instance != null and is_instance_valid(terrain_mesh_instance):
+		return terrain_mesh_instance
+	if chunk_root == null:
+		return null
+	for node in chunk_root.find_children("Terrain", "MeshInstance3D", true, false):
+		return node as MeshInstance3D
+	return null
+
+
 func _apply_ground_material(host: MeshInstance3D) -> void:
 	var material := ShaderMaterial.new()
 	material.shader = preload("res://src/GodotClient3D/Shaders/settlement_ground.gdshader")
