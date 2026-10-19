@@ -754,7 +754,7 @@ func _ground_patch(cx: float, cz: float, r: float, seedv: int, cbase: Color, csu
 	for si in 2: # small seated stones/clumps inside patch
 		var soff := dir * rng.randf_range(-r*0.5, r*0.5) + perp * rng.randf_range(-r*0.4, r*0.4)
 		blob(Vector3(cx+soff.x, _h(cx+soff.x, cz+soff.y) + 0.05, cz+soff.y), Vector3(0.20, 0.10, 0.18), Color("8f7355"))
-func _face_patch(o: Vector3, right: Vector3, up: Vector3, w: float, h: float, seedv: int, cbase: Color, tx := "") -> void:
+func _face_patch(o: Vector3, right: Vector3, up: Vector3, w: float, h: float, seedv: int, cbase: Color, tx := "", pattern := 0) -> void:
 	# R78: painted face patch - jagged multi-layer fan (irregular stepped edge, internal sub-tones), UV-mapped so stone/plaster texture shows inside
 	var rng := RandomNumberGenerator.new(); rng.seed = seedv
 	var nrm := right.cross(up).normalized()
@@ -776,6 +776,32 @@ func _face_patch(o: Vector3, right: Vector3, up: Vector3, w: float, h: float, se
 			for v in order:
 				st.set_normal(nrm); st.set_uv(Vector2(0.5 + (v - cen).dot(right) / maxf(w, 0.01), 0.5 + (v - cen).dot(up) / maxf(h, 0.01))); st.add_vertex(v)
 		add_mesh(st.commit(), house_xf if house_mode else Transform3D.IDENTITY, lc, tx); tri_total += n
+	if pattern > 0: # R79: per-stone / pattern variation inside the panel (mortar = panel base showing in gaps)
+		var tones := [cbase, cbase.darkened(0.25), cbase.lightened(0.14)]
+		var rows := 4 if pattern == 3 else 3
+		var cols := 3
+		for rw2 in rows:
+			for cl2 in (cols if pattern != 2 else 2):
+				if pattern == 2 and rw2 > 2: break
+				var fx := (float(cl2) - float(cols - 1) * 0.5) * w * (0.30 if pattern != 2 else 0.34) + (w * 0.07 if rw2 % 2 == 1 and pattern != 2 else 0.0)
+				var fy := (float(rw2) - float(rows - 1) * 0.5) * h * (0.24 if pattern == 3 else 0.28)
+				if pattern == 2: fx = rng.randf_range(-w * 0.28, w * 0.28); fy = rng.randf_range(-h * 0.26, h * 0.26)
+				var scx := o + right * fx + up * fy + nrm * 0.098
+				var hw3 := w * (0.17 if pattern == 3 else (0.15 if pattern == 1 else 0.20)); var hh3 := h * (0.10 if pattern == 3 else (0.13 if pattern == 1 else 0.20))
+				var sst := SurfaceTool.new(); sst.begin(Mesh.PRIMITIVE_TRIANGLES)
+				var sn := 6; var spts: Array = []
+				var u0 := rng.randf(); var v0 := rng.randf()
+				for i in sn:
+					var a2 := TAU * float(i) / float(sn)
+					var rr2 := rng.randf_range(0.78, 1.08)
+					spts.append(scx + right * (cos(a2) * hw3 * rr2) + up * (sin(a2) * hh3 * rr2))
+				for i in sn:
+					var q1: Vector3 = spts[i]; var q2: Vector3 = spts[(i + 1) % sn]
+					var fn2 := (q1 - scx).cross(q2 - scx)
+					var ord2 := [scx, q1, q2] if fn2.dot(nrm) > 0.0 else [scx, q2, q1]
+					for v2 in ord2:
+						sst.set_normal(nrm); sst.set_uv(Vector2(u0 + (v2 - scx).dot(right) / maxf(w, 0.01), v0 + (v2 - scx).dot(up) / maxf(h, 0.01))); sst.add_vertex(v2)
+				add_mesh(sst.commit(), house_xf if house_mode else Transform3D.IDENTITY, tones[(rw2 * 3 + cl2 + int(rng.randf() * 2.0)) % 3], tx); tri_total += sn
 func _top_band() -> void:
 	for tp8 in [Vector3(10,0,-16), Vector3(18,0,-16), Vector3(8,0,-11.8)]:
 		_build_tree(tp8, Color("79c24d"), Color("a9dd77"))
@@ -1013,14 +1039,14 @@ func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 			box(p+Vector3(2.36, 0.55+float(ry3)*0.5, -1.2+float(cz3)*0.6), Vector3(0.07,0.34,0.46), stone.darkened(0.12), 0,0,0, "stone")
 	# R78: castle patches as jagged textured fans (R77 flat rectangles replaced); tower shadow strips with internal stone insets
 	for pp7 in [[-1.45, 0.95, 1.35, 0.90, 101], [0.55, 1.35, 1.10, 0.75, 113], [1.55, 0.62, 0.90, 0.60, 127], [-0.35, 0.55, 1.00, 0.55, 139]]:
-		_face_patch(p+Vector3(pp7[0], pp7[1], 1.845), Vector3(1,0,0), Vector3(0,1,0), pp7[2], pp7[3], int(pp7[4]), stone.darkened(0.17), "stone")
+		_face_patch(p+Vector3(pp7[0], pp7[1], 1.845), Vector3(1,0,0), Vector3(0,1,0), pp7[2], pp7[3], int(pp7[4]), stone.darkened(0.17), "stone", 1)
 	for pp8 in [[-0.55, 2.75, 0.85, 0.70, 151], [0.45, 3.05, 0.75, 0.60, 163]]:
-		_face_patch(p+Vector3(pp8[0], pp8[1], 0.965), Vector3(1,0,0), Vector3(0,1,0), pp8[2], pp8[3], int(pp8[4]), stone.darkened(0.17), "stone")
+		_face_patch(p+Vector3(pp8[0], pp8[1], 0.965), Vector3(1,0,0), Vector3(0,1,0), pp8[2], pp8[3], int(pp8[4]), stone.darkened(0.17), "stone", 1)
 	for oi3 in 4:
 		var off3: Vector2 = [Vector2(-1.85,-1.45),Vector2(1.85,-1.45),Vector2(-1.85,1.45),Vector2(1.85,1.45)][oi3]
 		box(p+Vector3(off3.x+0.44, ths[oi3]*0.48, off3.y), Vector3(0.20, ths[oi3]*0.92, 0.80), stone.darkened(0.30), 0, 0, 0, "stone")
-		for ts8 in 3:
-			box(p+Vector3(off3.x+0.55, 0.75+float(ts8)*0.78, off3.y-0.19+float(ts8%2)*0.20), Vector3(0.03, 0.30, 0.32), stone.darkened(0.12) if ts8%2==0 else stone.lightened(0.07), 0, 0, 0, "stone")
+		for ts8 in 5:
+			box(p+Vector3(off3.x+0.55, 0.62+float(ts8)*0.58, off3.y-0.19+float(ts8%2)*0.20), Vector3(0.03, 0.26, 0.32), stone.darkened(0.12) if ts8%2==0 else stone.lightened(0.07), 0, 0, 0, "stone")
 	# battlements along side top edges + centre tower roof ring
 	for bz2 in [-1.2,-0.4,0.4,1.2]:
 		box(p+Vector3(2.32,2.52,bz2), Vector3(0.16,0.3,0.34), stone); box(p+Vector3(-2.32,2.52,bz2), Vector3(0.16,0.3,0.34), stone)
@@ -1121,17 +1147,17 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 	var hs78 := 200 + vi*17 + absi(int(p.x*3.0 + p.z))
 	var wp_tt := 0.48; var wp_nrm := Vector3(pitch2, hw2, 0).normalized()
 	var up_p := Vector3(-hw2, pitch2, 0).normalized(); var up_m := Vector3(hw2, pitch2, 0).normalized()
-	_face_patch(Vector3(hw2*(1.0-wp_tt), top+pitch2*wp_tt, 0) + wp_nrm*0.05, Vector3(0,0,-1), up_p, 1.65, 0.85, hs78+21, roof.lightened(0.30))
-	_face_patch(Vector3(-hw2*(1.0-0.30), top+pitch2*0.30, 0) + Vector3(-pitch2, hw2, 0).normalized()*0.05, Vector3(0,0,1), up_m, 1.40, 0.80, hs78+29, roof.darkened(0.28))
+	_face_patch(Vector3(hw2*(1.0-wp_tt), top+pitch2*wp_tt, 0) + wp_nrm*0.05, Vector3(0,0,-1), up_p, 1.65, 0.85, hs78+21, roof.lightened(0.30), "", 3)
+	_face_patch(Vector3(-hw2*(1.0-0.30), top+pitch2*0.30, 0) + Vector3(-pitch2, hw2, 0).normalized()*0.05, Vector3(0,0,1), up_m, 1.40, 0.80, hs78+29, roof.darkened(0.28), "", 3)
 	for ccx in [-1.15, 1.15]:
 		for ccz in [-0.95, 0.95]: cyl(Vector3(ccx*wf, cy, ccz), 0.13, 0.13, wh, Color("e8d9b8"), 8, "plaster")
 	box(Vector3(0,0.44,1.02), Vector3(2.42*wf,0.28,0.16), stone, 0, 0, 0.30, "stone")
 	box(Vector3(0,top-0.10,0), Vector3(2.36*wf,0.13,1.96), Color("f0e2c4"), 0,0,0, "plaster")
 	box(Vector3(-0.62*wf,cy,0.99), Vector3(0.72,wh*0.62,0.045), Color("e0cfa8"), 0,0,0, "plaster"); box(Vector3(0.62*wf,cy,0.99), Vector3(0.72,wh*0.62,0.045), Color("e0cfa8"), 0,0,0, "plaster")
 	# R78: plaster value modelling as jagged textured fans (R77 flat boxes replaced, same base keys)
-	_face_patch(Vector3(-0.58*wf, top-0.38, 0.99), Vector3(1,0,0), Vector3(0,1,0), 1.05, 0.58, hs78, Color("f5ecd2"), "plaster")
-	_face_patch(Vector3(0.66*wf, 0.72, 0.99), Vector3(1,0,0), Vector3(0,1,0), 0.90, 0.60, hs78+7, Color("d3bd96"), "plaster")
-	_face_patch(Vector3(1.14*wf, cy, 0), Vector3(0,0,-1), Vector3(0,1,0), 1.80, wh*0.88, hs78+13, Color("d8c49c"), "plaster")
+	_face_patch(Vector3(-0.58*wf, top-0.38, 0.99), Vector3(1,0,0), Vector3(0,1,0), 1.05, 0.58, hs78, Color("f5ecd2"), "plaster", 2)
+	_face_patch(Vector3(0.66*wf, 0.72, 0.99), Vector3(1,0,0), Vector3(0,1,0), 0.90, 0.60, hs78+7, Color("d3bd96"), "plaster", 2)
+	_face_patch(Vector3(1.14*wf, cy, 0), Vector3(0,0,-1), Vector3(0,1,0), 1.80, wh*0.88, hs78+13, Color("d8c49c"), "plaster", 2)
 	# stone foundation skirt
 	box(Vector3(0,0.40,0), Vector3(2.40*wf,0.58,2.0), stone, 0,0,0, "stone")
 	box(Vector3(-0.62*wf,top+0.67,0.68), Vector3(0.52,0.52,0.42), Color("e8d9b8"), 0,0,0, "plaster")
@@ -1165,6 +1191,9 @@ func _build_roundhouse(p: Vector3, roof: Color) -> void:
 	add_mesh(cone1, Transform3D(Basis.from_euler(Vector3(sin(p.x*1.3)*0.07,0,cos(p.z*1.7)*0.07)), p+Vector3(sin(p.z)*0.08,3.25 + 0.19*sin(p.x*1.9),cos(p.x)*0.06)), roof, "roofp"); tri_total += 96
 	box(p+Vector3(0,0.95,1.2), Vector3(0.62,1.5,0.1), Color("6e4a2c"))
 	box(p+Vector3(0.85,1.6,0.95), Vector3(0.42,0.5,0.08), Color("ffd98a"))
+	# R79: facade pattern on roundhouse front (stone base + plaster drum)
+	_face_patch(p+Vector3(0,0.32,1.30), Vector3(1,0,0), Vector3(0,1,0), 0.95, 0.42, 301+absi(int(p.x)), Color("9a968c"), "stone", 1)
+	_face_patch(p+Vector3(0,1.55,1.20), Vector3(1,0,0), Vector3(0,1,0), 0.85, 0.95, 317+absi(int(p.x)), Color("e8d9b8"), "plaster", 2)
 	cyl(p+Vector3(0.55,3.3,-0.4), 0.2,0.24,0.9, Color("9a968c"), 8, "stone")
 func _build_roundbarn(p: Vector3, roof: Color) -> void:
 	cyl(p+Vector3(0,0.25,0), 1.62,1.68,0.5, Color("9a968c"), 14, "stone")
