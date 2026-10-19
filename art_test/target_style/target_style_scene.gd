@@ -347,15 +347,15 @@ func _setup() -> void:
 	for sp9 in [Vector3(2.2,0,4.4), Vector3(-7.8,0,7.2), Vector3(9.2,0,3.2), Vector3(-2.8,0,-1.8), Vector3(6.6,0,7.8), Vector3(-10.6,0,-5.2), Vector3(13.8,0,7.2), Vector3(0.4,0,11.6)]:
 		box(sp9+Vector3(0,0.16,0), Vector3(0.36,0.32,0.36), Color("a67c4e"), 0.3); cyl(sp9+Vector3(0.42,0.20,0.18), 0.17,0.19,0.4, Color("8a5f36"), 7)
 	# market stall: posts, striped canopy, crates
-	for mp in [Vector3(-4.6,0,5.9), Vector3(-3.4,0,5.9), Vector3(-4.6,0,7.0), Vector3(-3.4,0,7.0)]: box(mp+Vector3(0,0.75,0), Vector3(0.13,1.5,0.13), Color("6b4423"))
-	roof2(Vector3(-4.0,1.52,6.45), 2.3, 2.1, 0.55, 0.14, Color("9c4a34")) # R78 roof eave muted (was flag-red)
-	box(Vector3(-4.0,0.55,6.45), Vector3(1.6,0.5,1.2), Color("a67c4e"), 0,0,0, "timber")
+	for mp in [Vector3(-3.0,0,5.9), Vector3(-1.8,0,5.9), Vector3(-3.0,0,7.0), Vector3(-1.8,0,7.0)]: box(mp+Vector3(0,0.75,0), Vector3(0.13,1.5,0.13), Color("6b4423"))
+	roof2(Vector3(-2.4,1.52,6.45), 2.3, 2.1, 0.55, 0.14, Color("9c4a34")) # R78 roof eave muted (was flag-red)
+	box(Vector3(-2.4,0.55,6.45), Vector3(1.6,0.5,1.2), Color("a67c4e"), 0,0,0, "timber")
 	for pp2 in [Vector3(0.9,0,3.1), Vector3(-4.2,0,6.3), Vector3(3.5,0,-0.9), Vector3(7.8,0,5.2), Vector3(-9.7,0,-3.2), Vector3(9.3,0,-4.2), Vector3(-1.6,0,-3.0)]: # R69 territory pennants (Black #7)
 		box(pp2+Vector3(0,1.05,0), Vector3(0.06,2.1,0.06), Color("4a3421")); box(pp2+Vector3(0.32,1.85,0), Vector3(0.6,0.34,0.04), Color("2f62b8") if int(pp2.x) % 2 == 0 else Color("d43a2a"))
 	for sp8 in [Vector3(1.2,0,1.8), Vector3(6.2,0,3.2), Vector3(-7.2,0,4.4), Vector3(4.2,0,-3.6), Vector3(-3.2,0,-0.6)]: _mini(sp8, Color("2f62b8") if int(sp8.x) % 2 == 0 else Color("d43a2a")) # settlers on paths
 	for fp2 in [Vector3(8.2,0,6.8), Vector3(-10.0,0,-3.5), Vector3(10.2,0,-3.8)]:
 		box(fp2+Vector3(0,2.2,0), Vector3(0.06,1.3,0.06), Color("4a3421")); box(fp2+Vector3(0.35,2.6,0), Vector3(0.65,0.38,0.04), Color("2f62b8") if fp2.x>0 else Color("d43a2a"))
-	for wpath in [[Vector2(-10.5,5.5),Vector2(-5.6,7.6),Vector2(0,3.2),Vector2(8.2,6.8),Vector2(12.0,2.5),Vector2(15.0,5.5)],[Vector2(-10.0,-3.5),Vector2(-5.0,-1.2),Vector2(-1.5,-3.3),Vector2(5.4,-0.4),Vector2(10.2,-3.8),Vector2(11.5,-6.2),Vector2(13.5,-7.5)],[Vector2(-1.5,-3.3),Vector2(1.5,-6.0),Vector2(5.0,-7.5),Vector2(9.0,-8.8)],[Vector2(-7.0,11.5),Vector2(-4.5,8.5),Vector2(-5.6,7.6)],[Vector2(8.2,6.8),Vector2(9.5,8.5),Vector2(14.0,12.0)]]:
+	for wpath in [[Vector2(-10.5,5.5),Vector2(-5.6,7.6),Vector2(0,3.2),Vector2(8.2,6.8),Vector2(12.0,2.5),Vector2(16.8,7.8)],[Vector2(-10.0,-3.5),Vector2(-5.0,-1.2),Vector2(-1.5,-3.3),Vector2(5.4,-0.4),Vector2(10.2,-3.8),Vector2(11.5,-6.2),Vector2(13.5,-7.5)],[Vector2(-1.5,-3.3),Vector2(1.5,-6.0),Vector2(5.0,-7.5),Vector2(9.0,-8.8)],[Vector2(-7.0,11.5),Vector2(-4.5,8.5),Vector2(-5.6,7.6)],[Vector2(8.2,6.8),Vector2(9.5,8.5),Vector2(13.0,13.6)]]:
 		for wi2 in wpath.size()-1:
 			var wa: Vector2 = wpath[wi2]; var wb: Vector2 = wpath[wi2+1]; var wlen := wa.distance_to(wb); var wsteps := int(wlen / 0.65)
 			for ws in wsteps+1:
@@ -367,7 +367,7 @@ func _setup() -> void:
 				if ws % 2 == 0: # R69 stone edging (Black #3)
 					blob(Vector3(wp.x+wperp.x*0.68, wy+0.01, wp.y+wperp.y*0.68), Vector3(0.13,0.09,0.13), Color("9a968c"))
 					blob(Vector3(wp.x-wperp.x*0.68, wy+0.01, wp.y-wperp.y*0.68), Vector3(0.13,0.09,0.13), Color("9a968c"))
-	for bp9 in [Vector2(5.4,-0.4), Vector2(8.2,6.8), Vector2(-5.6,7.6), Vector2(10.2,-3.8), Vector2(-10.0,-3.5), Vector2(-10.5,5.5), Vector2(12.0,2.5), Vector2(14.0,12.5), Vector2(-7.0,12.0), Vector2(15.0,5.5), Vector2(-6.5,-10.0), Vector2(17.5,1.0)]:
+	for bp9 in [Vector2(5.4,-0.4), Vector2(8.2,6.8), Vector2(-5.6,7.6), Vector2(10.2,-3.8), Vector2(-10.0,-3.5), Vector2(-10.5,5.5), Vector2(12.0,2.5), Vector2(12.8,14.2), Vector2(-7.0,12.0), Vector2(16.8,7.8), Vector2(-6.5,-10.0), Vector2(19.2,2.8)]:
 		var by9: float = _h(bp9.x,bp9.y) if bp9.length() > 11.0 else 0.0
 		_ground_patch(bp9.x, bp9.y, 1.65, int(700.0 + bp9.x*7.0), Color("a8895a"), Color("8a6c42")) # R76 worn yard
 		blob(Vector3(bp9.x, by9+0.045, bp9.y), Vector3(1.8,0.045,1.5), Color(0.10,0.16,0.05,0.42))
@@ -394,11 +394,11 @@ func _setup() -> void:
 	_build_roundbarn(Vector3(-10.5,0,5.5), roof)
 	_build_roundhouse(Vector3(12.0,0,2.5), roof)
 	_build_aframe(Vector3(-6.5,0,-10.0), roof, stone)
-	_build_octstore(Vector3(14.0,0,12.5), stone)
+	_build_octstore(Vector3(12.8,0,14.2), stone)
 	_build_house(Vector3(-7.0,0,12.0), roof, stone)
-	_build_house(Vector3(15.0,0,5.5), roof, stone)
-	_build_hut(Vector3(17.5,_h(17.5,1.0),1.0), stone)
-	for tp in [Vector3(-14,0,-8),Vector3(-15,0,2),Vector3(-13,0,9),Vector3(13,0,10),Vector3(19,0,-7),Vector3(8,0,-15),Vector3(-11,0,-11),Vector3(4,0,11),Vector3(-4,0,12),Vector3(14,0,5)]:
+	_build_house(Vector3(16.8,0,7.8), roof, stone)
+	_build_hut(Vector3(19.2,_h(19.2,2.8),2.8), stone)
+	for tp in [Vector3(-14,0,-8),Vector3(-15,0,2),Vector3(-13,0,9),Vector3(19,0,-7),Vector3(8,0,-15),Vector3(-11,0,-11),Vector3(4,0,11),Vector3(-4,0,12),Vector3(14,0,5)]:
 		_build_tree(tp, leaf, leaf2)
 	for bs2 in [Vector3(-13,0,-1),Vector3(4,0,-9),Vector3(12,0,-3),Vector3(-8,0,-9)]:
 		add_canopy(Transform3D(Basis.IDENTITY.scaled(Vector3(0.55,0.4,0.55)), bs2+Vector3(0,0.45,0)), leaf)
@@ -445,12 +445,12 @@ func _setup() -> void:
 	_spawn_carriers(); _spawn_statics()
 func _detail_pass() -> void:
 	# R75 scene-wide richness: per-building unique detail + patch-scale terrain detail (all seated, merged)
-	var homes := [Vector3(-1.5,0,-3.5), Vector3(5.4,0,-0.4), Vector3(8.2,0,6.8), Vector3(-5.6,0,7.6), Vector3(10.2,0,-3.8), Vector3(-10.0,0,-3.5), Vector3(-10.5,0,5.5), Vector3(12.0,0,2.5), Vector3(-6.5,0,-10.0), Vector3(14.0,0,12.5), Vector3(-7.0,0,12.0), Vector3(15.0,0,5.5), Vector3(17.5,0,1.0)]
+	var homes := [Vector3(-1.5,0,-3.5), Vector3(5.4,0,-0.4), Vector3(8.2,0,6.8), Vector3(-5.6,0,7.6), Vector3(10.2,0,-3.8), Vector3(-10.0,0,-3.5), Vector3(-10.5,0,5.5), Vector3(12.0,0,2.5), Vector3(-6.5,0,-10.0), Vector3(12.8,0,14.2), Vector3(-7.0,0,12.0), Vector3(16.8,0,7.8), Vector3(19.2,0,2.8)]
 	for hi in homes.size():
 		var hp: Vector3 = homes[hi]
 		if Vector2(hp.x, hp.z).length() > 11.0: hp.y = _h(hp.x, hp.z)
 		var ang := float(hi) * 1.37; var side := Vector3(cos(ang), 0, sin(ang)); var fwd := Vector3(-sin(ang), 0, cos(ang))
-		match (hi % 4) if not (hi in [0, 1, 2, 6, 9]) else -1: # R110 thinned clutter on 3 homes
+		match (hi % 4) if not (hi in [0, 1, 2, 6, 9, 11]) else -1: # R110 thinned clutter on 3 homes
 			0: # woodpile: stacked logs against wall
 				for li in 6:
 					var lm := CylinderMesh.new(); lm.bottom_radius=0.13; lm.top_radius=0.13; lm.height=1.05; lm.radial_segments=7
@@ -472,7 +472,7 @@ func _detail_pass() -> void:
 		box(hp + fwd*1.6 + side*0.8 + Vector3(0, 0.95, 0), Vector3(0.07, 0.9, 0.07), Color("4a3421")); box(hp + fwd*1.6 + side*0.8 + Vector3(0, 1.32, 0), Vector3(0.17, 0.2, 0.17), Color("ffd98a"))
 		blob(hp + fwd*1.9 + Vector3(0, 0.03, 0), Vector3(0.5, 0.05, 0.4), Color("9a968c"))
 	# second market stall: striped canopy (reads at full frame), goods crates
-	var ms := Vector3(5.9, 0, 7.9)
+	var ms := Vector3(4.2, 0, 9.0)
 	for mp2 in [Vector3(-0.9,0,-0.7), Vector3(0.9,0,-0.7), Vector3(-0.9,0,0.7), Vector3(0.9,0,0.7)]: box(ms+mp2+Vector3(0,0.8,0), Vector3(0.12,1.6,0.12), Color("6b4423"))
 	for sti in 5: box(ms+Vector3(-0.85+float(sti)*0.43, 1.72, 0), Vector3(0.4, 0.09, 1.9), Color("d43a2a") if sti%2==0 else Color("f2ead8"), 0, 0, 0.10)
 	box(ms+Vector3(0,0.55,0), Vector3(1.5,0.45,1.1), Color("a67c4e"), 0, 0, 0, "timber")
@@ -1025,7 +1025,7 @@ func _props2() -> void:
 	box(wp+Vector3(-0.62,1.25,0), Vector3(0.13,1.7,0.13), Color("6b4a2c")); box(wp+Vector3(0.62,1.25,0), Vector3(0.13,1.7,0.13), Color("6b4a2c"))
 	box(wp+Vector3(-0.35,2.32,0), Vector3(0.95,0.09,0.8), Color("9c4a34"), 0, 0.42, 0); box(wp+Vector3(0.35,2.32,0), Vector3(0.95,0.09,0.8), Color("9c4a34"), 0, -0.42, 0)
 	# sacks + crates near houses/market
-	for sp in [Vector3(-3.2,0,6.9), Vector3(2.6,0,0.6), Vector3(6.8,0,-2.4), Vector3(-7.8,0,3.6)]:
+	for sp in [Vector3(-1.5,0,7.1), Vector3(2.6,0,0.6), Vector3(6.8,0,-2.4), Vector3(-7.8,0,3.6)]:
 		blob(sp+Vector3(0,0.28,0), Vector3(0.34,0.3,0.34), Color("a67c4e")); blob(sp+Vector3(0.3,0.2,0.15), Vector3(0.26,0.22,0.26), Color("a67c4e"))
 		box(sp+Vector3(-0.45,0.3,-0.2), Vector3(0.55,0.55,0.55), Color("a67c4e"), 0.3)
 	# fence lines
