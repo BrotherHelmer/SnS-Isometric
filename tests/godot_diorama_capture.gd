@@ -8,6 +8,7 @@ extends SceneTree
 
 var shot_on := ""
 var shot_off := ""
+var wide := false
 
 
 func _init() -> void:
@@ -22,6 +23,8 @@ func _init() -> void:
 			shot_on = args[i + 1]
 		if args[i] == "--dio-game-shot-off" and i + 1 < args.size():
 			shot_off = args[i + 1]
+		if args[i] == "--dio-wide":
+			wide = true
 	call_deferred("_run")
 
 
@@ -46,9 +49,17 @@ func _run() -> void:
 	if th_id >= 0 and camp_id >= 0:
 		var mid: Vector3 = (game.world_view.focus_for_building(th_id) + game.world_view.focus_for_building(camp_id)) * 0.5
 		game.get_node("IsometricCameraRig").focus_world(mid)
+	elif th_id >= 0:
+		# M2: developed-stage raids can raze the camp before the shot;
+		# fall back to the Town Hall so the settlement is still framed.
+		game.get_node("IsometricCameraRig").focus_world(game.world_view.focus_for_building(th_id))
+	if wide:
+		# M2 evidence: pull to the rig's strategic zoom for a family view.
+		game.get_node("IsometricCameraRig").set_zoom_preset("strategic")
 	await create_timer(4.0).timeout
 	print("CAPTURE founded=", sim.is_town_hall_founded(), " buildings=", sim.buildings.size(), " workers=", sim.workers.size())
 	print("CAPTURE counts TH=", _count(sim, "TOWN_HALL"), " HOUSE=", _count(sim, "HOUSE"), " LUMBER=", _count(sim, "LUMBER_CAMP"))
+	print("CAPTURE family SAWMILL=", _count(sim, "SAWMILL"), " FARM=", _count(sim, "FARM"), " BAKERY=", _count(sim, "BAKERY"), " STOREHOUSE=", _count(sim, "STOREHOUSE"), " QUARRY=", _count(sim, "QUARRY"), " WATCHTOWER=", _count(sim, "WATCHTOWER"), " BARRACKS=", _count(sim, "BARRACKS"), " ROAD=", _count(sim, "ROAD"))
 	print("CAPTURE sun shadow_enabled=", game.sun_light.shadow_enabled, " shadow_mode=", game.sun_light.directional_shadow_mode, " (0=ORTHOGONAL 1=PSSM2 2=PSSM4)")
 	await _snap(shot_on)
 	if shot_off != "":
