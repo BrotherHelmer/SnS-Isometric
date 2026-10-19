@@ -124,7 +124,8 @@ func canopy_sphere() -> ArrayMesh:
 		var dv := verts[dvi]; var dk := str(dv)
 		if not disp2.has(dk):
 			var dn := dv.normalized()
-			var ds := 1.0 + 0.34*sin(dn.x*5.1+dn.y*3.3) + 0.26*sin(dn.y*7.2+dn.z*4.4) + 0.19*sin(dn.z*9.0-dn.x*5.0) + 0.13*sin(dn.x*13.7-dn.y*11.3) # R98 irregular silhouette
+			var scp := sin(dn.x*16.0+dn.y*9.0) * sin(dn.y*14.0-dn.z*12.0) * sin(dn.z*18.0+dn.x*7.0)
+			var ds := 1.0 + 0.34*sin(dn.x*5.1+dn.y*3.3) + 0.26*sin(dn.y*7.2+dn.z*4.4) + 0.19*sin(dn.z*9.0-dn.x*5.0) + 0.13*sin(dn.x*13.7-dn.y*11.3) + scp*0.17 # R99 scalloped lobes
 			disp2[dk] = dv * ds
 		verts[dvi] = disp2[dk]
 	var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -1351,7 +1352,15 @@ func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 		var sc: float = [1.05,0.78,0.74,0.78,0.66,0.55,0.53,0.45,0.43,0.46,0.40,0.38,0.36,0.34][ci] * (0.88 + 0.24 * (0.5 + 0.5*sin(float(ci)*2.3)))
 		var cc2: Color = a.lerp(b, clampf(float(ci)/7.0, 0.0, 1.0))
 		if ci % 3 == 2: cc2 = cc2.lightened(0.13)
+		if ci % 4 == 1: cc2 = cc2.darkened(0.20) # R99 cluster separation (shadow-side sub-masses)
 		add_canopy(Transform3D(Basis.from_euler(Vector3(0, float(ci)*0.62, 0)).scaled(Vector3(sc*1.15*tsc, sc*0.95*tsc, sc*1.15*tsc)), p+off*Vector3(1.28,tsc,1.28)), cc2)
+	# R99: mini lobes on crown perimeter (leaf-cluster bumps, varied tone)
+	for li99 in 7:
+		var la := float(li99) * 0.92 + float(vi) * 1.3
+		var loff := Vector3(cos(la) * (1.35 + 0.30*sin(float(li99)*2.1)), 2.15 + 0.55*sin(float(li99)*1.7 + 1.0), sin(la) * (1.35 + 0.30*cos(float(li99)*1.9)))
+		var lsc := (0.30 + 0.13 * (0.5 + 0.5*sin(float(li99)*3.3))) * tsc
+		var lc99: Color = b.lightened(0.10) if li99 % 3 == 0 else (a.darkened(0.16) if li99 % 3 == 1 else a.lerp(b, 0.5))
+		add_canopy(Transform3D(Basis.from_euler(Vector3(0, la, 0)).scaled(Vector3(lsc, lsc*0.82, lsc)), p + loff * Vector3(1.28, tsc, 1.28)), lc99)
 func _build_carrier(p: Vector3) -> void:
 	box(p+Vector3(-0.16,0.35,0), Vector3(0.2,0.7,0.22), Color("4a3421")); box(p+Vector3(0.16,0.35,0), Vector3(0.2,0.7,0.22), Color("4a3421"))
 	box(p+Vector3(0,0.95,0), Vector3(0.62,0.65,0.4), Color("2f62b8"))
