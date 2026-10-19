@@ -267,7 +267,7 @@ func add_foliage_card(xf: Transform3D, c: Color) -> void:
 func add_canopy(xf: Transform3D, c: Color) -> void:
 	if canopy_st == null: canopy_st = SurfaceTool.new(); canopy_st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var bs142: Vector3 = xf.basis.get_scale()
-	var rich142: bool = maxf(bs142.x, bs142.z) >= 0.51
+	var rich142: bool = maxf(bs142.x, bs142.z) >= 0.42
 	var arrays: Array = canopy_sphere_var(rich142, absi(int((xf.origin.x * 12.9898 + xf.origin.z * 78.233) * 7.31)) % 3).surface_get_arrays(0)
 	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]; var uvs: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
 	var seedv := xf.origin.x * 12.9898 + xf.origin.z * 78.233
@@ -1783,6 +1783,12 @@ func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 		var hf80: float = clampf(0.42 + maxf(hd80 - 15.0, 0.0) * 0.015, 0.42, 0.58)
 		a = a.lerp(Color("b9c9ae"), hf80); b = b.lerp(Color("ccd9b8"), hf80)
 	if Vector2(p.x,p.z).length() > 11.0: p.y = _h(p.x, p.z) - 0.1
+	var asx143 := 1.0 + 0.24 * sin(p.x*3.17 + p.z*1.93)
+	var asz143 := 1.0 + 0.24 * cos(p.x*1.71 - p.z*2.63)
+	var lnx143 := 0.20 * sin(p.x*2.29 + p.z*3.11)
+	var lnz143 := 0.20 * cos(p.x*2.83 - p.z*1.37)
+	var sqy143 := 1.0 + 0.16 * sin(p.x*1.93 - p.z*2.41)
+	var hs143 := sin(p.x*12.3 + p.z*7.7) * 2.0
 	cyl(p+Vector3(0,0.035,0), 1.7,1.7,0.02, Color(0.09,0.15,0.04,0.32), 12)
 	cyl(p+Vector3(0,0.9*tsc,0), 0.22,0.32,1.8*tsc, Color("6b4423"), 7)
 	for bang in [0.7, -0.65]:
@@ -1792,10 +1798,11 @@ func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 		for pi in 4:
 			var bc141: Color = a if pi % 2 == 0 else b
 			var bf141: float = lerpf(0.48, 1.34, float(pi) / 3.0)
-			add_canopy(Transform3D(Basis.from_euler(Vector3(0,float(pi)*0.8,0)).scaled(Vector3(0.85,1.05,0.85)), p+Vector3(0,1.9+float(pi)*0.62,0)), Color(clampf(bc141.r * bf141 * lerpf(0.88, 1.10, float(pi) / 3.0), 0.0, 1.0), clampf(bc141.g * bf141, 0.0, 1.0), clampf(bc141.b * bf141 * lerpf(1.16, 0.78, float(pi) / 3.0), 0.0, 1.0)))
+			add_canopy(Transform3D(Basis.from_euler(Vector3(0,float(pi)*0.8,0)).scaled(Vector3(0.85,1.05,0.85)), p+Vector3(lnx143*float(pi)*0.35,1.9+float(pi)*0.62,lnz143*float(pi)*0.35)), Color(clampf(bc141.r * bf141 * lerpf(0.88, 1.10, float(pi) / 3.0), 0.0, 1.0), clampf(bc141.g * bf141, 0.0, 1.0), clampf(bc141.b * bf141 * lerpf(1.16, 0.78, float(pi) / 3.0), 0.0, 1.0)))
 		return
 	for ci in 14:
 		var off: Vector3 = [Vector3(0,2.6,0), Vector3(0.85,2.05,0.3), Vector3(-0.85,2.15,-0.25), Vector3(0.1,3.25,-0.1), Vector3(-0.2,1.9,0.7), Vector3(1.15,2.7,-0.5), Vector3(-1.1,2.8,0.45), Vector3(1.3,2.2,0.6), Vector3(-1.3,2.3,-0.6), Vector3(0.5,3.6,0.5), Vector3(1.5,2.5,0.1), Vector3(-1.5,2.6,-0.2), Vector3(0.3,2.0,1.05), Vector3(-0.4,3.05,0.95)][ci]
+		off = Vector3(off.x * asx143 + lnx143 * (off.y - 2.2), 2.4 + (off.y - 2.4) * sqy143, off.z * asz143 + lnz143 * (off.y - 2.2))
 		var sc: float = [1.05,0.78,0.74,0.78,0.66,0.55,0.53,0.45,0.43,0.46,0.40,0.38,0.36,0.34][ci] * (0.88 + 0.24 * (0.5 + 0.5*sin(float(ci)*2.3)))
 		var cc2: Color = a.lerp(b, clampf(float(ci)/7.0, 0.0, 1.0))
 		if ci % 3 == 2: cc2 = cc2.lightened(0.13)
@@ -1808,12 +1815,19 @@ func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 	for li99 in 8: # R139 more, smaller perimeter lobes (silhouette breakup)
 		var la := float(li99) * 0.92 + float(vi) * 1.3
 		var loff := Vector3(cos(la) * (1.35 + 0.30*sin(float(li99)*2.1)), 2.15 + 0.55*sin(float(li99)*1.7 + 1.0), sin(la) * (1.35 + 0.30*cos(float(li99)*1.9)))
+		loff = Vector3(loff.x * asx143 + lnx143 * (loff.y - 2.2), 2.4 + (loff.y - 2.4) * sqy143, loff.z * asz143 + lnz143 * (loff.y - 2.2))
 		var lsc := (0.30 + 0.13 * (0.5 + 0.5*sin(float(li99)*3.3))) * tsc
 		var lc99: Color = b.lightened(0.10) if li99 % 3 == 0 else (a.darkened(0.16) if li99 % 3 == 1 else a.lerp(b, 0.5))
 		var lm141: float = clampf(0.5 + (loff.y - 2.15) * 0.55 + (loff.x * -0.45 + loff.z * 0.50) * 0.08, 0.0, 1.0)
 		var lf141: float = lerpf(0.48, 1.32, lm141)
 		lc99 = Color(clampf(lc99.r * lf141 * lerpf(0.88, 1.10, lm141), 0.0, 1.0), clampf(lc99.g * lf141, 0.0, 1.0), clampf(lc99.b * lf141 * lerpf(1.16, 0.78, lm141), 0.0, 1.0))
-		add_canopy(Transform3D(Basis.from_euler(Vector3(0, la, 0)).scaled(Vector3(lsc, lsc*0.82, lsc)), p + loff * Vector3(1.28, tsc, 1.28)), lc99)
+		add_canopy_low(Transform3D(Basis.from_euler(Vector3(0, la, 0)).scaled(Vector3(lsc, lsc*0.82, lsc)), p + loff * Vector3(1.28, tsc, 1.28)), lc99) # R143 TRADE: perimeter mini-lobes on 8x4 low mesh (10-18px, facets unread)
+	# R143: hanging skirt fringe - low offset lobes breaking the circular crown outline
+	for si143 in 5:
+		var sa143 := float(si143) * 1.256 + hs143 + float(si143) * 0.37
+		var soff143 := Vector3(cos(sa143) * (1.48 + 0.26*sin(float(si143)*2.7 + p.z*3.0)) * asx143, 1.58 + 0.20*sin(float(si143)*1.9 + p.x*2.0), sin(sa143) * (1.48 + 0.26*cos(float(si143)*2.3 + p.x)) * asz143)
+		var ssc143 := (0.27 + 0.09 * (0.5 + 0.5*sin(float(si143)*3.1 + p.z*1.7))) * tsc
+		add_canopy_low(Transform3D(Basis.from_euler(Vector3(0, sa143, 0)).scaled(Vector3(ssc143, ssc143*0.82, ssc143)), p + soff143 * Vector3(1.28, tsc, 1.28)), a.lerp(b, 0.35))
 func _build_tree_far(p: Vector3, a: Color, b: Color) -> void: # R125 distant tree: 4 low crowns + thin trunk, hazier R80 treatment
 	var hd := Vector2(p.x, p.z).length()
 	if hd > 11.0: p.y = _h(p.x, p.z) - 0.1
