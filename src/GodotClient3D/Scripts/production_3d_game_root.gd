@@ -1053,6 +1053,10 @@ func load_game() -> bool:
 
 func begin_placement(building_type: String) -> void:
 	if not is_build_unlocked(building_type):
+		# One action -> one message (as for unaffordable plans below): a locked
+		# click drops the stale placement and its hint.
+		if placement_type != "":
+			cancel_placement()
 		_show_toast("Not yet", unlock_hint(building_type), "info", 3.0)
 		_log_first_screen_hint("unlock", unlock_hint(building_type))
 		return
@@ -2032,7 +2036,9 @@ func _create_ui() -> void:
 		btn.add_child(btn_vbox)
 
 		var icon_canvas := Control.new()
-		icon_canvas.custom_minimum_size = Vector2(BUILD_SLOT_SIZE.x, 24)
+		# 20 + two ~17 px lines - 2 px overlap = 52 = BUILD_SLOT_SIZE.y; a 24 px row
+		# pushed the cost line 4 px below the slot (PT31 clipping check).
+		icon_canvas.custom_minimum_size = Vector2(BUILD_SLOT_SIZE.x, 20)
 		icon_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		# Look lift: rendered thumbnail (glyph fallback if a type has none). It is
 		# taller than the 24 px row and sits behind the outlined name label.
