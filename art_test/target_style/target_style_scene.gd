@@ -95,21 +95,42 @@ func roof2(p: Vector3, w: float, d: float, h: float, thick: float, c: Color, v12
 	var rng121 := RandomNumberGenerator.new(); rng121.seed = 12100 + absi(int(org.x*41.0 + org.z*67.0)) # R121 seeded roof-form variety
 	var sag121 := 0.13
 	if v121 > 0.0:
-		sag121 = rng121.randf_range(0.06, 0.24); tw *= rng121.randf_range(0.7, 1.9)
-		ec0 *= rng121.randf_range(0.8, 2.1); ec1 *= rng121.randf_range(0.8, 2.1); ec2 *= rng121.randf_range(0.8, 2.1); ec3 *= rng121.randf_range(0.8, 2.1)
+		sag121 = rng121.randf_range(0.08, 0.28); tw *= rng121.randf_range(0.7, 1.9) # R139 slightly deeper hand sag
+		ec0 *= rng121.randf_range(0.9, 2.6); ec1 *= rng121.randf_range(0.9, 2.6); ec2 *= rng121.randf_range(0.9, 2.6); ec3 *= rng121.randf_range(0.9, 2.6) # R139 uneven eaves stronger
 	var A := Vector3(-hw,ec0,-d/2); var B := Vector3(-hw,ec3,d/2); var E := Vector3(hw,ec1,-d/2); var F := Vector3(hw,ec2,d/2)
 	var C := Vector3(tw,h+e1,-d/2); var D := Vector3(-tw,h+e2,d/2); var M := Vector3(0,h+(e1+e2)*0.5-sag121,0)
 	var Am := Vector3(-hw,(ec0+ec3)*0.5,0); var Em := Vector3(hw,(ec1+ec2)*0.5,0)
 	var verts := PackedVector3Array(); var norms := PackedVector3Array(); var uvs := PackedVector2Array(); var cols := PackedColorArray()
 	var quads := [[A,C,M,Am,0.0],[Am,M,D,B,1.0],[F,D,M,Em,0.0],[Em,M,C,E,1.0]]
+	var qi139 := 0
 	for q in quads:
 		var n: Vector3 = (q[1]-q[0]).cross(q[3]-q[0]).normalized(); if n.y < 0: n = -n
 		var u0: float = q[4]
 		var uvq := [Vector2(u0,0), Vector2(u0,1), Vector2(u0+1.0,1), Vector2(u0+1.0,0)]
-		for idx in [0,1,2,0,2,3]: verts.append(q[idx]); norms.append(n); uvs.append(uvq[idx]); cols.append(Color.WHITE)
+		var q0: Vector3 = q[0]; var q1: Vector3 = q[1]; var q2: Vector3 = q[2]; var q3: Vector3 = q[3]
+		var gp139 := {}
+		for gi139 in 3:
+			for gj139 in 3:
+				var fa139 := float(gi139)/2.0; var fb139 := float(gj139)/2.0
+				var pos139: Vector3 = q0.lerp(q3, fa139).lerp(q1.lerp(q2, fa139), fb139)
+				if gi139 == 1 and gj139 == 1: pos139 += n * sin(seedv*13.7 + float(qi139)*2.9) * 0.045 # R139 centre-only displacement (edges shared, no cracks)
+				gp139[str(gi139)+","+str(gj139)] = [pos139, uvq[0].lerp(uvq[3], fa139).lerp(uvq[1].lerp(uvq[2], fa139), fb139)]
+		for ci139 in 2:
+			for cj139 in 2:
+				var cell139 := [gp139[str(ci139)+","+str(cj139)], gp139[str(ci139+1)+","+str(cj139)], gp139[str(ci139+1)+","+str(cj139+1)], gp139[str(ci139)+","+str(cj139+1)]]
+				for tri139 in [[0,1,2],[0,2,3]]:
+					var pts139 := [cell139[tri139[0]][0], cell139[tri139[1]][0], cell139[tri139[2]][0]]
+					var uvs139 := [cell139[tri139[0]][1], cell139[tri139[1]][1], cell139[tri139[2]][1]]
+					var fn139: Vector3 = (pts139[1]-pts139[0]).cross(pts139[2]-pts139[0])
+					if fn139.dot(n) < 0.0:
+						var tp139: Vector3 = pts139[1]; pts139[1] = pts139[2]; pts139[2] = tp139
+						var tu139: Vector2 = uvs139[1]; uvs139[1] = uvs139[2]; uvs139[2] = tu139; fn139 = -fn139
+					var bn139: Vector3 = (n*0.55 + fn139.normalized()*0.45).normalized() # R139 subface normal softened toward quad plane
+					for idx in 3: verts.append(pts139[idx]); norms.append(bn139); uvs.append(uvs139[idx]); cols.append(Color.WHITE)
+		qi139 += 1
 	var arrays := []; arrays.resize(Mesh.ARRAY_MAX); arrays[Mesh.ARRAY_VERTEX]=verts; arrays[Mesh.ARRAY_NORMAL]=norms; arrays[Mesh.ARRAY_TEX_UV]=uvs; arrays[Mesh.ARRAY_COLOR]=cols
 	var prism := ArrayMesh.new(); prism.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	roof_instances.append([prism, house_xf * Transform3D(Basis.from_euler(Vector3(0, 0, roof_tilt)), p) if house_mode else Transform3D(Basis.IDENTITY, p)]); tri_total += 8
+	roof_instances.append([prism, house_xf * Transform3D(Basis.from_euler(Vector3(0, 0, roof_tilt)), p) if house_mode else Transform3D(Basis.IDENTITY, p)]); tri_total += 32 # R139 subdivided quads
 	var gs := SurfaceTool.new(); gs.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for tri in [[A,E,C],[B,D,F]]:
 		var n2: Vector3 = (tri[1]-tri[0]).cross(tri[2]-tri[0]).normalized()
@@ -155,7 +176,7 @@ func _h(x: float, z: float) -> float:
 var _canopy_sphere: ArrayMesh = null
 func canopy_sphere() -> ArrayMesh:
 	if _canopy_sphere != null: return _canopy_sphere
-	var sm := SphereMesh.new(); sm.radial_segments = 9; sm.rings = 5; sm.radius = 1.0; sm.height = 2.0 # R126 near canopy 9x5 (was 13x7; 8x5 rejected - facets coarsen on FG crowns)
+	var sm := SphereMesh.new(); sm.radial_segments = 10; sm.rings = 6; # R139 finer facet size at screen scale (was 9x5 R126; 12x7 tried, prims over ceiling in shadow pass) sm.radius = 1.0; sm.height = 2.0 # R126 near canopy 9x5 (was 13x7; 8x5 rejected - facets coarsen on FG crowns)
 	var arrays: Array = sm.get_mesh_arrays(); var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]; var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
 	var disp2 := {}
 	for dvi in verts.size():
@@ -163,7 +184,7 @@ func canopy_sphere() -> ArrayMesh:
 		if not disp2.has(dk):
 			var dn := dv.normalized()
 			var scp := sin(dn.x*16.0+dn.y*9.0) * sin(dn.y*14.0-dn.z*12.0) * sin(dn.z*18.0+dn.x*7.0)
-			var ds := 1.0 + 0.34*sin(dn.x*5.1+dn.y*3.3) + 0.26*sin(dn.y*7.2+dn.z*4.4) + 0.19*sin(dn.z*9.0-dn.x*5.0) + 0.13*sin(dn.x*13.7-dn.y*11.3) + scp*0.17 # R99 scalloped lobes
+			var ds := 1.0 + 0.34*sin(dn.x*5.1+dn.y*3.3) + 0.26*sin(dn.y*7.2+dn.z*4.4) + 0.19*sin(dn.z*9.0-dn.x*5.0) + 0.13*sin(dn.x*13.7-dn.y*11.3) + scp*0.17 + 0.09*sin(dn.x*23.7-dn.y*13.1)*sin(dn.z*19.3+dn.x*11.7) # R99 scalloped lobes + R139 fine silhouette breakup
 			disp2[dk] = dv * ds
 		verts[dvi] = disp2[dk]
 	var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -177,7 +198,7 @@ func canopy_sphere() -> ArrayMesh:
 var _canopy_sphere_low: ArrayMesh = null
 func canopy_sphere_low() -> ArrayMesh: # R125 distant crown: 8x4 segments (vs 13x7 near), same scalloped lobes
 	if _canopy_sphere_low != null: return _canopy_sphere_low
-	var sm := SphereMesh.new(); sm.radial_segments = 8; sm.rings = 4; sm.radius = 1.0; sm.height = 2.0
+	var sm := SphereMesh.new(); sm.radial_segments = 9; sm.rings = 5; sm.radius = 1.0; sm.height = 2.0 # R139 far crowns finer (was 8x4)
 	var arrays: Array = sm.get_mesh_arrays(); var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]; var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
 	var disp2 := {}
 	for dvi in verts.size():
@@ -185,7 +206,7 @@ func canopy_sphere_low() -> ArrayMesh: # R125 distant crown: 8x4 segments (vs 13
 		if not disp2.has(dk):
 			var dn := dv.normalized()
 			var scp := sin(dn.x*16.0+dn.y*9.0) * sin(dn.y*14.0-dn.z*12.0) * sin(dn.z*18.0+dn.x*7.0)
-			var ds := 1.0 + 0.34*sin(dn.x*5.1+dn.y*3.3) + 0.26*sin(dn.y*7.2+dn.z*4.4) + 0.19*sin(dn.z*9.0-dn.x*5.0) + 0.13*sin(dn.x*13.7-dn.y*11.3) + scp*0.17
+			var ds := 1.0 + 0.34*sin(dn.x*5.1+dn.y*3.3) + 0.26*sin(dn.y*7.2+dn.z*4.4) + 0.19*sin(dn.z*9.0-dn.x*5.0) + 0.13*sin(dn.x*13.7-dn.y*11.3) + scp*0.17 + 0.09*sin(dn.x*23.7-dn.y*13.1)*sin(dn.z*19.3+dn.x*11.7)
 			disp2[dk] = dv * ds
 		verts[dvi] = disp2[dk]
 	var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -217,8 +238,9 @@ func add_canopy_low(xf: Transform3D, c: Color) -> void: # R125: add_canopy's R11
 		var cv131: float = maxf(cc.r, maxf(cc.g, cc.b)); cc = cc.lerp(Color(cv131,cv131,cv131), 0.62) # R131 canopy desat
 		cc = Color(cc.r*1.20, cc.g*1.20, cc.b*1.20); var mx133: float = maxf(cc.r, maxf(cc.g, cc.b)); if mx133 > 1.1: cc = cc * (1.1 / mx133) # R133 value lift x1.20, proportional cap (steps/split kept, sat held) toward target (sat .958 vs .729), value-preserving so shade faces do not darken
 		for j in 3:
-			canopy_st.set_normal(fn); canopy_st.set_color(cc); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j])
-	tri_total += 48
+			var bn139: Vector3 = (fn*0.50 + (tv[j] - xf.origin).normalized()*0.50).normalized() # R139 blended normal (colour still on flat fn)
+			canopy_st.set_normal(bn139); canopy_st.set_color(cc); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j])
+	tri_total += 80 # R139 9x5 low sphere
 var canopy_st: SurfaceTool = null
 var card_st: SurfaceTool = null
 func add_foliage_card(xf: Transform3D, c: Color) -> void:
@@ -252,8 +274,9 @@ func add_canopy(xf: Transform3D, c: Color) -> void:
 		var cv131: float = maxf(cc.r, maxf(cc.g, cc.b)); cc = cc.lerp(Color(cv131,cv131,cv131), 0.62) # R131 canopy desat
 		cc = Color(cc.r*1.20, cc.g*1.20, cc.b*1.20); var mx133: float = maxf(cc.r, maxf(cc.g, cc.b)); if mx133 > 1.1: cc = cc * (1.1 / mx133) # R133 value lift x1.20, proportional cap (steps/split kept, sat held) toward target (sat .958 vs .729), value-preserving, R114 steps kept
 		for j in 3:
-			canopy_st.set_normal(fn); canopy_st.set_color(cc); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j]) # R114 flat cluster-cell normals (was smooth radial = lump)
-	tri_total += 90 # R126 9x5 sphere tris (was 128 at 13x7)
+			var bn139: Vector3 = (fn*0.50 + (tv[j] - xf.origin).normalized()*0.50).normalized() # R139: normal blended flat/radial - facet plates get gradient, R114 colour steps on fn unchanged
+			canopy_st.set_normal(bn139); canopy_st.set_color(cc); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j])
+	tri_total += 100 # R139 10x6 sphere tris
 var _flat_sphere: ArrayMesh = null
 func flat_sphere() -> ArrayMesh:
 	if _flat_sphere != null: return _flat_sphere
@@ -818,7 +841,7 @@ func _build_watchtower(tp: Vector3) -> void:
 	box(tp+Vector3(0,4.3,0), Vector3(1.8,0.18,1.8), Color("7a5a36"))
 	box(tp+Vector3(0,5.05,0), Vector3(1.45,1.35,1.45), Color("a8875e"), 0,0,0, "timber")
 	box(tp+Vector3(0,5.15,0.75), Vector3(0.44,0.5,0.06), Color("ffd98a"))
-	cyl(tp+Vector3(0,6.25,0), 1.35,0.04,1.15, Color("a05a44"), 8, "roofp")
+	cyl(tp+Vector3(0,6.25,0), 1.35,0.04,1.15, Color("a05a44"), 12, "roofp") # R139 watchtower cone finer
 func _terrace(cx: float, cz: float, w: float, d: float, c: Color, tx: String) -> void:
 	# R71: 4 stepped segments conforming to _h, retaining skirt where slope falls (+z edge + ends)
 	var segs := 4
@@ -1471,7 +1494,7 @@ func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 	for bx2 in [-1.2,-0.6,0.0,0.6,1.2]: box(p+Vector3(bx2,2.42,-1.82), Vector3(0.34,0.32,0.16), stone.darkened(0.1))
 	box(p+Vector3(-0.25,3.9,-0.15), Vector3(0.08,1.2,0.08), Color("6b4423")); box(p+Vector3(0.20,4.3,-0.15), Vector3(0.8,0.45,0.05), Color("d43a2a"))
 func noised_box(w: float, h: float, d: float, amt: float, seedv: float) -> ArrayMesh:
-	var bm := BoxMesh.new(); bm.size = Vector3(w,h,d)
+	var bm := BoxMesh.new(); bm.size = Vector3(w,h,d); bm.subdivide_width = 2; bm.subdivide_height = 2; bm.subdivide_depth = 2 # R139 subdivided walls so displacement/jitter reaches face interiors, not only corners
 	var arrays: Array = bm.get_mesh_arrays(); var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]; var uvs: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]; var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
 	var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	if idx.size() == 0:
@@ -1487,6 +1510,8 @@ func noised_box(w: float, h: float, d: float, amt: float, seedv: float) -> Array
 			nv.x += leanx * t01 * t01 * h * 0.42; nv.z += leanz * t01 * t01 * h * 0.32
 			nv.x *= 1.0 - 0.19 * t01; nv.z *= 1.0 - 0.09 * t01
 			nv += v1.normalized() * sin(t01 * PI) * amt
+			nv.x += sin(seedv*7.1 + v1.y*3.1 + v1.z*2.3) * 0.030 * sin(t01 * PI) # R139 seeded wall unevenness (face interior, existing amt law kept)
+			nv.z += cos(seedv*5.7 + v1.x*2.9 - v1.y*1.7) * 0.030 * sin(t01 * PI)
 			if t01 > 0.98: nv.y += topofs[(1 if v1.x > 0.0 else 0) + (2 if v1.z > 0.0 else 0)] * (1.05 + 0.45*sin(seedv))
 			disp[key] = nv
 		verts[vi3] = disp[key]
@@ -1621,8 +1646,8 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 		cyl(Vector3(lean*(1.16*wf+0.40), wh+1.55, -0.25), 0.72,0.03,0.95, roof, 8, "roofp")
 	house_mode = false
 func _build_roundhouse(p: Vector3, roof: Color) -> void:
-	cyl(p+Vector3(0,0.3,0), 1.28,1.34,0.6, Color("9a968c"), 12, "stone")
-	cyl(p+Vector3(0,1.45,0), 1.18,1.10,1.75, Color("e8d9b8"), 12, "plaster")
+	cyl(p+Vector3(0,0.3,0), 1.28,1.34,0.6, Color("9a968c"), 16, "stone") # R139 drum facets finer
+	cyl(p+Vector3(0,1.45,0), 1.18,1.10,1.75, Color("e8d9b8"), 16, "plaster") # R139
 	var rng105r := RandomNumberGenerator.new(); rng105r.seed = 10550 + absi(int(p.x*31.0 + p.z*47.0)) # R105 irregular roundhouse framing
 	for pa in 6:
 		var aa := float(pa) * TAU / 6.0 + rng105r.randf_range(-0.07, 0.07)
@@ -1630,7 +1655,7 @@ func _build_roundhouse(p: Vector3, roof: Color) -> void:
 		box(p+Vector3(sin(aa)*rr105, 1.45 + rng105r.randf_range(-0.04, 0.04), cos(aa)*rr105), Vector3(rng105r.randf_range(0.12, 0.19), rng105r.randf_range(1.65, 1.95), 0.15), Color("54381f"), aa, rng105r.randf_range(-0.03, 0.03), 0, "timber")
 	if rng105r.randf() > 0.35: cyl(p+Vector3(0, 1.48 + rng105r.randf_range(-0.1, 0.1), 0), 1.21, 1.21, 0.13, Color("54381f"), 12, "timber")
 	box(p+Vector3(0,2.42,0), Vector3(2.5,0.16,2.5), Color("54381f"))
-	var cone1 := CylinderMesh.new(); cone1.bottom_radius=1.62; cone1.top_radius=0.12; cone1.height=1.55 + 0.38*sin(p.x*1.9); cone1.radial_segments=12
+	var cone1 := CylinderMesh.new(); cone1.bottom_radius=1.62; cone1.top_radius=0.12; cone1.height=1.55 + 0.38*sin(p.x*1.9); cone1.radial_segments=16 # R139 finer cone facets
 	add_mesh(cone1, Transform3D(Basis.from_euler(Vector3(sin(p.x*1.3)*0.07,0,cos(p.z*1.7)*0.07)), p+Vector3(sin(p.z)*0.08,3.25 + 0.19*sin(p.x*1.9),cos(p.x)*0.06)), roof, "roofp"); tri_total += 96
 	_cone_relief(p+Vector3(sin(p.z)*0.08, 3.25 + 0.19*sin(p.x*1.9), cos(p.x)*0.06), cone1.height, 1.62, 0.12, roof, 12100 + absi(int(p.x*7.0 + p.z*3.0)), false) # R121 village cone tile rings
 	box(p+Vector3(0,0.95,1.2), Vector3(0.62,1.5,0.1), Color("6e4a2c"))
@@ -1654,7 +1679,7 @@ func _build_roundbarn(p: Vector3, roof: Color) -> void:
 	cyl(p+Vector3(0,0.25,0), 1.62,1.68,0.5, Color("9a968c"), 14, "stone")
 	cyl(p+Vector3(0,1.25,0), 1.52,1.44,1.55, Color("a8875e"), 14, "timber")
 	box(p+Vector3(0,2.12,0), Vector3(3.2,0.15,3.2), Color("54381f"))
-	var cone2 := CylinderMesh.new(); cone2.bottom_radius=1.78; cone2.top_radius=0.14; cone2.height=1.55 + 0.30*sin(p.x*1.7 + p.z*0.9); cone2.radial_segments=14 # R121 barn cone height variety
+	var cone2 := CylinderMesh.new(); cone2.bottom_radius=1.78; cone2.top_radius=0.14; cone2.height=1.55 + 0.30*sin(p.x*1.7 + p.z*0.9); cone2.radial_segments=16 # R121 barn cone height variety, R139 finer facets
 	add_mesh(cone2, Transform3D(Basis.from_euler(Vector3(cos(p.x)*0.05,0,sin(p.z*1.4)*0.05)), p+Vector3(cos(p.z)*0.07,2.95 + (cone2.height-1.55)*0.5,sin(p.x)*0.05)), roof, "roofp"); tri_total += 112
 	_cone_relief(p+Vector3(cos(p.z)*0.07, 2.95 + (cone2.height-1.55)*0.5, sin(p.x)*0.05), cone2.height, 1.78, 0.14, roof, 12130 + absi(int(p.x*7.0 + p.z*3.0)), false) # R121
 	box(p+Vector3(0,0.95,1.5), Vector3(0.95,1.55,0.1), Color("54381f"))
@@ -1662,9 +1687,9 @@ func _build_roundbarn(p: Vector3, roof: Color) -> void:
 	box(p+Vector3(-0.75,1.55,1.42), Vector3(0.52,0.54,0.06), Color("54381f"), -0.55, 0, 0, "timber"); box(p+Vector3(-0.78,1.55,1.45), Vector3(0.4,0.42,0.08), Color("ffd98a"), -0.55) # R106 second window
 	cyl(p+Vector3(-0.8,2.6,-0.5), 0.18,0.22,0.8, Color("9a968c"), 8, "stone"); cyl(p+Vector3(-0.8,3.06,-0.5), 0.30,0.26,0.14, Color("9a968c"), 8, "stone") # R106 chimney cap
 func _build_octstore(p: Vector3, stone: Color) -> void:
-	cyl(p+Vector3(0,0.3,0), 1.45,1.5,0.6, stone, 8, "stone")
-	cyl(p+Vector3(0,1.55,0), 1.32,1.26,1.95, stone, 8, "stone")
-	var cone3 := CylinderMesh.new(); cone3.bottom_radius=1.58; cone3.top_radius=0.95; cone3.height=0.75 + 0.18*sin(p.x*2.3 + p.z); cone3.radial_segments=8 # R121 store cap height variety
+	cyl(p+Vector3(0,0.3,0), 1.45,1.5,0.6, stone, 12, "stone") # R139 octagon drum finer
+	cyl(p+Vector3(0,1.55,0), 1.32,1.26,1.95, stone, 12, "stone") # R139
+	var cone3 := CylinderMesh.new(); cone3.bottom_radius=1.58; cone3.top_radius=0.95; cone3.height=0.75 + 0.18*sin(p.x*2.3 + p.z); cone3.radial_segments=12 # R121 store cap height variety, R139 finer facets
 	var cy121 := 2.72 + (cone3.height-0.75)*0.5
 	add_mesh(cone3, Transform3D(Basis.from_euler(Vector3(sin(p.x*0.9)*0.06,0,cos(p.z)*0.06)), p+Vector3(0,cy121,0)), Color("a05a44"), "roofp"); tri_total += 64
 	_cone_relief(p+Vector3(0,cy121,0), cone3.height, 1.58, 0.95, Color("a8664e"), 12150 + absi(int(p.x*7.0 + p.z*3.0)), false) # R121 relief in existing roof-tone keys
@@ -1715,7 +1740,7 @@ func _build_hut(p: Vector3, stone: Color) -> void:
 	if rng105h.randf() > 0.4: # R106 seeded stone chimney with cap through the thatch
 		box(p+Vector3(0.55,2.25,-0.35), Vector3(0.36,0.95,0.36), stone, 0,0,0, "stone"); box(p+Vector3(0.55,2.78,-0.35), Vector3(0.50,0.12,0.50), stone.darkened(0.15), 0,0,0, "stone")
 	var th121 := 1.5 * rng105h.randf_range(0.88, 1.18); var cy121h := 2.05 + (th121-1.5)*0.5 # R121 per-hut thatch height
-	var cone4 := CylinderMesh.new(); cone4.bottom_radius=1.75; cone4.top_radius=0.25; cone4.height=th121; cone4.radial_segments=10
+	var cone4 := CylinderMesh.new(); cone4.bottom_radius=1.75; cone4.top_radius=0.25; cone4.height=th121; cone4.radial_segments=14 # R139 finer thatch cone facets
 	add_mesh(cone4, Transform3D(Basis.from_euler(Vector3(sin(p.x)*0.06,0,cos(p.z*1.2)*0.06)), p+Vector3(sin(p.z)*0.06,cy121h,0)), Color("b98a35"), "thatch"); tri_total += 80
 	for ri in 3: # R121 thatch rings follow the varied cone (fraction heights/radii)
 		var t121h: float = [0.16, 0.45, 0.72][ri]; var rr121h := lerpf(1.75, 0.25, t121h) + 0.04
@@ -1758,7 +1783,7 @@ func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 		if ci % 4 == 1: cc2 = cc2.darkened(0.32) # R99/R107 deeper shade sub-masses
 		add_canopy(Transform3D(Basis.from_euler(Vector3(0, float(ci)*0.62, 0)).scaled(Vector3(sc*1.15*tsc, sc*0.95*tsc, sc*1.15*tsc)), p+off*Vector3(1.28,tsc,1.28)), cc2)
 	# R99: mini lobes on crown perimeter (leaf-cluster bumps, varied tone)
-	for li99 in 7:
+	for li99 in 8: # R139 more, smaller perimeter lobes (silhouette breakup)
 		var la := float(li99) * 0.92 + float(vi) * 1.3
 		var loff := Vector3(cos(la) * (1.35 + 0.30*sin(float(li99)*2.1)), 2.15 + 0.55*sin(float(li99)*1.7 + 1.0), sin(la) * (1.35 + 0.30*cos(float(li99)*1.9)))
 		var lsc := (0.30 + 0.13 * (0.5 + 0.5*sin(float(li99)*3.3))) * tsc
