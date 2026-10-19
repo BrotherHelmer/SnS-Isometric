@@ -1023,20 +1023,34 @@ func _mini(mp: Vector3, tc: Color) -> void:
 	blob(mp+Vector3(0,1.02,0), Vector3(0.17,0.18,0.17), Color("e8b88a"))
 	cyl(mp+Vector3(0,1.16,0), 0.24,0.26,0.07, Color("c9a86a"), 8)
 	box(mp+Vector3(0.30,0.66,0.08), Vector3(0.08,0.52,0.08), Color("6b4a2c"), 0, 0.5, 0)
+func _cone_relief(cc: Vector3, h: float, rb: float, rt: float, roofc: Color, seedv: int, tiles: bool) -> void:
+	# R94: stepped shingle rings following cone curvature + irregular front-arc tiles (existing roof keys only)
+	var rng := RandomNumberGenerator.new(); rng.seed = seedv
+	for t in [0.20, 0.45, 0.70, 0.88]:
+		var ry: float = cc.y + (t - 0.5) * h; var rr: float = lerpf(rb, rt, t)
+		cyl(Vector3(cc.x, ry, cc.z), rr + 0.055, rr + 0.035, 0.085, roofc.darkened(0.22), 10)
+	if tiles:
+		var tones := [roofc.darkened(0.22), roofc.lightened(0.15), roofc.darkened(0.46), roofc]
+		for t in [0.28, 0.55, 0.80]:
+			var ty: float = cc.y + (t - 0.5) * h; var tr2: float = lerpf(rb, rt, t)
+			for k in 5:
+				var th := -1.05 + float(k) * 0.52 + rng.randf_range(-0.07, 0.07)
+				var tp := Vector3(cc.x + sin(th) * (tr2 + 0.04), ty + rng.randf_range(-0.03, 0.03), cc.z + cos(th) * (tr2 + 0.04))
+				box(tp, Vector3(rng.randf_range(0.17, 0.27), 0.055, rng.randf_range(0.13, 0.20)), tones[(k + int(t * 10.0)) % 4], th, rng.randf_range(-0.05, 0.05), -0.38)
 func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 	add_mesh(noised_box(4.7,2.4,3.6,0.07,4.2), Transform3D(Basis.IDENTITY, p+Vector3(0,1.2,0)), stone, "stone"); tri_total += 108
 	for cy in [0.55, 1.05, 1.55]: box(p+Vector3(0,cy,1.82), Vector3(4.6,0.07,0.05), stone.darkened(0.12))
 	add_mesh(noised_box(1.9,2.7,1.9,0.06,7.9), Transform3D(Basis.IDENTITY, p+Vector3(0,2.35,0)), stone.lightened(0.06), "stone"); tri_total += 108 # R90 keep warmer family
 	# stepped side wing + deformed prism roof over rear keep: uneven central roofline
 	box(p+Vector3(2.95,0.85,0.55), Vector3(1.35,1.7,2.3), stone, 0,0,0, "stone")
-	cyl(p+Vector3(2.95,2.15,0.55), 0.98,0.08,0.9, roof, 9, "roofp")
+	cyl(p+Vector3(2.95,2.15,0.55), 0.98,0.08,0.9, roof, 9, "roofp"); _cone_relief(p+Vector3(2.95,2.15,0.55), 0.9, 0.98, 0.08, roof, 9460, false)
 	roof2(p+Vector3(-0.6,2.38,-0.85), 3.6, 1.7, 0.95, 0.18, roof)
-	cyl(p+Vector3(0,4.85,0), 1.05,0.05,2.4, roof, 10, "roofp")
+	cyl(p+Vector3(0,4.85,0), 1.05,0.05,2.4, roof, 10, "roofp"); _cone_relief(p+Vector3(0,4.85,0), 2.4, 1.05, 0.05, roof, 9450, true)
 	var ths := [3.3, 3.75, 3.05, 3.5]
 	for oi2 in 4:
 		var off: Vector2 = [Vector2(-1.85,-1.45),Vector2(1.85,-1.45),Vector2(-1.85,1.45),Vector2(1.85,1.45)][oi2]
 		cyl(p+Vector3(off.x,ths[oi2]/2.0,off.y), 0.58,0.45,ths[oi2], stone.darkened(0.07), 8, "stone") # R90 towers cooler family
-		cyl(p+Vector3(off.x,3.95,off.y), 0.72,0.02,1.7, roof, 10, "roofp")
+		cyl(p+Vector3(off.x,3.95,off.y), 0.72,0.02,1.7, roof, 10, "roofp"); _cone_relief(p+Vector3(off.x,3.95,off.y), 1.7, 0.72, 0.02, roof, 9400+oi2, true)
 		cyl(p+Vector3(off.x,3.25,off.y), 0.88,0.72,0.14, roof.darkened(0.22), 10); cyl(p+Vector3(off.x,3.62,off.y), 0.62,0.46,0.14, roof.darkened(0.22), 10)
 		for ts in 3: box(p+Vector3(off.x+0.63,1.0+float(ts)*0.8,off.y), Vector3(0.1,0.65,0.34), stone.darkened(0.12))
 	var mhs := [0.35,0.52,0.27,0.46,0.30,0.49]
@@ -1085,7 +1099,7 @@ func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 	cyl(p+Vector3(0,3.62,0), 1.0,0.86,0.15, roof.darkened(0.22), 10)
 	for sp3 in [Vector2(-1.85,-1.45), Vector2(1.85,1.45)]:
 		cyl(p+Vector3(sp3.x,5.85,sp3.y), 0.10,0.13,0.8, stone, 6, "stone"); cyl(p+Vector3(sp3.x,6.45,sp3.y), 0.22,0.02,0.5, roof, 7, "roofp")
-	cyl(p+Vector3(1.7,3.3,-1.0), 0.42,0.46,1.6, stone, 8, "stone"); cyl(p+Vector3(1.7,4.45,-1.0), 0.55,0.02,0.8, roof, 8, "roofp")
+	cyl(p+Vector3(1.7,3.3,-1.0), 0.42,0.46,1.6, stone, 8, "stone"); cyl(p+Vector3(1.7,4.45,-1.0), 0.55,0.02,0.8, roof, 8, "roofp"); _cone_relief(p+Vector3(1.7,4.45,-1.0), 0.8, 0.55, 0.02, roof, 9470, false)
 	box(p+Vector3(-1.6,1.7,2.08), Vector3(0.55,1.15,0.07), Color("c22e22")); box(p+Vector3(1.6,1.7,2.08), Vector3(0.55,1.15,0.07), Color("c22e22"))
 	for bt in [Vector2(-2.55,-1.95),Vector2(2.55,-1.95),Vector2(-2.55,1.95),Vector2(2.55,1.95)]: box(p+Vector3(bt.x,0.55,bt.y), Vector3(0.55,1.1,0.55), stone.darkened(0.14), 0.4, 0, 0, "stone")
 	for wf in [Vector2(-1.9,1.35),Vector2(1.9,1.35),Vector2(0,2.6)]:
@@ -1175,6 +1189,13 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 			box(sp2 + nrm2*0.012, Vector3(0.52,0.045,2.80), roof.darkened(0.46), 0, -side2*sang, 0)
 			for sg2 in 3:
 				box(sp2 + nrm2*0.048 + Vector3(0,0,-0.93+float(sg2)*0.93), Vector3(0.48,0.085,0.88), roof.darkened(0.22) if (rw+sg2)%2==0 else roof.lightened(0.15), 0, -side2*sang, 0) # R83 chunkier shingle relief
+	# R94: irregular proud tiles on the +x slope (existing shingle keys, seeded per house)
+	var rng94 := RandomNumberGenerator.new(); rng94.seed = 9400 + vi*31 + absi(int(p.x*13.0 + p.z*7.0))
+	var tones94 := [roof.darkened(0.22), roof.lightened(0.15), roof.darkened(0.46), roof]
+	for rw94 in [0.22, 0.48, 0.74]:
+		var sp94 := Vector3(hw2*(1.0-rw94), top+pitch2*rw94, 0); var nm94 := Vector3(pitch2, hw2, 0).normalized()
+		for tz94 in 4:
+			box(sp94 + nm94*0.075 + Vector3(0, 0, -1.05+float(tz94)*0.70 + rng94.randf_range(-0.05, 0.05)), Vector3(rng94.randf_range(0.30, 0.42), 0.07, rng94.randf_range(0.48, 0.62)), tones94[(tz94 + int(rw94*10.0)) % 4], 0, -sang, 0)
 	# R78: roof wear as jagged slope fans (R77 flat boxes replaced, same base keys)
 	var hs78 := 200 + vi*17 + absi(int(p.x*3.0 + p.z))
 	var wp_tt := 0.48; var wp_nrm := Vector3(pitch2, hw2, 0).normalized()
