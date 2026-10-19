@@ -246,7 +246,11 @@ func _init() -> void:
 	var shield_sim = Simulation.new(30, 30, 99001, false, true)
 	var shield_center := shield_sim._footprint_center(shield_sim.town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
 	var shield_enemy_tile := shield_center + Vector2i(9, 0)
-	shield_sim._prepare_test_tile(shield_enemy_tile, Defs.TILE_GRASS)
+	# The seed's terrain walls (15,6) in with trees/rock, so the raider had no
+	# path and never reached the yard (Lumen was not what stopped it). Clear a
+	# grass lane from the raider toward the hall; geometry unchanged.
+	for lane_x in range(shield_center.x + 3, shield_enemy_tile.x + 1):
+		shield_sim._prepare_test_tile(Vector2i(lane_x, shield_center.y), Defs.TILE_GRASS)
 	shield_sim._reveal_radius(shield_enemy_tile, 2)
 	var shield_town: Dictionary = shield_sim._find_town_hall()
 	var shield_hp_before := int(shield_town["hp"])
@@ -260,10 +264,12 @@ func _init() -> void:
 		shield_sim._update_enemies(Simulation.TICK_SECONDS)
 	check(int(shield_town["hp"]) < shield_hp_before, "Lumen no longer blocks raiders from damaging the yard", failures)
 	check(shield_sim.is_tile_protected(shield_center), "Lumen still claims the town as lighting and shelter", failures)
-	shield_sim.central_inventory[Defs.RESOURCE_WYRD] = 3
+	# Black 20/10: night upkeep never takes Wyrd below CraterWarRules.RAW_RESERVE
+	# (3, deliberate since 199fecd); start one above the floor.
+	shield_sim.central_inventory[Defs.RESOURCE_WYRD] = 4
 	shield_sim.protection_powered = true
 	shield_sim._update_wyrd_network(81.0)
-	check(int(shield_sim.central_inventory[Defs.RESOURCE_WYRD]) == 2, "the Town Hall bubble consumes meaningful Wyrd each night minute", failures)
+	check(int(shield_sim.central_inventory[Defs.RESOURCE_WYRD]) == 3, "the Town Hall bubble consumes meaningful Wyrd each night minute (down to the 3 reserve)", failures)
 	var harvest_site: Dictionary = shield_sim.rivalry.get_wyrd_sites()[0]
 	var harvest_outpost := {
 		"id": 999,
