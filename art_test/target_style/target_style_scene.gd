@@ -278,13 +278,13 @@ func _setup() -> void:
 	var we := WorldEnvironment.new(); var env := Environment.new()
 	var sky := Sky.new(); var smat := ProceduralSkyMaterial.new(); smat.sky_top_color = Color("8fc3e8"); smat.sky_horizon_color = Color("f2e3c2"); smat.ground_bottom_color = Color("5d6b46"); smat.ground_horizon_color = Color("d9c9a4"); sky.sky_material = smat; env.sky = sky
 	env.background_mode = Environment.BG_SKY
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY; env.ambient_light_energy = amb * 0.40; env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
-	env.fog_enabled = true; env.fog_light_color = Color("f2e3c2"); env.fog_density = 0.0005; env.tonemap_mode = Environment.TONE_MAPPER_ACES; env.adjustment_enabled = true; env.adjustment_saturation = 1.05; env.adjustment_contrast = 1.07; env.adjustment_brightness = 1.00 # R70 muted toward target; env.glow_enabled = false; env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT;
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY; env.ambient_light_energy = amb * 0.30; env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
+	env.fog_enabled = true; env.fog_light_color = Color("f2e3c2"); env.fog_density = 0.0005; env.tonemap_mode = Environment.TONE_MAPPER_ACES; env.adjustment_enabled = true; env.adjustment_saturation = 1.12; env.adjustment_contrast = 1.10; env.adjustment_brightness = 1.00 # R70 muted toward target; env.glow_enabled = false; env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT;
 	we.environment = env; add_child(we)
-	var pool := OmniLight3D.new(); pool.position = Vector3(0,4.5,1); pool.light_color = Color("ffd9a0"); pool.light_energy = 0.34; pool.omni_range = 14.0; pool.shadow_enabled = false; add_child(pool)
-	var pool2 := OmniLight3D.new(); pool2.position = Vector3(17,8,-5); pool2.light_color = Color("ffd9a0"); pool2.light_energy = 0.30; pool2.omni_range = 13.0; pool2.shadow_enabled = false; add_child(pool2)
-	var fill := DirectionalLight3D.new(); fill.rotation_degrees = Vector3(-38, 125, 0); fill.light_energy = 0.09; fill.light_color = Color("dfe9f5"); fill.shadow_enabled = false; add_child(fill)
-	var sun := DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-52, -38, 0); sun.light_energy = light_e; sun.light_color = Color(1,0.90,0.74); sun.shadow_enabled = true; sun.shadow_opacity = 0.62 # R107 warm sun, deeper cast shade; sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS; sun.shadow_blur = 1.4 # R69: soft but readable cast shadows (Black #7); add_child(sun)
+	var pool := OmniLight3D.new(); pool.position = Vector3(0,4.5,1); pool.light_color = Color("ffd9a0"); pool.light_energy = 0.15; pool.omni_range = 14.0; pool.shadow_enabled = false; add_child(pool)
+	var pool2 := OmniLight3D.new(); pool2.position = Vector3(17,8,-5); pool2.light_color = Color("ffd9a0"); pool2.light_energy = 0.12; pool2.omni_range = 13.0; pool2.shadow_enabled = false; add_child(pool2)
+	var fill := DirectionalLight3D.new(); fill.rotation_degrees = Vector3(-38, 125, 0); fill.light_energy = 0.04; fill.light_color = Color("dfe9f5"); fill.shadow_enabled = false; add_child(fill)
+	var sun := DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-52, -38, 0); sun.light_energy = 0.20; sun.light_color = Color(1,0.90,0.74); sun.shadow_enabled = true; sun.shadow_opacity = 0.70; sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS; sun.shadow_blur = 1.4; add_child(sun) # R108 sun experiment: actually enabled (add_child was comment-swallowed in baseline)
 	var cam := Camera3D.new(); cam.projection = Camera3D.PROJECTION_ORTHOGONAL
 	if OS.get_cmdline_user_args().has("--hill"):
 		cam.size = 12.0; cam.look_at_from_position(Vector3(24,12,8), Vector3(12,3,-12), Vector3.UP)
@@ -431,7 +431,7 @@ func _setup() -> void:
 	# commit merged meshes
 	for key in surf:
 		var st: SurfaceTool = surf[key]; var mesh := st.commit()
-		var mi := MeshInstance3D.new(); mi.mesh = mesh; mi.material_override = mat_for(key, Color.html(key.split("|")[0])); mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(mi)
+		var mi := MeshInstance3D.new(); mi.mesh = mesh; mi.material_override = mat_for(key, Color.html(key.split("|")[0])); mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mi) # R108 sun experiment: merged surf bodies do not cast (draw budget); canopy/roofs/cliffs cast
 	var roof_groups := {}
 	for ri2 in roof_instances:
 		var rv := absi(int(ri2[1].origin.x*5.0 + ri2[1].origin.z*3.0)) % 3
