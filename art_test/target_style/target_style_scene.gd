@@ -31,8 +31,9 @@ func mat_col(c: Color) -> StandardMaterial3D:
 func mat_for(key: String, c: Color) -> StandardMaterial3D:
 	var m := mat_col(c); var tx: String = surf_tex.get(key, "")
 	if tx != "" and TEX.has(tx):
-		m.albedo_texture = load(TEX[tx]); m.uv1_scale = Vector3(3,3,1) if tx=="meadow" else (Vector3(1,1,1) if tx in ["roofp","stone","plaster","thatch","rock"] else Vector3(1.5,1.5,1)); m.albedo_color = Color(0.88,0.87,0.85)
+		m.albedo_texture = load(TEX[tx]); m.uv1_scale = Vector3(3,3,1) if tx=="meadow" else (Vector3(0.55,0.55,1) if tx in ["stone","plaster"] else (Vector3(1,1,1) if tx in ["roofp","thatch","rock"] else Vector3(1.5,1.5,1))) # R77 larger face features; m.albedo_color = Color(0.88,0.87,0.85)
 		if tx == "rock": m.albedo_color = Color(1.06,0.97,0.87).lerp(c, 0.50) # R73: warm rock, tint was being overridden grey
+		if tx == "stone": m.albedo_color = Color(1.04,1.00,0.94).lerp(c, 0.45) # R77 stone tint-through
 		if tx == "forest": m.albedo_color = Color(1,1,1).lerp(c, 0.30)
 		m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	if c.a < 0.99: m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -779,6 +780,11 @@ func _top_band() -> void:
 		var crx := 15.5 + float(cri)*1.35; var crz := -14.8 - fmod(float(cri)*0.8, 1.8); var cry := _h(crx,crz)
 		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.3,float(cri)*1.3,0.2)).scaled(Vector3(1.75,0.55,1.55)), Vector3(crx, cry-0.15, crz)), Color("96795c"), "rock") # R74: lowered/sunk crest humps, mine stays sole high point; tri_total += 128
 		if cri % 2 == 0: blob(Vector3(crx+0.55, cry+0.40, crz+0.3), Vector3(0.34,0.13,0.3), Color("eef2f4")) # R74 reseated on lowered rock tops
+	# R77: large rock-tone variation fans on the face + baked haze fans on the far crest
+	for rfp in [Vector2(19,-6), Vector2(22,-9), Vector2(20.5,-12), Vector2(23.5,-6.5), Vector2(18,-10), Vector2(25,-10)]:
+		_ground_patch(rfp.x, rfp.y, 2.3, int(900.0 + rfp.x*11.0), Color("8f7355"), Color("6e5638"))
+	for hfp in [Vector2(20,-15), Vector2(24,-14), Vector2(17,-16.5), Vector2(27,-12.5)]:
+		_ground_patch(hfp.x, hfp.y, 3.1, int(950.0 + hfp.x*7.0), Color(0.72, 0.78, 0.76, 0.32), Color(0.78, 0.83, 0.80, 0.30))
 	# R73: irregular gully snow on the camera-facing (SE) face (replaces R72 ovals, same areas)
 	for snp3 in [Vector2(18,-4), Vector2(20,-6), Vector2(22,-5), Vector2(19,-8), Vector2(21,-9), Vector2(23,-8), Vector2(18.5,-11), Vector2(21,-12), Vector2(24,-11), Vector2(20,-3), Vector2(23,-13), Vector2(17,-6.5), Vector2(22,-2.5), Vector2(25,-7), Vector2(19.5,-13.5), Vector2(24.5,-4)]:
 		var ssx: float = snp3.x; var ssz: float = snp3.y
@@ -982,6 +988,14 @@ func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 		for cz3 in 5:
 			if (cz3 + ry3) % 2 == 0: continue
 			box(p+Vector3(2.36, 0.55+float(ry3)*0.5, -1.2+float(cz3)*0.6), Vector3(0.07,0.34,0.46), stone.darkened(0.12), 0,0,0, "stone")
+	# R77: large tonal stone patches + tower shadow halves (large-scale face variation)
+	for pp7 in [[-1.45, 0.95, 1.30, 0.85, 0.20], [0.55, 1.35, 1.05, 0.70, -0.16], [1.55, 0.62, 0.85, 0.55, 0.24], [-0.35, 0.55, 0.95, 0.50, -0.10]]:
+		box(p+Vector3(pp7[0], pp7[1], 1.865), Vector3(pp7[2], pp7[3], 0.055), stone.darkened(pp7[4]) if pp7[4] > 0.0 else stone.lightened(-pp7[4]), 0, 0, 0, "stone")
+	for pp8 in [[-0.55, 2.75, 0.80, 0.65, 0.18], [0.45, 3.05, 0.70, 0.55, -0.14]]:
+		box(p+Vector3(pp8[0], pp8[1], 0.985), Vector3(pp8[2], pp8[3], 0.055), stone.darkened(pp8[4]) if pp8[4] > 0.0 else stone.lightened(-pp8[4]), 0, 0, 0, "stone")
+	for oi3 in 4:
+		var off3: Vector2 = [Vector2(-1.85,-1.45),Vector2(1.85,-1.45),Vector2(-1.85,1.45),Vector2(1.85,1.45)][oi3]
+		box(p+Vector3(off3.x+0.44, ths[oi3]*0.48, off3.y), Vector3(0.20, ths[oi3]*0.92, 0.80), stone.darkened(0.30), 0, 0, 0, "stone")
 	# battlements along side top edges + centre tower roof ring
 	for bz2 in [-1.2,-0.4,0.4,1.2]:
 		box(p+Vector3(2.32,2.52,bz2), Vector3(0.16,0.3,0.34), stone); box(p+Vector3(-2.32,2.52,bz2), Vector3(0.16,0.3,0.34), stone)
@@ -1078,11 +1092,19 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 			box(sp2 + nrm2*0.012, Vector3(0.52,0.045,2.80), roof.darkened(0.46), 0, -side2*sang, 0)
 			for sg2 in 3:
 				box(sp2 + nrm2*0.048 + Vector3(0,0,-0.93+float(sg2)*0.93), Vector3(0.46,0.06,0.86), roof.darkened(0.22) if (rw+sg2)%2==0 else roof.lightened(0.15), 0, -side2*sang, 0)
+	# R77: large roof wear patch (one slope, big tonal area)
+	var wp_tt := 0.48; var wp_nrm := Vector3(pitch2, hw2, 0).normalized()
+	box(Vector3(hw2*(1.0-wp_tt), top+pitch2*wp_tt, 0) + wp_nrm*0.055, Vector3(0.95, 0.05, 1.65), roof.lightened(0.30), 0, -sang, 0)
+	box(Vector3(-hw2*(1.0-0.30), top+pitch2*0.30, 0) + Vector3(-pitch2, hw2, 0).normalized()*0.055, Vector3(0.80, 0.05, 1.40), roof.darkened(0.28), 0, sang, 0)
 	for ccx in [-1.15, 1.15]:
 		for ccz in [-0.95, 0.95]: cyl(Vector3(ccx*wf, cy, ccz), 0.13, 0.13, wh, Color("e8d9b8"), 8, "plaster")
 	box(Vector3(0,0.44,1.02), Vector3(2.42*wf,0.28,0.16), stone, 0, 0, 0.30, "stone")
 	box(Vector3(0,top-0.10,0), Vector3(2.36*wf,0.13,1.96), Color("f0e2c4"), 0,0,0, "plaster")
 	box(Vector3(-0.62*wf,cy,0.99), Vector3(0.72,wh*0.62,0.045), Color("e0cfa8"), 0,0,0, "plaster"); box(Vector3(0.62*wf,cy,0.99), Vector3(0.72,wh*0.62,0.045), Color("e0cfa8"), 0,0,0, "plaster")
+	# R77: large-scale plaster value modelling (lit patch / shadow patch / shadow side face)
+	box(Vector3(-0.58*wf, top-0.38, 1.005), Vector3(1.02, 0.55, 0.04), Color("f5ecd2"), 0,0,0, "plaster")
+	box(Vector3(0.66*wf, 0.72, 1.005), Vector3(0.88, 0.58, 0.04), Color("d3bd96"), 0,0,0, "plaster")
+	box(Vector3(1.155*wf, cy, 0), Vector3(0.05, wh*0.86, 1.78), Color("d8c49c"), 0,0,0, "plaster")
 	# stone foundation skirt
 	box(Vector3(0,0.40,0), Vector3(2.40*wf,0.58,2.0), stone, 0,0,0, "stone")
 	box(Vector3(-0.62*wf,top+0.67,0.68), Vector3(0.52,0.52,0.42), Color("e8d9b8"), 0,0,0, "plaster")
@@ -1159,6 +1181,8 @@ func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 	vi = vi % 3
 	if vi == 1: a = Color("4c8a38"); b = Color("82b85e")
 	elif vi == 2: a = Color("558f3d"); b = Color("93c46e")
+	if p.z < -11.0: # R77 baked atmosphere: far/back trees hazier + lighter
+		a = a.lerp(Color("aec6a0"), 0.38); b = b.lerp(Color("c4d6ae"), 0.38)
 	if Vector2(p.x,p.z).length() > 11.0: p.y = _h(p.x, p.z) - 0.1
 	cyl(p+Vector3(0,0.035,0), 1.7,1.7,0.02, Color(0.09,0.15,0.04,0.32), 12)
 	cyl(p+Vector3(0,0.9*tsc,0), 0.22,0.32,1.8*tsc, Color("6b4423"), 7)
