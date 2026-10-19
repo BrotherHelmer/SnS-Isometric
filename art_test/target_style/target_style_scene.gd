@@ -460,6 +460,13 @@ func _setup() -> void:
 	_build_hut(Vector3(19.2,_h(19.2,2.8),2.8), stone)
 	for tp in [Vector3(-14,0,-8),Vector3(-15,0,2),Vector3(-13,0,9),Vector3(19,0,-7),Vector3(8,0,-15),Vector3(-11,0,-11),Vector3(4,0,11),Vector3(-4,0,12),Vector3(14,0,5)]:
 		_build_tree(tp, leaf, leaf2)
+	# R124 forest framing (existing _build_tree language; positions screened in-frame, cull-passing, clear of buildings/paths/apron)
+	for ftp in [Vector3(-0.5,0,18), Vector3(0.8,0,17.2), Vector3(4,0,15.5), Vector3(8,0,18.5), Vector3(13,0,18), Vector3(20,0,9.5), Vector3(21.5,0,14), Vector3(20.3,0,13.2)]: # foreground bottom band + corner clusters
+		_build_tree(ftp, leaf, leaf2)
+	for ftp2 in [Vector3(-18,0,-4), Vector3(-19,0,-6.5), Vector3(-13,0,-15), Vector3(-8.5,0,-14.5), Vector3(-4,0,-14.5), Vector3(5,0,-13.5)]: # left margin + background behind castle
+		_build_tree(ftp2, leaf, leaf2)
+	for ftp3 in [Vector3(14,0,-3), Vector3(18.5,0,-4), Vector3(21.5,0,-0.5)]: # village->hill transition (seated on _h by _build_tree)
+		_build_tree(ftp3, leaf, leaf2)
 	for bs2 in [Vector3(-13,0,-1),Vector3(4,0,-9),Vector3(12,0,-3),Vector3(-8,0,-9)]:
 		add_canopy(Transform3D(Basis.IDENTITY.scaled(Vector3(0.55,0.4,0.55)), bs2+Vector3(0,0.45,0)), leaf)
 	for bs in [Vector3(6,0,8),Vector3(-10,0,-3),Vector3(9,0,-8)]:
