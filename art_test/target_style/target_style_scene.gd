@@ -232,13 +232,13 @@ func add_canopy_low(xf: Transform3D, c: Color) -> void: # R125: add_canopy's R11
 	for f in range(0, verts.size() - 2, 3):
 		var tv := [xf * verts[f], xf * verts[f+1], xf * verts[f+2]]
 		var fn: Vector3 = (tv[1]-tv[0]).cross(tv[2]-tv[0]).normalized()
-		var vary: float = 0.84 + 0.12 * floor((0.5 + 0.5 * sin(seedv + float(f) * 2.39)) * 3.99)
+		var vary: float = 0.96 + 0.03 * floor((0.5 + 0.5 * sin(seedv + float(f) * 2.39)) * 3.99) # R145: face-index plate nearly flat (spatial cells carry clump tone)
 		var cc := Color(clampf(c.r*vary,0,1), clampf(c.g*vary,0,1), clampf(c.b*vary,0,1))
-		if fn.y > 0.45: cc = cc.lightened(0.22)
-		if fn.y < 0.1: cc = cc.darkened(0.16)
+		cc = cc.lightened(smoothstep(0.25, 0.75, fn.y) * 0.20) # R145: smooth top-light mass (was hard 0.45 step)
+		cc = cc.darkened((1.0 - smoothstep(-0.05, 0.35, fn.y)) * 0.14) # R145: smooth bottom-shade mass (was hard 0.1 step)
 		var clus := sin(seedv*0.7 + float(f) * 1.37)
-		if clus > 0.45: cc = cc.darkened(0.10)
-		elif clus < -0.55: cc = cc.lightened(0.18)
+		if clus > 0.45: cc = cc.darkened(0.05) # R145: plate step softened
+		elif clus < -0.55: cc = cc.lightened(0.09) # R145: plate step softened
 		var sunf := clampf(fn.dot(Vector3(-0.45, 0.75, 0.50)) * 0.5 + 0.5, 0.0, 1.0)
 		cc = Color(clampf(cc.r*(0.90+0.28*sunf),0,1), clampf(cc.g*(0.95+0.12*sunf),0,1), clampf(cc.b*(1.06-0.26*sunf),0,1))
 		cc = Color(clampf(cc.r*2.1,0.0,1.1), clampf(cc.g*2.0,0.0,1.1), clampf(cc.b*2.1,0.0,1.1))
@@ -250,6 +250,10 @@ func add_canopy_low(xf: Transform3D, c: Color) -> void: # R125: add_canopy's R11
 			var m141: float = clampf((ld141.dot(Vector3(-0.45, 0.75, 0.50).normalized()) * 0.5 + 0.5) * 0.65 + (ld141.y * 0.5 + 0.5) * 0.35, 0.0, 1.0)
 			var vf141: float = lerpf(0.38, 1.45, m141)
 			var cc141 := Color(clampf(cc.r * vf141 * lerpf(0.85, 1.12, m141), 0.0, 1.18), clampf(cc.g * vf141 * lerpf(0.96, 1.04, m141), 0.0, 1.18), clampf(cc.b * vf141 * lerpf(1.20, 0.75, m141), 0.0, 1.18))
+			var cq145: float = sin(ld141.x*5.1 + seedv*0.21) * sin(ld141.y*4.3 - seedv*0.13) * sin(ld141.z*5.7 + seedv*0.17)
+			var cell145: float = floor(clampf(cq145*0.5+0.5, 0.0, 0.999) * 3.99) / 3.0
+			var cf145: float = lerpf(0.74, 1.24, cell145)
+			cc141 = Color(clampf(cc141.r * cf145, 0.0, 1.18), clampf(cc141.g * cf145, 0.0, 1.18), clampf(cc141.b * cf145, 0.0, 1.18)) # R145: spatially coherent clump cells (neighbours share tone)
 			var cn144 := Vector3(sin(fn.x*6.7 + seedv*0.13), sin(fn.y*5.9 - seedv*0.07), sin(fn.z*7.3 + seedv*0.11))
 			var bn144: Vector3 = (bn139 + cn144 * 0.22).normalized()
 			canopy_st.set_normal(bn144); canopy_st.set_color(cc141); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j])
@@ -276,13 +280,13 @@ func add_canopy(xf: Transform3D, c: Color) -> void:
 	for f in range(0, verts.size() - 2, 3):
 		var tv := [xf * verts[f], xf * verts[f+1], xf * verts[f+2]]
 		var fn: Vector3 = (tv[1]-tv[0]).cross(tv[2]-tv[0]).normalized()
-		var vary: float = 0.84 + 0.12 * floor((0.5 + 0.5 * sin(seedv + float(f) * 2.39)) * 3.99) # R114 quantized cluster-cell tones (4 steps)
+		var vary: float = 0.96 + 0.03 * floor((0.5 + 0.5 * sin(seedv + float(f) * 2.39)) * 3.99) # R145: face-index plate nearly flat (spatial cells carry clump tone) # R114 quantized cluster-cell tones (4 steps)
 		var cc := Color(clampf(c.r*vary,0,1), clampf(c.g*vary,0,1), clampf(c.b*vary,0,1))
-		if fn.y > 0.45: cc = cc.lightened(0.22)
-		if fn.y < 0.1: cc = cc.darkened(0.16)
+		cc = cc.lightened(smoothstep(0.25, 0.75, fn.y) * 0.20) # R145: smooth top-light mass (was hard 0.45 step)
+		cc = cc.darkened((1.0 - smoothstep(-0.05, 0.35, fn.y)) * 0.14) # R145: smooth bottom-shade mass (was hard 0.1 step)
 		var clus := sin(seedv*0.7 + float(f) * 1.37)
-		if clus > 0.45: cc = cc.darkened(0.10)
-		elif clus < -0.55: cc = cc.lightened(0.18)
+		if clus > 0.45: cc = cc.darkened(0.05) # R145: plate step softened
+		elif clus < -0.55: cc = cc.lightened(0.09) # R145: plate step softened
 		var sunf := clampf(fn.dot(Vector3(-0.45, 0.75, 0.50)) * 0.5 + 0.5, 0.0, 1.0) # R98 warm sunlit / cool shaded clusters
 		cc = Color(clampf(cc.r*(0.90+0.28*sunf),0,1), clampf(cc.g*(0.95+0.12*sunf),0,1), clampf(cc.b*(1.06-0.26*sunf),0,1))
 		cc = Color(clampf(cc.r*2.1,0.0,1.1), clampf(cc.g*2.0,0.0,1.1), clampf(cc.b*2.1,0.0,1.1)) # R69: undo texture*vertex double-green
@@ -294,6 +298,10 @@ func add_canopy(xf: Transform3D, c: Color) -> void:
 			var m141: float = clampf((ld141.dot(Vector3(-0.45, 0.75, 0.50).normalized()) * 0.5 + 0.5) * 0.65 + (ld141.y * 0.5 + 0.5) * 0.35, 0.0, 1.0)
 			var vf141: float = lerpf(0.38, 1.45, m141)
 			var cc141 := Color(clampf(cc.r * vf141 * lerpf(0.85, 1.12, m141), 0.0, 1.18), clampf(cc.g * vf141 * lerpf(0.96, 1.04, m141), 0.0, 1.18), clampf(cc.b * vf141 * lerpf(1.20, 0.75, m141), 0.0, 1.18))
+			var cq145: float = sin(ld141.x*5.1 + seedv*0.21) * sin(ld141.y*4.3 - seedv*0.13) * sin(ld141.z*5.7 + seedv*0.17)
+			var cell145: float = floor(clampf(cq145*0.5+0.5, 0.0, 0.999) * 3.99) / 3.0
+			var cf145: float = lerpf(0.74, 1.24, cell145)
+			cc141 = Color(clampf(cc141.r * cf145, 0.0, 1.18), clampf(cc141.g * cf145, 0.0, 1.18), clampf(cc141.b * cf145, 0.0, 1.18)) # R145: spatially coherent clump cells (neighbours share tone)
 			var cn144 := Vector3(sin(fn.x*6.7 + seedv*0.13), sin(fn.y*5.9 - seedv*0.07), sin(fn.z*7.3 + seedv*0.11))
 			var bn144: Vector3 = (bn139 + cn144 * 0.22).normalized()
 			canopy_st.set_normal(bn144); canopy_st.set_color(cc141); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j])
