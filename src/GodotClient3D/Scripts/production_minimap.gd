@@ -99,7 +99,7 @@ var _view_rect := Rect2i()
 
 
 func _render_map(map_size: Vector2i, frame_snapshot: Dictionary) -> Image:
-	var sig := "%d:%d:%d:%s" % [map_size.x, map_size.y, int(simulation.revealed_tiles.size()), str(overview_mode)]
+	var sig := "%d:%d:%d:%s:%d" % [map_size.x, map_size.y, int(simulation.revealed_tiles.size()), str(overview_mode), int(simulation.buildings.size())]
 	if _base_image == null or sig != _base_sig:
 		_base_image = _render_terrain(map_size)
 		_base_sig = sig
@@ -107,9 +107,41 @@ func _render_map(map_size: Vector2i, frame_snapshot: Dictionary) -> Image:
 	return _render_overlays(image, map_size, frame_snapshot)
 
 
+## M3: ground currently inside a completed building's vision, painted the
+## same way the world view paints its fog mask (building vision radii from
+## the sim; workers' moving vision stays a world-only state).
+func _building_vision_lattice(map_size: Vector2i) -> PackedByteArray:
+	var lattice := PackedByteArray()
+	lattice.resize(map_size.x * map_size.y)
+	if not simulation.is_town_hall_founded():
+		return lattice
+	var centers: Array = []
+	centers.append([simulation._footprint_center(simulation.town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL)), int(simulation.building_vision_radius(Defs.BUILDING_TOWN_HALL))])
+	for b_value in simulation.buildings:
+		var b: Dictionary = b_value
+		if bool(b.get("construction", false)):
+			continue
+		var t := String(b.get("type", ""))
+		if t == Defs.BUILDING_TOWN_HALL or t == Defs.BUILDING_ROAD:
+			continue
+		centers.append([simulation._footprint_center(Vector2i(b.get("position", Vector2i.ZERO)), Defs.building_footprint(t)), int(simulation.building_vision_radius(t))])
+	for c in centers:
+		var center: Vector2i = c[0]
+		var radius := int(c[1])
+		for dy in range(-radius, radius + 1):
+			for dx in range(-radius, radius + 1):
+				if dx * dx + dy * dy > radius * radius:
+					continue
+				var t := center + Vector2i(dx, dy)
+				if t.x >= 0 and t.y >= 0 and t.x < map_size.x and t.y < map_size.y:
+					lattice[t.y * map_size.x + t.x] = 1
+	return lattice
+
+
 func _render_terrain(map_size: Vector2i) -> Image:
 	var image := Image.create(map_size.x, map_size.y, false, Image.FORMAT_RGB8)
 	image.fill(Color("#0a1210"))
+	var vision := _building_vision_lattice(map_size)
 	var lo := Vector2i(map_size.x, map_size.y)
 	var hi := Vector2i(-1, -1)
 	var step := 1 if map_size.x <= 120 or overview_mode else 2
@@ -122,7 +154,8 @@ func _render_terrain(map_size: Vector2i) -> Image:
 				hi = Vector2i(maxi(hi.x, x), maxi(hi.y, y))
 			var tile_type := String(simulation.get_tile(tile))
 			var color := Color("#4d8a3e")
-			if simulation.has_method("is_water_tile") and simulation.is_water_tile(tile):
+			var is_water: bool = simulation.has_method("is_water_tile") and simulation.is_water_tile(tile)
+			if is_water:
 				color = Color("#3a8a96")
 			elif tile_type == Defs.TILE_TREE:
 				color = Color("#1c4a22")
@@ -130,6 +163,17 @@ func _render_terrain(map_size: Vector2i) -> Image:
 				color = Color("#8a8678")
 			elif tile_type == Defs.TILE_SHARD:
 				color = Color("#6bcfe0")
+			if not is_water:
+				# M3: relief shading from the sim's own height levels, so
+				# the province map reads as the same heightfield the world
+				# renders (gentle NW light; hue families unchanged).
+				var h := float(simulation.get_height(tile))
+				var hx := float(simulation.get_height(Vector2i(mini(tile.x + 1, map_size.x - 1), tile.y)))
+				var hz := float(simulation.get_height(Vector2i(tile.x, mini(tile.y + 1, map_size.y - 1))))
+				var shade := clampf(0.80 + h * 0.030 + (h - hx) * 0.05 + (h - hz) * 0.05, 0.62, 1.30)
+				color = Color(color.r * shade, color.g * shade, color.b * shade)
+			if seen and vision[tile.y * map_size.x + tile.x] != 0:
+				color = color.lightened(0.22)
 			if not seen:
 				# Beta r23: unexplored land as a dim silhouette, not black,
 				# so the province reads as a map (5.5 review: "sparse").
