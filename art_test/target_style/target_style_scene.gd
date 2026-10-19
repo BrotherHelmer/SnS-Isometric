@@ -407,6 +407,7 @@ func _setup() -> void:
 	for plot in [Vector3(-12,0,10.5), Vector3(8,0,10.8), Vector3(-14,0,-7.5)]:
 		box(plot+Vector3(0,0.05,0), Vector3(2.7,0.07,1.9), Color("8a6c42"), 0.2)
 		for pr in 4: box(plot+Vector3(-0.95+float(pr)*0.62,0.13,0), Vector3(0.4,0.1,1.6), Color("5da038"), 0.2)
+	_detail_pass()
 	# commit merged meshes
 	for key in surf:
 		var st: SurfaceTool = surf[key]; var mesh := st.commit()
@@ -424,6 +425,70 @@ func _setup() -> void:
 		var kmi := MeshInstance3D.new(); kmi.mesh = card_st.commit(); var km := StandardMaterial3D.new(); km.albedo_texture = load(PT + "foliage_card.png"); km.vertex_color_use_as_albedo = true; km.albedo_color = Color(1,1,1); km.roughness = 1.0; km.alpha_scissor_threshold = 0.45; km.cull_mode = BaseMaterial3D.CULL_DISABLED; km.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; kmi.material_override = km; kmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(kmi)
 	_spawn_tufts()
 	_spawn_carriers(); _spawn_statics()
+func _detail_pass() -> void:
+	# R75 scene-wide richness: per-building unique detail + patch-scale terrain detail (all seated, merged)
+	var homes := [Vector3(-1.5,0,-3.5), Vector3(3.2,0,-1.2), Vector3(7.5,0,5.5), Vector3(-4.5,0,6.0), Vector3(9.0,0,-4.5), Vector3(-10.0,0,-3.5), Vector3(-10.5,0,5.5), Vector3(12.0,0,2.5), Vector3(-6.5,0,-10.0), Vector3(14.0,0,12.5), Vector3(-7.0,0,12.0), Vector3(15.0,0,5.5), Vector3(17.5,0,1.0)]
+	for hi in homes.size():
+		var hp: Vector3 = homes[hi]
+		if Vector2(hp.x, hp.z).length() > 11.0: hp.y = _h(hp.x, hp.z)
+		var ang := float(hi) * 1.37; var side := Vector3(cos(ang), 0, sin(ang)); var fwd := Vector3(-sin(ang), 0, cos(ang))
+		match hi % 4:
+			0: # woodpile: stacked logs against wall
+				for li in 6:
+					var lm := CylinderMesh.new(); lm.bottom_radius=0.13; lm.top_radius=0.13; lm.height=1.05; lm.radial_segments=7
+					add_mesh(lm, Transform3D(Basis.from_euler(Vector3(0, ang, PI/2.0)), hp + side*2.3 + fwd*(float(li%3)*0.3-0.3) + Vector3(0, 0.16+0.26*float(li/3), 0)), Color("8a6742")); tri_total += 28
+			1: # lean-to: sloped roof on posts + barrel under
+				box(hp + side*2.0 + Vector3(0, 1.05, 0), Vector3(1.7, 0.10, 1.4), Color("9c4a34"), ang, 0, 0.30)
+				box(hp + side*2.55 + Vector3(0, 0.5, 0) + fwd*0.55, Vector3(0.11, 1.0, 0.11), Color("54381f")); box(hp + side*2.55 + Vector3(0, 0.5, 0) - fwd*0.55, Vector3(0.11, 1.0, 0.11), Color("54381f"))
+				cyl(hp + side*2.0 + Vector3(0, 0.38, 0), 0.32, 0.36, 0.76, Color("8a5f36"), 8)
+			2: # crates + sacks + barrel cluster
+				box(hp + side*2.2 + Vector3(0, 0.32, 0), Vector3(0.64, 0.64, 0.64), Color("a67c4e"), ang*0.7)
+				box(hp + side*2.2 + fwd*0.7 + Vector3(0, 0.26, 0), Vector3(0.52, 0.52, 0.52), Color("8a6742"), ang)
+				blob(hp + side*2.3 - fwd*0.6 + Vector3(0, 0.24, 0), Vector3(0.32, 0.28, 0.32), Color("c9b18a"))
+				cyl(hp + side*1.7 + fwd*1.1 + Vector3(0, 0.36, 0), 0.30, 0.34, 0.72, Color("7a5a36"), 8)
+			3: # dormer window on the roof + window box flowers
+				box(hp + Vector3(0, 2.55, 0) + fwd*0.55, Vector3(0.62, 0.62, 0.5), Color("e8d9b8"), 0, 0, 0, "plaster")
+				box(hp + Vector3(0, 2.98, 0) + fwd*0.55, Vector3(0.78, 0.12, 0.66), Color("9c4a34"))
+				box(hp + Vector3(0, 2.5, 0) + fwd*0.86, Vector3(0.34, 0.4, 0.06), Color("ffd98a"))
+		# door-side lantern + step stones at every home
+		box(hp + fwd*1.6 + side*0.8 + Vector3(0, 0.95, 0), Vector3(0.07, 0.9, 0.07), Color("4a3421")); box(hp + fwd*1.6 + side*0.8 + Vector3(0, 1.32, 0), Vector3(0.17, 0.2, 0.17), Color("ffd98a"))
+		blob(hp + fwd*1.9 + Vector3(0, 0.03, 0), Vector3(0.5, 0.05, 0.4), Color("9a968c"))
+	# second market stall: striped canopy (reads at full frame), goods crates
+	var ms := Vector3(5.9, 0, 7.9)
+	for mp2 in [Vector3(-0.9,0,-0.7), Vector3(0.9,0,-0.7), Vector3(-0.9,0,0.7), Vector3(0.9,0,0.7)]: box(ms+mp2+Vector3(0,0.8,0), Vector3(0.12,1.6,0.12), Color("6b4423"))
+	for sti in 5: box(ms+Vector3(-0.85+float(sti)*0.43, 1.72, 0), Vector3(0.4, 0.09, 1.9), Color("d43a2a") if sti%2==0 else Color("f2ead8"), 0, 0, 0.10)
+	box(ms+Vector3(0,0.55,0), Vector3(1.5,0.45,1.1), Color("a67c4e"), 0, 0, 0, "timber")
+	for gi in 6: blob(ms+Vector3(-0.55+fmod(float(gi)*0.4,1.1), 0.86, -0.35+fmod(float(gi)*0.33,0.7)), Vector3(0.17,0.13,0.17), [Color("e2543e"), Color("ffd94a"), Color("7fae4a")][gi%3])
+	# fence lines along two meadow edges (posts + double rail, seated)
+	for fl in [[Vector3(-12.5,0,1.5), Vector3(-12.0,0,7.5)], [Vector3(10.5,0,8.0), Vector3(15.5,0,9.5)], [Vector3(-3.0,0,10.8), Vector3(2.5,0,11.4)]]:
+		var fa: Vector3 = fl[0]; var fb: Vector3 = fl[1]; var flen := fa.distance_to(fb); var fsteps := int(flen/1.1)
+		for fs in fsteps+1:
+			var fp9 := fa.lerp(fb, float(fs)/float(maxi(fsteps,1))); fp9.y = _h(fp9.x, fp9.z) if Vector2(fp9.x,fp9.z).length() > 11.0 else 0.0
+			box(fp9+Vector3(0,0.42,0), Vector3(0.11,0.84,0.11), Color("6b4423"))
+		var fmid := (fa+fb)*0.5; fmid.y = _h(fmid.x, fmid.z) if Vector2(fmid.x,fmid.z).length() > 11.0 else 0.0
+		box(fmid+Vector3(0,0.68,0), Vector3(0.09,0.09,flen), Color("7a5a36"), atan2(fb.x-fa.x, fb.z-fa.z))
+		box(fmid+Vector3(0,0.34,0), Vector3(0.09,0.09,flen), Color("7a5a36"), atan2(fb.x-fa.x, fb.z-fa.z))
+	# terrain patch detail (40-90px faces: patch scale, flat on ground, no floating specks)
+	var patch_cols := [Color("6f9a42"), Color("4e7d26"), Color("a8895a"), Color("7fae4a"), Color("8a6c42")]
+	for pi2 in 22:
+		var px2 := -17.0 + fmod(float(pi2)*5.83, 36.0); var pz2 := -12.0 + fmod(float(pi2)*4.37, 25.0)
+		if Vector2(px2, pz2).length() < 6.0: continue
+		var py2: float = _h(px2, pz2) if Vector2(px2, pz2).length() > 11.0 else 0.0
+		var pr := 1.9 + fmod(float(pi2)*0.71, 1.8)
+		blob(Vector3(px2, py2+0.025, pz2), Vector3(pr, 0.05, pr*0.78), patch_cols[pi2 % 5])
+	for ri2 in 10: # scattered boulders with contact shadow discs
+		var rx2 := -15.0 + fmod(float(ri2)*6.31, 33.0); var rz2 := -11.0 + fmod(float(ri2)*5.17, 23.0)
+		var ry2: float = _h(rx2, rz2) if Vector2(rx2, rz2).length() > 11.0 else 0.0
+		cyl(Vector3(rx2, ry2+0.015, rz2), 0.85, 0.85, 0.015, Color(0.09,0.15,0.04,0.35), 10)
+		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2, float(ri2)*1.9, 0.1)).scaled(Vector3(0.55,0.4,0.5)), Vector3(rx2, ry2+0.12, rz2)), Color("8f7355"), "rock"); tri_total += 128
+	for li3 in 5: # fallen logs
+		var lx3 := -13.0 + fmod(float(li3)*7.13, 28.0); var lz3 := -9.0 + fmod(float(li3)*6.03, 19.0)
+		var ly3: float = _h(lx3, lz3) if Vector2(lx3, lz3).length() > 11.0 else 0.0
+		var lg := CylinderMesh.new(); lg.bottom_radius=0.17; lg.top_radius=0.19; lg.height=1.7; lg.radial_segments=7
+		add_mesh(lg, Transform3D(Basis.from_euler(Vector3(0, float(li3)*0.9, PI/2.0)), Vector3(lx3, ly3+0.16, lz3)), Color("7a5a36")); tri_total += 28
+	for bu in [Vector3(-12.5,0,-6.5), Vector3(6.8,0,9.8), Vector3(16.5,0,-3.5), Vector3(-15.5,0,6.0), Vector3(4.2,0,12.8), Vector3(-8.5,0,-12.5), Vector3(19.5,0,4.5), Vector3(0.5,0,-13.5)]:
+		var bp9: Vector3 = bu; if Vector2(bu.x, bu.z).length() > 11.0: bp9.y = _h(bu.x, bu.z)
+		add_canopy(Transform3D(Basis.IDENTITY.scaled(Vector3(0.62,0.45,0.62)), bp9+Vector3(0,0.42,0)), Color("4e8f33"))
 func _spawn_carriers() -> void:
 	var chars := ["Farmer_B", "Farmer_A", "Rogue_Hooded", "Rogue"]
 	var cps := [Vector3(0.6,0.05,2.8), Vector3(-2.6,0.05,0.8), Vector3(5.2,0.05,1.6), Vector3(-6.4,0.05,-1.4), Vector3(-8.8,0.05,5.6), Vector3(8.6,0.05,4.6), Vector3(3.8,0.05,-4.2), Vector3(-9.5,0.05,1.5)]
@@ -599,6 +664,7 @@ func _summit() -> void:
 func _upper_fill() -> void:
 	for mf in 4:
 		var mx := 7.0+float(mf)*3.6; var mz := -10.8 - float(mf%2)*1.6; var my := _h(mx,mz)+0.05
+		if Vector2(mx,mz).distance_to(Vector2(14.5,-11.5)) < 4.5: continue # R75: calm near mine
 		_terrace(mx, mz, 4.2, 1.5, Color("86b83e") if mf%2==0 else Color("b08d55"), "")
 		for cr4 in 4: box(Vector3(mx-1.4+float(cr4)*0.9, _h(mx-1.4+float(cr4)*0.9, mz)+0.16, mz), Vector3(0.5,0.09,1.3), Color("4e7d26") if mf%2==0 else Color("96683c"), 0.18)
 	for tp5 in [Vector3(8.5,0,-12), Vector3(13,0,-11), Vector3(24,0,-12), Vector3(11.5,0,-14.5), Vector3(22,0,-9)]:
@@ -616,16 +682,19 @@ func _fill_more() -> void:
 		_build_tree(tp6, Color("79c24d"), Color("a9dd77"))
 	for cf in 3:
 		var cx6 := 8.5+float(cf)*5.0; var cz6 := -12.8-float(cf)*0.5
+		if Vector2(cx6,cz6).distance_to(Vector2(14.5,-11.5)) < 4.5: continue # R75
 		_terrace(cx6, cz6, 5.6, 1.8, Color("b08d55") if cf%2==0 else Color("86b83e"), "")
 		for oc in 3: blob(Vector3(cx6-1.6+float(oc)*1.5, _h(cx6-1.6+float(oc)*1.5,cz6+0.6)+0.2, cz6+0.6), Vector3(0.5,0.35,0.5), Color("a89a80"))
 	for cf2 in 3:
 		var cx7 := 7.5+float(cf2)*5.2; var cz7 := -9.9-float(cf2)*0.3
+		if Vector2(cx7,cz7).distance_to(Vector2(14.5,-11.5)) < 4.5: continue # R75
 		_terrace(cx7, cz7, 5.8, 1.7, Color("86b83e") if cf2%2==0 else Color("b08d55"), "")
 		for cr6 in 5: box(Vector3(cx7-1.9+float(cr6)*0.95, _h(cx7-1.9+float(cr6)*0.95, cz7)+0.16, cz7), Vector3(0.55,0.09,1.5), Color("3f7020") if cf2%2==0 else Color("96683c"), 0.12)
 	for tp7 in [Vector3(6.5,0,-10.5), Vector3(17.5,0,-10.2), Vector3(5.5,0,-12.8), Vector3(21.5,0,-14.5)]:
 		_build_tree(tp7, Color("79c24d"), Color("a9dd77"))
 	for cf3 in 2:
 		var cx8 := 5.5+float(cf3)*7.5; var cz8 := -11.6
+		if Vector2(cx8,cz8).distance_to(Vector2(14.5,-11.5)) < 4.5: continue # R75
 		_terrace(cx8, cz8, 5.4, 1.6, Color("b08d55") if cf3%2==0 else Color("86b83e"), "")
 		for fp6 in 4: box(Vector3(cx8-2.2+float(fp6)*1.45, _h(cx8-2.2+float(fp6)*1.45, cz8+0.9)+0.38, cz8+0.9), Vector3(0.09,0.75,0.09), Color("6b4a2c"))
 	# lower-left farm: fields + trees + fence (fills reframed meadow)
