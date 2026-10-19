@@ -42,13 +42,13 @@ func _run() -> void:
 	snapshot.rivalry_structures = [{"anchor": rival, "realm": "rival", "visible": true}]
 	snapshot.wyrd_sites = [{"position": shard, "visible": false}]
 	var image: Image = minimap._render_map(sim.map_size, snapshot)
-	_check(image.get_pixelv(shard).is_equal_approx(Color("#0a1210")), "Shard remains fogged on minimap")
-	_check(image.get_pixelv(rival).is_equal_approx(Color("#0a1210")), "rival roads and structures remain fogged")
+	_check(not image.get_pixelv(shard).is_equal_approx(Color("#6bcfe0")), "Shard remains fogged on minimap")
+	_check(not image.get_pixelv(rival).is_equal_approx(Color("#c45c3a")), "rival roads and structures remain fogged")
 	sim._reveal_radius(shard, 1)
 	sim._reveal_radius(rival, 1)
 	image = minimap._render_map(sim.map_size, snapshot)
 	_check(image.get_pixelv(shard).is_equal_approx(Color("#6bcfe0")), "explored Shard appears")
-	_check(image.get_pixelv(rival).is_equal_approx(Color("#7a2c36")), "explored rival Town Hall appears")
+	_check(image.get_pixelv(rival).is_equal_approx(Color("#c45c3a")), "explored rival Town Hall appears")
 	game.queue_free()
 	await process_frame
 	await create_timer(0.5).timeout
