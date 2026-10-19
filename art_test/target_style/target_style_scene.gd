@@ -1831,7 +1831,9 @@ func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 		for pi in 4:
 			var bc141: Color = a if pi % 2 == 0 else b
 			var bf141: float = lerpf(0.48, 1.34, float(pi) / 3.0)
-			add_canopy(Transform3D(Basis.from_euler(Vector3(0,float(pi)*0.8,0)).scaled(Vector3(0.85,1.05,0.85)), p+Vector3(lnx143*float(pi)*0.35,1.9+float(pi)*0.62,lnz143*float(pi)*0.35)), Color(clampf(bc141.r * bf141 * lerpf(0.88, 1.10, float(pi) / 3.0), 0.0, 1.0), clampf(bc141.g * bf141, 0.0, 1.0), clampf(bc141.b * bf141 * lerpf(1.16, 0.78, float(pi) / 3.0), 0.0, 1.0)))
+			var sc150: Color = Color(clampf(bc141.r * bf141 * lerpf(0.88, 1.10, float(pi) / 3.0), 0.0, 1.0), clampf(bc141.g * bf141, 0.0, 1.0), clampf(bc141.b * bf141 * lerpf(1.16, 0.78, float(pi) / 3.0), 0.0, 1.0))
+			for cr150 in 2: # R150: stacked-variant card analogue (crossed pairs at the 4 stacked lobe positions, law-tail colours)
+				add_foliage_card(Transform3D(Basis.from_euler(Vector3(0, float(pi)*0.8 + float(cr150)*0.85, 0)).scaled(Vector3(0.98, 1.10, 0.98)), p+Vector3(lnx143*float(pi)*0.35,1.9+float(pi)*0.62,lnz143*float(pi)*0.35)), card_col146(sc150))
 		return
 	for ci in 14:
 		var off: Vector3 = [Vector3(0,2.6,0), Vector3(0.85,2.05,0.3), Vector3(-0.85,2.15,-0.25), Vector3(0.1,3.25,-0.1), Vector3(-0.2,1.9,0.7), Vector3(1.15,2.7,-0.5), Vector3(-1.1,2.8,0.45), Vector3(1.3,2.2,0.6), Vector3(-1.3,2.3,-0.6), Vector3(0.5,3.6,0.5), Vector3(1.5,2.5,0.1), Vector3(-1.5,2.6,-0.2), Vector3(0.3,2.0,1.05), Vector3(-0.4,3.05,0.95)][ci]
