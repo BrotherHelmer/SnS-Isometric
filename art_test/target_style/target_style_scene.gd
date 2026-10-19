@@ -568,6 +568,46 @@ func _setup() -> void:
 		var kmi := MeshInstance3D.new(); kmi.mesh = card_st.commit(); var km := StandardMaterial3D.new(); km.albedo_texture = load(PT + "foliage_card.png"); km.vertex_color_use_as_albedo = true; km.albedo_color = Color(1,1,1); km.roughness = 1.0; km.alpha_scissor_threshold = 0.45; km.cull_mode = BaseMaterial3D.CULL_DISABLED; km.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; kmi.material_override = km; kmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(kmi)
 	_spawn_tufts()
 	_spawn_carriers(); _spawn_statics()
+func _worked_yard(p: Vector3, dir2: Vector2, seedv: int, slope: bool) -> void:
+	# R128 door-side worked yard: worn patch on the door side (R76/R118 language) + seeded prop set, existing keys only
+	var rng := RandomNumberGenerator.new(); rng.seed = seedv
+	var perp := Vector2(-dir2.y, dir2.x)
+	_ground_patch(p.x + dir2.x*1.7, p.z + dir2.y*1.7, rng.randf_range(1.3, 1.7), seedv + 7, Color("a8895a"), Color("8a6c42"))
+	var anchor := Vector2(p.x, p.z) + dir2 * 2.15
+	var pool := [0, 1, 2, 3, 4, 5]
+	var cnt := rng.randi_range(2, 4)
+	for k in cnt:
+		var pidx := rng.randi_range(0, pool.size() - 1); var kind: int = pool[pidx]; pool.remove_at(pidx)
+		var pp: Vector2 = anchor + perp * ((float(k) - float(cnt - 1) / 2.0) * 0.85) + dir2 * rng.randf_range(-0.15, 0.25)
+		var py: float = _h(pp.x, pp.y) if slope else p.y
+		blob(Vector3(pp.x, py + 0.03, pp.y), Vector3(0.55, 0.035, 0.5), Color(0.10, 0.16, 0.05, 0.42)) # contact shade (existing yard key)
+		if kind == 0: # wood pile: horizontal logs
+			for li in 3:
+				var lm := CylinderMesh.new(); lm.bottom_radius = 0.11; lm.top_radius = 0.11; lm.height = 0.95; lm.radial_segments = 7
+				add_mesh(lm, Transform3D(Basis.from_euler(Vector3(0, atan2(dir2.x, dir2.y), PI/2.0)), Vector3(pp.x, py + 0.13 + (0.20 if li == 2 else 0.0), pp.y) + Vector3(perp.x, 0, perp.y) * ((float(li % 2) - 0.25) * 0.24 if li < 2 else 0.0)), Color("8a5f36")); tri_total += 28
+		elif kind == 1: # barrels
+			cyl(Vector3(pp.x, py + 0.38, pp.y), 0.30, 0.34, 0.75, Color("8a5f36"), 8)
+			if rng.randf() > 0.45: cyl(Vector3(pp.x + perp.x*0.55, py + 0.38, pp.y + perp.y*0.55), 0.30, 0.34, 0.75, Color("8a5f36"), 8)
+		elif kind == 2: # crates
+			box(Vector3(pp.x, py + 0.31, pp.y), Vector3(0.62, 0.62, 0.62), Color("a67c4e"), rng.randf_range(0.2, 0.5))
+			if rng.randf() > 0.4: box(Vector3(pp.x + 0.08, py + 0.83, pp.y), Vector3(0.44, 0.44, 0.44), Color("a67c4e"), rng.randf_range(0.5, 0.9))
+		elif kind == 3: # chopping block + log
+			cyl(Vector3(pp.x, py + 0.21, pp.y), 0.34, 0.38, 0.42, Color("a67c4e"), 9)
+			box(Vector3(pp.x, py + 0.51, pp.y), Vector3(0.52, 0.18, 0.18), Color("8a5f36"), rng.randf_range(0.0, 0.6))
+		elif kind == 4: # fence stubs along perp
+			var fyaw := atan2(perp.x, perp.y)
+			for fi in 3:
+				var fp: Vector2 = pp + perp * (float(fi - 1) * 0.55)
+				var fy: float = _h(fp.x, fp.y) if slope else p.y
+				box(Vector3(fp.x, fy + 0.35, fp.y), Vector3(0.09, 0.7, 0.09), Color("6b4a2c"), fyaw)
+			box(Vector3(pp.x, py + 0.52, pp.y), Vector3(0.07, 0.08, 1.25), Color("7a5a36"), fyaw)
+		else: # hand cart (flat yards): bed + disc wheels
+			var cyaw := atan2(dir2.x, dir2.y)
+			box(Vector3(pp.x, py + 0.48, pp.y), Vector3(0.85, 0.10, 1.30), Color("a67c4e"), cyaw)
+			for ws in [-1.0, 1.0]:
+				var wm := CylinderMesh.new(); wm.bottom_radius = 0.34; wm.top_radius = 0.34; wm.height = 0.08; wm.radial_segments = 10
+				add_mesh(wm, Transform3D(Basis.from_euler(Vector3(PI/2.0, cyaw, 0)), Vector3(pp.x, py + 0.34, pp.y) + Vector3(perp.x, 0, perp.y) * ws * 0.46), Color("6b4423")); tri_total += 40
+			box(Vector3(pp.x, py + 0.30, pp.y) + Vector3(dir2.x, 0, dir2.y) * 0.75, Vector3(0.07, 0.07, 0.5), Color("6b4a2c"), cyaw)
 func _detail_pass() -> void:
 	# R75 scene-wide richness: per-building unique detail + patch-scale terrain detail (all seated, merged)
 	var homes := [Vector3(-1.5,0,-3.5), Vector3(5.4,0,-0.4), Vector3(8.2,0,6.8), Vector3(-5.6,0,7.6), Vector3(10.2,0,-3.8), Vector3(-10.0,0,-3.5), Vector3(-10.5,0,5.5), Vector3(12.0,0,2.5), Vector3(-6.5,0,-10.0), Vector3(12.8,0,14.2), Vector3(-7.0,0,12.0), Vector3(16.8,0,7.8), Vector3(19.2,0,2.8)]
@@ -635,6 +675,14 @@ func _detail_pass() -> void:
 	for bu in [Vector3(-12.5,0,-6.5), Vector3(6.8,0,9.8), Vector3(16.5,0,-3.5), Vector3(-15.5,0,6.0), Vector3(4.2,0,12.8), Vector3(-8.5,0,-12.5), Vector3(19.5,0,4.5), Vector3(0.5,0,-13.5)]:
 		var bp9: Vector3 = bu; if Vector2(bu.x, bu.z).length() > 11.0: bp9.y = _h(bu.x, bu.z)
 		add_canopy(Transform3D(Basis.IDENTITY.scaled(Vector3(0.62,0.45,0.62)), bp9+Vector3(0,0.42,0)), Color("4e8f33"))
+	# R128 worked yards on every building's door side (castle/mine/watchtower already yarded - not doubled)
+	for yp128 in [Vector3(8.2,0,6.8), Vector3(-10,0,-3.5), Vector3(19.2,_h(19.2,2.8),2.8), Vector3(-5.6,0,7.6), Vector3(-6.5,0,-10), Vector3(10.2,0,-3.8), Vector3(12,0,2.5), Vector3(-10.5,0,5.5), Vector3(5.4,0,-0.4), Vector3(12.8,0,14.2)]:
+		_worked_yard(yp128, Vector2(0, 1), 12800 + absi(int(yp128.x*31.0 + yp128.z*17.0)), Vector2(yp128.x, yp128.z).length() > 11.0)
+	for yp128h in [Vector3(8.2,_h(8.2,-11.2),-11.2), Vector3(18.5,_h(18.5,-8.0),-8.0)]: # hill huts had no yard
+		_worked_yard(yp128h, Vector2(0, 1), 12900 + absi(int(yp128h.x*31.0 + yp128h.z*17.0)), true)
+	for hp128 in [Vector3(-7,0,12), Vector3(16.8,0,7.8)]: # houses: door follows the R105 hang rotation
+		var hang128: float = [0.0, PI/2.0, PI, -PI/2.0][absi(int(hp128.x*7.0 + hp128.z*13.0)) % 4]
+		_worked_yard(hp128, Vector2(sin(hang128), cos(hang128)), 12850 + absi(int(hp128.x*31.0 + hp128.z*17.0)), false)
 	# R119 merged carriers on main/branch path routes (existing keys, varied loads/clothing)
 	_build_carrier(Vector3(4.0,0,3.4), Color("d43a2a"), 1)
 	_build_carrier(Vector3(-5.5,0,3.2), Color("3f7d3a"), 0)
