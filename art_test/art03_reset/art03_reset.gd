@@ -20,6 +20,7 @@ func _ready() -> void:
 	_build_ground()
 	_build_castle_and_cottages()
 	_build_forest()
+	_build_bushes()
 	_build_mountain()
 	_build_villagers()
 	_parse_capture_args()
@@ -29,6 +30,9 @@ func _load_textures() -> void:
 	tex["thatch"] = load(A + "cut_cottage_thatch.png")
 	tex["stone"] = load(A + "cut_cottage_stone.png")
 	tex["conifer"] = load(A + "cut_conifer.png")
+	tex["conifer_b"] = load(A + "cut_conifer_b.png")
+	tex["broad_b"] = load(A + "cut_broadleaf_b.png")
+	tex["bush"] = load(A + "cut_bush.png")
 	tex["broad"] = load(A + "cut_broadleaf_iso.png")
 	tex["mountain"] = load(A + "cut_mountain_mine.png")
 	tex["shadow"] = load(A + "shadow_blob.png")
@@ -39,7 +43,7 @@ func _build_environment() -> void:
 	var we := WorldEnvironment.new()
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color(0.66, 0.76, 0.68)
+	env.background_color = Color(0.60, 0.66, 0.40)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color(1, 1, 1)
 	env.ambient_light_energy = 1.0
@@ -47,8 +51,8 @@ func _build_environment() -> void:
 	add_child(we)
 	var cam := Camera3D.new()
 	cam.projection = Camera3D.PROJECTION_ORTHOGONAL
-	cam.size = 46.0
-	var target := Vector3(0, 0, -2)
+	cam.size = 50.5
+	var target := Vector3(0, 0, -1.5)
 	var dir := Vector3(0.557, 0.616, 0.557).normalized()
 	cam.look_at_from_position(target + dir * 60.0, target, Vector3.UP)
 	cam.current = true
@@ -61,7 +65,7 @@ func _build_ground() -> void:
 	under.mesh = up
 	var um := StandardMaterial3D.new()
 	um.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	um.albedo_color = Color(0.38, 0.55, 0.24)
+	um.albedo_color = Color(0.60, 0.66, 0.37)
 	under.material_override = um
 	under.position = Vector3(0, -0.08, 0)
 	add_child(under)
@@ -94,13 +98,13 @@ func _add_shadow(x: float, z: float, w: float, d: float, strength: float) -> Mes
 	add_child(mi)
 	return mi
 
-func _add_sprite(texture: Texture2D, x: float, z: float, width: float, flip: bool, tint: Color, shadow_w: float) -> Sprite3D:
+func _add_sprite(texture: Texture2D, x: float, z: float, width: float, flip: bool, tint: Color, shadow_w: float, sink: float = 0.0) -> Sprite3D:
 	_add_shadow(x, z + width * 0.04, shadow_w, shadow_w * 0.42, 0.9)
 	var s := Sprite3D.new()
 	s.texture = texture
 	s.pixel_size = width / float(texture.get_width())
 	var h := float(texture.get_height()) * s.pixel_size
-	s.position = Vector3(x, h * 0.5 - 0.04, z)
+	s.position = Vector3(x, h * 0.5 - 0.04 - sink, z)
 	s.flip_h = flip
 	s.modulate = tint
 	s.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
@@ -116,32 +120,55 @@ func _build_castle_and_cottages() -> void:
 	_add_sprite(tex["thatch"], 19.0, 4.0, 7.4, true, Color(0.93, 0.96, 1.0), 7.2)
 
 func _build_mountain() -> void:
-	_add_sprite(tex["mountain"], 25.0, -11.0, 19.0, false, Color(1, 1, 1), 21.0)
+	_add_sprite(tex["mountain"], 25.0, -11.0, 19.0, false, Color(1, 1, 1), 22.0, 0.55)
 
 func _build_forest() -> void:
 	var white := Color(1, 1, 1)
 	var conifers := [
-		[-30.0, -19.0, 6.5, false, white], [-24.5, -20.0, 7.5, true, Color(0.94, 1.0, 0.96)],
-		[-18.0, -18.5, 6.0, false, Color(1.02, 1.0, 0.94)], [-11.0, -20.0, 7.8, true, white],
-		[-1.0, -20.5, 6.8, false, Color(0.95, 0.99, 1.0)], [7.0, -19.5, 7.4, true, white],
-		[14.0, -20.0, 6.2, false, Color(1.0, 0.98, 0.92)], [21.0, -19.0, 7.6, false, white],
-		[-30.0, -9.0, 7.0, true, white], [-28.5, 1.0, 6.2, false, Color(0.94, 1.0, 0.96)],
-		[-29.0, 12.0, 7.4, false, white], [31.0, 3.0, 6.8, true, Color(0.96, 1.0, 0.97)],
-		[29.0, 13.0, 6.0, false, white], [-27.0, 18.0, 6.4, true, white],
-		[-19.0, 19.5, 5.6, false, Color(0.95, 1.0, 0.95)], [24.0, 18.0, 6.2, false, white],
-		[-31.0, 20.0, 6.8, false, white], [32.0, 20.5, 6.4, true, Color(0.95, 1.0, 0.96)], [12.0, 20.0, 6.0, true, white],
-		[31.0, 17.0, 5.4, true, Color(1.0, 0.99, 0.94)],
+		["conifer", -30.0, -19.0, 6.5, false, white], ["conifer_b", -24.5, -20.0, 8.5, true, Color(0.94, 1.0, 0.96)],
+		["conifer", -18.0, -18.5, 6.0, false, Color(1.02, 1.0, 0.94)], ["conifer_b", -11.0, -20.0, 8.0, false, white],
+		["conifer", -1.0, -20.5, 6.8, false, Color(0.95, 0.99, 1.0)], ["conifer_b", 7.0, -19.5, 8.6, true, white],
+		["conifer", 14.0, -20.0, 6.2, false, Color(1.0, 0.98, 0.92)], ["conifer_b", 21.0, -19.0, 8.2, false, white],
+		["conifer", 30.0, -20.0, 6.6, true, white],
+		["conifer_b", -27.0, -16.5, 7.6, false, white], ["conifer", -14.0, -17.0, 6.4, true, Color(0.95, 1.0, 0.97)],
+		["conifer_b", 3.0, -17.5, 7.8, true, white], ["conifer", 18.0, -17.0, 6.6, false, Color(0.96, 1.0, 0.96)],
+		["conifer", -30.0, -9.0, 7.0, true, white], ["conifer_b", -31.0, -14.0, 8.0, false, Color(0.95, 1.0, 0.95)],
+		["conifer", -28.5, 1.0, 6.2, false, Color(0.94, 1.0, 0.96)], ["conifer_b", -29.0, 12.0, 8.4, false, white],
+		["conifer", 33.0, -2.0, 6.8, true, Color(0.96, 1.0, 0.97)], ["conifer", 29.0, 13.0, 6.0, false, white],
+		["conifer_b", 33.0, 10.0, 7.6, true, white],
+		["conifer", -27.0, 18.0, 6.4, true, white], ["conifer_b", -24.0, 18.5, 8.0, false, Color(0.95, 1.0, 0.95)],
+		["conifer", -19.0, 19.5, 5.6, false, Color(0.95, 1.0, 0.95)], ["conifer_b", -5.0, 20.5, 7.6, true, white],
+		["conifer", 6.0, 19.5, 5.8, false, white], ["conifer_b", 18.0, 20.0, 8.0, false, Color(1.0, 0.99, 0.94)],
+		["conifer", 24.0, 18.0, 6.2, false, white], ["conifer", 31.0, 17.0, 5.4, true, Color(1.0, 0.99, 0.94)],
+		["conifer", -31.0, 20.0, 6.8, false, white], ["conifer", 32.0, 20.5, 6.4, true, Color(0.95, 1.0, 0.96)],
+		["conifer", 12.0, 20.0, 6.0, true, white],
 	]
 	for c in conifers:
-		_add_sprite(tex["conifer"], c[0], c[1], c[2], c[3], c[4], c[2] * 0.8)
+		_add_sprite(tex[c[0]], c[1], c[2], c[3], c[4], c[5], c[3] * 0.55)
 	var broads := [
-		[-14.0, -2.0, 7.0, false, white], [12.0, -7.0, 6.6, true, Color(0.95, 1.0, 0.96)],
-		[-25.0, -3.0, 6.4, true, white], [16.0, 13.0, 6.8, false, Color(1.0, 0.99, 0.93)],
-		[-24.0, 12.0, 6.6, true, white], [28.0, 9.0, 6.2, false, Color(0.97, 1.0, 0.96)],
-		[-9.0, 15.5, 6.2, false, white], [22.0, -4.5, 6.0, true, Color(0.96, 1.0, 0.97)],
+		["broad", -14.0, -2.0, 7.0, false, white], ["broad", 12.0, -7.0, 6.6, true, Color(0.95, 1.0, 0.96)],
+		["broad", -25.0, -3.0, 6.4, true, white], ["broad", 16.0, 13.0, 6.8, false, Color(1.0, 0.99, 0.93)],
+		["broad", -9.0, 15.5, 6.2, false, white], ["broad", 22.0, -4.5, 6.0, true, Color(0.96, 1.0, 0.97)],
+		["broad", -24.0, 12.0, 6.6, true, white], ["broad", 28.0, 9.0, 6.2, false, Color(0.97, 1.0, 0.96)],
+		["broad_b", 11.0, -16.5, 4.8, false, white], ["broad_b", -30.0, 7.0, 5.0, true, Color(0.96, 1.0, 0.95)],
+		["broad_b", 19.0, -14.0, 4.6, false, white], ["broad_b", -8.0, 19.0, 4.8, true, Color(0.97, 1.0, 0.96)],
+		["broad_b", 2.0, 16.0, 4.8, false, white],
 	]
 	for b in broads:
-		_add_sprite(tex["broad"], b[0], b[1], b[2], b[3], b[4], b[2] * 0.95)
+		_add_sprite(tex[b[0]], b[1], b[2], b[3], b[4], b[5], b[3] * 0.9)
+
+func _build_bushes() -> void:
+	var white := Color(1, 1, 1)
+	var bushes := [
+		[-15.0, 4.5, 2.8, false, white], [-21.5, 10.5, 2.5, true, Color(0.96, 1.0, 0.96)],
+		[2.0, 8.0, 2.6, false, white], [10.0, 14.5, 3.0, true, Color(1.0, 0.99, 0.94)],
+		[16.0, 1.0, 2.5, false, white], [21.0, 7.5, 2.8, true, Color(0.95, 1.0, 0.97)],
+		[19.5, -7.0, 2.7, false, white], [29.0, -4.5, 2.6, true, white],
+		[-14.0, 1.0, 2.4, true, Color(0.97, 1.0, 0.95)], [-27.0, 14.5, 2.9, false, white],
+		[7.0, -13.5, 2.5, false, Color(0.96, 1.0, 0.96)], [24.0, 12.0, 2.6, true, white],
+	]
+	for b in bushes:
+		_add_sprite(tex["bush"], b[0], b[1], b[2], b[3], b[4], b[2] * 0.9)
 
 func _build_villagers() -> void:
 	var routes := [
