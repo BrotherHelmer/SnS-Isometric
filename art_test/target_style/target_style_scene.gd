@@ -1803,7 +1803,9 @@ func card_col146(c: Color) -> Color: # R146: canopy-law tail (R69 lift, R131 des
 	return cc
 func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 	if absi(int(p.x*7.31 + p.z*13.17)) % 10 >= 5: return # R69: ~half the trees culled (Black #1)
-	var proto146: bool = p.x >= -18.0 and p.x <= 2.0 and p.z >= 3.0  # R146 PROTOTYPE SECTOR: south-west foreground trees only - main lobes become painted cards
+	var proto146: bool = p.x >= -18.0 and p.x <= 2.0 and p.z >= 3.0 # R146/R147 SW box (one card tree: (-10,8))
+	var proto148: bool = p.x >= 8.0 and p.x <= 21.5 and p.z >= 8.0 and p.z <= 15.0 # R148: south foreground band added (card-eligible: (9,13.5), (20,9.5), (20.3,13.2))
+	var use_cards148: bool = proto146 or proto148
 	var tsc := (0.85 + 0.45 * (0.5 + 0.5*sin(p.x*2.7 + p.z*1.9))) * 0.64
 	var vi := absi(int(p.x*3.0 + p.z*7.0)) % 7
 	if vi == 5: a = Color("c07a2e"); b = Color("e0a44a")
@@ -1843,7 +1845,7 @@ func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 		var cm141: float = clampf(0.5 + (off.y - 2.65) * 0.38 + (off.x * -0.45 + off.z * 0.50) * 0.10, 0.0, 1.0)
 		var cf141: float = lerpf(0.40, 1.38, cm141)
 		cc2 = Color(clampf(cc2.r * cf141 * lerpf(0.88, 1.10, cm141), 0.0, 1.0), clampf(cc2.g * cf141, 0.0, 1.0), clampf(cc2.b * cf141 * lerpf(1.16, 0.78, cm141), 0.0, 1.0))
-		if proto146: # R146: painted leaf-mass cards replace sphere main lobes in sector (2 crossed pairs per lobe)
+		if use_cards148: # R146/R148: painted leaf-mass cards replace sphere main lobes in cluster (2 crossed pairs per lobe)
 			var r146: float = sc*1.25*tsc
 			for cr146 in 2:
 				add_foliage_card(Transform3D(Basis.from_euler(Vector3(0, float(ci)*0.62 + float(cr146)*0.85, 0)).scaled(Vector3(r146, r146*0.92, r146)), p+off*Vector3(1.28,tsc,1.28)), card_col146(cc2))
