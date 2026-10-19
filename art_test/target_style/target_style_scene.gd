@@ -59,7 +59,7 @@ func mat_for(key: String, c: Color) -> Material:
 	var m := mat_col(c)
 	if tx != "" and TEX.has(tx):
 		m.albedo_texture = load(TEX[tx]); m.uv1_scale = Vector3(3,3,1) if tx=="meadow" else (Vector3(0.55,0.55,1) if tx in ["stone","plaster"] else (Vector3(1,1,1) if tx in ["roofp","thatch","rock"] else Vector3(1.5,1.5,1))) # R77 larger face features; m.albedo_color = Color(0.88,0.87,0.85)
-		if tx == "rock": m.albedo_color = Color(1.06,0.97,0.87).lerp(c, 0.50) # R73: warm rock, tint was being overridden grey
+		if tx == "rock": m.albedo_color = Color(0.92,0.84,0.74).lerp(c, 0.50) # R132 deepened rock tint (was 1.06,0.97,0.87 R73)
 		if tx == "stone": m.albedo_color = Color(1.02,1.00,0.97).lerp(c, 0.45) # R130 stone root neutralised; R90 face warmth stays in shader
 		if tx == "roofp": m.albedo_color = Color(0.93,0.84,0.75).lerp(c, 0.24) # R78 muted terracotta tint-through
 		if tx == "forest": m.albedo_color = Color(1,1,1).lerp(c, 0.30)
@@ -269,7 +269,7 @@ func _build_terrain() -> void:
 	# WELDED smooth-shaded heightfield: shared grid vertices, smooth normals,
 	# continuous (not per-cell) colour functions so facets stop reading.
 	var size := 120.0; var steps := 230
-	var g1 := Color("27631d"); var g2 := Color("3f842c"); var dirt := Color("9c7f52"); var rock := Color("8f7a5f"); var snow := Color("f4f6f2")
+	var g1 := Color("27631d"); var g2 := Color("3f842c"); var dirt := Color("9c7f52"); var rock := Color("6e5638"); var snow := Color("f4f6f2") # R132 rock vertex deepened toward target (val .569 vs .463)
 	var n1 := steps + 1
 	var verts := PackedVector3Array(); var cols := PackedColorArray(); var uvs := PackedVector2Array(); var norms := PackedVector3Array()
 	verts.resize(n1*n1); cols.resize(n1*n1); uvs.resize(n1*n1); norms.resize(n1*n1)
@@ -299,7 +299,7 @@ func _build_terrain() -> void:
 			if v.x > 18.0 and slope > 0.16:
 				c = c.lerp(rock, clampf((slope-0.16)*1.6, 0.0, 0.85))
 				var band2 := 0.5 + 0.5*sin(h*1.35 + v.x*0.32 - v.y*0.48)
-				if band2 > 0.55: c = c.lerp(Color("bfb096"), (band2-0.55) * 0.5)
+				if band2 > 0.55: c = c.lerp(Color("ac9f83"), (band2-0.55) * 0.5)
 				else: c = c.darkened((0.55-band2) * 0.25)
 			if slope > 0.55:
 				c = rock.lerp(Color("5f4c38"), clampf((slope-0.55)*0.9,0,1))
@@ -307,16 +307,16 @@ func _build_terrain() -> void:
 				var crev := 0.5 + 0.5*sin(v.x*7.3 - v.y*4.9) * sin(v.x*4.1 + v.y*2.7)
 				c = c.darkened(crev * 0.45)
 				var mot := 0.5 + 0.5*sin(v.x*23.7) * sin(v.y*19.3)
-				c = c.lerp(Color("c9bda6"), mot * 0.30)
+				c = c.lerp(Color("b0a189"), mot * 0.30)
 				var band := 0.5 + 0.5*sin(h*1.35 + v.x*0.32 - v.y*0.48)
-				if band > 0.55: c = c.lerp(Color("bfb096"), (band-0.55) * 0.55)
+				if band > 0.55: c = c.lerp(Color("ac9f83"), (band-0.55) * 0.55)
 				else: c = c.darkened((0.55-band) * 0.22)
 				var cf := 0.82 + 0.36 * chunk
 				c = Color(clampf(c.r*cf,0,1), clampf(c.g*cf,0,1), clampf(c.b*cf,0,1))
 				var crack := clampf(1.0 - absf(sin(v.x*5.3 + v.y*3.9 + sin(v.y*7.0))) / 0.22, 0.0, 1.0)
 				c = c.darkened(crack * 0.30)
 				var lich := 0.5 + 0.5*sin(v.x*1.4-0.5) * sin(v.y*1.1+2.1)
-				if lich > 0.52: c = c.lerp(Color("5f8140"), clampf((lich-0.52)*1.8,0,0.85))
+				if lich > 0.52: c = c.lerp(Color("49682f"), clampf((lich-0.52)*1.8,0,0.85))
 			for feat in [Vector2(14.5,-11.5), Vector2(17.0,-10.2), Vector2(13.0,-11.8)]:
 				var fd := Vector2(v.x-feat.x, v.y-feat.y).length()
 				if fd < 4.4: c = c.lerp(dirt, (1.0-fd/4.4) * 0.50)
@@ -349,7 +349,7 @@ func _build_terrain() -> void:
 	var tmesh := ArrayMesh.new(); tmesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	var up2 := MeshInstance3D.new(); var bm3 := BoxMesh.new(); bm3.size = Vector3(400, 0.1, 400); up2.mesh = bm3; up2.position = Vector3(0, -0.60, 0); var um2 := StandardMaterial3D.new(); um2.albedo_texture = load(PT + "detail_noise.png"); um2.set("texture_repeat", 1); um2.uv1_scale = Vector3(120,120,1); um2.albedo_color = Color(0.40,0.42,0.25); um2.roughness = 1.0; up2.material_override = um2; up2.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(up2)
 	var mi := MeshInstance3D.new(); mi.mesh = tmesh
-	var tsh := Shader.new(); tsh.code = "shader_type spatial;\nrender_mode cull_disabled;\nuniform sampler2D meadow_tex : source_color, repeat_enable;\nuniform sampler2D rock_tex : source_color, repeat_enable;\nvarying vec3 v_c;\nvarying vec3 v_wp;\nvarying vec3 v_wn;\nvoid vertex() { v_c = COLOR.rgb; v_wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; v_wn = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz); }\nvoid fragment() { float steep = smoothstep(0.74, 0.54, v_wn.y); vec3 md = texture(meadow_tex, v_wp.xz * 0.07).rgb; md = mix(md, texture(meadow_tex, v_wp.xz * 0.29 + 0.37).rgb, 0.32); vec2 ruv = abs(v_wn.x) > abs(v_wn.z) ? vec2(v_wp.z * 0.13, v_wp.y * 0.13) : vec2(v_wp.x * 0.13, v_wp.y * 0.13); vec3 rk = texture(rock_tex, ruv).rgb; vec3 mdx = clamp((md - 0.80) * 1.5 + 0.80, 0.50, 1.30); vec3 grass_c = v_c * mdx * vec3(1.13, 0.93, 0.76) * 0.85; vec3 rock_c = rk * vec3(1.06, 0.88, 0.66) * (0.30 + 0.50 * v_c) * mix(0.68, 1.0, clamp(v_wp.y / 8.0, 0.0, 1.0)); ALBEDO = mix(grass_c, rock_c, steep); float snp = 0.5 + 0.5*sin(v_wp.x*1.9+1.3)*sin(v_wp.z*1.4-0.7); float snw = smoothstep(2.8, 5.0, v_wp.y) * smoothstep(0.30, 0.58, v_wn.y) * smoothstep(0.32, 0.58, snp); ALBEDO = mix(ALBEDO, vec3(0.93,0.94,0.92), snw * 0.92); float asp = dot(normalize(v_wn.xz + vec2(0.001, 0.0)), normalize(vec2(0.62, 0.72))); float snp2 = 0.5 + 0.5*sin(v_wp.x*2.7-0.6)*sin(v_wp.z*2.2+1.9); float snw2 = smoothstep(2.6, 4.8, v_wp.y) * smoothstep(0.10, 0.55, asp) * smoothstep(0.30, 0.60, v_wn.y) * smoothstep(0.38, 0.62, snp2); ALBEDO = mix(ALBEDO, vec3(0.94,0.95,0.93), snw2 * 0.85); float zn1 = sin(v_wp.x*0.83+1.7) * sin(v_wp.z*0.61-0.4); float zn2 = sin(v_wp.x*1.93-0.6) * sin(v_wp.z*1.47+2.1); float zn3 = sin(v_wp.x*3.71+4.2) * sin(v_wp.z*2.93-1.3); float zn4 = sin(v_wp.x*0.80 + v_wp.z*0.91 + 0.9); float hzn = clamp(0.5 + 0.28*zn1 + 0.20*zn2 + 0.14*zn3 + 0.10*zn4, 0.0, 1.0); float hz = (smoothstep(10.0, 30.0, length(v_wp.xz)) * 0.38 + smoothstep(3.5, 9.0, v_wp.y) * 0.22) * mix(0.40, 1.25, hzn); ALBEDO = mix(ALBEDO, mix(vec3(0.70,0.76,0.74), vec3(0.78,0.82,0.79), hzn), clamp(hz, 0.0, 0.58)); ROUGHNESS = 1.0; }"
+	var tsh := Shader.new(); tsh.code = "shader_type spatial;\nrender_mode cull_disabled;\nuniform sampler2D meadow_tex : source_color, repeat_enable;\nuniform sampler2D rock_tex : source_color, repeat_enable;\nvarying vec3 v_c;\nvarying vec3 v_wp;\nvarying vec3 v_wn;\nvoid vertex() { v_c = COLOR.rgb; v_wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; v_wn = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz); }\nvoid fragment() { float steep = smoothstep(0.74, 0.54, v_wn.y); vec3 md = texture(meadow_tex, v_wp.xz * 0.07).rgb; md = mix(md, texture(meadow_tex, v_wp.xz * 0.29 + 0.37).rgb, 0.32); vec2 ruv = abs(v_wn.x) > abs(v_wn.z) ? vec2(v_wp.z * 0.13, v_wp.y * 0.13) : vec2(v_wp.x * 0.13, v_wp.y * 0.13); vec3 rk = texture(rock_tex, ruv).rgb; vec3 mdx = clamp((md - 0.80) * 1.5 + 0.80, 0.50, 1.30); vec3 grass_c = v_c * mdx * vec3(1.13, 0.93, 0.76) * 0.85; vec3 rock_c = rk * vec3(0.74, 0.60, 0.45) * (0.22 + 0.36 * v_c) * mix(0.68, 1.0, clamp(v_wp.y / 8.0, 0.0, 1.0)); ALBEDO = mix(grass_c, rock_c, steep); float snp = 0.5 + 0.5*sin(v_wp.x*1.9+1.3)*sin(v_wp.z*1.4-0.7); float snw = smoothstep(2.8, 5.0, v_wp.y) * smoothstep(0.30, 0.58, v_wn.y) * smoothstep(0.32, 0.58, snp); ALBEDO = mix(ALBEDO, vec3(0.93,0.94,0.92), snw * 0.92); float asp = dot(normalize(v_wn.xz + vec2(0.001, 0.0)), normalize(vec2(0.62, 0.72))); float snp2 = 0.5 + 0.5*sin(v_wp.x*2.7-0.6)*sin(v_wp.z*2.2+1.9); float snw2 = smoothstep(2.6, 4.8, v_wp.y) * smoothstep(0.10, 0.55, asp) * smoothstep(0.30, 0.60, v_wn.y) * smoothstep(0.38, 0.62, snp2); ALBEDO = mix(ALBEDO, vec3(0.94,0.95,0.93), snw2 * 0.85); float zn1 = sin(v_wp.x*0.83+1.7) * sin(v_wp.z*0.61-0.4); float zn2 = sin(v_wp.x*1.93-0.6) * sin(v_wp.z*1.47+2.1); float zn3 = sin(v_wp.x*3.71+4.2) * sin(v_wp.z*2.93-1.3); float zn4 = sin(v_wp.x*0.80 + v_wp.z*0.91 + 0.9); float hzn = clamp(0.5 + 0.28*zn1 + 0.20*zn2 + 0.14*zn3 + 0.10*zn4, 0.0, 1.0); float hz = (smoothstep(10.0, 30.0, length(v_wp.xz)) * 0.38 + smoothstep(3.5, 9.0, v_wp.y) * 0.22) * mix(0.40, 1.25, hzn); ALBEDO = mix(ALBEDO, mix(vec3(0.70,0.76,0.74), vec3(0.78,0.82,0.79), hzn), clamp(hz * (1.0 - 0.62 * steep), 0.0, 0.58)); ROUGHNESS = 1.0; }"
 	var m := ShaderMaterial.new(); m.shader = tsh; m.set_shader_parameter("meadow_tex", load(PT + "detail_noise.png")); m.set_shader_parameter("rock_tex", load(PT + "rock_painted.png")); mi.material_override = m; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mi)
 	# outer trees sit on terrain
 func _setup() -> void:
@@ -780,7 +780,7 @@ func _cliff_mesh(w: float, h: float, seedv: int) -> ArrayMesh:
 	var arrays := []; arrays.resize(Mesh.ARRAY_MAX); arrays[Mesh.ARRAY_VERTEX]=verts; arrays[Mesh.ARRAY_NORMAL]=norms; arrays[Mesh.ARRAY_TEX_UV]=uvs
 	var m := ArrayMesh.new(); m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays); return m
 func _spawn_cliffs() -> void:
-	var rmat := StandardMaterial3D.new(); rmat.albedo_texture = load(TEX["rock"]); rmat.albedo_color = Color(1.3,1.28,1.22); rmat.roughness = 1.0; rmat.cull_mode = BaseMaterial3D.CULL_DISABLED; rmat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+	var rmat := StandardMaterial3D.new(); rmat.albedo_texture = load(TEX["rock"]); rmat.albedo_color = Color(1.12,1.10,1.05) # R132 cliff deepened with rock family; rmat.roughness = 1.0; rmat.cull_mode = BaseMaterial3D.CULL_DISABLED; rmat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
 	var defs := [[Vector3(9.0,0,-11.5), 0.5, 7.0, 4.5], [Vector3(14.0,0,-12.5), 0.9, 8.0, 5.5], [Vector3(5.5,0,-10.5), 0.25, 5.5, 3.8]]
 	for i2 in defs.size():
 		var df: Array = defs[i2]; var pos: Vector3 = df[0]; pos.y = _h(pos.x, pos.z) + float(df[3])*0.32
@@ -1313,7 +1313,7 @@ func _props2() -> void:
 		var hb := Basis.from_euler(Vector3(0, hang2, 0))
 		for gx in 3:
 			for gz in 2: blob(hp + hb * Vector3(2.1+float(gx)*0.42,0.22,0.9+float(gz)*0.42), Vector3(0.2,0.18,0.2), Color("5da038") if (gx+gz)%2==0 else Color("7fae4a"))
-		cyl(hp + hb * Vector3(0,0.03,2.3), 0.5,0.5,0.03, Color("c9bda6"), 8); cyl(hp + hb * Vector3(0.25,0.03,3.3), 0.45,0.45,0.03, Color("c9bda6"), 8)
+		cyl(hp + hb * Vector3(0,0.03,2.3), 0.5,0.5,0.03, Color("b0a189"), 8); cyl(hp + hb * Vector3(0.25,0.03,3.3), 0.45,0.45,0.03, Color("b0a189"), 8)
 		cyl(hp + hb * Vector3(1.9,0.4,0.4), 0.3,0.34,0.8, Color("8a5f36"), 8)
 	for lp2 in [Vector3(-1.8,0,7.9), Vector3(8.9,0,3.4)]:
 		box(lp2+Vector3(-0.8,0.85,0), Vector3(0.09,1.7,0.09), Color("7a5a36")); box(lp2+Vector3(0.8,0.85,0), Vector3(0.09,1.7,0.09), Color("7a5a36"))
