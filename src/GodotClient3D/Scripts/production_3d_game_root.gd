@@ -288,6 +288,9 @@ var play_camera_focus := Vector3.ZERO
 var play_camera_zoom := ProductionIsometricCameraRig3D.OPENING_ZOOM
 var placement_invalid_shown := false
 var minimap_expanded := false
+var clock_summary_tip := ""
+var clock_full_title := ""
+var clock_full_phase := ""
 var first_screen_hint_log: Array[Dictionary] = []
 var reach_guidance_shown := false
 var last_objective_id := ""
@@ -2859,10 +2862,14 @@ func _update_ui() -> void:
 	var settlement_now: Dictionary = current_frame_snapshot.get("settlement", {})
 	var food_now := int(settlement_now.get("food", 0))
 	var demand_now := int(settlement_now.get("next_food_demand", 0))
-	if time_label != null:
-		time_label.text = "%s  ·  Pop %d/%d" % [_clock_title(), int(sim_now.population_current), int(sim_now.housing_capacity)]
-	if phase_label != null:
-		phase_label.text = "%s  ·  Workers %d  ·  Bread %s" % [_phase_countdown_text(), int(sim_now.workers_free()), ("%d/%d" % [food_now, demand_now]) if demand_now > 0 else str(food_now)]
+	if time_label != null and phase_label != null:
+		var summary_title := "%s  ·  Pop %d/%d" % [_clock_title(), int(sim_now.population_current), int(sim_now.housing_capacity)]
+		var summary_phase := "%s  ·  Workers %d  ·  Bread %s" % [_phase_countdown_text(), int(sim_now.workers_free()), ("%d/%d" % [food_now, demand_now]) if demand_now > 0 else str(food_now)]
+		time_label.text = summary_title
+		phase_label.text = summary_phase
+		clock_full_title = summary_title
+		clock_full_phase = summary_phase
+		_fit_clock_summary(summary_title, summary_phase)
 	var _pu_speed := FrameProfiler.t0()
 	_sync_speed_controls()
 	FrameProfiler.add("ui.speed", _pu_speed)
@@ -3111,10 +3118,15 @@ func _update_loop_hud() -> void:
 		if pressure_meter.has_method("set_threat"):
 			pressure_meter.set_threat(bool(simulation_host.simulation.is_night), hostiles)
 		pressure_meter.visible = _pressure_chip_should_show(pressure_meter.band, bool(simulation_host.simulation.is_night), hostiles)
+		# The chip's visibility changes the top-bar width; re-fit the clock.
+		if time_label != null and phase_label != null and clock_full_phase != "":
+			time_label.text = clock_full_title
+			phase_label.text = clock_full_phase
+			_fit_clock_summary(clock_full_title, clock_full_phase)
 		pressure_meter.tooltip_text = String(wyrdfall.get("pressure_tooltip", "Wyrd Pressure"))
 		# Q6: while the chip is hidden the QUIET state lives in the clock tooltip.
 		if day_icon != null and day_icon.get_parent() != null and day_icon.get_parent().get_parent() is Control:
-			(day_icon.get_parent().get_parent() as Control).tooltip_text = "Day and time until the next phase" + ("" if pressure_meter.visible else "\nWyrd Pressure: %s" % String(pressure_meter.band).capitalize())
+			(day_icon.get_parent().get_parent() as Control).tooltip_text = "Day and time until the next phase" + clock_summary_tip + ("" if pressure_meter.visible else "\nWyrd Pressure: %s" % String(pressure_meter.band).capitalize())
 	if pressure_label != null:
 		pressure_label.text = String(pressure.get("band", "QUIET"))
 	if binding_percent_label != null:
@@ -4347,6 +4359,63 @@ func _tick_shard_glance() -> void:
 		return
 	var town := Vector2(simulation_host.simulation.town_hall_position) + Vector2(1.5, 1.5)
 	camera_rig.compose_view(world_view.tile_to_world(town), ProductionIsometricCameraRig3D.NORMAL_ZOOM)
+
+
+# Hotfix 3 put the realm summary (pop, workers, bread) in the clock capsule; at
+# 1280 px with the raid chip and 4x speed that pushed the top bar to 1428 px
+# (T-SNS-UI rule: fits 1280). Pop, idle workers and bread already have their
+# own top-bar chips, so when the row would overflow the clock falls back to
+# title + countdown and the summary moves into its tooltip.
+func _fit_clock_summary(summary_title: String, summary_phase: String) -> void:
+	clock_summary_tip = ""
+	var clock_cell: Control = phase_label.get_parent().get_parent().get_parent() as Control
+	var top_row: HBoxContainer = clock_cell.get_parent() as HBoxContainer if clock_cell != null else null
+	if top_row == null:
+		return
+	# Measure from fonts, not cached container minimums: those lag a frame
+	# behind the text set here and made the fallback flip-flop.
+	var stack_w: float = maxf(84.0, maxf(_label_text_width(time_label, summary_title), _label_text_width(phase_label, summary_phase)))
+	var clock_w: float = 16.0 + 24.0 + 8.0 + stack_w + 8.0
+	var need: float = clock_w
+	var visible_cells := 1
+	for child in top_row.get_children():
+		var cell := child as Control
+		if cell == null or cell == clock_cell or not cell.visible:
+			continue
+		visible_cells += 1
+		need += cell.get_combined_minimum_size().x
+	need += float(top_row.get_theme_constant("separation")) * float(visible_cells - 1)
+	var limit: float = get_viewport().get_visible_rect().size.x - 12.0
+	var stab_cell: Control = null
+	if resource_chips.has("stabilized_wyrd"):
+		stab_cell = (resource_chips["stabilized_wyrd"] as Label).get_parent().get_parent().get_parent() as Control
+	var stab_w := 0.0
+	if stab_cell != null:
+		stab_w = stab_cell.get_combined_minimum_size().x + 8.0
+		if not stab_cell.visible:
+			need += stab_w
+	if need <= limit:
+		if stab_cell != null:
+			stab_cell.visible = true
+		return
+	time_label.text = _clock_title()
+	phase_label.text = _phase_countdown_text()
+	clock_summary_tip = "\n%s\n%s" % [summary_title, summary_phase]
+	clock_cell.tooltip_text = "Day and time until the next phase" + clock_summary_tip
+	# Still too wide (raid chip + 4x at 1280): drop the Stabilized Wyrd chip
+	# while it reads 0; it returns as soon as there is any, or room.
+	var compact_w: float = 16.0 + 24.0 + 8.0 + maxf(84.0, maxf(_label_text_width(time_label, time_label.text), _label_text_width(phase_label, phase_label.text))) + 8.0
+	var compact_need: float = need - clock_w + compact_w
+	if stab_cell != null:
+		var stab_amount := int(simulation_host.simulation.central_inventory.get(Defs.RESOURCE_STABILIZED_WYRD, 0)) if simulation_host != null and simulation_host.simulation != null else 0
+		stab_cell.visible = not (compact_need > limit and stab_amount == 0)
+
+
+func _label_text_width(label: Label, text: String) -> float:
+	var font: Font = label.get_theme_font("font")
+	if font == null:
+		return 0.0
+	return font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, label.get_theme_font_size("font_size")).x
 
 
 func _tick_minimap(delta: float) -> void:
