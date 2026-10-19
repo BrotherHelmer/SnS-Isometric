@@ -271,7 +271,7 @@ func _build_terrain() -> void:
 	# WELDED smooth-shaded heightfield: shared grid vertices, smooth normals,
 	# continuous (not per-cell) colour functions so facets stop reading.
 	var size := 120.0; var steps := 230
-	var g1 := Color("27631d"); var g2 := Color("3f842c"); var dirt := Color("9c7f52"); var rock := Color("6e5638"); var snow := Color("f4f6f2") # R132 rock vertex deepened toward target (val .569 vs .463)
+	var g1 := Color("27631d"); var g2 := Color("3f842c"); var dirt := Color("918167"); var rock := Color("6e5638"); var snow := Color("f4f6f2") # R132 rock vertex deepened toward target (val .569 vs .463)
 	var n1 := steps + 1
 	var verts := PackedVector3Array(); var cols := PackedColorArray(); var uvs := PackedVector2Array(); var norms := PackedVector3Array()
 	verts.resize(n1*n1); cols.resize(n1*n1); uvs.resize(n1*n1); norms.resize(n1*n1)
@@ -284,7 +284,7 @@ func _build_terrain() -> void:
 			var n := 0.5 + 0.28*sin(v.x*1.31 + sin(v.y*1.73)*2.1) + 0.22*sin(v.x*3.7 - v.y*2.9)
 			var patch := 0.5 + 0.5*sin(v.x*0.31+2.0) * sin(v.y*0.27-1.1)
 			var c: Color = g1.lerp(g2, n).lerp(Color("69a83a"), patch * 0.42)
-			if patch > 0.70: c = c.lerp(Color("b08d55"), (patch-0.70) * 1.3)
+			if patch > 0.70: c = c.lerp(Color("a38f6f"), (patch-0.70) * 1.3)
 			if patch < 0.26: c = c.lerp(Color("7fae4a"), (0.26-patch) * 1.2)
 			var sunface := clampf(0.5 - ((_h(v.x+0.8, v.y)-_h(v.x-0.8, v.y)) * 0.9 + (_h(v.x, v.y+0.8)-_h(v.x, v.y-0.8)) * 0.6) * 0.5, 0.0, 1.0)
 			c = c.darkened(sunface * 0.16)
@@ -331,7 +331,7 @@ func _build_terrain() -> void:
 			if sz120 > 0.01:
 				var gully120 := 0.5 + 0.5 * sin(v.x*0.63 - v.y*0.91 + 1.4) * sin(v.x*0.21 + v.y*0.47 - 0.6)
 				var expose120 := 0.5 + 0.5 * sin(v.x*0.43 + v.y*0.78 - 1.1) * sin(v.x*1.13 - v.y*0.57 + 2.0)
-				if slope > 0.18: c = c.lerp(Color("8a6c42"), sz120 * clampf((slope - 0.18) * 1.25, 0.0, 0.80) * (0.35 + 0.65 * expose120)) # worn brown between grass and rock
+				if slope > 0.18: c = c.lerp(Color("7f6e57"), sz120 * clampf((slope - 0.18) * 1.25, 0.0, 0.80) * (0.35 + 0.65 * expose120)) # worn brown between grass and rock
 				if slope <= 0.42 and gully120 > 0.58: c = c.lerp(Color("5f8140"), sz120 * clampf((gully120 - 0.58) * 1.35, 0.0, 0.62)) # vegetation held in sheltered gullies
 				if h > 3.2 and slope <= 0.50 and expose120 > 0.68: c = c.lerp(Color("a89a80"), sz120 * clampf((expose120 - 0.68) * 0.90, 0.0, 0.30)) # pale scree wash below snow, not snow itself
 			var lum2 := (c.r + c.g + c.b) / 3.0 # R70 muted painted palette
@@ -357,7 +357,7 @@ func _build_terrain() -> void:
 func _setup() -> void:
 	get_viewport().screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED; get_viewport().msaa_3d = Viewport.MSAA_4X # R69 crisp
 	# round presets: 1 pipeline, 2 softer/yellower, 3 tuned toward target mean colour
-	var grass := Color("6fbf3f"); var grass2 := Color("8fd14f"); var stone := Color("b8b4a8"); var roof := Color("b06a4a"); var dirt := Color("c9a86a"); var leaf := Color("4e9b35"); var leaf2 := Color("77c04a"); var light_e := 1.0; var amb := 0.55
+	var grass := Color("6fbf3f"); var grass2 := Color("8fd14f"); var stone := Color("b8b4a8"); var roof := Color("b06a4a"); var dirt := Color("bca986"); var leaf := Color("4e9b35"); var leaf2 := Color("77c04a"); var light_e := 1.0; var amb := 0.55
 	if round_no == 2:
 		grass = Color("69bd45"); grass2 = Color("86cc58"); stone = Color("c4bda9"); roof = Color("a85f43"); leaf = Color("4fae38"); leaf2 = Color("7cc24e"); light_e = 1.05; amb = 0.45
 	if round_no >= 3:
@@ -394,20 +394,20 @@ func _setup() -> void:
 		var mid := (a+b)*0.5; var dir := b-a; var ang := atan2(dir.x, dir.y)
 		var w117 := rng117.randf_range(1.25, 1.55)
 		box(Vector3(mid.x,0.015,mid.y), Vector3(w117+1.18+rng117.randf_range(-0.15,0.25),0.025,dir.length()+1.5), Color("7fae4a") if i%2==0 else Color("6f9a42"), ang) # R118 outer fringe (grass transition, existing patch keys)
-		box(Vector3(mid.x,0.022,mid.y), Vector3(w117+0.60,0.03,dir.length()+1.35), Color("a8895a"), ang) # worn mid-step
+		box(Vector3(mid.x,0.022,mid.y), Vector3(w117+0.60,0.03,dir.length()+1.35), Color("9d8b71"), ang) # worn mid-step
 		box(Vector3(mid.x,0.038,mid.y), Vector3(w117,0.04,dir.length()+1.2), dirt, ang, 0,0, "dirt")
 		for fb118 in 2: # irregular fringe blobs breaking the ring line (seeded interval/side)
 			var ft118 := rng117.randf_range(0.15, 0.85); var fs118 := 1.0 if fb118==0 else -1.0
 			var fp118 := a.lerp(b, ft118)
-			blob(Vector3(fp118.x + cos(ang)*fs118*(w117*0.5+0.38), 0.028, fp118.y - sin(ang)*fs118*(w117*0.5+0.38)), Vector3(rng117.randf_range(0.4,0.62),0.035,rng117.randf_range(0.3,0.45)), Color("7fae4a") if (i+fb118)%2==0 else Color("a8895a"))
+			blob(Vector3(fp118.x + cos(ang)*fs118*(w117*0.5+0.38), 0.028, fp118.y - sin(ang)*fs118*(w117*0.5+0.38)), Vector3(rng117.randf_range(0.4,0.62),0.035,rng117.randf_range(0.3,0.45)), Color("7fae4a") if (i+fb118)%2==0 else Color("9d8b71"))
 		if rng117.randf() > 0.35: # cart ruts on most segments (existing worn key)
 			for r117 in [-0.34, 0.34]:
-				box(Vector3(mid.x + cos(ang)*r117, 0.046, mid.y - sin(ang)*r117), Vector3(0.15,0.045,dir.length()*0.92), Color("8a6c42"), ang)
+				box(Vector3(mid.x + cos(ang)*r117, 0.046, mid.y - sin(ang)*r117), Vector3(0.15,0.045,dir.length()*0.92), Color("7f6e57"), ang)
 		for cj117 in [0.33, 0.66]: # worn light centres
-			var cp117 := a.lerp(b, cj117); cyl(Vector3(cp117.x,0.045,cp117.y), 0.30,0.30,0.03, Color("d9ba7c"), 9)
+			var cp117 := a.lerp(b, cj117); cyl(Vector3(cp117.x,0.045,cp117.y), 0.30,0.30,0.03, Color("ccba98"), 9)
 	for pt in path_pts:
 		cyl(Vector3(pt.x,0.014,pt.y), 1.28,1.28,0.025, Color("7fae4a"), 10) # R118 junction fringe
-		cyl(Vector3(pt.x,0.024,pt.y), 0.98,0.98,0.03, Color("a8895a"), 10)
+		cyl(Vector3(pt.x,0.024,pt.y), 0.98,0.98,0.03, Color("9d8b71"), 10)
 		cyl(Vector3(pt.x,0.040,pt.y), 0.80,0.80,0.04, dirt, 10)
 	# LANDSCAPE: rolling plateau back, cliff rocks, distant hills, mist bands
 
@@ -427,7 +427,7 @@ func _setup() -> void:
 		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(ti9)*2.1,0.1)).scaled(Vector3(ts9*1.12,ts9*0.40,ts9*0.9)), Vector3(tx9, _h(tx9,tz9)+ts9*0.02, tz9)), Color("87704f") if ti9%3==0 else (Color("a89a80") if ti9%3==1 else Color("a89a80"))) # R74 sunk/flattened; tri_total += 128
 	for ei in 10:
 		var ex := -11.0+fmod(float(ei)*4.91,23.0); var ez := -6.0+fmod(float(ei)*5.37,17.0)
-		cyl(Vector3(ex,0.03,ez), 0.62,0.62,0.025, Color("9a7c4e") if ei%2==0 else Color("b08d55"), 8)
+		cyl(Vector3(ex,0.03,ez), 0.62,0.62,0.025, Color("9a7c4e") if ei%2==0 else Color("a38f6f"), 8)
 	for fi in 36:
 		var fx2 := -12.0+fmod(float(fi)*3.97,25.0); var fz := -9.0+fmod(float(fi)*4.53,20.0)
 		if Vector2(fx2,fz).length() < 11.0:
@@ -435,7 +435,7 @@ func _setup() -> void:
 	# branch paths connecting buildings
 	for seg in [[Vector2(5.4,-0.4),Vector2(7.2,-3.8)],[Vector2(-3.4,4.6),Vector2(-8.6,4.8)],[Vector2(5.4,-0.4),Vector2(6.2,4.2)],[Vector2(-1.5,-3.5),Vector2(-5.6,3.4)],[Vector2(-1,2),Vector2(-5,9.5)],[Vector2(6,3),Vector2(12.5,4.5)],[Vector2(-4,5),Vector2(-8,8)]]:
 		var a2: Vector2 = seg[0]; var b2: Vector2 = seg[1]; var mid2 := (a2+b2)*0.5; var dir2 := b2-a2
-		box(Vector3(mid2.x,0.028,mid2.y), Vector3(0.95,0.035,dir2.length()+0.8), Color("d6b878"), atan2(dir2.x,dir2.y), 0,0, "dirt")
+		box(Vector3(mid2.x,0.028,mid2.y), Vector3(0.95,0.035,dir2.length()+0.8), Color("c9b894"), atan2(dir2.x,dir2.y), 0,0, "dirt")
 	for li2 in 5:
 		var lx2 := 10.0+fmod(float(li2)*2.3,6.0); var lz2 := -8.0-fmod(float(li2)*1.1,4.0)
 		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(li2),0.1)).scaled(Vector3(1.25,0.42,1.0)), Vector3(lx2,_h(lx2,lz2)+0.08,lz2)), Color("8f7355"), "rock"); tri_total+=128 # R74 sunk/flattened
@@ -469,19 +469,19 @@ func _setup() -> void:
 				var wy: float = 0.032 + (_h(wp.x,wp.y) if Vector2(wp.x,wp.y).length() > 11.0 else 0.0)
 				var wr117 := 0.56 + 0.17 * (0.5 + 0.5 * sin(float(ws)*1.7 + float(wi2)*2.3)) # R117 worn width variation along branch
 				cyl(Vector3(wp.x, wy-0.013, wp.y), wr117+0.60, wr117+0.60, 0.022, Color("7fae4a") if wi2%2==0 else Color("6f9a42"), 9) # R118 outer fringe
-				cyl(Vector3(wp.x, wy-0.006, wp.y), wr117+0.30, wr117+0.30, 0.03, Color("a8895a"), 9) # worn mid-step
-				cyl(Vector3(wp.x, wy, wp.y), wr117, wr117, 0.035, Color("d9ba7c"), 9)
+				cyl(Vector3(wp.x, wy-0.006, wp.y), wr117+0.30, wr117+0.30, 0.03, Color("9d8b71"), 9) # worn mid-step
+				cyl(Vector3(wp.x, wy, wp.y), wr117, wr117, 0.035, Color("ccba98"), 9)
 				if ws % 2 == 0: # R69 stone edging (Black #3)
 					blob(Vector3(wp.x+wperp.x*0.68, wy+0.01, wp.y+wperp.y*0.68), Vector3(0.13,0.09,0.13), Color("9a968c"))
 					blob(Vector3(wp.x-wperp.x*0.68, wy+0.01, wp.y-wperp.y*0.68), Vector3(0.13,0.09,0.13), Color("9a968c"))
 	for bp9 in [Vector2(5.4,-0.4), Vector2(8.2,6.8), Vector2(-5.6,7.6), Vector2(10.2,-3.8), Vector2(-10.0,-3.5), Vector2(-10.5,5.5), Vector2(12.0,2.5), Vector2(12.8,14.2), Vector2(-7.0,12.0), Vector2(16.8,7.8), Vector2(-6.5,-10.0), Vector2(19.2,2.8)]:
 		var by9: float = _h(bp9.x,bp9.y) if bp9.length() > 11.0 else 0.0
-		_ground_patch(bp9.x, bp9.y, 1.65, int(700.0 + bp9.x*7.0), Color("a8895a"), Color("8a6c42")) # R76 worn yard
+		_ground_patch(bp9.x, bp9.y, 1.65, int(700.0 + bp9.x*7.0), Color("9d8b71"), Color("7f6e57")) # R76 worn yard
 		blob(Vector3(bp9.x, by9+0.045, bp9.y), Vector3(1.8,0.045,1.5), Color(0.10,0.16,0.05,0.42))
 		for wt in 4:
 			var wang: float = float(wt)*1.7 + float(bp9.x)
 			blob(Vector3(bp9.x+sin(wang)*1.55, by9+0.07, bp9.y+cos(wang)*1.25), Vector3(0.34,0.16,0.3), Color("5b963a"))
-	_ground_patch(-1.5, -3.5, 1.85, 777, Color("a8895a"), Color("8a6c42")) # R76 castle worn yard
+	_ground_patch(-1.5, -3.5, 1.85, 777, Color("9d8b71"), Color("7f6e57")) # R76 castle worn yard
 	blob(Vector3(-1.5,0.045,-3.5), Vector3(2.8,0.05,2.3), Color(0.10,0.16,0.05,0.42))
 	# castle centre-back
 	_build_castle(Vector3(-1.5,0,-3.5), stone, roof)
@@ -549,9 +549,9 @@ func _setup() -> void:
 		add_mesh(lm2, Transform3D(Basis.from_euler(Vector3(0,0,PI/2.0)), cp2+Vector3(0,1.28,0.12)), Color("8a5f36")); tri_total += 32
 	for wi in 18:
 		var wx := -14.0+fmod(float(wi)*3.13,28.0); var wz := -11.0+fmod(float(wi)*4.71,22.0)
-		cyl(Vector3(wx,0.025,wz), 0.85+fmod(float(wi)*0.21,0.7), 0.85+fmod(float(wi)*0.21,0.7), 0.02, Color("b89a68") if wi%2==0 else Color("a8895a"), 9)
+		cyl(Vector3(wx,0.025,wz), 0.85+fmod(float(wi)*0.21,0.7), 0.85+fmod(float(wi)*0.21,0.7), 0.02, Color("ad9c80") if wi%2==0 else Color("9d8b71"), 9)
 	for plot in [Vector3(-12,0,10.5), Vector3(8,0,10.8), Vector3(-14,0,-7.5)]:
-		box(plot+Vector3(0,0.05,0), Vector3(2.7,0.07,1.9), Color("8a6c42"), 0.2)
+		box(plot+Vector3(0,0.05,0), Vector3(2.7,0.07,1.9), Color("7f6e57"), 0.2)
 		for pr in 4: box(plot+Vector3(-0.95+float(pr)*0.62,0.13,0), Vector3(0.4,0.1,1.6), Color("5da038"), 0.2)
 	_detail_pass()
 	# commit merged meshes
@@ -576,7 +576,7 @@ func _worked_yard(p: Vector3, dir2: Vector2, seedv: int, slope: bool) -> void:
 	# R128 door-side worked yard: worn patch on the door side (R76/R118 language) + seeded prop set, existing keys only
 	var rng := RandomNumberGenerator.new(); rng.seed = seedv
 	var perp := Vector2(-dir2.y, dir2.x)
-	_ground_patch(p.x + dir2.x*1.7, p.z + dir2.y*1.7, rng.randf_range(1.3, 1.7), seedv + 7, Color("a8895a"), Color("8a6c42"))
+	_ground_patch(p.x + dir2.x*1.7, p.z + dir2.y*1.7, rng.randf_range(1.3, 1.7), seedv + 7, Color("9d8b71"), Color("7f6e57"))
 	var anchor := Vector2(p.x, p.z) + dir2 * 2.15
 	var pool := [0, 1, 2, 3, 4, 5]
 	var cnt := rng.randi_range(2, 4)
@@ -622,8 +622,8 @@ func _worn_link(a: Vector2, b: Vector2, seedv: int, strength := 0.8) -> void:
 		var pos := a.lerp(b, tt) + perp * sin(tt * 6.0 + float(seedv)) * 0.22
 		var wy: float = _h(pos.x, pos.y) if pos.length() > 11.0 else 0.0
 		var w := (0.50 + 0.22 * (0.5 + 0.5 * sin(float(s)*1.9 + float(seedv)*0.7))) * (1.3 + 0.5 * strength) # R129 widened: links must read at judge scale
-		cyl(Vector3(pos.x, wy + 0.024, pos.y), w + 0.45, w + 0.45, 0.022, Color("a8895a"), 9) # worn mid-step
-		if rng.randf() < strength: cyl(Vector3(pos.x, wy + 0.033, pos.y), w, w, 0.026, Color("d9ba7c"), 9) # worn centre, seeded gaps
+		cyl(Vector3(pos.x, wy + 0.024, pos.y), w + 0.45, w + 0.45, 0.022, Color("9d8b71"), 9) # worn mid-step
+		if rng.randf() < strength: cyl(Vector3(pos.x, wy + 0.033, pos.y), w, w, 0.026, Color("ccba98"), 9) # worn centre, seeded gaps
 		if s % 3 == 0: blob(Vector3(pos.x + perp.x*(w + 0.35), wy + 0.028, pos.y + perp.y*(w + 0.35)), Vector3(0.42, 0.03, 0.34), Color("7fae4a")) # fringe break
 func _detail_pass() -> void:
 	# R75 scene-wide richness: per-building unique detail + patch-scale terrain detail (all seated, merged)
@@ -669,7 +669,7 @@ func _detail_pass() -> void:
 		box(fmid+Vector3(0,0.68,0), Vector3(0.09,0.09,flen), Color("7a5a36"), atan2(fb.x-fa.x, fb.z-fa.z))
 		box(fmid+Vector3(0,0.34,0), Vector3(0.09,0.09,flen), Color("7a5a36"), atan2(fb.x-fa.x, fb.z-fa.z))
 	# terrain patch detail (40-90px faces: patch scale, flat on ground, no floating specks)
-	var patch_cols := [Color("6f9a42"), Color("4e7d26"), Color("a8895a"), Color("7fae4a"), Color("8a6c42")]
+	var patch_cols := [Color("6f9a42"), Color("4e7d26"), Color("9d8b71"), Color("7fae4a"), Color("7f6e57")]
 	for pi2 in 22:
 		var px2 := -17.0 + fmod(float(pi2)*5.83, 36.0); var pz2 := -12.0 + fmod(float(pi2)*4.37, 25.0)
 		if Vector2(px2, pz2).length() < 6.0: continue
@@ -678,7 +678,7 @@ func _detail_pass() -> void:
 		_ground_patch(px2, pz2, pr, 400 + pi2*13, patch_cols[pi2 % 5], patch_cols[(pi2+2) % 5])
 	# R97: worn/meadow patches on open centre grass (positions avoid buildings/paths; same keys as outer patches)
 	for cp97 in [[0.8, 4.6, 1.9], [-5.8, 1.2, 2.1], [5.8, -1.8, 1.7], [-8.2, -6.2, 2.0], [10.8, 8.2, 1.8], [-1.2, 9.8, 2.2], [13.5, 0.8, 1.6]]:
-		_ground_patch(cp97[0], cp97[1], cp97[2], int(600.0 + cp97[0]*9.0), patch_cols[int(cp97[0]) % 5 if cp97[0] >= 0.0 else 1], Color("a8895a"))
+		_ground_patch(cp97[0], cp97[1], cp97[2], int(600.0 + cp97[0]*9.0), patch_cols[int(cp97[0]) % 5 if cp97[0] >= 0.0 else 1], Color("9d8b71"))
 	for ri2 in 10: # scattered boulders with contact shadow discs
 		var rx2 := -15.0 + fmod(float(ri2)*6.31, 33.0); var rz2 := -11.0 + fmod(float(ri2)*5.17, 23.0)
 		var ry2: float = _h(rx2, rz2) if Vector2(rx2, rz2).length() > 11.0 else 0.0
@@ -701,10 +701,10 @@ func _detail_pass() -> void:
 		var hang128: float = [0.0, PI/2.0, PI, -PI/2.0][absi(int(hp128.x*7.0 + hp128.z*13.0)) % 4]
 		_worked_yard(hp128, Vector2(sin(hang128), cos(hang128)), 12850 + absi(int(hp128.x*31.0 + hp128.z*17.0)), false)
 	# R129 continuous worn ground: desire lines yard->path and building->building + heavier working centre
-	_ground_patch(3.5, 0.5, 2.6, 13001, Color("a8895a"), Color("8a6c42")) # centre working area (heavier)
-	_ground_patch(7.0, 3.5, 2.2, 13002, Color("a8895a"), Color("8a6c42"))
-	_ground_patch(-2.0, 4.5, 1.9, 13003, Color("a8895a"), Color("8a6c42")) # west-centre worn
-	_ground_patch(10.5, 2.0, 1.8, 13004, Color("a8895a"), Color("8a6c42")) # east-centre worn
+	_ground_patch(3.5, 0.5, 2.6, 13001, Color("9d8b71"), Color("7f6e57")) # centre working area (heavier)
+	_ground_patch(7.0, 3.5, 2.2, 13002, Color("9d8b71"), Color("7f6e57"))
+	_ground_patch(-2.0, 4.5, 1.9, 13003, Color("9d8b71"), Color("7f6e57")) # west-centre worn
+	_ground_patch(10.5, 2.0, 1.8, 13004, Color("9d8b71"), Color("7f6e57")) # east-centre worn
 	_worn_link(Vector2(5.4, 1.8), Vector2(2.2, 2.2), 13101, 0.9) # octstore yard -> main path
 	_worn_link(Vector2(10.2, -1.6), Vector2(5.4, 1.8), 13102, 0.85) # roundhouse -> octstore (centre-east)
 	_worn_link(Vector2(8.2, 9.0), Vector2(12.0, 4.7), 13103, 0.8) # hut -> roundhouse
@@ -836,11 +836,11 @@ func _hill_content() -> void:
 	var sw := [Vector2(2,-4.5), Vector2(6,-5.2), Vector2(5.2,-6.8), Vector2(8.6,-7.6), Vector2(11.5,-9.3), Vector2(13.8,-11.0)] # R70 stone road to mine
 	for si in sw.size()-1:
 		var a3: Vector2 = sw[si]; var b3: Vector2 = sw[si+1]; var mid3 := (a3+b3)*0.5; var dir3 := b3-a3
-		box(Vector3(mid3.x, _h(mid3.x,mid3.y)+0.06, mid3.y), Vector3(1.15,0.07,dir3.length()+0.7), Color("c9ab72"), atan2(dir3.x,dir3.y), 0,0, "dirt")
+		box(Vector3(mid3.x, _h(mid3.x,mid3.y)+0.06, mid3.y), Vector3(1.15,0.07,dir3.length()+0.7), Color("bdac8c"), atan2(dir3.x,dir3.y), 0,0, "dirt")
 	for ti in 6:
 		var tx2 := 4.2+float(ti)*2.0; var tz2 := -6.2-float(ti)*0.6
 		var ty2 := _h(tx2,tz2)+0.05
-		_terrace(tx2, tz2, 4.4, 1.5, Color("86b83e") if ti%2==0 else Color("b08d55"), "dirt" if ti%2==1 else "")
+		_terrace(tx2, tz2, 4.4, 1.5, Color("86b83e") if ti%2==0 else Color("a38f6f"), "dirt" if ti%2==1 else "")
 		for cr in 5: box(Vector3(tx2-1.5+float(cr)*0.75, _h(tx2-1.5+float(cr)*0.75, tz2)+0.16, tz2), Vector3(0.5,0.09,1.25), Color("3f7020") if ti%2==0 else Color("96683c"), 0.15)
 	for stp in [Vector3(8,0,-9.5), Vector3(16.5,0,-12.5), Vector3(22,0,-11), Vector3(15,0,-13.5)]:
 		_build_tree(stp, Color("79c24d"), Color("a9dd77"))
@@ -852,7 +852,7 @@ func _hill_props() -> void:
 func _hill_fields() -> void:
 	for fi2 in 2:
 		var fx5 := 3.4+float(fi2)*3.4; var fz5 := -5.6-float(fi2)*0.4; var fy5 := _h(fx5,fz5)+0.05
-		_terrace(fx5, fz5, 4.6, 1.7, Color("86b83e") if fi2%2==0 else Color("b08d55"), "" if fi2%2==0 else "dirt")
+		_terrace(fx5, fz5, 4.6, 1.7, Color("86b83e") if fi2%2==0 else Color("a38f6f"), "" if fi2%2==0 else "dirt")
 		for cr2 in 5: box(Vector3(fx5-1.6+float(cr2)*0.8, _h(fx5-1.6+float(cr2)*0.8, fz5)+0.16, fz5), Vector3(0.5,0.09,1.45), Color("3f7020") if fi2%2==0 else Color("96683c"), 0.12)
 		for fp4 in 4: box(Vector3(fx5-2.1+float(fp4)*1.4, _h(fx5-2.1+float(fp4)*1.4, fz5+0.95)+0.35, fz5+0.95), Vector3(0.09,0.7,0.09), Color("6b4a2c"))
 	for fi3 in 6:
@@ -868,7 +868,7 @@ func _hill_fields() -> void:
 	_build_tree(Vector3(6.5,0,-10.5), Color("79c24d"), Color("a9dd77")); _build_tree(Vector3(23,0,-5.0), Color("79c24d"), Color("a9dd77"))
 func _summit() -> void:
 	var base := Vector3(9.0, _h(9.0,-8.8), -8.8)
-	cyl(base+Vector3(0,0.05,0), 2.8,2.8,0.07, Color("c9ab72"), 14, "dirt")
+	cyl(base+Vector3(0,0.05,0), 2.8,2.8,0.07, Color("bdac8c"), 14, "dirt")
 	cyl(base+Vector3(0,0.09,0), 1.5,1.5,0.08, Color("9a958a"), 12)
 	for ri4 in 7:
 		var ra := float(ri4) * TAU / 7.0
@@ -885,7 +885,7 @@ func _summit() -> void:
 	var up := [Vector2(11.5,-7.6), Vector2(10.4,-8.2), Vector2(9.6,-8.6), Vector2(9.0,-8.8)]
 	for ui in up.size()-1:
 		var a4: Vector2 = up[ui]; var b4: Vector2 = up[ui+1]; var mid4 := (a4+b4)*0.5; var dir4 := b4-a4
-		box(Vector3(mid4.x, _h(mid4.x,mid4.y)+0.06, mid4.y), Vector3(1.05,0.07,dir4.length()+0.6), Color("c9ab72"), atan2(dir4.x,dir4.y), 0,0, "dirt")
+		box(Vector3(mid4.x, _h(mid4.x,mid4.y)+0.06, mid4.y), Vector3(1.05,0.07,dir4.length()+0.6), Color("bdac8c"), atan2(dir4.x,dir4.y), 0,0, "dirt")
 	for tp4 in [Vector3(7.5,0,-16), Vector3(20.5,0,-15), Vector3(17,0,-16.5), Vector3(24,0,-12.5)]:
 		_build_tree(tp4, Color("79c24d"), Color("a9dd77"))
 	for rf in 3:
@@ -899,7 +899,7 @@ func _upper_fill() -> void:
 	for mf in 4:
 		var mx := 7.0+float(mf)*3.6; var mz := -10.8 - float(mf%2)*1.6; var my := _h(mx,mz)+0.05
 		if Vector2(mx,mz).distance_to(Vector2(14.5,-11.5)) < 4.5: continue # R75: calm near mine
-		_terrace(mx, mz, 4.2, 1.5, Color("86b83e") if mf%2==0 else Color("b08d55"), "")
+		_terrace(mx, mz, 4.2, 1.5, Color("86b83e") if mf%2==0 else Color("a38f6f"), "")
 		for cr4 in 4: box(Vector3(mx-1.4+float(cr4)*0.9, _h(mx-1.4+float(cr4)*0.9, mz)+0.16, mz), Vector3(0.5,0.09,1.3), Color("4e7d26") if mf%2==0 else Color("96683c"), 0.18)
 	for tp5 in [Vector3(8.5,0,-12), Vector3(13,0,-11), Vector3(24,0,-12), Vector3(11.5,0,-14.5), Vector3(22,0,-9)]:
 		_build_tree(tp5, Color("79c24d"), Color("a9dd77"))
@@ -907,7 +907,7 @@ func _upper_fill() -> void:
 	var net := [Vector2(10.5,-8.5), Vector2(12.5,-9.8), Vector2(14.2,-8.2), Vector2(15.0,-11.0), Vector2(19.0,-11.6)]
 	for ni in net.size()-1:
 		var a5: Vector2 = net[ni]; var b5: Vector2 = net[ni+1]; var mid5 := (a5+b5)*0.5; var dir5 := b5-a5
-		box(Vector3(mid5.x, _h(mid5.x,mid5.y)+0.06, mid5.y), Vector3(1.0,0.07,dir5.length()+0.6), Color("c9ab72"), atan2(dir5.x,dir5.y), 0,0, "dirt")
+		box(Vector3(mid5.x, _h(mid5.x,mid5.y)+0.06, mid5.y), Vector3(1.0,0.07,dir5.length()+0.6), Color("bdac8c"), atan2(dir5.x,dir5.y), 0,0, "dirt")
 	for fp5 in 5:
 		var fx7 := 8.0+float(fp5)*2.6; var fz7 := -10.2-fmod(float(fp5)*0.7,1.8)
 		box(Vector3(fx7, _h(fx7,fz7)+0.4, fz7), Vector3(0.09,0.8,0.09), Color("6b4a2c"))
@@ -917,24 +917,24 @@ func _fill_more() -> void:
 	for cf in 3:
 		var cx6 := 8.5+float(cf)*5.0; var cz6 := -12.8-float(cf)*0.5
 		if Vector2(cx6,cz6).distance_to(Vector2(14.5,-11.5)) < 4.5: continue # R75
-		_terrace(cx6, cz6, 5.6, 1.8, Color("b08d55") if cf%2==0 else Color("86b83e"), "")
+		_terrace(cx6, cz6, 5.6, 1.8, Color("a38f6f") if cf%2==0 else Color("86b83e"), "")
 		for oc in 3: blob(Vector3(cx6-1.6+float(oc)*1.5, _h(cx6-1.6+float(oc)*1.5,cz6+0.6)+0.2, cz6+0.6), Vector3(0.5,0.35,0.5), Color("a89a80"))
 	for cf2 in 3:
 		var cx7 := 7.5+float(cf2)*5.2; var cz7 := -9.9-float(cf2)*0.3
 		if Vector2(cx7,cz7).distance_to(Vector2(14.5,-11.5)) < 4.5: continue # R75
-		_terrace(cx7, cz7, 5.8, 1.7, Color("86b83e") if cf2%2==0 else Color("b08d55"), "")
+		_terrace(cx7, cz7, 5.8, 1.7, Color("86b83e") if cf2%2==0 else Color("a38f6f"), "")
 		for cr6 in 5: box(Vector3(cx7-1.9+float(cr6)*0.95, _h(cx7-1.9+float(cr6)*0.95, cz7)+0.16, cz7), Vector3(0.55,0.09,1.5), Color("3f7020") if cf2%2==0 else Color("96683c"), 0.12)
 	for tp7 in [Vector3(6.5,0,-10.5), Vector3(17.5,0,-10.2), Vector3(5.5,0,-12.8), Vector3(21.5,0,-14.5)]:
 		_build_tree(tp7, Color("79c24d"), Color("a9dd77"))
 	for cf3 in 2:
 		var cx8 := 5.5+float(cf3)*7.5; var cz8 := -11.6
 		if Vector2(cx8,cz8).distance_to(Vector2(14.5,-11.5)) < 4.5: continue # R75
-		_terrace(cx8, cz8, 5.4, 1.6, Color("b08d55") if cf3%2==0 else Color("86b83e"), "")
+		_terrace(cx8, cz8, 5.4, 1.6, Color("a38f6f") if cf3%2==0 else Color("86b83e"), "")
 		for fp6 in 4: box(Vector3(cx8-2.2+float(fp6)*1.45, _h(cx8-2.2+float(fp6)*1.45, cz8+0.9)+0.38, cz8+0.9), Vector3(0.09,0.75,0.09), Color("6b4a2c"))
 	# lower-left farm: fields + trees + fence (fills reframed meadow)
 	for lf in 2:
 		var lx6 := -13.5+float(lf)*0.4; var lz6 := 8.5+float(lf)*2.2
-		_terrace(lx6, lz6, 5.2, 2.0, Color("86b83e") if lf%2==0 else Color("b08d55"), "")
+		_terrace(lx6, lz6, 5.2, 2.0, Color("86b83e") if lf%2==0 else Color("a38f6f"), "")
 		for cr5 in 5: box(Vector3(lx6-1.9+float(cr5)*0.95, 0.14, lz6), Vector3(0.55,0.09,1.7), Color("3f7020") if lf%2==0 else Color("96683c"), 0.3)
 	_build_tree(Vector3(-15.5,0,4.5), Color("79c24d"), Color("a9dd77")); _build_tree(Vector3(-11,0,12), Color("79c24d"), Color("a9dd77"))
 func _snow_patch(cx: float, cz: float, r: float, seedv: int, c: Color) -> void:
@@ -1114,7 +1114,7 @@ func _top_band() -> void:
 	# worked terraces on the east mass face
 	for tfi in 7:
 		var tfx: float = [16.5, 17.5, 18.0, 16.0, 18.5, 15.5, 19.0][tfi]; var tfz: float = [-3.0, -7.0, -10.5, -1.5, -11.0, -6.0, -4.0][tfi]; var tfy := _h(tfx,tfz)+0.06
-		_terrace(tfx, tfz, 3.6, 1.35, Color("86b83e") if tfi%2==0 else Color("b08d55"), "dirt" if tfi%2==1 else "")
+		_terrace(tfx, tfz, 3.6, 1.35, Color("86b83e") if tfi%2==0 else Color("a38f6f"), "dirt" if tfi%2==1 else "")
 		for cr2 in 4: box(Vector3(tfx-1.2+float(cr2)*0.8, _h(tfx-1.2+float(cr2)*0.8, tfz)+0.15, tfz), Vector3(0.45,0.08,1.1), Color("3f7020") if tfi%2==0 else Color("96683c"), 0.15)
 	for etp in [Vector3(20.5,0,-5.5), Vector3(22.5,0,-9.5)]:
 		_build_tree(etp, Color("79c24d"), Color("a9dd77"))
@@ -1200,7 +1200,7 @@ func _top_band() -> void:
 		var ssy: float = (_h(ssa.x,ssa.y) + _h(ssb.x,ssb.y))*0.5 + 0.22
 		var ssperp := Vector2(-ssdir.normalized().y, ssdir.normalized().x)
 		if ssperp.y < 0.0: ssperp = -ssperp
-		box(Vector3(ssmid.x, ssy, ssmid.y), Vector3(1.9,0.22,ssdir.length()+0.7), Color("b99a68"), atan2(ssdir.x, ssdir.y), 0, 0, "dirt")
+		box(Vector3(ssmid.x, ssy, ssmid.y), Vector3(1.9,0.22,ssdir.length()+0.7), Color("ad9c80"), atan2(ssdir.x, ssdir.y), 0, 0, "dirt")
 		box(Vector3(ssmid.x+ssperp.x*0.95, ssy-0.28, ssmid.y+ssperp.y*0.95), Vector3(0.32,0.55,ssdir.length()+0.6), Color("8f7355"), atan2(ssdir.x, ssdir.y), 0, 0, "rock")
 	for smw in [[Vector3(22.0,0,2.0), Color("d43a2a")], [Vector3(24.0,0,-3.0), Color("2f62b8")]]:
 		var smp: Vector3 = smw[0]; smp.y = _h(smp.x, smp.z) + 0.25; _mini(smp, smw[1])
@@ -1216,7 +1216,7 @@ func _top_band() -> void:
 	# wall-foot blend: climbing fields + base trees between village and wall
 	for bfi in 3:
 		var bfx: float = [15.0, 16.0, 14.0][bfi]; var bfz: float = [-1.0, 2.0, 4.0][bfi]; var bfy := _h(bfx,bfz)+0.06
-		_terrace(bfx, bfz, 3.4, 1.3, Color("86b83e") if bfi%2==0 else Color("b08d55"), "dirt" if bfi%2==1 else "")
+		_terrace(bfx, bfz, 3.4, 1.3, Color("86b83e") if bfi%2==0 else Color("a38f6f"), "dirt" if bfi%2==1 else "")
 		for bcr in 4: box(Vector3(bfx-1.15+float(bcr)*0.75, _h(bfx-1.15+float(bcr)*0.75, bfz)+0.15, bfz), Vector3(0.42,0.08,1.05), Color("3f7020") if bfi%2==0 else Color("96683c"), 0.18)
 	for btp in [Vector3(16.5,0,-3.5), Vector3(18.0,0,0.5)]:
 		_build_tree(btp, Color("79c24d"), Color("a9dd77"))
@@ -1226,7 +1226,7 @@ func _top_band() -> void:
 		var sa: Vector2 = swp[swi]; var sb: Vector2 = swp[swi+1]; var smid := (sa+sb)*0.5; var sdir := sb-sa
 		var sy: float = (_h(sa.x,sa.y) + _h(sb.x,sb.y))*0.5 + 0.22
 		var sang := atan2(sdir.x, sdir.y)
-		box(Vector3(smid.x, sy, smid.y), Vector3(1.9,0.22,sdir.length()+0.7), Color("b99a68"), sang, 0, 0, "dirt")
+		box(Vector3(smid.x, sy, smid.y), Vector3(1.9,0.22,sdir.length()+0.7), Color("ad9c80"), sang, 0, 0, "dirt")
 		var sperp2 := Vector2(-sdir.normalized().y, sdir.normalized().x)
 		box(Vector3(smid.x+sperp2.x*0.95, sy-0.28, smid.y+sperp2.y*0.95), Vector3(0.32,0.55,sdir.length()+0.6), Color("8f7355"), sang, 0, 0, "rock")
 		blob(Vector3(sa.x, _h(sa.x,sa.y)+0.3, sa.y), Vector3(0.2,0.13,0.17), Color("9a968c")); blob(Vector3(sb.x, _h(sb.x,sb.y)+0.3, sb.y), Vector3(0.2,0.13,0.17), Color("9a968c"))
@@ -1238,7 +1238,7 @@ func _top_band() -> void:
 	add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.5,2.8,-0.3)).scaled(Vector3(1.5,0.85,1.25)), Vector3(28, _h(28,-4)+0.2, -4)), Color("8f7355"), "rock"); tri_total += 128
 	for cf4 in 2:
 		var cx9 := 6.5+float(cf4)*7.0; var cz9 := -13.6
-		_terrace(cx9, cz9, 5.2, 1.6, Color("86b83e") if cf4%2==0 else Color("b08d55"), "")
+		_terrace(cx9, cz9, 5.2, 1.6, Color("86b83e") if cf4%2==0 else Color("a38f6f"), "")
 	_slope_zones() # R120: scree/exposure/grass/snow-approach/mine-apron zones seated over this slope content
 func _slope_zones() -> void:
 	# R120 slope surface zones (all seated on _h, merged into existing keys, no building/tree moves)
@@ -1265,13 +1265,13 @@ func _slope_zones() -> void:
 		_slope_fan(tf120.x, tf120.y, tf120.z * 0.55, int(12950.0 + tf120.x * 43.0), Color("9a8a76"), 1.60, 0.026, false)
 	_slope_fan(13.4, -4.6, 1.20, 12980, Color("7fae4a"), 2.05, 0.010, false) # grass tongue on the open face
 	# Worn mine apron downhill of the entrance/cart, tying mine to the stone road.
-	_slope_fan(14.3, -10.1, 2.05, 12801, Color("8a6c42"), 1.75, 0.014, true)
-	_slope_fan(14.3, -10.1, 1.15, 12802, Color("a8895a"), 1.60, 0.030, false)
+	_slope_fan(14.3, -10.1, 2.05, 12801, Color("7f6e57"), 1.75, 0.014, true)
+	_slope_fan(14.3, -10.1, 1.15, 12802, Color("9d8b71"), 1.60, 0.030, false)
 func _aprons() -> void:
 	for ap2 in [Vector3(10.5,_h(10.5,-8.5),-8.5), Vector3(14.2,_h(14.2,-6.9),-6.9), Vector3(19.0,_h(19.0,-13.8),-13.8)]:
-		blob(ap2+Vector3(0,0.03,0), Vector3(3.1,0.055,2.5), Color("8a6c42"))
-		blob(ap2+Vector3(1.3,0.035,0.7), Vector3(2.0,0.05,1.6), Color("a8895a"))
-		blob(ap2+Vector3(-1.5,0.03,-0.6), Vector3(1.8,0.05,1.5), Color("8a6c42"))
+		blob(ap2+Vector3(0,0.03,0), Vector3(3.1,0.055,2.5), Color("7f6e57"))
+		blob(ap2+Vector3(1.3,0.035,0.7), Vector3(2.0,0.05,1.6), Color("9d8b71"))
+		blob(ap2+Vector3(-1.5,0.03,-0.6), Vector3(1.8,0.05,1.5), Color("7f6e57"))
 		blob(ap2+Vector3(2.3,0.025, -0.9), Vector3(1.3,0.045,1.1), Color("7fae4a"))
 		blob(ap2+Vector3(-2.4,0.025,1.0), Vector3(1.2,0.045,1.0), Color("7fae4a"))
 		for sti in 6:
@@ -1282,7 +1282,7 @@ func _aprons() -> void:
 		for lbi in 7:
 			var lang: float = float(lbi)*0.91 + float(ap2.x)
 			var loff := Vector3(sin(lang)*3.15, 0.022, cos(lang*1.3)*2.45)
-			blob(ap2+loff, Vector3(1.05,0.04,0.85), Color("7fae4a") if lbi%2==0 else Color("a8895a"))
+			blob(ap2+loff, Vector3(1.05,0.04,0.85), Color("7fae4a") if lbi%2==0 else Color("9d8b71"))
 func _props2() -> void:
 	# log piles
 	for lp in [Vector3(-6.8,0,7.6), Vector3(8.8,0,6.2), Vector3(1.2,0,7.8)]:
@@ -1352,7 +1352,7 @@ func _mini(mp: Vector3, tc: Color) -> void:
 	box(mp+Vector3(-0.11,0.27,0), Vector3(0.16,0.54,0.18), Color("4a3421")); box(mp+Vector3(0.11,0.27,0), Vector3(0.16,0.54,0.18), Color("4a3421"))
 	box(mp+Vector3(0,0.76,0), Vector3(0.50,0.50,0.30), tc)
 	blob(mp+Vector3(0,1.24,0), Vector3(0.21,0.22,0.21), Color("e8b88a"))
-	cyl(mp+Vector3(0,1.41,0), 0.29,0.31,0.08, Color("c9a86a"), 8)
+	cyl(mp+Vector3(0,1.41,0), 0.29,0.31,0.08, Color("bca986"), 8)
 	box(mp+Vector3(0.36,0.80,0.10), Vector3(0.09,0.62,0.09), Color("6b4a2c"), 0, 0.5, 0)
 	var g119 := absi(int(mp.x*7.0 + mp.z*13.0)) % 3 # R119 seeded carried goods (existing keys)
 	if g119 == 0: blob(mp+Vector3(-0.36,0.74,0.05), Vector3(0.20,0.25,0.20), Color("c9b18a"))
