@@ -349,12 +349,12 @@ func _setup() -> void:
 					blob(Vector3(wp.x-wperp.x*0.68, wy+0.01, wp.y-wperp.y*0.68), Vector3(0.13,0.09,0.13), Color("9a968c"))
 	for bp9 in [Vector2(3.2,-1.2), Vector2(7.5,5.5), Vector2(-4.5,6.0), Vector2(9.0,-4.5), Vector2(-10.0,-3.5), Vector2(-10.5,5.5), Vector2(12.0,2.5), Vector2(14.0,12.5), Vector2(-7.0,12.0), Vector2(15.0,5.5), Vector2(-6.5,-10.0), Vector2(17.5,1.0)]:
 		var by9: float = _h(bp9.x,bp9.y) if bp9.length() > 11.0 else 0.0
-		blob(Vector3(bp9.x, by9+0.03, bp9.y), Vector3(2.35,0.05,1.95), Color("a8895a"))
+		_ground_patch(bp9.x, bp9.y, 1.65, int(700.0 + bp9.x*7.0), Color("a8895a"), Color("8a6c42")) # R76 worn yard
 		blob(Vector3(bp9.x, by9+0.045, bp9.y), Vector3(1.8,0.045,1.5), Color(0.10,0.16,0.05,0.42))
 		for wt in 4:
 			var wang: float = float(wt)*1.7 + float(bp9.x)
 			blob(Vector3(bp9.x+sin(wang)*1.55, by9+0.07, bp9.y+cos(wang)*1.25), Vector3(0.34,0.16,0.3), Color("5b963a"))
-	blob(Vector3(-1.5,0.03,-3.5), Vector3(3.5,0.055,2.9), Color("a8895a"))
+	_ground_patch(-1.5, -3.5, 2.35, 777, Color("a8895a"), Color("8a6c42")) # R76 castle worn yard
 	blob(Vector3(-1.5,0.045,-3.5), Vector3(2.8,0.05,2.3), Color(0.10,0.16,0.05,0.42))
 	# castle centre-back
 	_build_castle(Vector3(-1.5,0,-3.5), stone, roof)
@@ -475,7 +475,7 @@ func _detail_pass() -> void:
 		if Vector2(px2, pz2).length() < 6.0: continue
 		var py2: float = _h(px2, pz2) if Vector2(px2, pz2).length() > 11.0 else 0.0
 		var pr := 1.9 + fmod(float(pi2)*0.71, 1.8)
-		blob(Vector3(px2, py2+0.025, pz2), Vector3(pr, 0.05, pr*0.78), patch_cols[pi2 % 5])
+		_ground_patch(px2, pz2, pr, 400 + pi2*13, patch_cols[pi2 % 5], patch_cols[(pi2+2) % 5])
 	for ri2 in 10: # scattered boulders with contact shadow discs
 		var rx2 := -15.0 + fmod(float(ri2)*6.31, 33.0); var rz2 := -11.0 + fmod(float(ri2)*5.17, 23.0)
 		var ry2: float = _h(rx2, rz2) if Vector2(rx2, rz2).length() > 11.0 else 0.0
@@ -722,6 +722,36 @@ func _snow_patch(cx: float, cz: float, r: float, seedv: int, c: Color) -> void:
 		var fn := (p1-c0).cross(p2-c0).normalized(); if fn.y < 0.0: fn = -fn
 		for v in [c0, p1, p2]: st.set_normal(fn); st.set_uv(Vector2(0.5,0.5)); st.add_vertex(v)
 	add_mesh(st.commit(), Transform3D.IDENTITY, c); tri_total += n
+func _ground_patch(cx: float, cz: float, r: float, seedv: int, cbase: Color, csub: Color) -> void:
+	# R76: worked-earth patch - jagged fan outline seated per-vertex on _h, internal variation at frame scale
+	var rng := RandomNumberGenerator.new(); rng.seed = seedv
+	var ang0 := rng.randf() * TAU
+	var dir := Vector2(cos(ang0), sin(ang0)); var perp := Vector2(-dir.y, dir.x)
+	var layers := [[r, cbase, Vector2.ZERO], [r*0.58, cbase.darkened(0.28), dir*r*0.10], [r*0.42, csub.lightened(0.10), perp*r*0.34 + dir*r*0.12]]
+	for li in layers.size():
+		var lr: float = layers[li][0]; var lc: Color = layers[li][1]; var off: Vector2 = layers[li][2]
+		var ccx := cx + off.x; var ccz := cz + off.y
+		var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		var n := 11; var pts: Array = []
+		for i in n:
+			var a := TAU * float(i) / float(n)
+			var rr := lr * rng.randf_range(0.45, 1.25)
+			var dd := Vector2(cos(a), sin(a))
+			var ex := ccx + dd.x * rr * (1.0 + 0.35*absf(dd.dot(dir))); var ez := ccz + dd.y * rr * (1.0 + 0.35*absf(dd.dot(dir)))
+			pts.append(Vector3(ex, _h(ex, ez) + 0.030 + float(li)*0.006, ez))
+		var c0 := Vector3(ccx, _h(ccx, ccz) + 0.034 + float(li)*0.006, ccz)
+		for i in n:
+			var p1: Vector3 = pts[i]; var p2: Vector3 = pts[(i+1) % n]
+			var fn := (p1-c0).cross(p2-c0).normalized(); if fn.y < 0.0: fn = -fn
+			for v in [c0, p1, p2]: st.set_normal(fn); st.set_uv(Vector2(0.5,0.5)); st.add_vertex(v)
+		add_mesh(st.commit(), Transform3D.IDENTITY, lc); tri_total += n
+	for fi in 3: # furrow/wear strips following patch direction (thin seated boxes, not specks)
+		var foff := perp * (float(fi-1) * r * 0.38)
+		var fx := cx + foff.x; var fz := cz + foff.y
+		box(Vector3(fx, _h(fx, fz) + 0.048, fz), Vector3(0.14, 0.03, r*1.45), cbase.darkened(0.38), ang0)
+	for si in 2: # small seated stones/clumps inside patch
+		var soff := dir * rng.randf_range(-r*0.5, r*0.5) + perp * rng.randf_range(-r*0.4, r*0.4)
+		blob(Vector3(cx+soff.x, _h(cx+soff.x, cz+soff.y) + 0.05, cz+soff.y), Vector3(0.20, 0.10, 0.18), Color("8f7355"))
 func _top_band() -> void:
 	for tp8 in [Vector3(10,0,-16), Vector3(18,0,-16), Vector3(8,0,-11.8)]:
 		_build_tree(tp8, Color("79c24d"), Color("a9dd77"))
