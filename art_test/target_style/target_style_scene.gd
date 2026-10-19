@@ -174,6 +174,49 @@ func canopy_sphere() -> ArrayMesh:
 		var n := (b-a).cross(c2-a).normalized()
 		for vtx in [a,b,c2]: st.set_normal(n); st.set_uv(Vector2(vtx.x*0.7+0.5, vtx.y*0.7+0.5)); st.add_vertex(vtx)
 	_canopy_sphere = st.commit(); return _canopy_sphere
+var _canopy_sphere_low: ArrayMesh = null
+func canopy_sphere_low() -> ArrayMesh: # R125 distant crown: 8x4 segments (vs 13x7 near), same scalloped lobes
+	if _canopy_sphere_low != null: return _canopy_sphere_low
+	var sm := SphereMesh.new(); sm.radial_segments = 8; sm.rings = 4; sm.radius = 1.0; sm.height = 2.0
+	var arrays: Array = sm.get_mesh_arrays(); var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]; var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var disp2 := {}
+	for dvi in verts.size():
+		var dv := verts[dvi]; var dk := str(dv)
+		if not disp2.has(dk):
+			var dn := dv.normalized()
+			var scp := sin(dn.x*16.0+dn.y*9.0) * sin(dn.y*14.0-dn.z*12.0) * sin(dn.z*18.0+dn.x*7.0)
+			var ds := 1.0 + 0.34*sin(dn.x*5.1+dn.y*3.3) + 0.26*sin(dn.y*7.2+dn.z*4.4) + 0.19*sin(dn.z*9.0-dn.x*5.0) + 0.13*sin(dn.x*13.7-dn.y*11.3) + scp*0.17
+			disp2[dk] = dv * ds
+		verts[dvi] = disp2[dk]
+	var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	if idx.size() == 0:
+		for i in range(0, verts.size()-2, 3): idx.append_array([i, i+1, i+2])
+	for f in range(0, idx.size(), 3):
+		var a: Vector3 = verts[idx[f]]; var b: Vector3 = verts[idx[f+1]]; var c2: Vector3 = verts[idx[f+2]]
+		var n := (b-a).cross(c2-a).normalized()
+		for vtx in [a,b,c2]: st.set_normal(n); st.set_uv(Vector2(vtx.x*0.7+0.5, vtx.y*0.7+0.5)); st.add_vertex(vtx)
+	_canopy_sphere_low = st.commit(); return _canopy_sphere_low
+func add_canopy_low(xf: Transform3D, c: Color) -> void: # R125: add_canopy's R114 cluster-tone law on the low mesh (merged into same canopy mesh)
+	if canopy_st == null: canopy_st = SurfaceTool.new(); canopy_st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var arrays: Array = canopy_sphere_low().surface_get_arrays(0)
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]; var uvs: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
+	var seedv := xf.origin.x * 12.9898 + xf.origin.z * 78.233
+	for f in range(0, verts.size() - 2, 3):
+		var tv := [xf * verts[f], xf * verts[f+1], xf * verts[f+2]]
+		var fn: Vector3 = (tv[1]-tv[0]).cross(tv[2]-tv[0]).normalized()
+		var vary: float = 0.84 + 0.12 * floor((0.5 + 0.5 * sin(seedv + float(f) * 2.39)) * 3.99)
+		var cc := Color(clampf(c.r*vary,0,1), clampf(c.g*vary,0,1), clampf(c.b*vary,0,1))
+		if fn.y > 0.45: cc = cc.lightened(0.22)
+		if fn.y < 0.1: cc = cc.darkened(0.16)
+		var clus := sin(seedv*0.7 + float(f) * 1.37)
+		if clus > 0.45: cc = cc.darkened(0.10)
+		elif clus < -0.55: cc = cc.lightened(0.18)
+		var sunf := clampf(fn.dot(Vector3(-0.45, 0.75, 0.50)) * 0.5 + 0.5, 0.0, 1.0)
+		cc = Color(clampf(cc.r*(0.90+0.28*sunf),0,1), clampf(cc.g*(0.95+0.12*sunf),0,1), clampf(cc.b*(1.06-0.26*sunf),0,1))
+		cc = Color(clampf(cc.r*2.1,0.0,1.1), clampf(cc.g*2.0,0.0,1.1), clampf(cc.b*2.1,0.0,1.1))
+		for j in 3:
+			canopy_st.set_normal(fn); canopy_st.set_color(cc); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j])
+	tri_total += 48
 var canopy_st: SurfaceTool = null
 var card_st: SurfaceTool = null
 func add_foliage_card(xf: Transform3D, c: Color) -> void:
@@ -467,6 +510,15 @@ func _setup() -> void:
 		_build_tree(ftp2, leaf, leaf2)
 	for ftp3 in [Vector3(14,0,-3), Vector3(18.5,0,-4), Vector3(21.5,0,-0.5)]: # village->hill transition (seated on _h by _build_tree)
 		_build_tree(ftp3, leaf, leaf2)
+	# R125 continuous distant treeline (cheap far construction; screened as R124, apron/mine clear)
+	for i125 in 11: # back row behind castle, two depths via z jitter
+		_build_tree_far(Vector3(-15.0 + float(i125)*2.6 + sin(float(i125)*2.7)*0.5, 0, -18.2 + float(i125 % 2)*0.8), leaf, leaf2)
+	for i125b in 8: # front far row filling between R124 background trees
+		_build_tree_far(Vector3(-12.0 + float(i125b)*2.9 + sin(float(i125b)*3.1)*0.4, 0, -15.4 - float(i125b % 3)*0.5), leaf, leaf2)
+	for i125c in 6: # left margin depth
+		_build_tree_far(Vector3(-21.0 + float(i125c % 2)*0.8, 0, -10.0 + float(i125c)*3.2), leaf, leaf2)
+	for i125d in 4: # left front far row
+		_build_tree_far(Vector3(-18.8, 0, -9.0 + float(i125d)*5.0), leaf, leaf2)
 	for bs2 in [Vector3(-13,0,-1),Vector3(4,0,-9),Vector3(12,0,-3),Vector3(-8,0,-9)]:
 		add_canopy(Transform3D(Basis.IDENTITY.scaled(Vector3(0.55,0.4,0.55)), bs2+Vector3(0,0.45,0)), leaf)
 	for bs in [Vector3(6,0,8),Vector3(-10,0,-3),Vector3(9,0,-8)]:
@@ -1626,6 +1678,18 @@ func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 		var lsc := (0.30 + 0.13 * (0.5 + 0.5*sin(float(li99)*3.3))) * tsc
 		var lc99: Color = b.lightened(0.10) if li99 % 3 == 0 else (a.darkened(0.16) if li99 % 3 == 1 else a.lerp(b, 0.5))
 		add_canopy(Transform3D(Basis.from_euler(Vector3(0, la, 0)).scaled(Vector3(lsc, lsc*0.82, lsc)), p + loff * Vector3(1.28, tsc, 1.28)), lc99)
+func _build_tree_far(p: Vector3, a: Color, b: Color) -> void: # R125 distant tree: 4 low crowns + thin trunk, hazier R80 treatment
+	var hd := Vector2(p.x, p.z).length()
+	if hd > 11.0: p.y = _h(p.x, p.z) - 0.1
+	var hf: float = clampf(0.45 + maxf(hd - 15.0, 0.0) * 0.012, 0.45, 0.60)
+	a = a.lerp(Color("b9c9ae"), hf); b = b.lerp(Color("ccd9b8"), hf)
+	var ts := 0.95 + 0.30 * (0.5 + 0.5 * sin(p.x*2.1 + p.z*1.7))
+	cyl(p+Vector3(0,0.03,0), 1.3,1.3,0.02, Color(0.09,0.15,0.04,0.32), 10)
+	cyl(p+Vector3(0,0.65*ts,0), 0.15,0.22,1.3*ts, Color("6b4423"), 6)
+	for mi125 in 4:
+		var off: Vector3 = [Vector3(0,2.1,0), Vector3(0.68,1.65,0.2), Vector3(-0.66,1.75,-0.18), Vector3(0.08,2.62,-0.08)][mi125]
+		var sc: float = [1.02, 0.78, 0.74, 0.60][mi125] * ts
+		add_canopy_low(Transform3D(Basis.from_euler(Vector3(0, float(mi125)*0.9 + p.x, 0)).scaled(Vector3(sc*1.15, sc*0.95, sc*1.15)), p + off*Vector3(1.25, ts, 1.25)), a if mi125 % 2 == 0 else b)
 func _build_carrier(p: Vector3, tc := Color("2f62b8"), kind := 0) -> void:
 	cyl(p+Vector3(0,0.02,0), 0.44,0.44,0.02, Color(0.09,0.15,0.04,0.32), 10) # R119 contact disc
 	box(p+Vector3(-0.16,0.35,0), Vector3(0.2,0.7,0.22), Color("4a3421")); box(p+Vector3(0.16,0.35,0), Vector3(0.2,0.7,0.22), Color("4a3421"))
