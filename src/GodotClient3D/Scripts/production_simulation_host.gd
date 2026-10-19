@@ -97,6 +97,16 @@ func _start_async_autosave() -> void:
 	)
 
 
+## The worker lambda writes into this host; leaving the tree (quit, new
+## scene, test teardown) with the task still pending let it write into a
+## freed object (glibc "corrupted size vs. prev_size" abort at exit).
+## Join it first; the save itself still completes normally.
+func _exit_tree() -> void:
+	if _autosave_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_autosave_task)
+		_autosave_task = -1
+
+
 func _poll_async_autosave() -> void:
 	if _autosave_task < 0 or not WorkerThreadPool.is_task_completed(_autosave_task):
 		return
