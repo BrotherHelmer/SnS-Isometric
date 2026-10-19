@@ -734,6 +734,17 @@ func _draw_census() -> void:
 
 ## R29 probe: C&C group selection. 4 soldiers; box-select, Ctrl toggle,
 ## plain click, group move and group attack, with shots.
+func _open_patch(sim, centre: Vector2i) -> bool:
+	for dy in range(-1, 2):
+		for dx in range(-1, 2):
+			var t := centre + Vector2i(dx, dy)
+			if not sim.is_inside_map(t) or not sim.is_revealed(t):
+				return false
+			if String(sim.get_tile(t)) != "GRASS" or sim.is_tile_occupied(t):
+				return false
+	return true
+
+
 func _group_probe(tree: SceneTree) -> void:
 	var sim = game.simulation_host.simulation
 	sim.soldiers_total += 4
@@ -772,12 +783,21 @@ func _group_probe(tree: SceneTree) -> void:
 	checks.append(["plain_click", game._group_ids().size() == 1, "group=%d" % game._group_ids().size()])
 	game.box_select_from_rect(Rect2(Vector2(0, 60), Vector2(vp.size.x, vp.size.y * 0.7)), false)
 	# 4) group move
+	# order_group spreads soldiers over the destination and its neighbour
+	# slots; a tree in any of them is (by design) a gather order, not a
+	# move. Pick a destination whose whole 3x3 patch is open grass so the
+	# probe measures group moving, independent of the founding spot.
 	var dest := origin + Vector2i(5, 4)
-	for r in range(4, 9):
-		var t := origin + Vector2i(r, r)
-		if sim.is_revealed(t) and String(sim.get_tile(t)) == "GRASS" and not sim.is_tile_occupied(t):
-			dest = t
+	var found_dest := false
+	for r in range(4, 13):
+		if found_dest:
 			break
+		for t in [origin + Vector2i(r, r), origin + Vector2i(r, 0), origin + Vector2i(0, r), origin + Vector2i(-r, r), origin + Vector2i(r, -r), origin + Vector2i(-r, 0), origin + Vector2i(0, -r), origin + Vector2i(-r, -r)]:
+			if _open_patch(sim, t):
+				dest = t
+				found_dest = true
+				break
+	_note("group_probe dest=%s open_patch=%s" % [str(dest), str(found_dest)])
 	var res: Dictionary = game.order_group(game._group_ids(), dest, "auto")
 	var moving := 0
 	for id in ids:
