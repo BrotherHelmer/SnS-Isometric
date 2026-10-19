@@ -191,7 +191,7 @@ func canopy_sphere_var(rich: bool, variant: int) -> ArrayMesh: # R142: rich mesh
 		if not disp2.has(dk):
 			var dn := dv.normalized()
 			var scp := sin(dn.x*16.0+dn.y*9.0+ph) * sin(dn.y*14.0-dn.z*12.0+ph*1.3) * sin(dn.z*18.0+dn.x*7.0-ph)
-			var ds := 1.0 + 0.34*sin(dn.x*5.1+dn.y*3.3+ph) + 0.26*sin(dn.y*7.2+dn.z*4.4-ph*0.7) + 0.19*sin(dn.z*9.0-dn.x*5.0+ph*1.1) + 0.13*sin(dn.x*13.7-dn.y*11.3+ph) + scp*0.17 + 0.09*sin(dn.x*23.7-dn.y*13.1)*sin(dn.z*19.3+dn.x*11.7) + 0.15*sin(dn.x*2.2+ph*2.0)*sin(dn.z*1.8-ph) + 0.10*sin(dn.y*2.6+ph*1.7)
+			var ds := 1.0 + 0.34*sin(dn.x*5.1+dn.y*3.3+ph) + 0.26*sin(dn.y*7.2+dn.z*4.4-ph*0.7) + 0.19*sin(dn.z*9.0-dn.x*5.0+ph*1.1) + 0.13*sin(dn.x*13.7-dn.y*11.3+ph) + scp*0.17 + 0.09*sin(dn.x*23.7-dn.y*13.1)*sin(dn.z*19.3+dn.x*11.7) + 0.15*sin(dn.x*2.2+ph*2.0)*sin(dn.z*1.8-ph) + 0.10*sin(dn.y*2.6+ph*1.7) + 0.10*sin(dn.x*8.3+ph*1.9)*sin(dn.y*7.3-ph)*sin(dn.z*9.1+ph*0.6)
 			disp2[dk] = dv * ds
 		verts[dvi] = disp2[dk]
 	var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -205,7 +205,7 @@ func canopy_sphere_var(rich: bool, variant: int) -> ArrayMesh: # R142: rich mesh
 var _canopy_sphere_low: ArrayMesh = null
 func canopy_sphere_low() -> ArrayMesh: # R125 distant crown: 8x4 segments (vs 13x7 near), same scalloped lobes
 	if _canopy_sphere_low != null: return _canopy_sphere_low
-	var sm := SphereMesh.new(); sm.radial_segments = 8; sm.rings = 4; sm.radius = 1.0; sm.height = 2.0 # R142 TRADE: far crowns back to 8x4 (prim trade to near crowns, checked in treeline A/B)
+	var sm := SphereMesh.new(); sm.radial_segments = 8; sm.rings = 4; sm.radius = 1.0; sm.height = 2.0 # R142 far crowns 8x4 (R144 7x3 trade tried for sub-lobes, reverted with them)
 	var arrays: Array = sm.get_mesh_arrays(); var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]; var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
 	var disp2 := {}
 	for dvi in verts.size():
@@ -213,7 +213,7 @@ func canopy_sphere_low() -> ArrayMesh: # R125 distant crown: 8x4 segments (vs 13
 		if not disp2.has(dk):
 			var dn := dv.normalized()
 			var scp := sin(dn.x*16.0+dn.y*9.0) * sin(dn.y*14.0-dn.z*12.0) * sin(dn.z*18.0+dn.x*7.0)
-			var ds := 1.0 + 0.34*sin(dn.x*5.1+dn.y*3.3) + 0.26*sin(dn.y*7.2+dn.z*4.4) + 0.19*sin(dn.z*9.0-dn.x*5.0) + 0.13*sin(dn.x*13.7-dn.y*11.3) + scp*0.17 + 0.09*sin(dn.x*23.7-dn.y*13.1)*sin(dn.z*19.3+dn.x*11.7)
+			var ds := 1.0 + 0.34*sin(dn.x*5.1+dn.y*3.3) + 0.26*sin(dn.y*7.2+dn.z*4.4) + 0.19*sin(dn.z*9.0-dn.x*5.0) + 0.13*sin(dn.x*13.7-dn.y*11.3) + scp*0.17 + 0.09*sin(dn.x*23.7-dn.y*13.1)*sin(dn.z*19.3+dn.x*11.7) + 0.10*sin(dn.x*8.3+1.9)*sin(dn.y*7.3)*sin(dn.z*9.1+0.6)
 			disp2[dk] = dv * ds
 		verts[dvi] = disp2[dk]
 	var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -245,12 +245,14 @@ func add_canopy_low(xf: Transform3D, c: Color) -> void: # R125: add_canopy's R11
 		var cv131: float = maxf(cc.r, maxf(cc.g, cc.b)); cc = cc.lerp(Color(cv131,cv131,cv131), 0.62) # R131 canopy desat
 		cc = Color(cc.r*1.20, cc.g*1.20, cc.b*1.20); var mx133: float = maxf(cc.r, maxf(cc.g, cc.b)); if mx133 > 1.1: cc = cc * (1.1 / mx133) # R133 value lift x1.20, proportional cap (steps/split kept, sat held) toward target (sat .958 vs .729), value-preserving so shade faces do not darken
 		for j in 3:
-			var bn139: Vector3 = (fn*0.50 + (tv[j] - xf.origin).normalized()*0.50).normalized()
+			var bn139: Vector3 = (fn*0.50 + (tv[j] - xf.origin).normalized()*0.50).normalized() # R144: R139 blend restored (0.32/0.12 softening tried = pale balloon washout, canopy class lost, reverted)
 			var ld141: Vector3 = (tv[j] - xf.origin).normalized()
 			var m141: float = clampf((ld141.dot(Vector3(-0.45, 0.75, 0.50).normalized()) * 0.5 + 0.5) * 0.65 + (ld141.y * 0.5 + 0.5) * 0.35, 0.0, 1.0)
 			var vf141: float = lerpf(0.38, 1.45, m141)
 			var cc141 := Color(clampf(cc.r * vf141 * lerpf(0.85, 1.12, m141), 0.0, 1.18), clampf(cc.g * vf141 * lerpf(0.96, 1.04, m141), 0.0, 1.18), clampf(cc.b * vf141 * lerpf(1.20, 0.75, m141), 0.0, 1.18))
-			canopy_st.set_normal(bn139); canopy_st.set_color(cc141); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j])
+			var cn144 := Vector3(sin(fn.x*6.7 + seedv*0.13), sin(fn.y*5.9 - seedv*0.07), sin(fn.z*7.3 + seedv*0.11))
+			var bn144: Vector3 = (bn139 + cn144 * 0.22).normalized()
+			canopy_st.set_normal(bn144); canopy_st.set_color(cc141); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j])
 	tri_total += 48 # R142 8x4 low sphere authored tris
 var canopy_st: SurfaceTool = null
 var card_st: SurfaceTool = null
@@ -287,12 +289,14 @@ func add_canopy(xf: Transform3D, c: Color) -> void:
 		var cv131: float = maxf(cc.r, maxf(cc.g, cc.b)); cc = cc.lerp(Color(cv131,cv131,cv131), 0.62) # R131 canopy desat
 		cc = Color(cc.r*1.20, cc.g*1.20, cc.b*1.20); var mx133: float = maxf(cc.r, maxf(cc.g, cc.b)); if mx133 > 1.1: cc = cc * (1.1 / mx133) # R133 value lift x1.20, proportional cap (steps/split kept, sat held) toward target (sat .958 vs .729), value-preserving, R114 steps kept
 		for j in 3:
-			var bn139: Vector3 = (fn*0.50 + (tv[j] - xf.origin).normalized()*0.50).normalized()
+			var bn139: Vector3 = (fn*0.50 + (tv[j] - xf.origin).normalized()*0.50).normalized() # R144: R139 blend restored (0.32/0.12 softening tried = pale balloon washout, canopy class lost, reverted)
 			var ld141: Vector3 = (tv[j] - xf.origin).normalized()
 			var m141: float = clampf((ld141.dot(Vector3(-0.45, 0.75, 0.50).normalized()) * 0.5 + 0.5) * 0.65 + (ld141.y * 0.5 + 0.5) * 0.35, 0.0, 1.0)
 			var vf141: float = lerpf(0.38, 1.45, m141)
 			var cc141 := Color(clampf(cc.r * vf141 * lerpf(0.85, 1.12, m141), 0.0, 1.18), clampf(cc.g * vf141 * lerpf(0.96, 1.04, m141), 0.0, 1.18), clampf(cc.b * vf141 * lerpf(1.20, 0.75, m141), 0.0, 1.18))
-			canopy_st.set_normal(bn139); canopy_st.set_color(cc141); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j])
+			var cn144 := Vector3(sin(fn.x*6.7 + seedv*0.13), sin(fn.y*5.9 - seedv*0.07), sin(fn.z*7.3 + seedv*0.11))
+			var bn144: Vector3 = (bn139 + cn144 * 0.22).normalized()
+			canopy_st.set_normal(bn144); canopy_st.set_color(cc141); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j])
 	tri_total += 208 if rich142 else 100 # R142 rich 13x9 / standard 10x6 authored tris
 var _flat_sphere: ArrayMesh = null
 func flat_sphere() -> ArrayMesh:
@@ -310,7 +314,7 @@ func flat_sphere() -> ArrayMesh:
 func _build_terrain() -> void:
 	# WELDED smooth-shaded heightfield: shared grid vertices, smooth normals,
 	# continuous (not per-cell) colour functions so facets stop reading.
-	var size := 120.0; var steps := 180 # R142 TRADE: terrain grid 230->180 (prim trade to crowns; hill/colour A/B checked)
+	var size := 120.0; var steps := 180 # R142 TRADE: terrain grid 230->180 (R144 172 tried for sub-lobes, reverted with them)
 	var g1 := Color("27631d"); var g2 := Color("3f842c"); var dirt := Color("9f9078"); var rock := Color("6e5638"); var snow := Color("f4f6f2") # R132 rock vertex deepened toward target (val .569 vs .463)
 	var n1 := steps + 1
 	var verts := PackedVector3Array(); var cols := PackedColorArray(); var uvs := PackedVector2Array(); var norms := PackedVector3Array()
