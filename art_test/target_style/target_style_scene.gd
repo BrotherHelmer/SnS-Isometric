@@ -871,6 +871,9 @@ func _top_band() -> void:
 		var sss := 0.95 + fmod(absf(ssx*1.37 + ssz*2.11), 0.9)
 		_snow_patch(ssx, ssz, sss, int(ssx*17.0 + ssz*31.0), Color("eef2f4"))
 		_snow_patch(ssx+0.8, ssz+0.6, sss*0.55, int(ssx*23.0 - ssz*13.0), Color("e4e9ec"))
+	# R100: broken outcrop relief on the face (existing rock keys, seated, away from mine focal area)
+	for oc in [[17.2,-3.2,2.2],[19.8,-5.6,1.7],[21.5,-8.4,2.4],[18.6,-10.8,1.6],[23.8,-11.5,1.9],[16.4,-7.6,1.5],[22.8,-3.8,1.4],[20.4,-13.2,2.0]]:
+		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.25, oc[0]*1.37, 0.18)).scaled(Vector3(oc[2], oc[2]*0.42, oc[2]*0.66)), Vector3(oc[0], _h(oc[0], oc[1])-0.18, oc[1])), Color("8f7355") if int(oc[0]) % 2 == 0 else Color("96795c"), "rock"); tri_total += 128
 	# talus cones + outcrops breaking the wall plane (merged rock key)
 	for tli in 6:
 		var tlx: float = [16.8, 17.5, 16.5, 18.0, 17.0, 18.5][tli]; var tlz: float = [-2.0, -5.0, -8.0, -10.0, -12.0, -3.5][tli]
