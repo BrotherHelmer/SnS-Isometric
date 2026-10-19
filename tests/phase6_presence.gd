@@ -40,7 +40,8 @@ func _run() -> void:
 	_check(failures, game.pressure_meter != null and not game.pressure_meter.visible and "QUIET" in game.pressure_meter.band, "Wyrd Pressure chip is wired from minute zero and hidden while QUIET")
 	_check(failures, game.pressure_meter != null and game._pressure_chip_should_show("RISING", false, 0) and game._pressure_chip_should_show("QUIET", true, 0), "Wyrd Pressure chip appears above QUIET or at night")
 	var rival_line := String(game.simulation_host.simulation.get_wyrdfall_presentation().get("rival_line", ""))
-	_check(failures, rival_line != "", "rival threat is named from the opening")
+	# Black 19/10: the rival is a late reveal (Crater War, 199fecd); blank at t=0 is intended.
+	_check(failures, rival_line == "", "rival threat stays unnamed until it is foreshadowed")
 	game._update_shard_compass()
 	_check(failures, game.shard_compass != null, "shard compass exists for off-screen guidance")
 	game.queue_free()
