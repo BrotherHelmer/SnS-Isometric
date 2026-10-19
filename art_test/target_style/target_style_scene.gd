@@ -245,7 +245,7 @@ func _build_terrain() -> void:
 	var tmesh := ArrayMesh.new(); tmesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	var up2 := MeshInstance3D.new(); var bm3 := BoxMesh.new(); bm3.size = Vector3(400, 0.1, 400); up2.mesh = bm3; up2.position = Vector3(0, -0.60, 0); var um2 := StandardMaterial3D.new(); um2.albedo_texture = load(PT + "detail_noise.png"); um2.set("texture_repeat", 1); um2.uv1_scale = Vector3(120,120,1); um2.albedo_color = Color(0.38,0.42,0.27); um2.roughness = 1.0; up2.material_override = um2; up2.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(up2)
 	var mi := MeshInstance3D.new(); mi.mesh = tmesh
-	var tsh := Shader.new(); tsh.code = "shader_type spatial;\nrender_mode cull_disabled;\nuniform sampler2D meadow_tex : source_color, repeat_enable;\nuniform sampler2D rock_tex : source_color, repeat_enable;\nvarying vec3 v_c;\nvarying vec3 v_wp;\nvarying vec3 v_wn;\nvoid vertex() { v_c = COLOR.rgb; v_wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; v_wn = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz); }\nvoid fragment() { float steep = smoothstep(0.74, 0.54, v_wn.y); vec3 md = texture(meadow_tex, v_wp.xz * 0.07).rgb; vec2 ruv = abs(v_wn.x) > abs(v_wn.z) ? vec2(v_wp.z * 0.13, v_wp.y * 0.13) : vec2(v_wp.x * 0.13, v_wp.y * 0.13); vec3 rk = texture(rock_tex, ruv).rgb; vec3 grass_c = v_c * md * 1.02; vec3 rock_c = rk * vec3(1.06, 0.88, 0.66) * (0.30 + 0.50 * v_c) * mix(0.68, 1.0, clamp(v_wp.y / 8.0, 0.0, 1.0)); ALBEDO = mix(grass_c, rock_c, steep); float snp = 0.5 + 0.5*sin(v_wp.x*1.9+1.3)*sin(v_wp.z*1.4-0.7); float snw = smoothstep(2.8, 5.0, v_wp.y) * smoothstep(0.30, 0.58, v_wn.y) * smoothstep(0.32, 0.58, snp); ALBEDO = mix(ALBEDO, vec3(0.93,0.94,0.92), snw * 0.92); float asp = dot(normalize(v_wn.xz + vec2(0.001, 0.0)), normalize(vec2(0.62, 0.72))); float snp2 = 0.5 + 0.5*sin(v_wp.x*2.7-0.6)*sin(v_wp.z*2.2+1.9); float snw2 = smoothstep(2.6, 4.8, v_wp.y) * smoothstep(0.10, 0.55, asp) * smoothstep(0.30, 0.60, v_wn.y) * smoothstep(0.38, 0.62, snp2); ALBEDO = mix(ALBEDO, vec3(0.94,0.95,0.93), snw2 * 0.85); ROUGHNESS = 1.0; }"
+	var tsh := Shader.new(); tsh.code = "shader_type spatial;\nrender_mode cull_disabled;\nuniform sampler2D meadow_tex : source_color, repeat_enable;\nuniform sampler2D rock_tex : source_color, repeat_enable;\nvarying vec3 v_c;\nvarying vec3 v_wp;\nvarying vec3 v_wn;\nvoid vertex() { v_c = COLOR.rgb; v_wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; v_wn = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz); }\nvoid fragment() { float steep = smoothstep(0.74, 0.54, v_wn.y); vec3 md = texture(meadow_tex, v_wp.xz * 0.07).rgb; vec2 ruv = abs(v_wn.x) > abs(v_wn.z) ? vec2(v_wp.z * 0.13, v_wp.y * 0.13) : vec2(v_wp.x * 0.13, v_wp.y * 0.13); vec3 rk = texture(rock_tex, ruv).rgb; vec3 grass_c = v_c * md * 1.02; vec3 rock_c = rk * vec3(1.06, 0.88, 0.66) * (0.30 + 0.50 * v_c) * mix(0.68, 1.0, clamp(v_wp.y / 8.0, 0.0, 1.0)); ALBEDO = mix(grass_c, rock_c, steep); float snp = 0.5 + 0.5*sin(v_wp.x*1.9+1.3)*sin(v_wp.z*1.4-0.7); float snw = smoothstep(2.8, 5.0, v_wp.y) * smoothstep(0.30, 0.58, v_wn.y) * smoothstep(0.32, 0.58, snp); ALBEDO = mix(ALBEDO, vec3(0.93,0.94,0.92), snw * 0.92); float asp = dot(normalize(v_wn.xz + vec2(0.001, 0.0)), normalize(vec2(0.62, 0.72))); float snp2 = 0.5 + 0.5*sin(v_wp.x*2.7-0.6)*sin(v_wp.z*2.2+1.9); float snw2 = smoothstep(2.6, 4.8, v_wp.y) * smoothstep(0.10, 0.55, asp) * smoothstep(0.30, 0.60, v_wn.y) * smoothstep(0.38, 0.62, snp2); ALBEDO = mix(ALBEDO, vec3(0.94,0.95,0.93), snw2 * 0.85); float hz = smoothstep(10.0, 30.0, length(v_wp.xz)) * 0.38 + smoothstep(3.5, 9.0, v_wp.y) * 0.22; ALBEDO = mix(ALBEDO, vec3(0.74,0.79,0.76), clamp(hz, 0.0, 0.55)); ROUGHNESS = 1.0; }"
 	var m := ShaderMaterial.new(); m.shader = tsh; m.set_shader_parameter("meadow_tex", load(PT + "detail_noise.png")); m.set_shader_parameter("rock_tex", load(PT + "rock_painted.png")); mi.material_override = m; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(mi)
 	# outer trees sit on terrain
 func _setup() -> void:
@@ -803,6 +803,14 @@ func _face_patch(o: Vector3, right: Vector3, up: Vector3, w: float, h: float, se
 						sst.set_normal(nrm); sst.set_uv(Vector2(u0 + (v2 - scx).dot(right) / maxf(w, 0.01), v0 + (v2 - scx).dot(up) / maxf(h, 0.01))); sst.add_vertex(v2)
 				add_mesh(sst.commit(), house_xf if house_mode else Transform3D.IDENTITY, tones[(rw2 * 3 + cl2 + int(rng.randf() * 2.0)) % 3], tx); tri_total += sn
 func _top_band() -> void:
+	# R80 layer separators: dark valley band + treeline at mountain foot, pale crest edge (existing keys/canopy mesh)
+	for vb in [Vector2(12.5,-0.5), Vector2(14.5,-3.5), Vector2(16,-6.5), Vector2(17,-9.5), Vector2(18.5,-12.5)]:
+		blob(Vector3(vb.x, _h(vb.x, vb.y)+0.05, vb.y), Vector3(2.7, 0.07, 1.9), Color(0.10,0.16,0.05,0.42))
+		box(Vector3(vb.x, _h(vb.x, vb.y)+0.55, vb.y), Vector3(0.16, 1.1, 0.16), Color("6b4a2c"))
+		add_canopy(Transform3D(Basis.IDENTITY.scaled(Vector3(1.25, 0.85, 1.25)), Vector3(vb.x, _h(vb.x, vb.y)+1.45, vb.y)), Color("5c8438"))
+		add_canopy(Transform3D(Basis.IDENTITY.scaled(Vector3(0.9, 0.65, 0.9)), Vector3(vb.x+0.9, _h(vb.x+0.9, vb.y)+1.05, vb.y+0.4)), Color("6d9440"))
+	for ce in [Vector2(18,-15.5), Vector2(21,-16.5), Vector2(24,-15), Vector2(27,-13)]:
+		blob(Vector3(ce.x, _h(ce.x, ce.y)+0.16, ce.y), Vector3(1.7, 0.20, 0.85), Color("e4e9ec"))
 	for tp8 in [Vector3(10,0,-16), Vector3(18,0,-16), Vector3(8,0,-11.8)]:
 		_build_tree(tp8, Color("79c24d"), Color("a9dd77"))
 	for sd2 in 3:
@@ -832,7 +840,7 @@ func _top_band() -> void:
 	# R77: large rock-tone variation fans on the face + baked haze fans on the far crest
 	for rfp in [Vector2(19,-6), Vector2(22,-9), Vector2(20.5,-12), Vector2(23.5,-6.5), Vector2(18,-10), Vector2(25,-10)]:
 		_ground_patch(rfp.x, rfp.y, 2.3, int(900.0 + rfp.x*11.0), Color("8f7355"), Color("6e5638"))
-	for hfp in [Vector2(20,-15), Vector2(24,-14), Vector2(17,-16.5), Vector2(27,-12.5)]:
+	for hfp in [Vector2(20,-15), Vector2(24,-14), Vector2(17,-16.5), Vector2(27,-12.5), Vector2(16,-14), Vector2(19,-17), Vector2(23,-16), Vector2(26,-14), Vector2(21,-13.5), Vector2(28,-11)]:
 		_ground_patch(hfp.x, hfp.y, 3.1, int(950.0 + hfp.x*7.0), Color(0.72, 0.78, 0.76, 0.32), Color(0.78, 0.83, 0.80, 0.30))
 	# R73: irregular gully snow on the camera-facing (SE) face (replaces R72 ovals, same areas)
 	for snp3 in [Vector2(18,-4), Vector2(20,-6), Vector2(22,-5), Vector2(19,-8), Vector2(21,-9), Vector2(23,-8), Vector2(18.5,-11), Vector2(21,-12), Vector2(24,-11), Vector2(20,-3), Vector2(23,-13), Vector2(17,-6.5), Vector2(22,-2.5), Vector2(25,-7), Vector2(19.5,-13.5), Vector2(24.5,-4)]:
@@ -1237,8 +1245,11 @@ func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 	vi = vi % 3
 	if vi == 1: a = Color("4c8a38"); b = Color("82b85e")
 	elif vi == 2: a = Color("558f3d"); b = Color("93c46e")
-	if p.z < -11.0: # R77 baked atmosphere: far/back trees hazier + lighter
-		a = a.lerp(Color("aec6a0"), 0.38); b = b.lerp(Color("c4d6ae"), 0.38)
+	# R80: distance-graded baked haze on far trees (stronger than R77 hint)
+	var hd80 := Vector2(p.x, p.z).length()
+	if p.z < -10.0 or hd80 > 15.0:
+		var hf80: float = clampf(0.42 + maxf(hd80 - 15.0, 0.0) * 0.015, 0.42, 0.58)
+		a = a.lerp(Color("b9c9ae"), hf80); b = b.lerp(Color("ccd9b8"), hf80)
 	if Vector2(p.x,p.z).length() > 11.0: p.y = _h(p.x, p.z) - 0.1
 	cyl(p+Vector3(0,0.035,0), 1.7,1.7,0.02, Color(0.09,0.15,0.04,0.32), 12)
 	cyl(p+Vector3(0,0.9*tsc,0), 0.22,0.32,1.8*tsc, Color("6b4423"), 7)
