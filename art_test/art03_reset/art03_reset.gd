@@ -34,7 +34,7 @@ func _load_textures() -> void:
 	tex["broad_b"] = load(A + "cut_broadleaf_b.png")
 	tex["bush"] = load(A + "cut_bush.png")
 	tex["broad"] = load(A + "cut_broadleaf_iso.png")
-	tex["mountain"] = load(A + "cut_mountain_mine.png")
+	tex["mountain"] = load(A + "cut_mountain_wide.png")
 	tex["shadow"] = load(A + "shadow_blob.png")
 	tex["ground"] = load(A + "ground_plate.png")
 	tex["villagers"] = [load(A + "villager_red.png"), load(A + "villager_blue.png"), load(A + "villager_mustard.png"), load(A + "villager_green.png")]
@@ -65,7 +65,7 @@ func _build_ground() -> void:
 	under.mesh = up
 	var um := StandardMaterial3D.new()
 	um.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	um.albedo_color = Color(0.60, 0.66, 0.37)
+	um.albedo_color = Color(0.38, 0.45, 0.20)
 	under.material_override = um
 	under.position = Vector3(0, -0.08, 0)
 	add_child(under)
@@ -120,7 +120,7 @@ func _build_castle_and_cottages() -> void:
 	_add_sprite(tex["thatch"], 19.0, 4.0, 7.4, true, Color(0.93, 0.96, 1.0), 7.2)
 
 func _build_mountain() -> void:
-	_add_sprite(tex["mountain"], 25.0, -11.0, 19.0, false, Color(1, 1, 1), 22.0, 0.55)
+	_add_sprite(tex["mountain"], 26.5, -12.0, 32.0, false, Color(1, 1, 1), 27.0, 0.65)
 
 func _build_forest() -> void:
 	var white := Color(1, 1, 1)
