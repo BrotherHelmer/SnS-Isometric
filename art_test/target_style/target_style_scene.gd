@@ -117,14 +117,14 @@ func _h(x: float, z: float) -> float:
 var _canopy_sphere: ArrayMesh = null
 func canopy_sphere() -> ArrayMesh:
 	if _canopy_sphere != null: return _canopy_sphere
-	var sm := SphereMesh.new(); sm.radial_segments = 9; sm.rings = 5; sm.radius = 1.0; sm.height = 2.0
+	var sm := SphereMesh.new(); sm.radial_segments = 13; sm.rings = 7; sm.radius = 1.0; sm.height = 2.0 # R98 denser canopy
 	var arrays: Array = sm.get_mesh_arrays(); var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]; var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
 	var disp2 := {}
 	for dvi in verts.size():
 		var dv := verts[dvi]; var dk := str(dv)
 		if not disp2.has(dk):
 			var dn := dv.normalized()
-			var ds := 1.0 + 0.30*sin(dn.x*5.1+dn.y*3.3) + 0.23*sin(dn.y*7.2+dn.z*4.4) + 0.15*sin(dn.z*9.0-dn.x*5.0)
+			var ds := 1.0 + 0.34*sin(dn.x*5.1+dn.y*3.3) + 0.26*sin(dn.y*7.2+dn.z*4.4) + 0.19*sin(dn.z*9.0-dn.x*5.0) + 0.13*sin(dn.x*13.7-dn.y*11.3) # R98 irregular silhouette
 			disp2[dk] = dv * ds
 		verts[dvi] = disp2[dk]
 	var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -162,10 +162,12 @@ func add_canopy(xf: Transform3D, c: Color) -> void:
 		var clus := sin(seedv*0.7 + float(f) * 1.37)
 		if clus > 0.45: cc = cc.darkened(0.10)
 		elif clus < -0.55: cc = cc.lightened(0.18)
+		var sunf := clampf(fn.dot(Vector3(-0.45, 0.75, 0.50)) * 0.5 + 0.5, 0.0, 1.0) # R98 warm sunlit / cool shaded clusters
+		cc = Color(clampf(cc.r*(0.90+0.28*sunf),0,1), clampf(cc.g*(0.95+0.12*sunf),0,1), clampf(cc.b*(1.06-0.26*sunf),0,1))
 		cc = Color(clampf(cc.r*2.1,0.0,1.1), clampf(cc.g*2.0,0.0,1.1), clampf(cc.b*2.1,0.0,1.1)) # R69: undo texture*vertex double-green
 		for j in 3:
 			var sn2: Vector3 = (tv[j] - xf.origin).normalized()
-			canopy_st.set_normal(fn); canopy_st.set_color(cc); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j])
+			canopy_st.set_normal(sn2); canopy_st.set_color(cc); canopy_st.set_uv(uvs[f+j]); canopy_st.add_vertex(tv[j])
 	tri_total += 128
 var _flat_sphere: ArrayMesh = null
 func flat_sphere() -> ArrayMesh:
