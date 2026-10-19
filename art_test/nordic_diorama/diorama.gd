@@ -119,14 +119,16 @@ func _normal(x: float, z: float) -> Vector3:
 	return Vector3(-dx, 2.0 * e, -dz).normalized()
 
 func _make_materials() -> void:
-	mats["grass"] = _mat("grass.png", Color(0.58, 0.68, 0.52))
+	mats["grass"] = _mat("grass_rich.png", Color(0.50, 0.66, 0.56))
+	mats["grass"].vertex_color_use_as_albedo = true
 	mats["dirt"] = _mat("dirt.png", Color(0.88, 0.82, 0.72))
-	mats["stone"] = _mat("stone.png", Color(0.92, 0.92, 0.90))
+	mats["stone"] = _mat("stone_rich.png", Color(0.95, 0.94, 0.90), 1.6)
 	mats["rock"] = _mat("rock.png", Color(0.88, 0.86, 0.82))
+	mats["rockface"] = _mat("stone_rich.png", Color(0.80, 0.78, 0.74), 2.4)
 	mats["wood"] = _mat("wood.png", Color(1, 1, 1))
 	mats["wood_dark"] = _mat("wood.png", Color(0.55, 0.42, 0.32))
 	mats["plaster"] = _mat("plaster.png", Color(1, 1, 1))
-	mats["thatch"] = _mat("thatch.png", Color(1, 1, 1))
+	mats["thatch"] = _mat("thatch_rich.png", Color(1, 1, 1), 1.3)
 	mats["slate"] = _mat("slate.png", Color(1, 1, 1))
 	mats["terra"] = _mat("shingle.png", Color(0.82, 0.48, 0.36))
 	mats["dark"] = _plain(Color(0.16, 0.12, 0.10))
@@ -140,10 +142,11 @@ func _make_materials() -> void:
 	mats["leaf2"] = _mat("grass.png", Color(0.49, 0.67, 0.34))
 	mats["bush"] = _mat("grass.png", Color(0.48, 0.68, 0.36))
 
-func _mat(texfile: String, tint: Color) -> StandardMaterial3D:
+func _mat(texfile: String, tint: Color, uv: float = 1.0) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
 	m.albedo_texture = load(A + texfile)
 	m.albedo_color = tint
+	m.uv1_scale = Vector3(uv, uv, uv)
 	m.roughness = 0.95
 	m.set("texture_repeat", 1)
 	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
@@ -184,7 +187,7 @@ func _build_environment() -> void:
 	sun.look_at_from_position(Vector3(-38, 46, -20), Vector3(4, 0, 2), Vector3.UP)
 	var cam := Camera3D.new()
 	cam.projection = Camera3D.PROJECTION_ORTHOGONAL
-	cam.size = 50.0
+	cam.size = 44.0
 	var target := Vector3(2, 1.0, -3)
 	var dir := Vector3(0.557, 0.616, 0.557).normalized()
 	cam.look_at_from_position(target + dir * 80.0, target, Vector3.UP)
@@ -199,14 +202,18 @@ func _build_terrain() -> void:
 	var verts := PackedVector3Array()
 	var normals := PackedVector3Array()
 	var uvs := PackedVector2Array()
+	var colors := PackedColorArray()
 	var idx := PackedInt32Array()
 	for j in range(seg_z + 1):
 		for i in range(seg_x + 1):
 			var x := -size_x * 0.5 + size_x * float(i) / seg_x
 			var z := -size_z * 0.5 + size_z * float(j) / seg_z
-			verts.append(Vector3(x, _h(x, z), z))
+			var hv := _h(x, z)
+			verts.append(Vector3(x, hv, z))
 			normals.append(_normal(x, z))
-			uvs.append(Vector2((x + 68.0) / 13.0, (z + 50.0) / 13.0))
+			uvs.append(Vector2((x + 68.0) / 18.0, (z + 50.0) / 18.0))
+			var ct := clampf((hv + 1.5) / 5.5, 0.0, 1.0)
+			colors.append(Color(0.87 + 0.19 * ct, 0.92 + 0.11 * ct, 0.82 + 0.13 * ct))
 	for j in range(seg_z):
 		for i in range(seg_x):
 			var a := j * (seg_x + 1) + i
@@ -219,6 +226,7 @@ func _build_terrain() -> void:
 	arrays[Mesh.ARRAY_VERTEX] = verts
 	arrays[Mesh.ARRAY_NORMAL] = normals
 	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	arrays[Mesh.ARRAY_COLOR] = colors
 	arrays[Mesh.ARRAY_INDEX] = idx
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
@@ -303,7 +311,7 @@ func _sph(r: float, seg: int = 20, rings: int = 14) -> SphereMesh:
 func _cone(r: float, h: float, seg: int = 20) -> CylinderMesh:
 	return _cyl(0.02, r, h, seg)
 
-func _displaced_sphere(radius: float, seed_off: Vector3, amp: float, freq: float, seg: int = 22, rings: int = 16) -> ArrayMesh:
+func _displaced_sphere(radius: float, seed_off: Vector3, amp: float, freq: float, seg: int = 22, rings: int = 16, smooth_only: bool = false) -> ArrayMesh:
 	var sm := _sph(radius, seg, rings)
 	var arrays := sm.surface_get_arrays(0)
 	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
@@ -315,10 +323,14 @@ func _displaced_sphere(radius: float, seed_off: Vector3, amp: float, freq: float
 	for i in range(verts.size()):
 		var v := verts[i]
 		var pp := v * 2.2 + seed_off
-		var swell := n2.get_noise_3dv(pp * 0.55)
-		var ridge: float = 1.0 - absf(n2.get_noise_3dv(pp * 1.9 + Vector3(11.0, 5.0, 7.0)))
-		var detail := n2.get_noise_3dv(pp * 3.1 + Vector3(3.0, 9.0, 1.0))
-		var d: float = amp * (swell * 0.55 + (ridge - 0.58) * 0.85 + detail * 0.30)
+		var d: float
+		if smooth_only:
+			d = amp * (n2.get_noise_3dv(pp * 0.45) * 0.75 + n2.get_noise_3dv(pp * 1.05 + Vector3(4.0, 2.0, 6.0)) * 0.25)
+		else:
+			var swell := n2.get_noise_3dv(pp * 0.55)
+			var ridge: float = 1.0 - absf(n2.get_noise_3dv(pp * 1.9 + Vector3(11.0, 5.0, 7.0)))
+			var detail := n2.get_noise_3dv(pp * 3.1 + Vector3(3.0, 9.0, 1.0))
+			d = amp * (swell * 0.55 + (ridge - 0.58) * 0.85 + detail * 0.30)
 		verts[i] = v + norms[i] * d
 	var acc := []
 	acc.resize(verts.size())
@@ -348,6 +360,7 @@ func _ground_group(x: float, z: float, sink: float = 0.12) -> Node3D:
 
 func _build_castle() -> void:
 	var g := _ground_group(-4.0, -8.0, 0.15)
+	g.scale = Vector3.ONE * 1.28
 	_put(g, _box(8.6, 4.6, 6.4), mats["stone"], Vector3(0, 2.3, -0.6))
 	_put(g, _box(9.4, 0.7, 7.2), mats["stone"], Vector3(0, 4.85, -0.6))
 	for bx in [-4.2, -2.5, -0.8, 0.8, 2.5, 4.2]:
@@ -369,6 +382,7 @@ func _build_castle() -> void:
 
 func _cottage(x: float, z: float, ry: float, wall_mat: Material, roof_mat: Material, kind: int) -> void:
 	var g := _ground_group(x, z, 0.12)
+	g.scale = Vector3.ONE * 1.22
 	g.rotation.y = ry
 	_put(g, _box(5.4, 2.9, 4.4), wall_mat, Vector3(0, 1.45, 0))
 	if kind == 0:
@@ -391,11 +405,11 @@ func _build_cottages() -> void:
 	_cottage(19.0, 4.0, -0.9, mats["wood"], mats["terra"], 1)
 
 func _build_mountain_mine() -> void:
-	var rock_mesh := _displaced_sphere(11.0, Vector3(3, 1, 2), 3.8, 0.35, 48, 32)
-	var mg := _ground_group(34.0, -19.0, 1.4)
-	_put(mg, rock_mesh, mats["rock"], Vector3(0, 3.4, 0), 0.7, Vector3(1.35, 0.88, 1.08))
-	_put(mg, rock_mesh, mats["rock"], Vector3(-9.5, 1.2, 4.5), 2.4, Vector3(0.8, 0.5, 0.7))
-	_put(mg, rock_mesh, mats["rock"], Vector3(8.5, 0.8, 5.5), 4.2, Vector3(0.65, 0.42, 0.6))
+	var rock_mesh := _displaced_sphere(11.0, Vector3(3, 1, 2), 1.6, 0.35, 44, 30, true)
+	var mg := _ground_group(34.0, -19.0, 1.8)
+	_put(mg, rock_mesh, mats["rockface"], Vector3(0, 3.2, 0), 0.7, Vector3(1.32, 0.82, 1.05))
+	_put(mg, rock_mesh, mats["rockface"], Vector3(-9.0, 1.4, 3.5), 2.4, Vector3(0.72, 0.5, 0.66))
+	_put(mg, rock_mesh, mats["rockface"], Vector3(8.0, 1.0, 5.0), 4.2, Vector3(0.6, 0.42, 0.55))
 	var eg := Node3D.new()
 	eg.position = Vector3(24.2, _h(24.2, -8.2) - 0.1, -8.2)
 	eg.rotation.y = 0.785
@@ -410,7 +424,7 @@ func _build_mountain_mine() -> void:
 	for i in range(7):
 		var t := float(i)
 		_put(eg, _box(1.6, 0.09, 0.3), mats["wood_dark"], Vector3(0, 0.24 - t * 0.018, 0.7 + t * 0.72))
-	var rock_small := _displaced_sphere(1.0, Vector3(9, 2, 5), 0.22, 0.5)
+	var rock_small := _displaced_sphere(1.0, Vector3(9, 2, 5), 0.22, 0.5, 18, 12, true)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 777
 	for i in range(14):
@@ -420,12 +434,12 @@ func _build_mountain_mine() -> void:
 		var pz := -14.0 + sin(ang) * rad * 0.8
 		var sg := _ground_group(px, pz, 0.25)
 		var s := rng.randf_range(0.5, 1.6)
-		_put(sg, rock_small, mats["rock"], Vector3(0, 0.25, 0), rng.randf_range(0, 3.0), Vector3(s, s * 0.75, s))
+		_put(sg, rock_small, mats["rockface"], Vector3(0, 0.25, 0), rng.randf_range(0, 3.0), Vector3(s, s * 0.75, s))
 
 func _build_forest() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 4242
-	var cone_meshes := [_cone(1.5, 2.6, 18), _cone(1.15, 2.2, 18), _cone(0.75, 1.9, 18)]
+	var cone_meshes := [_cone(1.7, 2.7, 18), _cone(1.32, 2.3, 18), _cone(0.88, 2.0, 18)]
 	var trunk_c := _cyl(0.15, 0.23, 1.3, 10)
 	var trunk_b := _cyl(0.17, 0.26, 1.7, 10)
 	var canopy_a := _displaced_sphere(1.55, Vector3(5, 3, 1), 0.20, 0.55)
@@ -433,9 +447,10 @@ func _build_forest() -> void:
 	var pine_mats := [mats["pine0"], mats["pine1"], mats["pine2"]]
 	var leaf_mats := [mats["leaf0"], mats["leaf1"], mats["leaf2"]]
 	var clusters := [
-		[Vector2(-38, -24), 5], [Vector2(-14, -26), 5], [Vector2(8, -26), 4], [Vector2(19, -25), 4],
-		[Vector2(-41, -6), 4], [Vector2(-38, 14), 4], [Vector2(-16, 25), 4], [Vector2(8, 26), 4],
-		[Vector2(30, 23), 3], [Vector2(43, -4), 3], [Vector2(-30, -15), 3], [Vector2(44, 12), 2],
+		[Vector2(-38, -24), 6], [Vector2(-14, -26), 5], [Vector2(8, -26), 4], [Vector2(19, -25), 4],
+		[Vector2(-41, -6), 5], [Vector2(-38, 14), 4], [Vector2(-16, 25), 4], [Vector2(8, 26), 4],
+		[Vector2(30, 23), 5], [Vector2(43, -4), 3], [Vector2(-30, -15), 4], [Vector2(44, 12), 3],
+		[Vector2(38, 19), 4], [Vector2(-44, 22), 3], [Vector2(-33, -28), 4],
 	]
 	for cl in clusters:
 		var centre: Vector2 = cl[0]
@@ -461,7 +476,7 @@ func _build_forest() -> void:
 					continue
 				placed = true
 				var is_conifer := rng.randf() < 0.65
-				var sc := rng.randf_range(0.85, 1.35)
+				var sc := rng.randf_range(0.9, 1.5)
 				var g := _ground_group(px, pz, 0.1)
 				var n := _normal(px, pz)
 				g.rotation = Vector3(n.z * 0.35, rng.randf_range(0, 6.28), -n.x * 0.35)
@@ -474,8 +489,9 @@ func _build_forest() -> void:
 				else:
 					var lm: Material = leaf_mats[rng.randi_range(0, 2)]
 					_put(g, trunk_b, mats["trunk"], Vector3(0, 0.8, 0))
-					_put(g, canopy_a, lm, Vector3(0, 2.75, 0), rng.randf_range(0, 3.0), Vector3(1.25, 1.05, 1.25))
-					_put(g, canopy_b, lm, Vector3(0.8, 3.6, 0.3), rng.randf_range(0, 3.0), Vector3(1.15, 1.0, 1.15))
+					_put(g, canopy_a, lm, Vector3(0, 2.75, 0), rng.randf_range(0, 3.0), Vector3(1.42, 1.16, 1.42))
+					_put(g, canopy_b, lm, Vector3(0.85, 3.6, 0.3), rng.randf_range(0, 3.0), Vector3(1.3, 1.05, 1.3))
+					_put(g, canopy_b, lm, Vector3(-0.75, 3.25, -0.25), rng.randf_range(0, 3.0), Vector3(1.05, 0.9, 1.05))
 				g.scale = Vector3.ONE * sc
 				break
 			if not placed:
@@ -494,6 +510,7 @@ func _build_villagers() -> void:
 	for i in range(4):
 		var g := Node3D.new()
 		add_child(g)
+		g.scale = Vector3.ONE * 1.35
 		var sm := _plain(shirt_cols[i])
 		var body := CapsuleMesh.new()
 		body.radius = 0.17
