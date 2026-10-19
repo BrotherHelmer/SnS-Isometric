@@ -296,11 +296,11 @@ func _setup() -> void:
 	for si9 in 15:
 		var sx9 := 8.5 + fmod(float(si9)*3.17, 12.5); var sz9 := -8.0 - fmod(float(si9)*2.43, 7.5)
 		var ss9 := 1.1 + fmod(float(si9)*0.41, 1.1)
-		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.3,float(si9)*1.7,0.15)).scaled(Vector3(ss9,ss9*0.72,ss9*0.85)), Vector3(sx9, _h(sx9,sz9)+ss9*0.22, sz9)), Color("87704f") if si9%2==0 else Color("a89a80")); tri_total += 128
+		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.3,float(si9)*1.7,0.15)).scaled(Vector3(ss9*1.12,ss9*0.46,ss9*0.95)), Vector3(sx9, _h(sx9,sz9)+ss9*0.02, sz9)), Color("87704f") if si9%2==0 else Color("a89a80")) # R74 sunk/flattened; tri_total += 128
 	for ti9 in 13:
 		var tx9 := 6.5 + fmod(float(ti9)*2.61, 14.5); var tz9 := -6.2 - fmod(float(ti9)*1.37, 3.2)
 		var ts9 := 0.55 + fmod(float(ti9)*0.39, 0.6)
-		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(ti9)*2.1,0.1)).scaled(Vector3(ts9,ts9*0.62,ts9*0.8)), Vector3(tx9, _h(tx9,tz9)+ts9*0.18, tz9)), Color("87704f") if ti9%3==0 else (Color("a89a80") if ti9%3==1 else Color("a89a80"))); tri_total += 128
+		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(ti9)*2.1,0.1)).scaled(Vector3(ts9*1.12,ts9*0.40,ts9*0.9)), Vector3(tx9, _h(tx9,tz9)+ts9*0.02, tz9)), Color("87704f") if ti9%3==0 else (Color("a89a80") if ti9%3==1 else Color("a89a80"))) # R74 sunk/flattened; tri_total += 128
 	for ei in 10:
 		var ex := -11.0+fmod(float(ei)*4.91,23.0); var ez := -6.0+fmod(float(ei)*5.37,17.0)
 		cyl(Vector3(ex,0.03,ez), 0.62,0.62,0.025, Color("9a7c4e") if ei%2==0 else Color("b08d55"), 8)
@@ -314,7 +314,7 @@ func _setup() -> void:
 		box(Vector3(mid2.x,0.028,mid2.y), Vector3(0.95,0.035,dir2.length()+0.8), Color("d6b878"), atan2(dir2.x,dir2.y), 0,0, "dirt")
 	for li2 in 5:
 		var lx2 := 10.0+fmod(float(li2)*2.3,6.0); var lz2 := -8.0-fmod(float(li2)*1.1,4.0)
-		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(li2),0.1)).scaled(Vector3(1.1,0.65,0.9)), Vector3(lx2,_h(lx2,lz2)+0.3,lz2)), Color("8f7355"), "rock"); tri_total+=128
+		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.2,float(li2),0.1)).scaled(Vector3(1.25,0.42,1.0)), Vector3(lx2,_h(lx2,lz2)+0.08,lz2)), Color("8f7355"), "rock"); tri_total+=128 # R74 sunk/flattened
 	_hill_content(); _hill_props(); _hill_fields(); _summit(); _upper_fill(); _fill_more(); _top_band(); _aprons(); _props2()
 	for uw in [[Vector3(-4.2,0,7.6), Color("d43a2a")], [Vector3(2.8,0,8.8), Color("2f62b8")], [Vector3(-9.8,0,5.6), Color("2f62b8")], [Vector3(4.4,_h(4.4,-6.2),-6.2), Color("d43a2a")], [Vector3(13.2,_h(13.2,-12.4),-12.4), Color("2f62b8")], [Vector3(-13.2,0,9.2), Color("d43a2a")], [Vector3(5.0,_h(5.0,-6.4),-6.4), Color("2f62b8")], [Vector3(8.2,_h(8.2,-10.1),-10.1), Color("d43a2a")], [Vector3(11.5,_h(11.5,-11.2),-11.2), Color("2f62b8")], [Vector3(15.0,_h(15.0,-13.6),-13.6), Color("d43a2a")], [Vector3(6.8,_h(6.8,-13.4),-13.4), Color("2f62b8")]]:
 		_mini(uw[0], uw[1])
@@ -574,15 +574,15 @@ func _summit() -> void:
 	for ri4 in 7:
 		var ra := float(ri4) * TAU / 7.0
 		blob(base+Vector3(sin(ra)*2.45, 0.18, cos(ra)*2.45), Vector3(0.32,0.22,0.32), Color("8a867e"))
-	for si4 in 5:
+	for si4 in 5: # R74: summit standing stones lowered/sunk into slope (were 3.1-3.8 dark pillars competing with mine)
 		var sa := float(si4) * TAU / 5.0
-		var sty := 3.1+fmod(float(si4)*0.3,0.7)
-		box(base+Vector3(sin(sa)*1.3, sty/2.0, cos(sa)*1.3), Vector3(0.62,sty,0.4), Color("59564f"), sa, 0.12, 0)
-		box(base+Vector3(sin(sa)*1.3, sty+0.12, cos(sa)*1.3), Vector3(0.5,0.24,0.32), Color("eef2f4"), sa, 0.12, 0)
+		var sty := 1.15+fmod(float(si4)*0.22,0.5)
+		box(base+Vector3(sin(sa)*1.3, sty/2.0-0.38, cos(sa)*1.3), Vector3(0.78,sty,0.52), Color("7d6a52"), sa, 0.12, 0)
+		box(base+Vector3(sin(sa)*1.3, sty-0.26, cos(sa)*1.3), Vector3(0.6,0.2,0.4), Color("d8cbb2"), sa, 0.12, 0)
 		box(base+Vector3(sin(sa)*2.35, 0.28, cos(sa)*2.35), Vector3(0.55,0.55,0.4), Color("8a867e"), sa, 0, 0)
-	box(base+Vector3(0,1.7,0), Vector3(0.7,3.4,0.48), Color("59564f"), 0.3, 0.08, 0)
-	box(base+Vector3(0,3.55,0), Vector3(0.55,0.3,0.36), Color("eef2f4"), 0.3, 0.08, 0)
-	box(base+Vector3(0,2.6,0.35), Vector3(0.08,2.2,0.08), Color("6b4a2c")); box(base+Vector3(0.38,3.35,0.35), Vector3(0.68,0.4,0.04), Color("d43a2a"))
+	box(base+Vector3(0,0.62,0), Vector3(0.85,1.7,0.6), Color("7d6a52"), 0.3, 0.08, 0) # centre stone lowered likewise
+	box(base+Vector3(0,1.55,0), Vector3(0.62,0.24,0.44), Color("d8cbb2"), 0.3, 0.08, 0)
+	box(base+Vector3(0,1.35,0.35), Vector3(0.08,1.5,0.08), Color("6b4a2c")); box(base+Vector3(0.38,1.95,0.35), Vector3(0.68,0.4,0.04), Color("d43a2a"))
 	var up := [Vector2(11.5,-7.6), Vector2(10.4,-8.2), Vector2(9.6,-8.6), Vector2(9.0,-8.8)]
 	for ui in up.size()-1:
 		var a4: Vector2 = up[ui]; var b4: Vector2 = up[ui+1]; var mid4 := (a4+b4)*0.5; var dir4 := b4-a4
@@ -678,8 +678,8 @@ func _top_band() -> void:
 	# jagged crest silhouette on NE ridge, snow only in crevices
 	for cri in 7:
 		var crx := 15.5 + float(cri)*1.35; var crz := -14.8 - fmod(float(cri)*0.8, 1.8); var cry := _h(crx,crz)
-		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.3,float(cri)*1.3,0.2)).scaled(Vector3(1.45,1.05,1.25)), Vector3(crx, cry+0.35, crz)), Color("96795c"), "rock") # R72 warm crest rocks; tri_total += 128
-		if cri % 2 == 0: blob(Vector3(crx+0.55, cry+0.12, crz+0.3), Vector3(0.34,0.13,0.3), Color("eef2f4"))
+		add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0.3,float(cri)*1.3,0.2)).scaled(Vector3(1.75,0.55,1.55)), Vector3(crx, cry-0.15, crz)), Color("96795c"), "rock") # R74: lowered/sunk crest humps, mine stays sole high point; tri_total += 128
+		if cri % 2 == 0: blob(Vector3(crx+0.55, cry+0.40, crz+0.3), Vector3(0.34,0.13,0.3), Color("eef2f4")) # R74 reseated on lowered rock tops
 	# R73: irregular gully snow on the camera-facing (SE) face (replaces R72 ovals, same areas)
 	for snp3 in [Vector2(18,-4), Vector2(20,-6), Vector2(22,-5), Vector2(19,-8), Vector2(21,-9), Vector2(23,-8), Vector2(18.5,-11), Vector2(21,-12), Vector2(24,-11), Vector2(20,-3), Vector2(23,-13), Vector2(17,-6.5), Vector2(22,-2.5), Vector2(25,-7), Vector2(19.5,-13.5), Vector2(24.5,-4)]:
 		var ssx: float = snp3.x; var ssz: float = snp3.y
