@@ -608,6 +608,19 @@ func _worked_yard(p: Vector3, dir2: Vector2, seedv: int, slope: bool) -> void:
 				var wm := CylinderMesh.new(); wm.bottom_radius = 0.34; wm.top_radius = 0.34; wm.height = 0.08; wm.radial_segments = 10
 				add_mesh(wm, Transform3D(Basis.from_euler(Vector3(PI/2.0, cyaw, 0)), Vector3(pp.x, py + 0.34, pp.y) + Vector3(perp.x, 0, perp.y) * ws * 0.46), Color("6b4423")); tri_total += 40
 			box(Vector3(pp.x, py + 0.30, pp.y) + Vector3(dir2.x, 0, dir2.y) * 0.75, Vector3(0.07, 0.07, 0.5), Color("6b4a2c"), cyaw)
+func _worn_link(a: Vector2, b: Vector2, seedv: int, strength := 0.8) -> void:
+	# R129 desire line: broken worn discs (R118 fringe language) - seeded gaps/widths, no hard ribbon
+	var rng := RandomNumberGenerator.new(); rng.seed = seedv
+	var steps := int(a.distance_to(b) / 0.65)
+	var perp := Vector2(-(b-a).normalized().y, (b-a).normalized().x)
+	for s in steps + 1:
+		var tt := float(s) / float(maxi(steps, 1))
+		var pos := a.lerp(b, tt) + perp * sin(tt * 6.0 + float(seedv)) * 0.22
+		var wy: float = _h(pos.x, pos.y) if pos.length() > 11.0 else 0.0
+		var w := (0.50 + 0.22 * (0.5 + 0.5 * sin(float(s)*1.9 + float(seedv)*0.7))) * (1.3 + 0.5 * strength) # R129 widened: links must read at judge scale
+		cyl(Vector3(pos.x, wy + 0.024, pos.y), w + 0.45, w + 0.45, 0.022, Color("a8895a"), 9) # worn mid-step
+		if rng.randf() < strength: cyl(Vector3(pos.x, wy + 0.033, pos.y), w, w, 0.026, Color("d9ba7c"), 9) # worn centre, seeded gaps
+		if s % 3 == 0: blob(Vector3(pos.x + perp.x*(w + 0.35), wy + 0.028, pos.y + perp.y*(w + 0.35)), Vector3(0.42, 0.03, 0.34), Color("7fae4a")) # fringe break
 func _detail_pass() -> void:
 	# R75 scene-wide richness: per-building unique detail + patch-scale terrain detail (all seated, merged)
 	var homes := [Vector3(-1.5,0,-3.5), Vector3(5.4,0,-0.4), Vector3(8.2,0,6.8), Vector3(-5.6,0,7.6), Vector3(10.2,0,-3.8), Vector3(-10.0,0,-3.5), Vector3(-10.5,0,5.5), Vector3(12.0,0,2.5), Vector3(-6.5,0,-10.0), Vector3(12.8,0,14.2), Vector3(-7.0,0,12.0), Vector3(16.8,0,7.8), Vector3(19.2,0,2.8)]
@@ -683,6 +696,20 @@ func _detail_pass() -> void:
 	for hp128 in [Vector3(-7,0,12), Vector3(16.8,0,7.8)]: # houses: door follows the R105 hang rotation
 		var hang128: float = [0.0, PI/2.0, PI, -PI/2.0][absi(int(hp128.x*7.0 + hp128.z*13.0)) % 4]
 		_worked_yard(hp128, Vector2(sin(hang128), cos(hang128)), 12850 + absi(int(hp128.x*31.0 + hp128.z*17.0)), false)
+	# R129 continuous worn ground: desire lines yard->path and building->building + heavier working centre
+	_ground_patch(3.5, 0.5, 2.6, 13001, Color("a8895a"), Color("8a6c42")) # centre working area (heavier)
+	_ground_patch(7.0, 3.5, 2.2, 13002, Color("a8895a"), Color("8a6c42"))
+	_ground_patch(-2.0, 4.5, 1.9, 13003, Color("a8895a"), Color("8a6c42")) # west-centre worn
+	_ground_patch(10.5, 2.0, 1.8, 13004, Color("a8895a"), Color("8a6c42")) # east-centre worn
+	_worn_link(Vector2(5.4, 1.8), Vector2(2.2, 2.2), 13101, 0.9) # octstore yard -> main path
+	_worn_link(Vector2(10.2, -1.6), Vector2(5.4, 1.8), 13102, 0.85) # roundhouse -> octstore (centre-east)
+	_worn_link(Vector2(8.2, 9.0), Vector2(12.0, 4.7), 13103, 0.8) # hut -> roundhouse
+	_worn_link(Vector2(-10.5, 7.7), Vector2(-5.6, 9.8), 13104, 0.75) # roundbarn -> aframe (west)
+	_worn_link(Vector2(-10.0, -1.3), Vector2(-10.5, 7.7), 13105, 0.7) # west hut -> roundbarn
+	_worn_link(Vector2(-9.2, 12.0), Vector2(-5.2, 9.8), 13106, 0.8) # west house (door west) -> branch path
+	_worn_link(Vector2(14.6, 7.8), Vector2(12.5, 4.8), 13107, 0.8) # east house (door west) -> branch path
+	_worn_link(Vector2(12.8, 16.3), Vector2(13.0, 13.8), 13108, 0.65) # south octstore yard -> branch end
+	_worn_link(Vector2(19.2, 5.0), Vector2(14.6, 7.8), 13109, 0.6) # hill hut -> east house (light, edge)
 	# R119 merged carriers on main/branch path routes (existing keys, varied loads/clothing)
 	_build_carrier(Vector3(4.0,0,3.4), Color("d43a2a"), 1)
 	_build_carrier(Vector3(-5.5,0,3.2), Color("3f7d3a"), 0)
