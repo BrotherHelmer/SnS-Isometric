@@ -623,7 +623,7 @@ func _setup() -> void:
 	if canopy_st != null:
 		var cmi := MeshInstance3D.new(); cmi.mesh = canopy_st.commit(); var cm := StandardMaterial3D.new(); cm.albedo_texture = load(TEX["leafp"]); cm.vertex_color_use_as_albedo = true; cm.albedo_color = Color(1.36,1.26,1.10); cm.roughness = 1.0; cm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; cmi.material_override = cm; cmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(cmi)
 	if card_st != null:
-		var kmi := MeshInstance3D.new(); kmi.mesh = card_st.commit(); var km := StandardMaterial3D.new(); km.albedo_texture = load(PT + "foliage_card.png"); km.vertex_color_use_as_albedo = true; km.albedo_color = Color(1,1,1); km.roughness = 1.0; km.alpha_scissor_threshold = 0.45; km.cull_mode = BaseMaterial3D.CULL_DISABLED; km.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; kmi.material_override = km; kmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(kmi)
+		var kmi := MeshInstance3D.new(); kmi.mesh = card_st.commit(); var km := StandardMaterial3D.new(); km.albedo_texture = load(PT + "foliage_card.png"); km.vertex_color_use_as_albedo = true; km.albedo_color = Color(1,1,1); km.roughness = 1.0; km.alpha_scissor_threshold = 0.45; km.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED # R146: painted shading lives in the texture (lambert gave binary dark slabs on flat quads) km.cull_mode = BaseMaterial3D.CULL_DISABLED; km.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; kmi.material_override = km; kmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(kmi) # R146: cards do not cast (draw cap - see scorecard shadow finding)
 	_spawn_tufts()
 	_spawn_carriers(); _spawn_statics()
 func _worked_yard(p: Vector3, dir2: Vector2, seedv: int, slope: bool) -> void:
@@ -838,12 +838,14 @@ func _cliff_mesh(w: float, h: float, seedv: int) -> ArrayMesh:
 func _spawn_cliffs() -> void:
 	var rmat := StandardMaterial3D.new(); rmat.albedo_texture = load(TEX["rock"]); rmat.albedo_color = Color(1.12,1.10,1.05) # R132 cliff deepened with rock family; rmat.roughness = 1.0; rmat.cull_mode = BaseMaterial3D.CULL_DISABLED; rmat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
 	var defs := [[Vector3(9.0,0,-11.5), 0.5, 7.0, 4.5], [Vector3(14.0,0,-12.5), 0.9, 8.0, 5.5], [Vector3(5.5,0,-10.5), 0.25, 5.5, 3.8]]
+	var cst146 := SurfaceTool.new(); cst146.begin(Mesh.PRIMITIVE_TRIANGLES) # R146 TRADE: 3 cliff instances merged into one (same material/geometry, frees 4 draws for the card mesh)
 	for i2 in defs.size():
 		var df: Array = defs[i2]; var pos: Vector3 = df[0]; pos.y = _h(pos.x, pos.z) + float(df[3])*0.32
-		var mi := MeshInstance3D.new(); mi.mesh = _cliff_mesh(float(df[2]), float(df[3]), 40+i2*7); mi.position = pos; mi.rotation = Vector3(-0.52, float(df[1]), 0.05); mi.material_override = rmat; mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(mi)
+		cst146.append_from(_cliff_mesh(float(df[2]), float(df[3]), 40+i2*7), 0, Transform3D(Basis.from_euler(Vector3(-0.52, float(df[1]), 0.05)), pos))
 		for si3 in 3:
 			var bp := pos + Vector3(float(si3)*1.3-1.3, -float(df[3])*0.3, 1.8)
 			add_mesh(flat_sphere(), Transform3D(Basis.from_euler(Vector3(0,float(si3),0)).scaled(Vector3(0.6,0.42,0.55)), Vector3(bp.x, _h(bp.x,bp.z)+0.12, bp.z)), Color("8f7355"), "rock"); tri_total += 128
+	var cmi146 := MeshInstance3D.new(); cmi146.mesh = cst146.commit(); cmi146.material_override = rmat; cmi146.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(cmi146) # R146 TRADE: merged cliffs cast off (-1 shadow draw for card mesh; hill A/B checked)
 func _build_mine(mp: Vector3) -> void:
 	# R72: enlarged timber headframe (was 1.9 tall, drowned by crest rocks) - warm timber, dark iron
 	box(mp+Vector3(0,0.10,0.6), Vector3(3.4,0.22,2.6), Color("6e4a28")) # timber platform
@@ -1781,8 +1783,14 @@ func _build_hut(p: Vector3, stone: Color) -> void:
 		var ba := bo121 + float(bi2) * PI / 4.0
 		box(p+Vector3(sin(ba)*1.58, cy121h - th121*0.5 + 0.48, cos(ba)*1.58), Vector3(0.22,0.95,0.12), Color("a87c34") if bi2%2==0 else Color("c49a48"), ba, 0, 0)
 	cyl(p+Vector3(0,cy121h + th121*0.5 + 0.12,0), 0.3,0.36,0.22, Color("8f6a2a"), 8) # R121 cap reseated
+func card_col146(c: Color) -> Color: # R146: canopy-law tail (R69 lift, R131 desat, R133 lift/cap) applied to card vertex colours so cards sit in the same measured family as sphere crowns
+	var cc := Color(clampf(c.r*2.1,0.0,1.1), clampf(c.g*2.0,0.0,1.1), clampf(c.b*2.1,0.0,1.1))
+	var cv146: float = maxf(cc.r, maxf(cc.g, cc.b)); cc = cc.lerp(Color(cv146,cv146,cv146), 0.62)
+	cc = Color(cc.r*1.20, cc.g*1.20, cc.b*1.20); var mx146: float = maxf(cc.r, maxf(cc.g, cc.b)); if mx146 > 1.1: cc = cc * (1.1 / mx146)
+	return cc
 func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 	if absi(int(p.x*7.31 + p.z*13.17)) % 10 >= 5: return # R69: ~half the trees culled (Black #1)
+	var proto146: bool = p.x >= -18.0 and p.x <= 2.0 and p.z >= 3.0  # R146 PROTOTYPE SECTOR: south-west foreground trees only - main lobes become painted cards
 	var tsc := (0.85 + 0.45 * (0.5 + 0.5*sin(p.x*2.7 + p.z*1.9))) * 0.64
 	var vi := absi(int(p.x*3.0 + p.z*7.0)) % 7
 	if vi == 5: a = Color("c07a2e"); b = Color("e0a44a")
@@ -1822,7 +1830,12 @@ func _build_tree(p: Vector3, a: Color, b: Color) -> void:
 		var cm141: float = clampf(0.5 + (off.y - 2.65) * 0.38 + (off.x * -0.45 + off.z * 0.50) * 0.10, 0.0, 1.0)
 		var cf141: float = lerpf(0.40, 1.38, cm141)
 		cc2 = Color(clampf(cc2.r * cf141 * lerpf(0.88, 1.10, cm141), 0.0, 1.0), clampf(cc2.g * cf141, 0.0, 1.0), clampf(cc2.b * cf141 * lerpf(1.16, 0.78, cm141), 0.0, 1.0))
-		add_canopy(Transform3D(Basis.from_euler(Vector3(0, float(ci)*0.62, 0)).scaled(Vector3(sc*1.15*tsc, sc*0.95*tsc, sc*1.15*tsc)), p+off*Vector3(1.28,tsc,1.28)), cc2)
+		if proto146: # R146: painted leaf-mass cards replace sphere main lobes in sector (2 crossed pairs per lobe)
+			var r146: float = sc*1.25*tsc
+			for cr146 in 2:
+				add_foliage_card(Transform3D(Basis.from_euler(Vector3(0, float(ci)*0.62 + float(cr146)*0.85, 0)).scaled(Vector3(r146, r146*0.92, r146)), p+off*Vector3(1.28,tsc,1.28)), card_col146(cc2))
+		else:
+			add_canopy(Transform3D(Basis.from_euler(Vector3(0, float(ci)*0.62, 0)).scaled(Vector3(sc*1.15*tsc, sc*0.95*tsc, sc*1.15*tsc)), p+off*Vector3(1.28,tsc,1.28)), cc2)
 	# R99: mini lobes on crown perimeter (leaf-cluster bumps, varied tone)
 	for li99 in 8: # R139 more, smaller perimeter lobes (silhouette breakup)
 		var la := float(li99) * 0.92 + float(vi) * 1.3
