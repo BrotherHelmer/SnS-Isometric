@@ -34,6 +34,7 @@ func mat_for(key: String, c: Color) -> StandardMaterial3D:
 		m.albedo_texture = load(TEX[tx]); m.uv1_scale = Vector3(3,3,1) if tx=="meadow" else (Vector3(0.55,0.55,1) if tx in ["stone","plaster"] else (Vector3(1,1,1) if tx in ["roofp","thatch","rock"] else Vector3(1.5,1.5,1))) # R77 larger face features; m.albedo_color = Color(0.88,0.87,0.85)
 		if tx == "rock": m.albedo_color = Color(1.06,0.97,0.87).lerp(c, 0.50) # R73: warm rock, tint was being overridden grey
 		if tx == "stone": m.albedo_color = Color(1.04,1.00,0.94).lerp(c, 0.45) # R77 stone tint-through
+		if tx == "roofp": m.albedo_color = Color(0.93,0.84,0.75).lerp(c, 0.28) # R78 muted terracotta tint-through
 		if tx == "forest": m.albedo_color = Color(1,1,1).lerp(c, 0.30)
 		m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	if c.a < 0.99: m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -250,11 +251,11 @@ func _build_terrain() -> void:
 func _setup() -> void:
 	get_viewport().screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED; get_viewport().msaa_3d = Viewport.MSAA_4X # R69 crisp
 	# round presets: 1 pipeline, 2 softer/yellower, 3 tuned toward target mean colour
-	var grass := Color("6fbf3f"); var grass2 := Color("8fd14f"); var stone := Color("b8b4a8"); var roof := Color("c23b2a"); var dirt := Color("c9a86a"); var leaf := Color("4e9b35"); var leaf2 := Color("77c04a"); var light_e := 1.0; var amb := 0.55
+	var grass := Color("6fbf3f"); var grass2 := Color("8fd14f"); var stone := Color("b8b4a8"); var roof := Color("b06a4a"); var dirt := Color("c9a86a"); var leaf := Color("4e9b35"); var leaf2 := Color("77c04a"); var light_e := 1.0; var amb := 0.55
 	if round_no == 2:
-		grass = Color("69bd45"); grass2 = Color("86cc58"); stone = Color("c4bda9"); roof = Color("c2442c"); leaf = Color("4fae38"); leaf2 = Color("7cc24e"); light_e = 1.05; amb = 0.45
+		grass = Color("69bd45"); grass2 = Color("86cc58"); stone = Color("c4bda9"); roof = Color("a85f43"); leaf = Color("4fae38"); leaf2 = Color("7cc24e"); light_e = 1.05; amb = 0.45
 	if round_no >= 3:
-		grass = Color("406e26"); grass2 = Color("4f7f2e"); stone = Color("9d9584"); roof = Color("bf3f27"); dirt = Color("cda96e"); leaf = Color("4e8f33"); leaf2 = Color("7cb54f"); light_e = 1.04; amb = 0.37
+		grass = Color("406e26"); grass2 = Color("4f7f2e"); stone = Color("9d9584"); roof = Color("a15f43"); dirt = Color("cda96e"); leaf = Color("4e8f33"); leaf2 = Color("7cb54f"); light_e = 1.04; amb = 0.37
 	# environment + light + camera (game iso: ortho, pitch -38, yaw -45)
 	var we := WorldEnvironment.new(); var env := Environment.new()
 	var sky := Sky.new(); var smat := ProceduralSkyMaterial.new(); smat.sky_top_color = Color("8fc3e8"); smat.sky_horizon_color = Color("f2e3c2"); smat.ground_bottom_color = Color("5d6b46"); smat.ground_horizon_color = Color("d9c9a4"); sky.sky_material = smat; env.sky = sky
@@ -329,7 +330,7 @@ func _setup() -> void:
 		box(sp9+Vector3(0,0.16,0), Vector3(0.36,0.32,0.36), Color("a67c4e"), 0.3); cyl(sp9+Vector3(0.42,0.20,0.18), 0.17,0.19,0.4, Color("8a5f36"), 7)
 	# market stall: posts, striped canopy, crates
 	for mp in [Vector3(-4.6,0,5.9), Vector3(-3.4,0,5.9), Vector3(-4.6,0,7.0), Vector3(-3.4,0,7.0)]: box(mp+Vector3(0,0.75,0), Vector3(0.13,1.5,0.13), Color("6b4423"))
-	roof2(Vector3(-4.0,1.52,6.45), 2.3, 2.1, 0.55, 0.14, Color("d43a2a"))
+	roof2(Vector3(-4.0,1.52,6.45), 2.3, 2.1, 0.55, 0.14, Color("9c4a34")) # R78 roof eave muted (was flag-red)
 	box(Vector3(-4.0,0.55,6.45), Vector3(1.6,0.5,1.2), Color("a67c4e"), 0,0,0, "timber")
 	for pp2 in [Vector3(0.9,0,3.1), Vector3(-4.2,0,6.3), Vector3(3.5,0,-0.9), Vector3(7.8,0,5.2), Vector3(-9.7,0,-3.2), Vector3(9.3,0,-4.2), Vector3(-1.6,0,-3.0)]: # R69 territory pennants (Black #7)
 		box(pp2+Vector3(0,1.05,0), Vector3(0.06,2.1,0.06), Color("4a3421")); box(pp2+Vector3(0.32,1.85,0), Vector3(0.6,0.34,0.04), Color("2f62b8") if int(pp2.x) % 2 == 0 else Color("d43a2a"))
@@ -419,7 +420,7 @@ func _setup() -> void:
 		if not roof_groups.has(rv): roof_groups[rv] = SurfaceTool.new(); (roof_groups[rv] as SurfaceTool).begin(Mesh.PRIMITIVE_TRIANGLES)
 		(roof_groups[rv] as SurfaceTool).append_from(ri2[0], 0, ri2[1])
 	for rv2 in roof_groups:
-		var rmi := MeshInstance3D.new(); rmi.mesh = (roof_groups[rv2] as SurfaceTool).commit(); var rmat := StandardMaterial3D.new(); rmat.albedo_texture = load(TEX["roofp"]); rmat.albedo_color = [Color(0.96,0.84,0.72), Color(0.84,0.66,0.52), Color(0.80,0.76,0.72)][rv2]; rmat.roughness = 0.92; rmat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; rmi.material_override = rmat; rmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(rmi)
+		var rmi := MeshInstance3D.new(); rmi.mesh = (roof_groups[rv2] as SurfaceTool).commit(); var rmat := StandardMaterial3D.new(); rmat.albedo_texture = load(TEX["roofp"]); rmat.albedo_color = [Color(0.88,0.76,0.66), Color(0.78,0.64,0.54), Color(0.74,0.68,0.62)][rv2] # R78 muted terracotta roof families; rmat.roughness = 0.92; rmat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; rmi.material_override = rmat; rmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(rmi)
 	if canopy_st != null:
 		var cmi := MeshInstance3D.new(); cmi.mesh = canopy_st.commit(); var cm := StandardMaterial3D.new(); cm.albedo_texture = load(TEX["leafp"]); cm.vertex_color_use_as_albedo = true; cm.albedo_color = Color(1.05,1.08,1.0); cm.roughness = 1.0; cm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS; cmi.material_override = cm; cmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON; add_child(cmi)
 	if card_st != null:
@@ -753,6 +754,28 @@ func _ground_patch(cx: float, cz: float, r: float, seedv: int, cbase: Color, csu
 	for si in 2: # small seated stones/clumps inside patch
 		var soff := dir * rng.randf_range(-r*0.5, r*0.5) + perp * rng.randf_range(-r*0.4, r*0.4)
 		blob(Vector3(cx+soff.x, _h(cx+soff.x, cz+soff.y) + 0.05, cz+soff.y), Vector3(0.20, 0.10, 0.18), Color("8f7355"))
+func _face_patch(o: Vector3, right: Vector3, up: Vector3, w: float, h: float, seedv: int, cbase: Color, tx := "") -> void:
+	# R78: painted face patch - jagged multi-layer fan (irregular stepped edge, internal sub-tones), UV-mapped so stone/plaster texture shows inside
+	var rng := RandomNumberGenerator.new(); rng.seed = seedv
+	var nrm := right.cross(up).normalized()
+	var layers := [[1.0, cbase, Vector2.ZERO], [0.60, cbase.darkened(0.25), Vector2(0.10, -0.08)], [0.38, cbase.lightened(0.14), Vector2(-0.20, 0.16)], [0.20, cbase.darkened(0.25), Vector2(0.28, 0.22)], [0.16, cbase.lightened(0.14), Vector2(-0.34, -0.24)]]
+	for li in layers.size():
+		var sc: float = layers[li][0]; var lc: Color = layers[li][1]; var off: Vector2 = layers[li][2]
+		var cen := o + right * (off.x * w) + up * (off.y * h) + nrm * (0.045 + float(li) * 0.009)
+		var st := SurfaceTool.new(); st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		var n := 10; var pts: Array = []
+		for i in n:
+			var a := TAU * float(i) / float(n)
+			var rr := rng.randf_range(0.55, 1.15)
+			var lx := cos(a) * w * 0.5 * sc * rr; var ly := sin(a) * h * 0.5 * sc * rr
+			pts.append(cen + right * lx + up * ly)
+		for i in n:
+			var p1: Vector3 = pts[i]; var p2: Vector3 = pts[(i + 1) % n]
+			var fn := (p1 - cen).cross(p2 - cen)
+			var order := [cen, p1, p2] if fn.dot(nrm) > 0.0 else [cen, p2, p1]
+			for v in order:
+				st.set_normal(nrm); st.set_uv(Vector2(0.5 + (v - cen).dot(right) / maxf(w, 0.01), 0.5 + (v - cen).dot(up) / maxf(h, 0.01))); st.add_vertex(v)
+		add_mesh(st.commit(), house_xf if house_mode else Transform3D.IDENTITY, lc, tx); tri_total += n
 func _top_band() -> void:
 	for tp8 in [Vector3(10,0,-16), Vector3(18,0,-16), Vector3(8,0,-11.8)]:
 		_build_tree(tp8, Color("79c24d"), Color("a9dd77"))
@@ -988,14 +1011,16 @@ func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 		for cz3 in 5:
 			if (cz3 + ry3) % 2 == 0: continue
 			box(p+Vector3(2.36, 0.55+float(ry3)*0.5, -1.2+float(cz3)*0.6), Vector3(0.07,0.34,0.46), stone.darkened(0.12), 0,0,0, "stone")
-	# R77: large tonal stone patches + tower shadow halves (large-scale face variation)
-	for pp7 in [[-1.45, 0.95, 1.30, 0.85, 0.20], [0.55, 1.35, 1.05, 0.70, -0.16], [1.55, 0.62, 0.85, 0.55, 0.24], [-0.35, 0.55, 0.95, 0.50, -0.10]]:
-		box(p+Vector3(pp7[0], pp7[1], 1.865), Vector3(pp7[2], pp7[3], 0.055), stone.darkened(pp7[4]) if pp7[4] > 0.0 else stone.lightened(-pp7[4]), 0, 0, 0, "stone")
-	for pp8 in [[-0.55, 2.75, 0.80, 0.65, 0.18], [0.45, 3.05, 0.70, 0.55, -0.14]]:
-		box(p+Vector3(pp8[0], pp8[1], 0.985), Vector3(pp8[2], pp8[3], 0.055), stone.darkened(pp8[4]) if pp8[4] > 0.0 else stone.lightened(-pp8[4]), 0, 0, 0, "stone")
+	# R78: castle patches as jagged textured fans (R77 flat rectangles replaced); tower shadow strips with internal stone insets
+	for pp7 in [[-1.45, 0.95, 1.35, 0.90, 101], [0.55, 1.35, 1.10, 0.75, 113], [1.55, 0.62, 0.90, 0.60, 127], [-0.35, 0.55, 1.00, 0.55, 139]]:
+		_face_patch(p+Vector3(pp7[0], pp7[1], 1.845), Vector3(1,0,0), Vector3(0,1,0), pp7[2], pp7[3], int(pp7[4]), stone.darkened(0.17), "stone")
+	for pp8 in [[-0.55, 2.75, 0.85, 0.70, 151], [0.45, 3.05, 0.75, 0.60, 163]]:
+		_face_patch(p+Vector3(pp8[0], pp8[1], 0.965), Vector3(1,0,0), Vector3(0,1,0), pp8[2], pp8[3], int(pp8[4]), stone.darkened(0.17), "stone")
 	for oi3 in 4:
 		var off3: Vector2 = [Vector2(-1.85,-1.45),Vector2(1.85,-1.45),Vector2(-1.85,1.45),Vector2(1.85,1.45)][oi3]
 		box(p+Vector3(off3.x+0.44, ths[oi3]*0.48, off3.y), Vector3(0.20, ths[oi3]*0.92, 0.80), stone.darkened(0.30), 0, 0, 0, "stone")
+		for ts8 in 3:
+			box(p+Vector3(off3.x+0.55, 0.75+float(ts8)*0.78, off3.y-0.19+float(ts8%2)*0.20), Vector3(0.03, 0.30, 0.32), stone.darkened(0.12) if ts8%2==0 else stone.lightened(0.07), 0, 0, 0, "stone")
 	# battlements along side top edges + centre tower roof ring
 	for bz2 in [-1.2,-0.4,0.4,1.2]:
 		box(p+Vector3(2.32,2.52,bz2), Vector3(0.16,0.3,0.34), stone); box(p+Vector3(-2.32,2.52,bz2), Vector3(0.16,0.3,0.34), stone)
@@ -1092,19 +1117,21 @@ func _build_house(p: Vector3, roof: Color, stone: Color) -> void:
 			box(sp2 + nrm2*0.012, Vector3(0.52,0.045,2.80), roof.darkened(0.46), 0, -side2*sang, 0)
 			for sg2 in 3:
 				box(sp2 + nrm2*0.048 + Vector3(0,0,-0.93+float(sg2)*0.93), Vector3(0.46,0.06,0.86), roof.darkened(0.22) if (rw+sg2)%2==0 else roof.lightened(0.15), 0, -side2*sang, 0)
-	# R77: large roof wear patch (one slope, big tonal area)
+	# R78: roof wear as jagged slope fans (R77 flat boxes replaced, same base keys)
+	var hs78 := 200 + vi*17 + absi(int(p.x*3.0 + p.z))
 	var wp_tt := 0.48; var wp_nrm := Vector3(pitch2, hw2, 0).normalized()
-	box(Vector3(hw2*(1.0-wp_tt), top+pitch2*wp_tt, 0) + wp_nrm*0.055, Vector3(0.95, 0.05, 1.65), roof.lightened(0.30), 0, -sang, 0)
-	box(Vector3(-hw2*(1.0-0.30), top+pitch2*0.30, 0) + Vector3(-pitch2, hw2, 0).normalized()*0.055, Vector3(0.80, 0.05, 1.40), roof.darkened(0.28), 0, sang, 0)
+	var up_p := Vector3(-hw2, pitch2, 0).normalized(); var up_m := Vector3(hw2, pitch2, 0).normalized()
+	_face_patch(Vector3(hw2*(1.0-wp_tt), top+pitch2*wp_tt, 0) + wp_nrm*0.05, Vector3(0,0,-1), up_p, 1.65, 0.85, hs78+21, roof.lightened(0.30))
+	_face_patch(Vector3(-hw2*(1.0-0.30), top+pitch2*0.30, 0) + Vector3(-pitch2, hw2, 0).normalized()*0.05, Vector3(0,0,1), up_m, 1.40, 0.80, hs78+29, roof.darkened(0.28))
 	for ccx in [-1.15, 1.15]:
 		for ccz in [-0.95, 0.95]: cyl(Vector3(ccx*wf, cy, ccz), 0.13, 0.13, wh, Color("e8d9b8"), 8, "plaster")
 	box(Vector3(0,0.44,1.02), Vector3(2.42*wf,0.28,0.16), stone, 0, 0, 0.30, "stone")
 	box(Vector3(0,top-0.10,0), Vector3(2.36*wf,0.13,1.96), Color("f0e2c4"), 0,0,0, "plaster")
 	box(Vector3(-0.62*wf,cy,0.99), Vector3(0.72,wh*0.62,0.045), Color("e0cfa8"), 0,0,0, "plaster"); box(Vector3(0.62*wf,cy,0.99), Vector3(0.72,wh*0.62,0.045), Color("e0cfa8"), 0,0,0, "plaster")
-	# R77: large-scale plaster value modelling (lit patch / shadow patch / shadow side face)
-	box(Vector3(-0.58*wf, top-0.38, 1.005), Vector3(1.02, 0.55, 0.04), Color("f5ecd2"), 0,0,0, "plaster")
-	box(Vector3(0.66*wf, 0.72, 1.005), Vector3(0.88, 0.58, 0.04), Color("d3bd96"), 0,0,0, "plaster")
-	box(Vector3(1.155*wf, cy, 0), Vector3(0.05, wh*0.86, 1.78), Color("d8c49c"), 0,0,0, "plaster")
+	# R78: plaster value modelling as jagged textured fans (R77 flat boxes replaced, same base keys)
+	_face_patch(Vector3(-0.58*wf, top-0.38, 0.99), Vector3(1,0,0), Vector3(0,1,0), 1.05, 0.58, hs78, Color("f5ecd2"), "plaster")
+	_face_patch(Vector3(0.66*wf, 0.72, 0.99), Vector3(1,0,0), Vector3(0,1,0), 0.90, 0.60, hs78+7, Color("d3bd96"), "plaster")
+	_face_patch(Vector3(1.14*wf, cy, 0), Vector3(0,0,-1), Vector3(0,1,0), 1.80, wh*0.88, hs78+13, Color("d8c49c"), "plaster")
 	# stone foundation skirt
 	box(Vector3(0,0.40,0), Vector3(2.40*wf,0.58,2.0), stone, 0,0,0, "stone")
 	box(Vector3(-0.62*wf,top+0.67,0.68), Vector3(0.52,0.52,0.42), Color("e8d9b8"), 0,0,0, "plaster")
