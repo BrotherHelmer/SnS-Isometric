@@ -3,7 +3,7 @@ extends RefCounted
 
 const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
 
-const STAGES := ["fresh", "early", "placement", "construction", "lumber", "second_chain", "developed", "reloaded"]
+const STAGES := ["fresh", "early", "placement", "construction", "lumber", "second_chain", "developed", "reloaded", "sovereign"]
 
 var road_ids: Array[int] = []
 var building_ids: Dictionary = {}
@@ -57,7 +57,7 @@ func apply(simulation, stage: String) -> Dictionary:
 	if sawmill_site.x >= 0:
 		building_ids[Defs.BUILDING_SAWMILL] = _request_and_complete(simulation, Defs.BUILDING_SAWMILL, sawmill_site)
 	_advance_ticks(simulation, 900)
-	if stage != "developed":
+	if stage not in ["developed", "sovereign"]:
 		return _result(simulation, stage)
 	_advance_until_stock(simulation, Defs.RESOURCE_STONE, 6, 900)
 	_advance_until_stock(simulation, Defs.RESOURCE_PLANKS, 8, 900)
@@ -79,11 +79,113 @@ func apply(simulation, stage: String) -> Dictionary:
 	if tower_site.x >= 0:
 		building_ids[Defs.BUILDING_WATCHTOWER] = _request_and_complete(simulation, Defs.BUILDING_WATCHTOWER, tower_site)
 	_advance_ticks(simulation, 700)
+	if stage == "sovereign":
+		_build_sovereign(simulation)
+		_advance_ticks(simulation, 300)
 	simulation.is_night = false
 	simulation.phase_time = 95.0
 	simulation.enemies.clear()
 	simulation.dawn_summary = {}
 	return _result(simulation, stage)
+
+
+## M4 evidence stage: a developed settlement that has pushed toward the
+## Shard — Lumen Pillar and claim Outpost on the shard bearing, Wyrd
+## Refiner beside the storehouse chain. (Wyrd Harvester is not placed:
+## it needs the crater-war geologist survey first, which a fixture
+## should not fake.)
+func _build_sovereign(simulation) -> void:
+	_advance_until_stock(simulation, Defs.RESOURCE_STONE, 6, 900)
+	_advance_until_stock(simulation, Defs.RESOURCE_PLANKS, 6, 900)
+	# Push a road toward the Shard, then place the Pillar and Outpost on
+	# that bearing through authoritative validation, as in real play.
+	_extend_road_toward(simulation, simulation.shard_position, 6)
+	var pillar_site := _find_sovereign_site(simulation, Defs.BUILDING_LUMEN_PILLAR)
+	if pillar_site.x < 0:
+		_clear_sovereign_patch(simulation)
+		_extend_road_toward(simulation, simulation.shard_position, 4)
+		pillar_site = _find_sovereign_site(simulation, Defs.BUILDING_LUMEN_PILLAR)
+	if pillar_site.x >= 0:
+		building_ids[Defs.BUILDING_LUMEN_PILLAR] = _request_structure(simulation, Defs.BUILDING_LUMEN_PILLAR, pillar_site)
+	else:
+		report.append("No valid Lumen Pillar site found through authoritative validation.")
+	_extend_road_toward(simulation, simulation.shard_position, 4)
+	var outpost_site := _find_sovereign_site(simulation, Defs.BUILDING_OUTPOST)
+	if outpost_site.x >= 0:
+		building_ids[Defs.BUILDING_OUTPOST] = _request_structure(simulation, Defs.BUILDING_OUTPOST, outpost_site)
+	else:
+		report.append("No valid Outpost site found through authoritative validation.")
+	var refiner_site := _ensure_site(simulation, Defs.BUILDING_WYRD_REFINER, simulation.town_hall_position + Vector2i(11, 11))
+	if refiner_site.x >= 0:
+		building_ids[Defs.BUILDING_WYRD_REFINER] = _request_and_complete(simulation, Defs.BUILDING_WYRD_REFINER, refiner_site)
+
+
+## Rivalry structures need cleared grass, so when no valid site exists
+## yet, clear a small patch on the Shard bearing inside the Town Hall's
+## Lumen (clearers are the game's own temporary workers).
+func _clear_sovereign_patch(simulation) -> void:
+	var hall: Vector2i = simulation.town_hall_position
+	var centre: Vector2i = simulation._footprint_center(hall, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
+	var to_shard := Vector2(simulation.shard_position - centre)
+	if to_shard.length() < 1.0:
+		to_shard = Vector2(-1, 0)
+	to_shard = to_shard.normalized()
+	var patch := centre + Vector2i(to_shard * 5.0)
+	for dy in range(-1, 2):
+		for dx in range(-1, 2):
+			var tile := patch + Vector2i(dx, dy)
+			simulation.request_clear(tile)
+	var guard := 0
+	while simulation._clearer_count() > 0 and guard < 3000:
+		simulation.advance_tick()
+		guard += 1
+
+
+## Rivalry structures (Lumen Pillar, Outpost) are placed instantly by
+## the rivalry layer; there is no construction site to wait for.
+func _request_structure(simulation, building_type: String, tile: Vector2i) -> int:
+	var result: Dictionary = simulation.request_build(building_type, tile)
+	if not bool(result.get("success", false)):
+		report.append("%s request failed: %s" % [Defs.building_name(building_type), String(result.get("message", ""))])
+		return 0
+	return int(Dictionary(result.get("structure", {})).get("id", 0))
+
+
+## Sovereign-stage road push: completed road tiles toward a far target.
+func _extend_road_toward(simulation, target: Vector2i, count: int) -> void:
+	for step in count:
+		var road_tile := _best_road_extension(simulation, target)
+		if road_tile.x < 0:
+			return
+		var result: Dictionary = simulation.request_build(Defs.BUILDING_ROAD, road_tile)
+		if not bool(result.get("success", false)):
+			return
+		var id := int(Dictionary(result.get("building", {})).get("id", 0))
+		road_ids.append(id)
+		_advance_until_complete(simulation, id, 500)
+
+
+## First tile near the Town Hall where authoritative validation accepts
+## the building, preferring the Shard bearing (the same search the
+## game's own Lumen objective jump performs for the player).
+func _find_sovereign_site(simulation, building_type: String) -> Vector2i:
+	var hall: Vector2i = simulation.town_hall_position
+	var shard: Vector2i = simulation.shard_position
+	var best := Vector2i(-1, -1)
+	var best_score := INF
+	for dy in range(-26, 27):
+		for dx in range(-26, 27):
+			var tile := hall + Vector2i(dx, dy)
+			if not simulation.is_inside_map(tile):
+				continue
+			var validation: Dictionary = simulation.validate_placement(building_type, tile, 0)
+			if not bool(validation.get("success", false)):
+				continue
+			var score := Vector2(tile - shard).length() + Vector2(tile - hall).length() * 0.35
+			if score < best_score:
+				best_score = score
+				best = tile
+	return best
 
 
 func _build_road_spine(simulation, count: int) -> void:

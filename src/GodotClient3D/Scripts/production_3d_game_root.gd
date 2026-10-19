@@ -4003,8 +4003,14 @@ var _objective_ping: Node3D = null
 
 
 func _objective_why(t: String) -> String:
+	if "road" in t:
+		return "Roads connect buildings so workers and goods can flow; every building needs a road link."
+	if "town hall" in t:
+		return "The Town Hall founds your realm: storage, shelter and the road network all start here."
 	if "lumen" in t:
 		return "Lumen light keeps Exposure down; a connected chain toward the Shard lets you claim it. Click the goal bar for a spot."
+	if "storehouse" in t or "storage" in t:
+		return "Storage caps how much your realm can hold; a Storehouse near production stops deliveries backing up."
 	if "quarry" in t or "stone" in t:
 		return "Stone gates towers, storehouses and bakeries. Click the goal bar to find a deposit."
 	if "lumber" in t or "wood" in t:
@@ -4015,10 +4021,12 @@ func _objective_why(t: String) -> String:
 		return "More homes mean more workers and shelter at night."
 	if "bread" in t or "farm" in t or "bak" in t:
 		return "Workers eat bread; a Farm feeds a Bakery."
-	if "outpost" in t or "rival" in t:
-		return "The rival Outpost pressures your border; capturing it removes that pressure."
 	if "seal" in t or "fissure" in t or "wyrd" in t:
 		return "Sealing the Fissure is the realm's final goal. A Wyrd Refiner turns Wyrd from a Harvester into Stabilized Wyrd."
+	if "rival" in t:
+		return "The rival Outpost pressures your border; capturing it removes that pressure."
+	if "outpost" in t:
+		return "An Outpost toward the Shard extends your Lumen and claims ground the rival cannot."
 	return ""
 
 
