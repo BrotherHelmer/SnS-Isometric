@@ -1101,21 +1101,23 @@ func _cone_relief(cc: Vector3, h: float, rb: float, rt: float, roofc: Color, see
 func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 	add_mesh(noised_box(4.7,2.4,3.6,0.07,4.2), Transform3D(Basis.IDENTITY, p+Vector3(0,1.2,0)), stone, "stone"); tri_total += 108
 	for cy in [0.55, 1.05, 1.55]: box(p+Vector3(0,cy,1.82), Vector3(4.6,0.07,0.05), stone.darkened(0.12))
-	add_mesh(noised_box(1.9,2.7,1.9,0.06,7.9), Transform3D(Basis.IDENTITY, p+Vector3(0,2.35,0)), stone.lightened(0.06), "stone"); tri_total += 108 # R90 keep warmer family
+	add_mesh(noised_box(1.9,2.7,1.9,0.06,7.9), Transform3D(Basis.IDENTITY, p+Vector3(-0.25,2.35,-0.15)), stone.lightened(0.06), "stone"); tri_total += 108 # R90 keep warmer family; R116 keep offset in plan
+	var toff := [Vector2(-2.05,-1.60), Vector2(1.70,-1.30), Vector2(-1.65,1.55), Vector2(2.10,1.35)] # R116 irregular tower plan (was identical +/-1.85,+/-1.45)
+	var trad := [0.64, 0.54, 0.50, 0.68] # R116 varied tower footprints
 	# stepped side wing + deformed prism roof over rear keep: uneven central roofline
 	box(p+Vector3(2.95,0.85,0.55), Vector3(1.35,1.7,2.3), stone, 0,0,0, "stone")
 	cyl(p+Vector3(2.95,2.15,0.55), 0.98,0.08,0.9, roof, 9, "roofp"); _cone_relief(p+Vector3(2.95,2.15,0.55), 0.9, 0.98, 0.08, roof, 9460, false)
 	roof2(p+Vector3(-0.6,2.38,-0.85), 3.6, 1.7, 0.95, 0.18, roof)
-	cyl(p+Vector3(0,4.85,0), 1.05,0.05,2.4, roof, 10, "roofp"); _cone_relief(p+Vector3(0,4.85,0), 2.4, 1.05, 0.05, roof, 9450, true)
+	cyl(p+Vector3(-0.25,4.85,-0.15), 1.05,0.05,2.4, roof, 10, "roofp"); _cone_relief(p+Vector3(-0.25,4.85,-0.15), 2.4, 1.05, 0.05, roof, 9450, true)
 	var ths := [3.15, 3.95, 2.85, 4.05] # R115 varied tower heights (was 3.05-3.75 near-uniform)
 	var cnh := [1.50, 1.90, 1.30, 2.00] # R115 varied cone heights/pitches, seated on each tower top
 	var cnr := [0.70, 0.76, 0.66, 0.80]
 	for oi2 in 4:
-		var off: Vector2 = [Vector2(-1.85,-1.45),Vector2(1.85,-1.45),Vector2(-1.85,1.45),Vector2(1.85,1.45)][oi2]
-		cyl(p+Vector3(off.x,ths[oi2]/2.0,off.y), 0.58,0.45,ths[oi2], stone.darkened(0.07), 8, "stone") # R90 towers cooler family
+		var off: Vector2 = toff[oi2]
+		cyl(p+Vector3(off.x,ths[oi2]/2.0,off.y), trad[oi2],trad[oi2]*0.78,ths[oi2], stone.darkened(0.07), 8, "stone") # R90 towers cooler family
 		cyl(p+Vector3(off.x,ths[oi2]+cnh[oi2]*0.5-0.12,off.y), cnr[oi2],0.02,cnh[oi2], roof, 10, "roofp"); _cone_relief(p+Vector3(off.x,ths[oi2]+cnh[oi2]*0.5-0.12,off.y), cnh[oi2], cnr[oi2], 0.02, roof, 9400+oi2, true)
-		cyl(p+Vector3(off.x,ths[oi2]-0.35,off.y), 0.88,0.72,0.14, roof.darkened(0.22), 10); cyl(p+Vector3(off.x,ths[oi2]-0.02,off.y), 0.62,0.46,0.14, roof.darkened(0.22), 10)
-		for ts in 3: box(p+Vector3(off.x+0.63,1.0+float(ts)*0.8,off.y), Vector3(0.1,0.65,0.34), stone.darkened(0.12))
+		cyl(p+Vector3(off.x,ths[oi2]-0.35,off.y), trad[oi2]*1.45,trad[oi2]*1.18,0.14, roof.darkened(0.22), 10); cyl(p+Vector3(off.x,ths[oi2]-0.02,off.y), trad[oi2]*1.02,trad[oi2]*0.80,0.14, roof.darkened(0.22), 10)
+		for ts in 3: box(p+Vector3(off.x+trad[oi2]+0.05,1.0+float(ts)*0.8,off.y), Vector3(0.1,0.65,0.34), stone.darkened(0.12))
 	var mhs := [0.35,0.52,0.27,0.46,0.30,0.49]
 	for mi in 6: box(p+Vector3([-1.9,-1.15,-0.4,0.4,1.15,1.9][mi],2.02+mhs[mi]/2.0,1.82), Vector3(0.42,mhs[mi],0.18), stone)
 	for bx in [-0.9,-0.45,0.0,0.45,0.9]: box(p+Vector3(bx,3.42,1.12), Vector3(0.3,0.3,0.16), stone.darkened(0.12))
@@ -1142,49 +1144,49 @@ func _build_castle(p: Vector3, stone: Color, roof: Color) -> void:
 			var tilt85 := rng85.randf_range(-0.05, 0.05) if rng85.randf() > 0.18 else rng85.randf_range(-0.16, 0.16)
 			box(p+Vector3(-0.70+float(cx83)*0.47 + (0.10 if ry83%2==1 else 0.0) + rng85.randf_range(-0.035, 0.035), 1.70+float(ry83)*0.38 + rng85.randf_range(-0.03, 0.03), 0.92+st85*0.5), Vector3(sw85, sh85, st85), stone.darkened(0.12) if (cx83+ry83)%2==0 else stone.lightened(0.07), 0, tilt85, 0, "stone")
 	for oi83 in 4:
-		var off83: Vector2 = [Vector2(-1.85,-1.45),Vector2(1.85,-1.45),Vector2(-1.85,1.45),Vector2(1.85,1.45)][oi83]
+		var off83: Vector2 = toff[oi83]
 		for sy83 in 5:
-			box(p+Vector3(off83.x + (float(sy83%2)*0.24-0.12) + rng85.randf_range(-0.03, 0.03), 0.65+float(sy83)*0.55 + rng85.randf_range(-0.03, 0.03), off83.y+0.57), Vector3(rng85.randf_range(0.26, 0.44), rng85.randf_range(0.20, 0.34), rng85.randf_range(0.05, 0.11)), stone.darkened(0.12) if sy83%2==0 else stone.lightened(0.07), 0, rng85.randf_range(-0.05, 0.05), 0, "stone")
-			box(p+Vector3(off83.x - (float(sy83%2)*0.24-0.12) + rng85.randf_range(-0.03, 0.03), 0.92+float(sy83)*0.55 + rng85.randf_range(-0.03, 0.03), off83.y+0.57), Vector3(rng85.randf_range(0.24, 0.40), rng85.randf_range(0.20, 0.32), rng85.randf_range(0.05, 0.11)), stone.lightened(0.07) if sy83%2==0 else stone.darkened(0.12), 0, rng85.randf_range(-0.05, 0.05), 0, "stone")
+			box(p+Vector3(off83.x + (float(sy83%2)*0.24-0.12) + rng85.randf_range(-0.03, 0.03), 0.65+float(sy83)*0.55 + rng85.randf_range(-0.03, 0.03), off83.y+trad[oi83]+0.04), Vector3(rng85.randf_range(0.26, 0.44), rng85.randf_range(0.20, 0.34), rng85.randf_range(0.05, 0.11)), stone.darkened(0.12) if sy83%2==0 else stone.lightened(0.07), 0, rng85.randf_range(-0.05, 0.05), 0, "stone")
+			box(p+Vector3(off83.x - (float(sy83%2)*0.24-0.12) + rng85.randf_range(-0.03, 0.03), 0.92+float(sy83)*0.55 + rng85.randf_range(-0.03, 0.03), off83.y+trad[oi83]+0.04), Vector3(rng85.randf_range(0.24, 0.40), rng85.randf_range(0.20, 0.32), rng85.randf_range(0.05, 0.11)), stone.lightened(0.07) if sy83%2==0 else stone.darkened(0.12), 0, rng85.randf_range(-0.05, 0.05), 0, "stone")
 	# R78: castle patches as jagged textured fans (R77 flat rectangles replaced); tower shadow strips with internal stone insets
 	for pp7 in [[-1.45, 0.95, 1.35, 0.90, 101], [0.55, 1.35, 1.10, 0.75, 113], [1.55, 0.62, 0.90, 0.60, 127], [-0.35, 0.55, 1.00, 0.55, 139]]:
 		_face_patch(p+Vector3(pp7[0], pp7[1], 1.845), Vector3(1,0,0), Vector3(0,1,0), pp7[2], pp7[3], int(pp7[4]), stone.darkened(0.17), "stone", 1)
-	for pp8 in [[-0.55, 2.75, 0.85, 0.70, 151], [0.45, 3.05, 0.75, 0.60, 163]]:
-		_face_patch(p+Vector3(pp8[0], pp8[1], 0.965), Vector3(1,0,0), Vector3(0,1,0), pp8[2], pp8[3], int(pp8[4]), stone.darkened(0.17), "stone", 1)
+	for pp8 in [[-0.80, 2.75, 0.85, 0.70, 151], [0.20, 3.05, 0.75, 0.60, 163]]:
+		_face_patch(p+Vector3(pp8[0], pp8[1], 0.815), Vector3(1,0,0), Vector3(0,1,0), pp8[2], pp8[3], int(pp8[4]), stone.darkened(0.17), "stone", 1)
 	for oi3 in 4:
-		var off3: Vector2 = [Vector2(-1.85,-1.45),Vector2(1.85,-1.45),Vector2(-1.85,1.45),Vector2(1.85,1.45)][oi3]
-		box(p+Vector3(off3.x+0.44, ths[oi3]*0.48, off3.y), Vector3(0.20, ths[oi3]*0.92, 0.80), stone.darkened(0.30), 0, 0, 0, "stone")
+		var off3: Vector2 = toff[oi3]
+		box(p+Vector3(off3.x+trad[oi3]*0.72, ths[oi3]*0.48, off3.y), Vector3(0.20, ths[oi3]*0.92, 0.80), stone.darkened(0.30), 0, 0, 0, "stone")
 		for ts8 in 5:
-			box(p+Vector3(off3.x+0.55, 0.62+float(ts8)*0.58, off3.y-0.19+float(ts8%2)*0.20), Vector3(0.03, 0.26, 0.32), stone.darkened(0.12) if ts8%2==0 else stone.lightened(0.07), 0, 0, 0, "stone")
+			box(p+Vector3(off3.x+trad[oi3]*0.88, 0.62+float(ts8)*0.58, off3.y-0.19+float(ts8%2)*0.20), Vector3(0.03, 0.26, 0.32), stone.darkened(0.12) if ts8%2==0 else stone.lightened(0.07), 0, 0, 0, "stone")
 	# battlements along side top edges + centre tower roof ring
 	for bz2 in [-1.2,-0.4,0.4,1.2]:
 		box(p+Vector3(2.32,2.52,bz2), Vector3(0.16,0.3,0.34), stone); box(p+Vector3(-2.32,2.52,bz2), Vector3(0.16,0.3,0.34), stone)
-	cyl(p+Vector3(0,3.62,0), 1.0,0.86,0.15, roof.darkened(0.22), 10)
+	cyl(p+Vector3(-0.25,3.62,-0.15), 1.0,0.86,0.15, roof.darkened(0.22), 10)
 	var tops115 := [4.53, 5.73, 4.03, 5.93] # cone apex per tower (ths + cone - overlap)
 	for sp3i in 2:
-		var sp3: Vector2 = [Vector2(-1.85,-1.45), Vector2(1.85,1.45)][sp3i]; var sty: float = tops115[[0, 3][sp3i]]
+		var sp3: Vector2 = [toff[0], toff[3]][sp3i]; var sty: float = tops115[[0, 3][sp3i]]
 		cyl(p+Vector3(sp3.x,sty+0.28,sp3.y), 0.10,0.13,0.8, stone, 6, "stone"); cyl(p+Vector3(sp3.x,sty+0.88,sp3.y), 0.22,0.02,0.5, roof, 7, "roofp")
 	for pn3i in 2: # R115 pennants on the remaining two cone tops (existing pole/pennant keys)
-		var pn3: Vector2 = [Vector2(1.85,-1.45), Vector2(-1.85,1.45)][pn3i]; var pty: float = tops115[[1, 2][pn3i]]
+		var pn3: Vector2 = [toff[1], toff[2]][pn3i]; var pty: float = tops115[[1, 2][pn3i]]
 		box(p+Vector3(pn3.x,pty+0.30,pn3.y), Vector3(0.06,0.72,0.06), Color("6b4423")); box(p+Vector3(pn3.x+0.30,pty+0.52,pn3.y), Vector3(0.55,0.32,0.04), Color("d43a2a"))
 	# R115 front-tower hanging banners (existing banner key, varied height/size) + keep-roof dormer turret
-	box(p+Vector3(-1.85,2.30,2.04), Vector3(0.50,1.05,0.06), Color("c22e22")); box(p+Vector3(1.85,1.95,2.04), Vector3(0.44,0.85,0.06), Color("c22e22"))
+	box(p+Vector3(toff[2].x,2.30,toff[2].y+trad[2]+0.06), Vector3(0.50,1.05,0.06), Color("c22e22")); box(p+Vector3(toff[3].x,1.95,toff[3].y+trad[3]+0.06), Vector3(0.44,0.85,0.06), Color("c22e22"))
 	cyl(p+Vector3(-1.05,3.02,1.50), 0.30,0.26,1.15, stone, 8, "stone"); cyl(p+Vector3(-1.05,3.95,1.50), 0.44,0.02,0.80, roof, 8, "roofp")
 	cyl(p+Vector3(1.7,3.3,-1.0), 0.42,0.46,1.6, stone, 8, "stone"); cyl(p+Vector3(1.7,4.45,-1.0), 0.55,0.02,0.8, roof, 8, "roofp"); _cone_relief(p+Vector3(1.7,4.45,-1.0), 0.8, 0.55, 0.02, roof, 9470, false)
 	box(p+Vector3(-1.6,1.7,2.08), Vector3(0.55,1.15,0.07), Color("c22e22")); box(p+Vector3(1.6,1.7,2.08), Vector3(0.55,1.15,0.07), Color("c22e22"))
 	for bt in [Vector2(-2.55,-1.95),Vector2(2.55,-1.95),Vector2(-2.55,1.95),Vector2(2.55,1.95)]: box(p+Vector3(bt.x,0.55,bt.y), Vector3(0.55,1.1,0.55), stone.darkened(0.14), 0.4, 0, 0, "stone")
 	for wf in [Vector2(-1.9,1.35),Vector2(1.9,1.35),Vector2(0,2.6)]:
 		box(p+Vector3(wf.x,wf.y,2.07), Vector3(0.52,0.68,0.08), Color("e8c87a")); box(p+Vector3(wf.x,wf.y,2.11), Vector3(0.36,0.5,0.05), Color("3a2c1c"))
-	box(p+Vector3(0,0.7,2.08), Vector3(0.95,1.4,0.15), Color("4a3421"))
+	box(p+Vector3(0.35,0.7,2.08), Vector3(0.95,1.4,0.15), Color("4a3421"))
 	var gm := CylinderMesh.new(); gm.bottom_radius=0.48; gm.top_radius=0.48; gm.height=0.16; gm.radial_segments=10
-	add_mesh(gm, Transform3D(Basis.from_euler(Vector3(PI/2.0,0,0)), p+Vector3(0,1.42,2.09)), Color("4a3421")); tri_total += 40
+	add_mesh(gm, Transform3D(Basis.from_euler(Vector3(PI/2.0,0,0)), p+Vector3(0.35,1.42,2.09)), Color("4a3421")); tri_total += 40
 	# gatehouse protrusion + annex tower (silhouette complexity)
-	box(p+Vector3(0,0.85,2.45), Vector3(1.7,1.7,0.85), stone, 0,0,0, "stone")
-	cyl(p+Vector3(0,2.15,2.45), 1.15,0.35,0.85, roof, 8, "roofp")
+	box(p+Vector3(0.35,0.85,2.45), Vector3(1.7,1.7,0.85), stone, 0,0,0, "stone")
+	cyl(p+Vector3(0.35,2.15,2.45), 1.15,0.35,0.85, roof, 8, "roofp")
 	cyl(p+Vector3(-3.35,1.7,0.3), 0.82,0.82,3.4, stone, 8, "stone")
 	cyl(p+Vector3(-3.35,4.15,0.3), 1.05,0.03,1.35, roof, 9, "roofp")
 	for bx2 in [-1.2,-0.6,0.0,0.6,1.2]: box(p+Vector3(bx2,2.42,-1.82), Vector3(0.34,0.32,0.16), stone.darkened(0.1))
-	box(p+Vector3(0.0,3.9,0), Vector3(0.08,1.2,0.08), Color("6b4423")); box(p+Vector3(0.45,4.3,0), Vector3(0.8,0.45,0.05), Color("d43a2a"))
+	box(p+Vector3(-0.25,3.9,-0.15), Vector3(0.08,1.2,0.08), Color("6b4423")); box(p+Vector3(0.20,4.3,-0.15), Vector3(0.8,0.45,0.05), Color("d43a2a"))
 func noised_box(w: float, h: float, d: float, amt: float, seedv: float) -> ArrayMesh:
 	var bm := BoxMesh.new(); bm.size = Vector3(w,h,d)
 	var arrays: Array = bm.get_mesh_arrays(); var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]; var uvs: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]; var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
