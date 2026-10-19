@@ -199,7 +199,7 @@ func _create_completed_model() -> void:
 		return
 	# M1 diorama-world: the approved diorama builders own the founding-loop
 	# types. CASTLE (the barracks upgrade) keeps the authored keep view.
-	if building_type in ["TOWN_HALL", "HOUSE", "LUMBER_CAMP"]:
+	if building_type in ["TOWN_HALL", "HOUSE", "LUMBER_CAMP", "SAWMILL", "FARM", "BAKERY", "STOREHOUSE", "QUARRY", "WATCHTOWER", "BARRACKS"]:
 		model_root = DioramaBuildings.build(building_type, entity_id)
 		model_root.name = "SemanticModel_%s" % building_type
 		model_root.position.z = _model_offset_z()
@@ -413,7 +413,13 @@ func _create_wall_model() -> void:
 	var mask := int(last_snapshot.get("wall_mask", 0))
 	if mask == 0:
 		mask = 5
-	var stone := _material(Color("#a99d81"), 0.0)
+	# M2 diorama-world: painted stone + a sculpted cap slab; the mask
+	# connectivity and silhouette are unchanged.
+	var stone := StandardMaterial3D.new()
+	stone.albedo_texture = load(Catalog.DIORAMA_TEXTURES["stone"]) as Texture2D
+	stone.albedo_color = Color(0.90, 0.88, 0.84)
+	stone.uv1_scale = Vector3(1.2, 1.2, 1.2)
+	stone.roughness = 0.95
 	for index in 4:
 		if mask & (1 << index) == 0:
 			continue
@@ -425,6 +431,13 @@ func _create_wall_model() -> void:
 		segment.rotation.y = float(index) * PI * 0.5
 		segment.material_override = stone
 		model_root.add_child(segment)
+		var cap := MeshInstance3D.new()
+		var cap_mesh := BoxMesh.new()
+		cap_mesh.size = Vector3(0.88, 0.16, 2.32)
+		cap.mesh = cap_mesh
+		cap.position = Vector3(0.0, 1.03, 0.0)
+		cap.material_override = stone
+		segment.add_child(cap)
 		for merlon_index in 3:
 			var merlon := MeshInstance3D.new()
 			merlon.name = "Crenellation"

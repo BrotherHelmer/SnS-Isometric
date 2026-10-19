@@ -7,6 +7,7 @@ const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
 const Catalog = preload("res://src/GodotClient3D/Scripts/production_asset_catalog.gd")
 const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_profile.gd")
 const BuildingView = preload("res://src/GodotClient3D/Scripts/production_building_view_3d.gd")
+const DioramaBuildings = preload("res://src/GodotClient3D/Scripts/production_diorama_buildings.gd")
 const WarmupCatalog = preload("res://src/GodotClient3D/Scripts/production_asset_catalog.gd")
 const CharacterView = preload("res://src/GodotClient3D/Scripts/production_character_view_3d.gd")
 const RoadView = preload("res://src/GodotClient3D/Scripts/production_road_view_3d.gd")
@@ -195,6 +196,8 @@ var stream_enabled := true
 
 
 func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {}) -> void:
+	# M2: roads drape over the same height field the terrain renders.
+	RoadView.height_sampler = Callable(self, "terrain_surface_y_at_logical")
 	# The screen fog quad is parented to the camera, not to this node, so the
 	# child wipe below never freed it. A new realm with another seed kept the
 	# old quad and its stale fog mask, which covered the whole new map.
@@ -435,6 +438,33 @@ func world_to_tile(world_position: Vector3) -> Vector2i:
 		roundi(world_position.x / ScaleProfile.LOGICAL_CELL_METRES + half.x),
 		roundi(world_position.z / ScaleProfile.LOGICAL_CELL_METRES + half.y)
 	)
+
+
+## M2 diorama-world: the exact height of the rendered terrain surface at
+## a logical point — the same corner heightfield _build_chunk_terrain
+## draws (tile heights x elevation unit + visual relief, same triangle
+## split), so road ribbons drape on the surface the player sees.
+func terrain_surface_y_at_logical(logical: Vector2) -> float:
+	if simulation == null or map_size == Vector2i.ZERO:
+		return 0.0
+	var g := logical + Vector2(0.5, 0.5)
+	var a := clampi(int(floor(g.x)), 0, map_size.x - 1)
+	var b := clampi(int(floor(g.y)), 0, map_size.y - 1)
+	var u := clampf(g.x - float(a), 0.0, 1.0)
+	var v := clampf(g.y - float(b), 0.0, 1.0)
+	var v00 := _terrain_corner_y(a, b)
+	var v10 := _terrain_corner_y(a + 1, b)
+	var v11 := _terrain_corner_y(a + 1, b + 1)
+	var v01 := _terrain_corner_y(a, b + 1)
+	if u >= v:
+		return v00 + (v10 - v00) * u + (v11 - v10) * v
+	return v00 + (v11 - v01) * u + (v01 - v00) * v
+
+
+func _terrain_corner_y(a: int, b: int) -> float:
+	var tile := Vector2i(clampi(a, 0, map_size.x - 1), clampi(b, 0, map_size.y - 1))
+	var world := ScaleProfile.tile_to_flat_world(Vector2(tile), map_size)
+	return float(simulation.get_height(tile)) * ScaleProfile.TERRAIN_ELEVATION_UNIT_METRES + _visual_relief_y(Vector2(world.x, world.z))
 
 
 func height_at_logical(tile_position: Vector2) -> float:
@@ -1147,9 +1177,7 @@ func _build_chunk_nature(host: Node3D, coord: Vector2i, lod: int) -> void:
 			elif tile_type == Defs.TILE_ROCK and lod == CHUNK_LOD_NEAR:
 				if _nature_suppressed_near_activity(tile):
 					continue
-				var rock_path := String(Catalog.ROCKS[_tile_hash(tile, 101) % Catalog.ROCKS.size()]) if Catalog.ROCKS.size() > 0 else ""
-				if rock_path != "":
-					_append_nature_transform(transforms_by_path, rock_path, tile, 0, 0.66, 0.70, 0.18)
+				_append_nature_transform(transforms_by_path, "diorama://rock_a", tile, 0, 0.66, 0.70, 0.18)
 	_spawn_nature_multimeshes(host, transforms_by_path, true)
 
 
@@ -1492,9 +1520,7 @@ func _rebake_nature_row(transforms_by_path: Dictionary, origin: Vector2i, y: int
 		elif tile_type == Defs.TILE_ROCK and lod == CHUNK_LOD_NEAR:
 			if _nature_suppressed_near_activity(tile):
 				continue
-			var rock_path := String(Catalog.ROCKS[_tile_hash(tile, 101) % Catalog.ROCKS.size()]) if Catalog.ROCKS.size() > 0 else ""
-			if rock_path != "":
-				_append_nature_transform(transforms_by_path, rock_path, tile, 0, 0.66, 0.70, 0.18)
+			_append_nature_transform(transforms_by_path, "diorama://rock_a", tile, 0, 0.66, 0.70, 0.18)
 
 
 func _rebake_grass_row(transforms_by_path: Dictionary, origin: Vector2i, y: int, occupied: Dictionary) -> void:
@@ -2899,6 +2925,10 @@ func _append_boundary_instance(groups: Dictionary, logical_position: Vector2, in
 func _mesh_for_nature_path(path_value: String) -> Mesh:
 	if nature_mesh_cache.has(path_value):
 		return nature_mesh_cache[path_value]
+	if path_value.begins_with("diorama://"):
+		var diorama_mesh := DioramaBuildings.nature_mesh(path_value)
+		nature_mesh_cache[path_value] = diorama_mesh
+		return diorama_mesh
 	if path_value.get_file().get_basename() == "grass":
 		var clump := _grass_clump_mesh()
 		nature_mesh_cache[path_value] = clump
@@ -6051,23 +6081,17 @@ func _force_cast_shadows(node: Node) -> void:
 
 
 func _tree_path_for_tile(tile: Vector2i, index: int, neighbors: int) -> String:
-	# GFX-K woodland: 55% conifer / 25% broadleaf / 20% understory at the edge.
+	# M2 diorama-world: 55% conifer / 25% broadleaf / 20% understory at the
+	# edge, same rolls as the GFX-K woodland, but the tree forms are the
+	# diorama family (spruce/oak keys resolve in _mesh_for_nature_path).
 	var roll := _tile_hash(tile, 17 + index) % 100
-	if neighbors <= 1:
-		if roll < 55 and Catalog.CONIFERS.size() > 0:
-			return String(Catalog.CONIFERS[_tile_hash(tile, 31 + index) % Catalog.CONIFERS.size()])
-		if roll < 80 and Catalog.DECIDUOUS.size() > 0:
-			return String(Catalog.DECIDUOUS[_tile_hash(tile, 41 + index) % Catalog.DECIDUOUS.size()])
-		if Catalog.UNDERSTORY.size() > 0:
-			return String(Catalog.UNDERSTORY[_tile_hash(tile, 51 + index) % Catalog.UNDERSTORY.size()])
-	if neighbors >= 2:
-		if roll < 55 and Catalog.CONIFERS.size() > 0:
-			return String(Catalog.CONIFERS[_tile_hash(tile, 31 + index) % Catalog.CONIFERS.size()])
-		if roll < 80 and Catalog.DECIDUOUS.size() > 0:
-			return String(Catalog.DECIDUOUS[_tile_hash(tile, 41 + index) % Catalog.DECIDUOUS.size()])
-		if Catalog.EDGE_TREES.size() > 0:
-			return String(Catalog.EDGE_TREES[_tile_hash(tile, 51 + index) % Catalog.EDGE_TREES.size()])
-	return String(Catalog.TREES[_tile_hash(tile, 17 + index) % Catalog.TREES.size()])
+	if roll < 55:
+		return "diorama://spruce_a" if _tile_hash(tile, 31 + index) % 2 == 0 else "diorama://spruce_b"
+	if roll < 80:
+		return "diorama://oak_a" if _tile_hash(tile, 41 + index) % 2 == 0 else "diorama://oak_b"
+	if neighbors <= 1 and Catalog.UNDERSTORY.size() > 0:
+		return String(Catalog.UNDERSTORY[_tile_hash(tile, 51 + index) % Catalog.UNDERSTORY.size()])
+	return "diorama://oak_b"
 
 
 func _tree_scale_range(path_value: String, neighbors: int) -> Vector2:
@@ -6113,6 +6137,8 @@ func _shared_foliage_material(mesh: Mesh, path_value: String) -> Material:
 
 
 func _foliage_material(mesh: Mesh, path_value: String) -> Material:
+	if String(path_value).begins_with("diorama://"):
+		return null
 	if String(path_value).contains("wheat"):
 		var gold := StandardMaterial3D.new()
 		gold.albedo_color = Identity.PALETTE_WHEAT
