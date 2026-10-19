@@ -5700,9 +5700,8 @@ func _reveal_from_world() -> void:
 		_reveal_radius(town_center, INITIAL_REVEAL_RADIUS)
 		return
 	_reveal_radius(town_center, building_vision_radius(Defs.BUILDING_TOWN_HALL))
-	# Settlers live inside the bowl: keep the Shard and the crater
-	# corridor visible from the first camera so the horizon reads.
-	_reveal_radius(shard_position, 8)
+	# The Shard stays hidden until scouted (Helmer ruling 19/10): no
+	# opening reveal. The crater corridor below still marks the way.
 	var crater_dir := crater_direction_from(town_center)
 	var span := _tile_distance(town_center, shard_position)
 	for frac in [0.22, 0.45, 0.68, 0.88]:
