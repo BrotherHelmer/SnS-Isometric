@@ -1116,7 +1116,7 @@ func _plan_ai_goal() -> void:
 			scores["claim"] = 120.0
 		elif _ai_can_prepare_outpost():
 			scores["claim"] = 105.0
-	if _ai_needs_lumen_extension():
+	if _ai_needs_lumen_extension() and not _ai_lumen_cap_blocks_placement():
 		scores["place_lumen"] = 76.0
 	var inactive_pillars := _count_inactive_pillars(Tuning.AI_REALM)
 	var holding_valid_night := bool(ai_claim.get("active", false))
@@ -1224,7 +1224,7 @@ func _ai_place_lumen() -> void:
 		ai_current_goal = "secure_wood"
 		_set_ai_target(Vector2i(_home_center(Tuning.AI_REALM)))
 		return
-	if _count_structures(Tuning.AI_REALM, Tuning.STRUCTURE_LUMEN_PILLAR) >= Tuning.MAX_LUMEN_PILLARS_PER_REALM:
+	if _ai_lumen_pillar_cap_reached():
 		_record_navigation_failure("Rival Lumen network reached its Pillar cap without reaching the Shard.")
 		return
 	var tile := _best_lumen_site(Tuning.AI_REALM)
@@ -1260,7 +1260,7 @@ func _ai_claim() -> void:
 			return
 		var site := _best_outpost_site(Tuning.AI_REALM)
 		if site.x < 0:
-			if _ai_needs_lumen_extension():
+			if _ai_needs_lumen_extension() and not _ai_lumen_cap_blocks_placement():
 				ai_current_goal = "place_lumen"
 				_ai_place_lumen()
 			else:
@@ -1577,6 +1577,15 @@ func _ai_can_prepare_outpost() -> bool:
 	if not is_lumen_connected_at(Tuning.AI_REALM, Vector2(simulation.shard_position)):
 		return false
 	return true
+
+
+func _ai_lumen_pillar_cap_reached() -> bool:
+	return _count_structures(Tuning.AI_REALM, Tuning.STRUCTURE_LUMEN_PILLAR) >= Tuning.max_lumen_pillars_for_map(simulation.map_size)
+
+
+# At the cap with nothing to restore, place_lumen can only fail; fall back to roads/defence instead of looping.
+func _ai_lumen_cap_blocks_placement() -> bool:
+	return _ai_lumen_pillar_cap_reached() and _first_inactive_pillar(Tuning.AI_REALM).is_empty()
 
 
 func _ai_needs_lumen_extension() -> bool:
