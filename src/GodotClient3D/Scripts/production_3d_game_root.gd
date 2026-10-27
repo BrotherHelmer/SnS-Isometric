@@ -643,13 +643,17 @@ func _unhandled_input(event: InputEvent) -> void:
 			elif placement_type == Defs.TOOL_CLEAR_AREA:
 				_start_clear_drag(event.position)
 			elif placement_type != "":
-				_commit_placement()
+				_commit_placement(event.position)
 			else:
 				_set_build_palette_visible(false)
 				map_drag_active = true
 				map_drag_moved = false
 				map_drag_origin = event.position
-				box_select_active = not scout_aiming and unit_order_mode == ""
+				var press_on_unit: bool = false
+				if not scout_aiming and unit_order_mode == "":
+					var character_pick: Dictionary = _screen_space_character_pick(event.position)
+					press_on_unit = not character_pick.is_empty()
+				box_select_active = press_on_unit
 				box_select_origin = event.position
 			get_viewport().set_input_as_handled()
 		else:
@@ -2453,10 +2457,17 @@ func _update_placement_ghost(force := false) -> void:
 		placement_label.text = "%s · %s" % [prefix, String(placement_validation.get("message", ""))]
 
 
-func _commit_placement() -> void:
-	if placement_type == "" or placement_tile.x < 0:
+func _commit_placement(click_position := Vector2(-1, -1)) -> void:
+	if placement_type == "":
 		return
-	var result: Dictionary = simulation_host.simulation.request_build(placement_type, placement_tile, placement_rotation)
+	var commit_tile := placement_tile
+	if click_position.x >= 0.0:
+		var hit := _raycast_terrain(click_position)
+		if not hit.is_empty():
+			commit_tile = world_view.world_to_tile(hit.position)
+	if commit_tile.x < 0:
+		return
+	var result: Dictionary = simulation_host.simulation.request_build(placement_type, commit_tile, placement_rotation)
 	_show_status(String(result.get("message", "")), 3.0)
 	if bool(result.get("success", false)):
 		_sync_presentation()
