@@ -644,14 +644,20 @@ func _unhandled_input(event: InputEvent) -> void:
 				_start_clear_drag(event.position)
 			elif placement_type != "":
 				_commit_placement(event.position)
-			else:
-				_set_build_palette_visible(false)
-				map_drag_active = true
-				map_drag_moved = false
-				map_drag_origin = event.position
-				var has_selectable_units := not current_frame_snapshot.get("workers", []).is_empty()
-				box_select_active = not scout_aiming and unit_order_mode == "" and has_selectable_units
-				box_select_origin = event.position
+		else:
+			_set_build_palette_visible(false)
+			map_drag_active = true
+			map_drag_moved = false
+			map_drag_origin = event.position
+			var press_on_unit: bool = false
+			if not scout_aiming and unit_order_mode == "":
+				var character_pick: Dictionary = _screen_space_character_pick(event.position)
+				if not character_pick.is_empty():
+					var pick_id: int = int(character_pick.get("id", 0))
+					if String(character_pick.get("kind", "")) == "worker" and _is_patrol_soldier_id(pick_id):
+						press_on_unit = true
+			box_select_active = press_on_unit
+			box_select_origin = event.position
 			get_viewport().set_input_as_handled()
 		else:
 			var consumed := road_dragging or wall_dragging or clear_dragging or map_drag_active
