@@ -22,7 +22,8 @@ static var _build_cache := {}
 ## are per-building); only the geometry resources are shared. A fresh
 ## build whose root is not purely mesh instances is returned uncached.
 static func build(building_type: String, seed_id: int) -> Node3D:
-	var key := building_type + ":" + str(absi(seed_id) % 3 if building_type == "HOUSE" else 0)
+	# Bug 1 fix: Increase house variants from 3 to 5
+	var key := building_type + ":" + str(absi(seed_id) % 5 if building_type == "HOUSE" else 0)
 	if _build_cache.has(key):
 		var entry: Dictionary = _build_cache[key]
 		var root := Node3D.new()
@@ -319,15 +320,31 @@ static func _cottage(b: Batch, wall_mat: Material, roof_mat: Material, kind: int
 
 static func _build_house(seed_id: int) -> Node3D:
 	var b := Batch.new()
-	var variant := absi(seed_id) % 3
+	# Bug 1 fix: 5 distinct variants with different roof colors and minor shape changes
+	var variant := absi(seed_id) % 5
+	var scale := 0.88
 	if variant == 0:
+		# Plaster walls + thatch roof (golden/yellow)
 		_cottage(b, _plain_mat("plaster", Color(0.90, 0.86, 0.78)), _thatch(), 0)
+		scale = 0.86
 	elif variant == 1:
+		# Stone walls + dark slate roof (blue-gray)
 		_cottage(b, _stone(), _plain_mat("slate", Color(0.40, 0.46, 0.54)), 1)
+		scale = 0.88
+	elif variant == 2:
+		# Wood walls + dark brown shingle roof
+		_cottage(b, _plain_mat("wood", Color(0.52, 0.40, 0.29)), _plain_mat("wood_dark", Color(0.38, 0.29, 0.21)), 2)
+		scale = 0.90
+	elif variant == 3:
+		# Plaster walls + ochre/tan roof
+		_cottage(b, _plain_mat("plaster", Color(0.88, 0.84, 0.76)), _plain_mat("hay", Color(0.76, 0.64, 0.36)), 1)
+		scale = 0.92
 	else:
-		_cottage(b, _plain_mat("wood", Color(0.52, 0.40, 0.29)), _plain_mat("terra", Color(0.60, 0.31, 0.24)), 2)
+		# Stone walls + red terra roof (use red sparingly - only 1 of 5)
+		_cottage(b, _stone(), _plain_mat("terra", Color(0.60, 0.31, 0.24)), 2)
+		scale = 0.87
 	var root := b.build_root("DioramaHouse")
-	root.scale = Vector3.ONE * 0.88
+	root.scale = Vector3.ONE * scale
 	return root
 
 

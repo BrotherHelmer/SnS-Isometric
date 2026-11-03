@@ -48,7 +48,13 @@ func configure(snapshot: Dictionary) -> void:
 	last_snapshot = snapshot.duplicate(true)
 	wall_signature = "%d:%d:%d" % [int(snapshot.get("wall_mask", 0)), int(bool(snapshot.get("gate_adjacent", false))), int(bool(snapshot.get("gate_closed", false)))]
 	name = "%s_%d" % ["Construction" if is_construction else building_type, entity_id]
-	rotation.y = -float(rotation_quarters) * PI * 0.5
+	# Bug 1 fix: Add rotation variety for houses based on entity_id (0, 90, 180, 270 degrees)
+	var base_rotation := -float(rotation_quarters) * PI * 0.5
+	if building_type == "HOUSE" and not is_construction:
+		var variant_rotation := (entity_id % 4) * PI * 0.5
+		rotation.y = base_rotation + variant_rotation
+	else:
+		rotation.y = base_rotation
 	# Issue #5: Check if this is Town Hall and should upgrade to Castle
 	var has_barracks := bool(snapshot.get("has_barracks", false))
 	if building_type == "TOWN_HALL" and has_barracks:
