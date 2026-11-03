@@ -1110,6 +1110,16 @@ func begin_placement(building_type: String) -> void:
 	elif building_type in [Defs.BUILDING_ROAD, Defs.BUILDING_WALL]:
 		instruction = "hold and drag to draw · right-click cancels"
 		legend = ""
+		# F2: First-run coach for Road mode
+		if building_type == Defs.BUILDING_ROAD:
+			var has_road_hint := false
+			for entry in first_screen_hint_log:
+				if String(Dictionary(entry).get("kind", "")) == "road_coach":
+					has_road_hint = true
+					break
+			if not has_road_hint:
+				instruction = "drag from the brown roads at the Town Hall · right-click cancels"
+				_log_first_screen_hint("road_coach", "Drag from Town Hall roads")
 	else:
 		instruction = "R rotates · click to place · right-click cancels"
 		legend = "GREEN = valid · YELLOW = needs clearing · RED = blocked"
@@ -2419,20 +2429,24 @@ func _update_placement_ghost(force := false) -> void:
 			ghost_clearing_label.visible = false
 		placement_label.text = String(placement_validation.get("message", "CLEAR"))
 		return
-	placement_validation = simulation_host.simulation.validate_placement(placement_type, placement_tile, placement_rotation)
+	# F1: Center multi-tile footprints under cursor instead of using cursor tile as anchor
 	var footprint := Defs.building_footprint(placement_type)
 	if posmod(placement_rotation, 2) == 1:
 		footprint = Vector2i(footprint.y, footprint.x)
+	var anchor_tile := placement_tile - Vector2i(footprint - Vector2i.ONE) / 2
+	
+	placement_validation = simulation_host.simulation.validate_placement(placement_type, anchor_tile, placement_rotation)
 	var valid := bool(placement_validation.get("success", false))
 	var needs_clearing := valid and "CLEARING REQUIRED" in String(placement_validation.get("message", ""))
-	var ghost_height := 0.58 if needs_clearing else 0.14
+	# F1: Make invalid ghost taller (0.65) for better visibility on fog
+	var ghost_height := 0.58 if needs_clearing else (0.65 if not valid else 0.14)
 	var box := BoxMesh.new()
 	box.size = Vector3(float(footprint.x) * ScaleProfile.LOGICAL_CELL_METRES, ghost_height, float(footprint.y) * ScaleProfile.LOGICAL_CELL_METRES)
 	ghost_footprint.mesh = box
 	var ghost_color := Color(0.95, 0.68, 0.18, 0.52) if needs_clearing else (Color(0.26, 0.86, 0.48, 0.42) if valid else Color(0.92, 0.25, 0.22, 0.46))
 	ghost_footprint.material_override = _ghost_material(ghost_color)
 	ghost_access.material_override = _ghost_material(ghost_color.lightened(0.18))
-	var center := Vector2(placement_tile) + Vector2(footprint - Vector2i.ONE) * 0.5
+	var center := Vector2(anchor_tile) + Vector2(footprint - Vector2i.ONE) * 0.5
 	placement_ghost.position = world_view.tile_to_world(center) + Vector3.UP * (0.08 + ghost_height * 0.5)
 	placement_ghost.rotation.y = -float(placement_rotation) * PI * 0.5
 	ghost_access.position.z = float(footprint.y) * ScaleProfile.LOGICAL_CELL_METRES * 0.5 + 0.72
@@ -2442,7 +2456,7 @@ func _update_placement_ghost(force := false) -> void:
 		ghost_clearing_label.position.y = ghost_height + 2.15
 	var quality: Dictionary = placement_validation.get("placement_quality", {})
 	if quality.is_empty() and simulation_host.simulation.has_method("evaluate_placement_quality"):
-		quality = simulation_host.simulation.evaluate_placement_quality(placement_type, placement_tile, placement_rotation)
+		quality = simulation_host.simulation.evaluate_placement_quality(placement_type, anchor_tile, placement_rotation)
 	var quality_text := String(quality.get("label", ""))
 	var prefix := "CLEARING REQUIRED" if needs_clearing else ("VALID" if valid else "INVALID")
 	if not valid:
@@ -2450,11 +2464,20 @@ func _update_placement_ghost(force := false) -> void:
 		var why := String(placement_validation.get("message", "")).strip_edges()
 		if why == "":
 			why = "this tile is blocked"
-		placement_label.text = "Can't place %s: %s · right-click cancels" % [Defs.building_name(placement_type), why]
+		# F1: Add fog tip when Fog error but green build pads exist
+		var pads: Dictionary = simulation_host.simulation.collect_build_pads(placement_type, placement_rotation, 40)
+		var has_valid_pads := not Array(pads.get("valid", [])).is_empty()
+		if "Fog" in String(placement_validation.get("reason", "")) and has_valid_pads:
+			placement_label.text = "Fog — click a green pad · right-click cancels"
+		else:
+			placement_label.text = "Can't place %s: %s · right-click cancels" % [Defs.building_name(placement_type), why]
 	elif quality_text != "":
 		placement_label.text = "%s · %s" % [prefix, quality_text]
 	else:
 		placement_label.text = "%s · %s" % [prefix, String(placement_validation.get("message", ""))]
+	
+	# Store anchor_tile for commit_placement to use
+	placement_tile = anchor_tile
 
 
 func _commit_placement(click_position := Vector2(-1, -1)) -> void:
@@ -2464,9 +2487,32 @@ func _commit_placement(click_position := Vector2(-1, -1)) -> void:
 	if click_position.x >= 0.0:
 		var hit := _raycast_terrain(click_position)
 		if not hit.is_empty():
-			commit_tile = world_view.world_to_tile(hit.position)
+			var clicked_tile := world_view.world_to_tile(hit.position)
+			# F1: Center multi-tile footprints under cursor
+			var footprint := Defs.building_footprint(placement_type)
+			if posmod(placement_rotation, 2) == 1:
+				footprint = Vector2i(footprint.y, footprint.x)
+			commit_tile = clicked_tile - Vector2i(footprint - Vector2i.ONE) / 2
 	if commit_tile.x < 0:
 		return
+	
+	# F1: Snap to nearest valid pad if commit fails due to Fog/Unrevealed
+	var pre_validation: Dictionary = simulation_host.simulation.validate_placement(placement_type, commit_tile, placement_rotation)
+	if not bool(pre_validation.get("success", false)) and "Fog" in String(pre_validation.get("reason", "")):
+		var pads: Dictionary = simulation_host.simulation.collect_build_pads(placement_type, placement_rotation, 40)
+		var valid_pads: Array = pads.get("valid", [])
+		if not valid_pads.is_empty():
+			var nearest_pad := Vector2i(valid_pads[0])
+			var nearest_dist := 999999.0
+			for pad_value in valid_pads:
+				var pad := Vector2i(pad_value)
+				var dist := Vector2(pad - commit_tile).length_squared()
+				if dist < nearest_dist:
+					nearest_dist = dist
+					nearest_pad = pad
+			if nearest_dist < 16.0:  # Within ~4 tiles
+				commit_tile = nearest_pad
+	
 	var result: Dictionary = simulation_host.simulation.request_build(placement_type, commit_tile, placement_rotation)
 	_show_status(String(result.get("message", "")), 3.0)
 	if bool(result.get("success", false)):
@@ -2528,8 +2574,15 @@ func _finish_road_drag(screen_position: Vector2) -> void:
 		_sync_presentation()
 	elif not bool(result.get("success", false)):
 		placement_invalid_shown = true
-		_log_first_screen_hint("placement", String(result.get("message", "Road route is blocked.")))
-		_show_status(String(result.get("message", "Road route is blocked.")), 3.0)
+		var failure_reason := String(result.get("message", "Road route is blocked."))
+		# F2: Sticky 4s status on road failures with clear reason
+		var sticky_message := failure_reason
+		if "Fog" in String(result.get("reason", "")):
+			sticky_message = "Road blocked: Fog — scout this area first"
+		elif "Disconnected" in failure_reason or "road network" in failure_reason:
+			sticky_message = "Road blocked: must connect to existing roads from Town Hall"
+		_log_first_screen_hint("placement", failure_reason)
+		_show_status(sticky_message, 4.0)
 	road_preview_route.clear()
 	road_preview_validation.clear()
 	road_drag_start = Vector2i(-1, -1)
@@ -3027,7 +3080,8 @@ func _compact_cost(building_type: String) -> String:
 	var parts: Array[String] = []
 	for resource_type in Defs.RESOURCE_TYPES:
 		if cost.has(resource_type):
-			parts.append("%d%s" % [int(cost[resource_type]), Defs.resource_name(resource_type).substr(0, 2)])
+			# F4: Show full resource names (e.g. "4 Wood" instead of "4Wo")
+			parts.append("%d %s" % [int(cost[resource_type]), Defs.resource_name(resource_type)])
 	return " ".join(parts)
 
 
