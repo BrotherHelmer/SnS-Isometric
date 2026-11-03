@@ -5700,14 +5700,16 @@ func _reveal_from_world() -> void:
 		_reveal_radius(town_center, INITIAL_REVEAL_RADIUS)
 		return
 	_reveal_radius(town_center, building_vision_radius(Defs.BUILDING_TOWN_HALL))
-	# The Shard stays hidden until scouted (Helmer ruling 19/10): no
-	# opening reveal. The crater corridor below still marks the way.
-	var crater_dir := crater_direction_from(town_center)
-	var span := _tile_distance(town_center, shard_position)
-	for frac in [0.22, 0.45, 0.68, 0.88]:
-		var along := town_center + Vector2i(roundi(crater_dir.x * span * frac), roundi(crater_dir.y * span * frac))
-		if is_inside_map(along):
-			_reveal_radius(along, 5)
+	# Bug 2 fix: Remove crater corridor auto-reveal to fix false-lit disconnected islands.
+	# The Shard stays hidden until scouted (Helmer ruling 19/10): no opening reveal,
+	# and no corridor markers either (they create pre-lit pockets Helmer never visited).
+	# Player must scout to discover the frontier.
+	# var crater_dir := crater_direction_from(town_center)
+	# var span := _tile_distance(town_center, shard_position)
+	# for frac in [0.22, 0.45, 0.68, 0.88]:
+	# 	var along := town_center + Vector2i(roundi(crater_dir.x * span * frac), roundi(crater_dir.y * span * frac))
+	# 	if is_inside_map(along):
+	# 		_reveal_radius(along, 5)
 	for building in buildings:
 		if bool(building.get("construction", false)):
 			continue
