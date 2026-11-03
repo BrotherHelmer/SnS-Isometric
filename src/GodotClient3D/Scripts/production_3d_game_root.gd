@@ -2549,9 +2549,9 @@ func _start_road_drag(screen_position: Vector2) -> void:
 	road_drag_start = world_view.world_to_tile(hit.position)
 	# F5c: Forgiving road drag - snap start to network within 1 tile
 	if simulation_host.simulation != null and simulation_host.simulation.has_method("find_nearest_road_tile"):
-		var nearest := simulation_host.simulation.find_nearest_road_tile(road_drag_start, 1)
-		if not nearest.is_empty():
-			road_drag_start = Vector2i(nearest)
+		var nearest: Vector2i = simulation_host.simulation.find_nearest_road_tile(road_drag_start, 1)
+		if nearest.x >= 0:
+			road_drag_start = nearest
 	road_dragging = true
 	road_preview_route = [road_drag_start]
 	_update_road_drag_preview(screen_position)
