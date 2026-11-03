@@ -624,7 +624,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	if event is InputEventMouseMotion and map_drag_active:
-		if not map_drag_moved and event.position.distance_to(map_drag_origin) > 8.0:
+		# Bug 3 fix: Don't treat slight movement as drag while scout aiming
+		var drag_threshold := 20.0 if scout_aiming else 8.0
+		if not map_drag_moved and event.position.distance_to(map_drag_origin) > drag_threshold:
 			map_drag_moved = true
 		if map_drag_moved and box_select_active:
 			_update_box_select_rect(box_select_origin, event.position)
@@ -957,10 +959,27 @@ func _commit_unit_order(screen_position: Vector2, mode: String) -> void:
 	if simulation_host.simulation == null or world_view == null:
 		return
 	var hit: Dictionary = _raycast_terrain(screen_position)
+	var tile: Vector2i
+	# P0 Fix: Same ground-plane fallback as Scout - Move must work on fog/water clicks
 	if hit.is_empty():
-		_show_status("Click the land to give an order.")
-		return
-	var tile := world_view.world_to_tile(hit.position)
+		var camera := camera_rig.camera
+		if camera == null:
+			_show_status("Click the land to give an order.")
+			return
+		var ray_origin := camera.project_ray_origin(screen_position)
+		var ray_dir := camera.project_ray_normal(screen_position)
+		var ground_plane := Plane(Vector3.UP, 0.0)
+		var intersect: Variant = ground_plane.intersects_ray(ray_origin, ray_dir)
+		if intersect == null:
+			_show_status("Click the land to give an order.")
+			return
+		tile = world_view.world_to_tile(Vector3(intersect.x, 0.0, intersect.z))
+	else:
+		tile = world_view.world_to_tile(hit.position)
+	
+	# Clamp to map bounds
+	tile.x = clampi(tile.x, 0, simulation_host.simulation.map_size.x - 1)
+	tile.y = clampi(tile.y, 0, simulation_host.simulation.map_size.y - 1)
 	var sim = simulation_host.simulation
 	var group := _group_ids()
 	if group.size() > 1:
@@ -982,15 +1001,37 @@ func _commit_unit_order(screen_position: Vector2, mode: String) -> void:
 
 
 func _commit_scout_click(screen_position: Vector2) -> void:
-	scout_aiming = false
 	if simulation_host.simulation == null or world_view == null:
 		return
 	var hit: Dictionary = _raycast_terrain(screen_position)
+	var tile: Vector2i
+	# Bug 3 fix: Fallback to ground plane (y=0) if raycast misses (fog/water)
 	if hit.is_empty():
-		_show_status("Click the land to choose a scouting direction.")
-		return
-	var tile := world_view.world_to_tile(hit.position)
+		var camera := camera_rig.camera
+		if camera == null:
+			scout_aiming = false
+			_show_status("Click the land to set a scout direction.")
+			return
+		var ray_origin := camera.project_ray_origin(screen_position)
+		var ray_dir := camera.project_ray_normal(screen_position)
+		var ground_plane := Plane(Vector3.UP, 0.0)
+		var intersect: Variant = ground_plane.intersects_ray(ray_origin, ray_dir)
+		if intersect == null:
+			scout_aiming = false
+			_show_status("Click the land to set a scout direction.")
+			return
+		tile = world_view.world_to_tile(Vector3(intersect.x, 0.0, intersect.z))
+	else:
+		tile = world_view.world_to_tile(hit.position)
+	
+	# Clamp to map bounds
+	tile.x = clampi(tile.x, 0, simulation_host.simulation.map_size.x - 1)
+	tile.y = clampi(tile.y, 0, simulation_host.simulation.map_size.y - 1)
+	
 	var result: Dictionary = simulation_host.simulation.request_scout_direction(selected_worker_id, tile)
+	# Only clear aiming after successful order
+	if bool(result.get("success", false)):
+		scout_aiming = false
 	_show_command_result(result)
 
 
@@ -1110,6 +1151,17 @@ func begin_placement(building_type: String) -> void:
 	elif building_type in [Defs.BUILDING_ROAD, Defs.BUILDING_WALL]:
 		instruction = "hold and drag to draw · right-click cancels"
 		legend = ""
+		# F2: First-run coach for Road mode
+		if building_type == Defs.BUILDING_ROAD:
+			var has_road_hint := false
+			for entry in first_screen_hint_log:
+				if String(Dictionary(entry).get("kind", "")) == "road_coach":
+					has_road_hint = true
+					break
+			if not has_road_hint:
+				# F5f: Reference blue highlight in coach
+				instruction = "drag from the BLUE HIGHLIGHTED roads · right-click cancels"
+				_log_first_screen_hint("road_coach", "Drag from highlighted roads")
 	else:
 		instruction = "R rotates · click to place · right-click cancels"
 		legend = "GREEN = valid · YELLOW = needs clearing · RED = blocked"
@@ -2394,13 +2446,15 @@ func _update_placement_ghost(force := false) -> void:
 	placement_tile = next_tile
 	if placement_type == Defs.BUILDING_ROAD:
 		placement_validation = simulation_host.simulation.validate_road_route([placement_tile])
-		world_view.show_road_preview(placement_validation.get("segments", []))
+		# F5f: Show connected road network as highlight to clarify where to start
+		world_view.show_road_network_highlight()
 		placement_ghost.visible = false
 		if ghost_clearing_label != null:
 			ghost_clearing_label.visible = false
 		world_view.clear_build_pads()
 		if not bool(placement_validation.get("success", false)) and not placement_invalid_shown:
-			placement_label.text = "Road · hold and drag to draw · right-click cancels"
+			# F5f: Clearer coach text
+			placement_label.text = "Road · drag from the BLUE HIGHLIGHTED roads · right-click cancels"
 		else:
 			placement_label.text = "%s · drag from the road network" % String(placement_validation.get("message", "Road Building Mode"))
 		return
@@ -2419,20 +2473,27 @@ func _update_placement_ghost(force := false) -> void:
 			ghost_clearing_label.visible = false
 		placement_label.text = String(placement_validation.get("message", "CLEAR"))
 		return
-	placement_validation = simulation_host.simulation.validate_placement(placement_type, placement_tile, placement_rotation)
+	# F1: Center multi-tile footprints under cursor instead of using cursor tile as anchor
 	var footprint := Defs.building_footprint(placement_type)
 	if posmod(placement_rotation, 2) == 1:
 		footprint = Vector2i(footprint.y, footprint.x)
+	# F5d: Fix centering - use floored division for proper offset
+	# 2x2: offset (1,1), 3x3: offset (1,1), 4x4: offset (2,2)
+	var anchor_tile := placement_tile - Vector2i(footprint.x / 2, footprint.y / 2)
+	
+	placement_validation = simulation_host.simulation.validate_placement(placement_type, anchor_tile, placement_rotation)
 	var valid := bool(placement_validation.get("success", false))
 	var needs_clearing := valid and "CLEARING REQUIRED" in String(placement_validation.get("message", ""))
-	var ghost_height := 0.58 if needs_clearing else 0.14
+	# F1: Make invalid ghost taller (0.65) for better visibility on fog
+	# F5f: Even taller (0.85) for better visibility
+	var ghost_height := 0.58 if needs_clearing else (0.85 if not valid else 0.14)
 	var box := BoxMesh.new()
 	box.size = Vector3(float(footprint.x) * ScaleProfile.LOGICAL_CELL_METRES, ghost_height, float(footprint.y) * ScaleProfile.LOGICAL_CELL_METRES)
 	ghost_footprint.mesh = box
 	var ghost_color := Color(0.95, 0.68, 0.18, 0.52) if needs_clearing else (Color(0.26, 0.86, 0.48, 0.42) if valid else Color(0.92, 0.25, 0.22, 0.46))
 	ghost_footprint.material_override = _ghost_material(ghost_color)
 	ghost_access.material_override = _ghost_material(ghost_color.lightened(0.18))
-	var center := Vector2(placement_tile) + Vector2(footprint - Vector2i.ONE) * 0.5
+	var center := Vector2(anchor_tile) + Vector2(footprint - Vector2i.ONE) * 0.5
 	placement_ghost.position = world_view.tile_to_world(center) + Vector3.UP * (0.08 + ghost_height * 0.5)
 	placement_ghost.rotation.y = -float(placement_rotation) * PI * 0.5
 	ghost_access.position.z = float(footprint.y) * ScaleProfile.LOGICAL_CELL_METRES * 0.5 + 0.72
@@ -2442,7 +2503,7 @@ func _update_placement_ghost(force := false) -> void:
 		ghost_clearing_label.position.y = ghost_height + 2.15
 	var quality: Dictionary = placement_validation.get("placement_quality", {})
 	if quality.is_empty() and simulation_host.simulation.has_method("evaluate_placement_quality"):
-		quality = simulation_host.simulation.evaluate_placement_quality(placement_type, placement_tile, placement_rotation)
+		quality = simulation_host.simulation.evaluate_placement_quality(placement_type, anchor_tile, placement_rotation)
 	var quality_text := String(quality.get("label", ""))
 	var prefix := "CLEARING REQUIRED" if needs_clearing else ("VALID" if valid else "INVALID")
 	if not valid:
@@ -2450,11 +2511,22 @@ func _update_placement_ghost(force := false) -> void:
 		var why := String(placement_validation.get("message", "")).strip_edges()
 		if why == "":
 			why = "this tile is blocked"
-		placement_label.text = "Can't place %s: %s · right-click cancels" % [Defs.building_name(placement_type), why]
+		# F1: Add fog tip when Fog error but green build pads exist
+		var pads: Dictionary = simulation_host.simulation.collect_build_pads(placement_type, placement_rotation, 40)
+		var has_valid_pads := not Array(pads.get("valid", [])).is_empty()
+		# F5d: Check both reason and message for Fog/Unrevealed (roads use message)
+		var is_fog := "Fog" in String(placement_validation.get("reason", "")) or "Unrevealed" in why or "revealed" in why.to_lower()
+		if is_fog and has_valid_pads:
+			placement_label.text = "Fog — click a green pad · right-click cancels"
+		else:
+			placement_label.text = "Can't place %s: %s · right-click cancels" % [Defs.building_name(placement_type), why]
 	elif quality_text != "":
 		placement_label.text = "%s · %s" % [prefix, quality_text]
 	else:
 		placement_label.text = "%s · %s" % [prefix, String(placement_validation.get("message", ""))]
+	
+	# Store anchor_tile for commit_placement to use
+	placement_tile = anchor_tile
 
 
 func _commit_placement(click_position := Vector2(-1, -1)) -> void:
@@ -2464,9 +2536,36 @@ func _commit_placement(click_position := Vector2(-1, -1)) -> void:
 	if click_position.x >= 0.0:
 		var hit := _raycast_terrain(click_position)
 		if not hit.is_empty():
-			commit_tile = world_view.world_to_tile(hit.position)
+			var clicked_tile := world_view.world_to_tile(hit.position)
+			# F1: Center multi-tile footprints under cursor
+			var footprint := Defs.building_footprint(placement_type)
+			if posmod(placement_rotation, 2) == 1:
+				footprint = Vector2i(footprint.y, footprint.x)
+			# F5d: Use proper floored division for centering
+			commit_tile = clicked_tile - Vector2i(footprint.x / 2, footprint.y / 2)
 	if commit_tile.x < 0:
 		return
+	
+	# F1: Snap to nearest valid pad if commit fails due to Fog/Unrevealed
+	var pre_validation: Dictionary = simulation_host.simulation.validate_placement(placement_type, commit_tile, placement_rotation)
+	var fail_message := String(pre_validation.get("message", ""))
+	# F5d: Check message for Fog/Unrevealed (reason key not always present)
+	var is_fog_fail := "Fog" in String(pre_validation.get("reason", "")) or "Unrevealed" in fail_message or "revealed" in fail_message.to_lower()
+	if not bool(pre_validation.get("success", false)) and is_fog_fail:
+		var pads: Dictionary = simulation_host.simulation.collect_build_pads(placement_type, placement_rotation, 40)
+		var valid_pads: Array = pads.get("valid", [])
+		if not valid_pads.is_empty():
+			var nearest_pad := Vector2i(valid_pads[0])
+			var nearest_dist := 999999.0
+			for pad_value in valid_pads:
+				var pad := Vector2i(pad_value)
+				var dist := Vector2(pad - commit_tile).length_squared()
+				if dist < nearest_dist:
+					nearest_dist = dist
+					nearest_pad = pad
+			if nearest_dist < 16.0:  # Within ~4 tiles
+				commit_tile = nearest_pad
+	
 	var result: Dictionary = simulation_host.simulation.request_build(placement_type, commit_tile, placement_rotation)
 	_show_status(String(result.get("message", "")), 3.0)
 	if bool(result.get("success", false)):
@@ -2489,6 +2588,11 @@ func _start_road_drag(screen_position: Vector2) -> void:
 	if hit.is_empty():
 		return
 	road_drag_start = world_view.world_to_tile(hit.position)
+	# F5c: Forgiving road drag - snap start to network within 1 tile
+	if simulation_host.simulation != null and simulation_host.simulation.has_method("find_nearest_road_tile"):
+		var nearest: Vector2i = simulation_host.simulation.find_nearest_road_tile(road_drag_start, 1)
+		if nearest.x >= 0:
+			road_drag_start = nearest
 	road_dragging = true
 	road_preview_route = [road_drag_start]
 	_update_road_drag_preview(screen_position)
@@ -2528,8 +2632,15 @@ func _finish_road_drag(screen_position: Vector2) -> void:
 		_sync_presentation()
 	elif not bool(result.get("success", false)):
 		placement_invalid_shown = true
-		_log_first_screen_hint("placement", String(result.get("message", "Road route is blocked.")))
-		_show_status(String(result.get("message", "Road route is blocked.")), 3.0)
+		var failure_reason := String(result.get("message", "Road route is blocked."))
+		# F2: Sticky 4s status on road failures with clear reason
+		var sticky_message := failure_reason
+		if "Fog" in String(result.get("reason", "")):
+			sticky_message = "Road blocked: Fog — scout this area first"
+		elif "Disconnected" in failure_reason or "road network" in failure_reason:
+			sticky_message = "Road blocked: must connect to existing roads from Town Hall"
+		_log_first_screen_hint("placement", failure_reason)
+		_show_status(sticky_message, 4.0)
 	road_preview_route.clear()
 	road_preview_validation.clear()
 	road_drag_start = Vector2i(-1, -1)
@@ -3027,7 +3138,8 @@ func _compact_cost(building_type: String) -> String:
 	var parts: Array[String] = []
 	for resource_type in Defs.RESOURCE_TYPES:
 		if cost.has(resource_type):
-			parts.append("%d%s" % [int(cost[resource_type]), Defs.resource_name(resource_type).substr(0, 2)])
+			# F4: Show full resource names (e.g. "4 Wood" instead of "4Wo")
+			parts.append("%d %s" % [int(cost[resource_type]), Defs.resource_name(resource_type)])
 	return " ".join(parts)
 
 
@@ -3391,6 +3503,8 @@ func _update_inspector_core() -> void:
 			inspector_panel.visible = true
 			if scout_button != null:
 				scout_button.visible = simulation_host.simulation.is_patrol_scout(worker) and not worker.has("scout_mission")
+				# Bug 3 fix: Keep button highlighted while aiming
+				scout_button.button_pressed = scout_aiming
 			var soldier := String(worker.get("type", "")) == "guard" and int(worker.get("building_id", 0)) == 0
 			if move_button != null:
 				move_button.visible = soldier
@@ -5448,6 +5562,13 @@ func _hide_start_menu() -> void:
 		camera_rig.input_enabled = true
 	_sync_speed_controls()
 	play_has_begun = true
+	# Bug 2 fix: Restore revealed_tiles snapshot after title composition
+	if not _title_revealed_snapshot.is_empty() and simulation_host.simulation != null:
+		simulation_host.simulation.revealed_tiles = _title_revealed_snapshot.duplicate()
+		_title_revealed_snapshot = {}
+		if world_view != null:
+			world_view.last_revealed_count = -1
+		_sync_presentation()
 
 
 func _resume_from_menu() -> void:
@@ -5459,11 +5580,15 @@ func _resume_from_menu() -> void:
 		world_view.set_presentation_paused(false)
 
 
+var _title_revealed_snapshot: Dictionary = {}
+
 func _author_title_composition() -> void:
 	if simulation_host.simulation == null or world_view == null or camera_rig == null:
 		return
 	var simulation = simulation_host.simulation
 	if not play_has_begun:
+		# Bug 2 fix: Snapshot revealed_tiles before title composition, restore when play starts
+		_title_revealed_snapshot = simulation.revealed_tiles.duplicate()
 		var town_tile: Vector2i = simulation.town_hall_position
 		var shard_tile: Vector2i = simulation.shard_position
 		simulation._reveal_radius(town_tile, 6)

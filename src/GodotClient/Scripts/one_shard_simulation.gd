@@ -2371,7 +2371,9 @@ func _assign_idle_workers_to_priority_clears() -> void:
 	for worker in workers:
 		if targets.is_empty():
 			return
-		if String(worker.get("type", "")) in ["carrier", "clearer", "guard"]:
+		# P0 Fix: Allow carriers/settlers/laborers to be converted to clearers.
+		# Previously excluded "carrier" which made Clear tool a no-op in diorama demo.
+		if String(worker.get("type", "")) in ["clearer", "guard"]:
 			continue
 		if int(worker.get("building_id", 0)) != 0:
 			continue
@@ -5700,14 +5702,16 @@ func _reveal_from_world() -> void:
 		_reveal_radius(town_center, INITIAL_REVEAL_RADIUS)
 		return
 	_reveal_radius(town_center, building_vision_radius(Defs.BUILDING_TOWN_HALL))
-	# The Shard stays hidden until scouted (Helmer ruling 19/10): no
-	# opening reveal. The crater corridor below still marks the way.
-	var crater_dir := crater_direction_from(town_center)
-	var span := _tile_distance(town_center, shard_position)
-	for frac in [0.22, 0.45, 0.68, 0.88]:
-		var along := town_center + Vector2i(roundi(crater_dir.x * span * frac), roundi(crater_dir.y * span * frac))
-		if is_inside_map(along):
-			_reveal_radius(along, 5)
+	# Bug 2 fix: Remove crater corridor auto-reveal to fix false-lit disconnected islands.
+	# The Shard stays hidden until scouted (Helmer ruling 19/10): no opening reveal,
+	# and no corridor markers either (they create pre-lit pockets Helmer never visited).
+	# Player must scout to discover the frontier.
+	# var crater_dir := crater_direction_from(town_center)
+	# var span := _tile_distance(town_center, shard_position)
+	# for frac in [0.22, 0.45, 0.68, 0.88]:
+	# 	var along := town_center + Vector2i(roundi(crater_dir.x * span * frac), roundi(crater_dir.y * span * frac))
+	# 	if is_inside_map(along):
+	# 		_reveal_radius(along, 5)
 	for building in buildings:
 		if bool(building.get("construction", false)):
 			continue
@@ -10163,6 +10167,19 @@ func _first_connected_road_tile() -> Vector2i:
 	for key in connected_roads.keys():
 		return _tile_from_key(key)
 	return Vector2i(-1, -1)
+
+
+## F5c: Find nearest connected road tile within max_distance (Manhattan)
+func find_nearest_road_tile(from: Vector2i, max_distance: int) -> Vector2i:
+	var best := Vector2i(-1, -1)
+	var best_dist := max_distance + 1
+	for key in connected_roads.keys():
+		var road_tile := _tile_from_key(String(key))
+		var dist := _manhattan(from, road_tile)
+		if dist <= max_distance and dist < best_dist:
+			best = road_tile
+			best_dist = dist
+	return best
 
 
 func _is_walkable_road(tile: Vector2i) -> bool:

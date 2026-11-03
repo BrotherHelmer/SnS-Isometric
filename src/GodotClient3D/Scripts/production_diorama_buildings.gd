@@ -22,7 +22,8 @@ static var _build_cache := {}
 ## are per-building); only the geometry resources are shared. A fresh
 ## build whose root is not purely mesh instances is returned uncached.
 static func build(building_type: String, seed_id: int) -> Node3D:
-	var key := building_type + ":" + str(absi(seed_id) % 3 if building_type == "HOUSE" else 0)
+	# Bug 1 fix: Increase house variants from 3 to 5
+	var key := building_type + ":" + str(absi(seed_id) % 5 if building_type == "HOUSE" else 0)
 	if _build_cache.has(key):
 		var entry: Dictionary = _build_cache[key]
 		var root := Node3D.new()
@@ -93,6 +94,19 @@ static func _tex_mat(key: String, tint: Color, uv: float) -> StandardMaterial3D:
 	m.albedo_color = tint
 	m.uv1_scale = Vector3(uv, uv, uv)
 	m.roughness = 0.95
+	_mat_cache[cache_key] = m
+	return m
+
+
+static func _arch_tex_mat(key: String, tint: Color, uv: float) -> StandardMaterial3D:
+	var cache_key := "arch:" + key + "@" + str(uv) + tint.to_html()
+	if _mat_cache.has(cache_key):
+		return _mat_cache[cache_key]
+	var m := StandardMaterial3D.new()
+	m.albedo_texture = load(Catalog.ARCH_TEXTURES[key]) as Texture2D
+	m.albedo_color = tint
+	m.uv1_scale = Vector3(uv, uv, uv)
+	m.roughness = 0.88
 	_mat_cache[cache_key] = m
 	return m
 
@@ -319,24 +333,40 @@ static func _cottage(b: Batch, wall_mat: Material, roof_mat: Material, kind: int
 
 static func _build_house(seed_id: int) -> Node3D:
 	var b := Batch.new()
-	var variant := absi(seed_id) % 3
+	# Bug 1 fix: 5 distinct variants with different roof colors and minor shape changes
+	var variant := absi(seed_id) % 5
+	var scale := 0.88
 	if variant == 0:
-		_cottage(b, _plain_mat("plaster", Color(0.90, 0.86, 0.78)), _thatch(), 0)
+		# Plaster walls + thatch roof (golden/yellow)
+		_cottage(b, _arch_tex_mat("plaster", Color(0.90, 0.86, 0.78), 2.2), _thatch(), 0)
+		scale = 0.86
 	elif variant == 1:
-		_cottage(b, _stone(), _plain_mat("slate", Color(0.40, 0.46, 0.54)), 1)
+		# Stone walls + textured slate-like roof
+		_cottage(b, _stone(), _tex_mat("thatch", Color(0.40, 0.46, 0.54), 1.5), 1)
+		scale = 0.88
+	elif variant == 2:
+		# Timber walls + dark textured roof
+		_cottage(b, _arch_tex_mat("timber", Color(0.52, 0.40, 0.29), 1.8), _tex_mat("thatch", Color(0.38, 0.29, 0.21), 1.3), 2)
+		scale = 0.90
+	elif variant == 3:
+		# Plaster walls + ochre/tan textured roof
+		_cottage(b, _arch_tex_mat("plaster", Color(0.88, 0.84, 0.76), 2.2), _tex_mat("thatch", Color(0.76, 0.64, 0.36), 1.4), 1)
+		scale = 0.92
 	else:
-		_cottage(b, _plain_mat("wood", Color(0.52, 0.40, 0.29)), _plain_mat("terra", Color(0.60, 0.31, 0.24)), 2)
+		# Stone walls + red textured roof (use red sparingly - only 1 of 5)
+		_cottage(b, _stone(), _tex_mat("thatch", Color(0.60, 0.31, 0.24), 1.3), 2)
+		scale = 0.87
 	var root := b.build_root("DioramaHouse")
-	root.scale = Vector3.ONE * 0.88
+	root.scale = Vector3.ONE * scale
 	return root
 
 
 static func _build_lumber_camp() -> Node3D:
 	var b := Batch.new()
-	var wood := _plain_mat("wood", Color(0.52, 0.40, 0.29))
-	var wood_dark := _plain_mat("wood_dark", Color(0.38, 0.29, 0.21))
-	var log_mat := _plain_mat("log", Color(0.62, 0.50, 0.36))
-	_cottage(b, wood, _plain_mat("terra", Color(0.60, 0.31, 0.24)), 2)
+	var wood := _arch_tex_mat("timber", Color(0.52, 0.40, 0.29), 1.8)
+	var wood_dark := _arch_tex_mat("timber", Color(0.38, 0.29, 0.21), 1.8)
+	var log_mat := _arch_tex_mat("timber", Color(0.62, 0.50, 0.36), 1.5)
+	_cottage(b, wood, _tex_mat("thatch", Color(0.60, 0.31, 0.24), 1.3), 2)
 	var log_tilt := Basis(Vector3.FORWARD, PI * 0.5)
 	_cyl(b, log_mat, 0.26, 0.26, 2.4, Vector3(2.6, 0.27, 1.5), 12, log_tilt)
 	_cyl(b, log_mat, 0.26, 0.26, 2.4, Vector3(2.6, 0.27, 2.05), 12, log_tilt)
@@ -379,14 +409,15 @@ static func _build_castle() -> Node3D:
 
 static func _build_sawmill() -> Node3D:
 	var b := Batch.new()
-	var wood := _plain_mat("wood", Color(0.52, 0.40, 0.29))
-	var log_mat := _plain_mat("log", Color(0.62, 0.50, 0.36))
+	var wood := _arch_tex_mat("timber", Color(0.52, 0.40, 0.29), 1.8)
+	var log_mat := _arch_tex_mat("timber", Color(0.62, 0.50, 0.36), 1.5)
 	var dark := _plain_mat("dark", Color(0.16, 0.12, 0.10))
-	_cottage(b, wood, _plain_mat("terra", Color(0.60, 0.31, 0.24)), 2)
+	_cottage(b, wood, _tex_mat("thatch", Color(0.60, 0.31, 0.24), 1.3), 2)
 	var disc_tilt := Basis(Vector3.RIGHT, PI * 0.5)
 	_cyl(b, dark, 0.85, 0.85, 0.14, Vector3(1.9, 1.35, 2.55), 24, disc_tilt)
-	_box(b, _plain_mat("wood_dark", Color(0.38, 0.29, 0.21)), Vector3(0.18, 1.5, 0.18), Vector3(1.35, 0.75, 2.5))
-	_box(b, _plain_mat("wood_dark", Color(0.38, 0.29, 0.21)), Vector3(0.18, 1.5, 0.18), Vector3(2.45, 0.75, 2.5))
+	var wood_dark := _arch_tex_mat("timber", Color(0.38, 0.29, 0.21), 1.8)
+	_box(b, wood_dark, Vector3(0.18, 1.5, 0.18), Vector3(1.35, 0.75, 2.5))
+	_box(b, wood_dark, Vector3(0.18, 1.5, 0.18), Vector3(2.45, 0.75, 2.5))
 	var log_tilt := Basis(Vector3.FORWARD, PI * 0.5)
 	_cyl(b, log_mat, 0.24, 0.24, 2.6, Vector3(-2.5, 0.25, 1.9), 12, log_tilt)
 	_cyl(b, log_mat, 0.24, 0.24, 2.6, Vector3(-2.5, 0.25, 2.42), 12, log_tilt)
@@ -399,8 +430,8 @@ static func _build_sawmill() -> Node3D:
 static func _build_farm() -> Node3D:
 	var b := Batch.new()
 	var stone := _stone()
-	var wood := _plain_mat("wood", Color(0.52, 0.40, 0.29))
-	var wood_dark := _plain_mat("wood_dark", Color(0.38, 0.29, 0.21))
+	var wood := _arch_tex_mat("timber", Color(0.52, 0.40, 0.29), 1.7)
+	var wood_dark := _arch_tex_mat("timber", Color(0.38, 0.29, 0.21), 1.7)
 	var terra := _plain_mat("terra", Color(0.60, 0.31, 0.24))
 	var hay := _plain_mat("hay", Color(0.76, 0.64, 0.36))
 	_box(b, stone, Vector3(7.6, 1.2, 5.2), Vector3(0, 0.6, 0))
@@ -422,8 +453,8 @@ static func _build_farm() -> Node3D:
 
 static func _build_bakery() -> Node3D:
 	var b := Batch.new()
-	var plaster := _plain_mat("plaster", Color(0.90, 0.86, 0.78))
-	_cottage(b, _stone(), _plain_mat("terra", Color(0.60, 0.31, 0.24)), 1)
+	var plaster := _arch_tex_mat("plaster", Color(0.90, 0.86, 0.78), 2.5)
+	_cottage(b, _stone(), _tex_mat("thatch", Color(0.60, 0.31, 0.24), 1.3), 1)
 	_box(b, _stone(), Vector3(0.62, 1.3, 0.62), Vector3(-1.7, 5.2, -0.9))
 	_ball(b, plaster, 0.42, Vector3(2.35, 0.3, 2.3), Vector3(1, 0.72, 1))
 	_ball(b, plaster, 0.38, Vector3(1.85, 0.27, 2.45), Vector3(1, 0.72, 1))
@@ -436,8 +467,8 @@ static func _build_bakery() -> Node3D:
 
 static func _build_storehouse() -> Node3D:
 	var b := Batch.new()
-	var wood := _plain_mat("wood", Color(0.52, 0.40, 0.29))
-	var wood_dark := _plain_mat("wood_dark", Color(0.38, 0.29, 0.21))
+	var wood := _arch_tex_mat("timber", Color(0.52, 0.40, 0.29), 1.6)
+	var wood_dark := _arch_tex_mat("timber", Color(0.38, 0.29, 0.21), 1.6)
 	var stone := _stone()
 	_box(b, stone, Vector3(8.8, 0.55, 5.4), Vector3(0, 0.28, 0))
 	_box(b, wood, Vector3(8.8, 2.9, 5.4), Vector3(0, 2.0, 0))
@@ -495,9 +526,9 @@ static func _build_watchtower() -> Node3D:
 static func _build_barracks() -> Node3D:
 	var b := Batch.new()
 	var stone := _stone()
-	var wood_dark := _plain_mat("wood_dark", Color(0.38, 0.29, 0.21))
+	var wood_dark := _arch_tex_mat("timber", Color(0.38, 0.29, 0.21), 1.7)
 	var dark := _plain_mat("dark", Color(0.16, 0.12, 0.10))
-	var terra := _plain_mat("terra", Color(0.60, 0.31, 0.24))
+	var terra := _tex_mat("thatch", Color(0.60, 0.31, 0.24), 1.3)
 	_box(b, stone, Vector3(8.8, 3.4, 5.0), Vector3(0, 1.7, 0))
 	_roof_prism(b, terra, Vector3(6.2, 2.6, 9.6), Vector3(0, 4.6, 0))
 	_box(b, wood_dark, Vector3(1.3, 2.4, 0.22), Vector3(-2.2, 1.2, 2.55))
@@ -528,10 +559,10 @@ static func _build_lumen_pillar() -> Node3D:
 static func _build_claimant_outpost() -> Node3D:
 	var b := Batch.new()
 	var stone := _stone()
-	var wood := _plain_mat("wood", Color(0.52, 0.40, 0.29))
-	var wood_dark := _plain_mat("wood_dark", Color(0.38, 0.29, 0.21))
+	var wood := _arch_tex_mat("timber", Color(0.52, 0.40, 0.29), 1.7)
+	var wood_dark := _arch_tex_mat("timber", Color(0.38, 0.29, 0.21), 1.7)
 	var dark := _plain_mat("dark", Color(0.16, 0.12, 0.10))
-	var terra := _plain_mat("terra", Color(0.60, 0.31, 0.24))
+	var terra := _tex_mat("thatch", Color(0.60, 0.31, 0.24), 1.3)
 	var rival_red := _plain_mat("rival_red", Color(0.42, 0.16, 0.14))
 	_box(b, stone, Vector3(3.9, 1.1, 3.9), Vector3(0, 0.55, 0))
 	for lx in [-1.25, 1.25]:
