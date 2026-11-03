@@ -41,9 +41,10 @@ func _test_night_road_and_house_orders() -> void:
 	sim.start_new_run(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 424202, true)
 	var entrance := sim._town_hall_entrance_tile()
 	var road_tile := entrance + Vector2i(0, 1)
-	var house_tile := entrance + Vector2i(1, 1)
 	sim._prepare_test_tile(road_tile, Defs.TILE_GRASS)
-	_prepare_house_plot(sim, house_tile)
+	# 2ac49ba lays founding roads around the hall; entrance+(1,1) now overlaps
+	# one (Occupied by day too), so take the first free 2x2 touching road_tile.
+	var house_tile := _free_house_plot_beside(sim, road_tile)
 	sim._start_night()
 	var road_result: Dictionary = sim.request_build(Defs.BUILDING_ROAD, road_tile)
 	var house_result: Dictionary = sim.request_build(Defs.BUILDING_HOUSE, house_tile)
@@ -53,6 +54,16 @@ func _test_night_road_and_house_orders() -> void:
 	var house: Dictionary = sim.get_building_at_tile(house_tile)
 	_check(String(road.get("type", "")) == Defs.BUILDING_ROAD and not bool(road.get("construction", false)), "night-placed road completes after dawn")
 	_check(String(house.get("type", "")) == Defs.BUILDING_HOUSE and not bool(house.get("construction", false)), "night-placed house completes after its road and dawn")
+
+
+func _free_house_plot_beside(sim: Simulation, road_tile: Vector2i) -> Vector2i:
+	var offsets: Array[Vector2i] = [Vector2i(1, 0), Vector2i(1, -1), Vector2i(-2, 0), Vector2i(-2, -1), Vector2i(0, 1), Vector2i(-1, 1), Vector2i(1, 1), Vector2i(-2, 1)]
+	for offset in offsets:
+		var candidate: Vector2i = road_tile + offset
+		_prepare_house_plot(sim, candidate)
+		if bool(sim.validate_placement(Defs.BUILDING_HOUSE, candidate).get("success", false)):
+			return candidate
+	return road_tile + Vector2i(1, 0)
 
 
 func _house_tile_on_entrance(sim: Simulation) -> Vector2i:

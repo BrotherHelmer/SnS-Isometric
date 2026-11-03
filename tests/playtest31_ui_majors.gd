@@ -22,6 +22,12 @@ func _run() -> void:
 	for _i in 4:
 		await process_frame
 	var sim = game.simulation_host.simulation
+	# Beta R6 (8461179) gates non-starter plans behind an unlock schedule; this
+	# test is about cost/affordability feedback, so lift the schedule.
+	game.begin_placement(Defs.BUILDING_HOUSE)
+	game.begin_placement(Defs.BUILDING_BARRACKS)
+	_check(game.placement_type == "" and not game.placement_panel.visible, "a locked plan click drops the stale placement hint")
+	game.debug_unlock_all = true
 	game._tick_minimap(0.2)
 	game._update_ui()
 	await process_frame

@@ -2,13 +2,13 @@
 
 importer="wav"
 type="AudioStreamWAV"
-uid="uid://c8v4w9x2p5tn1"
-path="res://.godot/imported/farm_animal.wav-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6.sample"
+uid="uid://c8v4xax2p5tn1"
+path="res://.godot/imported/farm_animal.wav-fe92cd9834f4f913e3191ad4d9aad088.sample"
 
 [deps]
 
 source_file="res://assets/settlement/audio/farm_animal.wav"
-dest_files=["res://.godot/imported/farm_animal.wav-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6.sample"]
+dest_files=["res://.godot/imported/farm_animal.wav-fe92cd9834f4f913e3191ad4d9aad088.sample"]
 
 [params]
 

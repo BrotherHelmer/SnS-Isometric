@@ -11,6 +11,9 @@ var tick_accumulator := 0.0
 var speed_multiplier := 1.0
 var paused := false
 var dropped_backlog_frames := 0
+## R34 (gate harness): called after every fixed sim tick, so a test bot can
+## act at deterministic game ticks regardless of frame rate.
+var tick_hook: Callable
 var autosave_elapsed := 0.0
 
 
@@ -67,6 +70,8 @@ func advance(delta: float) -> int:
 		tick_accumulator -= Simulation.TICK_SECONDS
 		simulation.advance_tick()
 		ticks += 1
+		if tick_hook.is_valid():
+			tick_hook.call()
 	# A rendered client must not enter an unbounded catch-up spiral after a slow
 	# frame. The simulation's fixed tick remains unchanged; only stale wall-clock
 	# backlog beyond this frame budget is discarded.
@@ -90,6 +95,16 @@ func _start_async_autosave() -> void:
 	_autosave_task = WorkerThreadPool.add_task(func() -> void:
 		_autosave_result = SaveStore.write_save(path, data)
 	)
+
+
+## The worker lambda writes into this host; leaving the tree (quit, new
+## scene, test teardown) with the task still pending let it write into a
+## freed object (glibc "corrupted size vs. prev_size" abort at exit).
+## Join it first; the save itself still completes normally.
+func _exit_tree() -> void:
+	if _autosave_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_autosave_task)
+		_autosave_task = -1
 
 
 func _poll_async_autosave() -> void:

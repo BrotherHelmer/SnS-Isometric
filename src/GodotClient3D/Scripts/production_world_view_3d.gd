@@ -1,10 +1,14 @@
 class_name ProductionWorldView3D
 extends Node3D
 
+const FrameProfiler = preload("res://src/GodotClient3D/Scripts/production_frame_profiler.gd")
+
 const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
 const Catalog = preload("res://src/GodotClient3D/Scripts/production_asset_catalog.gd")
 const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_profile.gd")
 const BuildingView = preload("res://src/GodotClient3D/Scripts/production_building_view_3d.gd")
+const DioramaBuildings = preload("res://src/GodotClient3D/Scripts/production_diorama_buildings.gd")
+const WarmupCatalog = preload("res://src/GodotClient3D/Scripts/production_asset_catalog.gd")
 const CharacterView = preload("res://src/GodotClient3D/Scripts/production_character_view_3d.gd")
 const RoadView = preload("res://src/GodotClient3D/Scripts/production_road_view_3d.gd")
 const HaloCatalog = preload("res://src/GodotClient3D/Scripts/production_building_halo.gd")
@@ -131,6 +135,15 @@ var animated_civilian_count := 0
 var carriers_with_cargo := 0
 var construction_activity_count := 0
 var last_revealed_count := -1
+# Hotfix 6: explored lattice cache, filled incrementally from the
+# insertion-ordered revealed_tiles dict (rebuilt on clear/load).
+var _explored_lattice := PackedByteArray()
+var _explored_lattice_size := Vector2i.ZERO
+var _explored_lattice_dict: Dictionary = {}
+var _explored_lattice_count := 0
+var _inside_lattice := PackedByteArray()
+var _inside_lattice_size := Vector2i.ZERO
+var _inside_lattice_sim: Object = null
 var last_fog_signature := ""
 var fog_visibility_texture: ImageTexture
 var fog_mask_bytes := PackedByteArray()
@@ -183,10 +196,13 @@ var stream_enabled := true
 
 
 func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {}) -> void:
+	# M2: roads drape over the same height field the terrain renders.
+	RoadView.height_sampler = Callable(self, "terrain_surface_y_at_logical")
 	# The screen fog quad is parented to the camera, not to this node, so the
 	# child wipe below never freed it. A new realm with another seed kept the
 	# old quad and its stale fog mask, which covered the whole new map.
 	_free_camera_fog_screens()
+	ProductionBuildingView3D.vfx_density = float(quality.get("vfx_density", 1.0))
 	if get_child_count() > 0:
 		for child in get_children():
 			remove_child(child)
@@ -243,8 +259,11 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 		terrain_body = null
 		terrain_mesh_instance = null
 		building_views.clear()
+		_building_snapshot_hashes.clear()
 		character_views.clear()
 		road_views.clear()
+		_road_merged.clear()
+		_road_merge_dirty.clear()
 		road_signatures.clear()
 		road_stamp_signature = ""
 		rival_road_views.clear()
@@ -273,6 +292,8 @@ func setup(simulation_value, world_snapshot: Dictionary, quality: Dictionary = {
 		_terrain_color_grid = PackedColorArray()
 		_terrain_lookups_ready = false
 	_rebake_queue.clear()
+	_rebake_job = {}
+	_stream_job = {}
 	_chunk_occupation_hashes.clear()
 	simulation = simulation_value
 	map_size = Vector2i(world_snapshot.get("map_size", Vector2i.ZERO))
@@ -304,17 +325,44 @@ func bind_fog_overlay(_camera: Camera3D) -> void:
 		_ensure_fog_screen()
 
 
+var _terrain_lookup_sig := -1
+
+
+## Every input of _refresh_terrain_lookups: road keys and, per building,
+## id / position / construction / type / planned_type / footprint.
+func _terrain_lookup_signature() -> int:
+	if simulation == null:
+		return 0
+	var parts: Array = [simulation.connected_roads.hash() if simulation.connected_roads != null else 0, map_size]
+	for building_value in simulation.buildings:
+		var b: Dictionary = building_value
+		parts.append([b.get("id", 0), b.get("position", Vector2i.ZERO), b.get("construction", false), b.get("type", ""), b.get("planned_type", ""), b.get("footprint", null)])
+	return parts.hash()
+
+
 func sync_frame(frame_snapshot: Dictionary) -> void:
 	# One lookup pass per frame. GFX-E corner averaging used to call
 	# _terrain_color ~16× per cell, and each call scanned every building
 	# for roads — that is the 8 s new-game / 112 s showcase first-frame.
-	_refresh_terrain_lookups()
+	var _pf1 := FrameProfiler.t0()
+	# Hotfix 7: rebuild the lookups only when one of their inputs changed.
+	var lookup_sig := _terrain_lookup_signature()
+	if lookup_sig != _terrain_lookup_sig or not _terrain_lookups_ready:
+		_refresh_terrain_lookups()
+		_terrain_lookup_sig = lookup_sig
+	FrameProfiler.add("wv._refresh_terrain_lookups", _pf1)
+	var _pf_sig := FrameProfiler.t0()
 	var next_height_signature := _calculate_height_signature()
 	var next_occupation := _calculate_occupation_signature()
+	FrameProfiler.add("wv.signatures", _pf_sig)
 	if next_height_signature != terrain_height_signature:
+		var _pf_rt := FrameProfiler.t0()
 		_rebuild_terrain()
+		FrameProfiler.add("wv._rebuild_terrain", _pf_rt)
 	elif next_occupation != terrain_occupation_signature:
+		var _pf_ro := FrameProfiler.t0()
 		_rebake_occupied_chunks()
+		FrameProfiler.add("wv._rebake_occupied_chunks", _pf_ro)
 		# Hotfix 3: the rebake never stored the new signature, so after the
 		# first road or building every frame rebaked every chunk (~260 ms).
 		terrain_occupation_signature = next_occupation
@@ -322,23 +370,57 @@ func sync_frame(frame_snapshot: Dictionary) -> void:
 	var reveal_changed := revealed_count != last_revealed_count
 	if reveal_changed:
 		_enqueue_revealed_chunks()
+	var _pf2 := FrameProfiler.t0()
 	_sync_fog(false)
+	FrameProfiler.add("wv._sync_fog", _pf2)
+	var _pf3 := FrameProfiler.t0()
 	_sync_roads(frame_snapshot.get("roads", []))
+	FrameProfiler.add("wv._sync_roads", _pf3)
+	var _pf4 := FrameProfiler.t0()
 	_sync_buildings(frame_snapshot.get("buildings", []))
+	FrameProfiler.add("wv._sync_buildings", _pf4)
+	var _pf5 := FrameProfiler.t0()
 	_rebuild_building_halos(false)
+	FrameProfiler.add("wv._rebuild_building_halos", _pf5)
+	var _pf6 := FrameProfiler.t0()
 	_sync_characters(frame_snapshot.get("workers", []))
+	FrameProfiler.add("wv._sync_characters", _pf6)
+	var _pf7 := FrameProfiler.t0()
 	_sync_gates(frame_snapshot.get("roads", []))
+	FrameProfiler.add("wv._sync_gates", _pf7)
+	var _pf8 := FrameProfiler.t0()
 	_sync_rival_roads(frame_snapshot.get("rival_roads", []))
+	FrameProfiler.add("wv._sync_rival_roads", _pf8)
+	var _pf9 := FrameProfiler.t0()
 	_sync_rivalry_structures(frame_snapshot.get("rivalry_structures", []))
+	FrameProfiler.add("wv._sync_rivalry_structures", _pf9)
+	var _pf10 := FrameProfiler.t0()
 	_sync_combatants(frame_snapshot.get("combatants", []))
+	FrameProfiler.add("wv._sync_combatants", _pf10)
+	var _pf11 := FrameProfiler.t0()
 	_sync_projectiles(frame_snapshot.get("projectiles", []))
+	FrameProfiler.add("wv._sync_projectiles", _pf11)
+	var _pf12 := FrameProfiler.t0()
 	_sync_decorative_props(frame_snapshot.get("decorative_props", []))
+	FrameProfiler.add("wv._sync_decorative_props", _pf12)
+	var _pf13 := FrameProfiler.t0()
 	_sync_claim_overlays(frame_snapshot.get("lumen_sources", []), frame_snapshot.get("claims", {}))
+	FrameProfiler.add("wv._sync_claim_overlays", _pf13)
+	var _pf14 := FrameProfiler.t0()
 	_update_shard_beacon(frame_snapshot.get("wyrdfall", {}))
+	FrameProfiler.add("wv._update_shard_beacon", _pf14)
+	var _pf15 := FrameProfiler.t0()
 	_update_seal_ceremony(frame_snapshot.get("wyrdfall", {}))
+	FrameProfiler.add("wv._update_seal_ceremony", _pf15)
+	var _pf16 := FrameProfiler.t0()
 	_update_channel_flash(frame_snapshot.get("wyrdfall", {}))
+	FrameProfiler.add("wv._update_channel_flash", _pf16)
+	var _pf17 := FrameProfiler.t0()
 	_sync_wyrd_springs(frame_snapshot.get("wyrd_sites", []))
+	FrameProfiler.add("wv._sync_wyrd_springs", _pf17)
+	var _pf18 := FrameProfiler.t0()
 	_sync_map_markers()
+	FrameProfiler.add("wv._sync_map_markers", _pf18)
 	if reveal_changed:
 		_rebuild_edge_forest(false)
 		_rebuild_world_rim(false)
@@ -358,6 +440,33 @@ func world_to_tile(world_position: Vector3) -> Vector2i:
 	)
 
 
+## M2 diorama-world: the exact height of the rendered terrain surface at
+## a logical point — the same corner heightfield _build_chunk_terrain
+## draws (tile heights x elevation unit + visual relief, same triangle
+## split), so road ribbons drape on the surface the player sees.
+func terrain_surface_y_at_logical(logical: Vector2) -> float:
+	if simulation == null or map_size == Vector2i.ZERO:
+		return 0.0
+	var g := logical + Vector2(0.5, 0.5)
+	var a := clampi(int(floor(g.x)), 0, map_size.x - 1)
+	var b := clampi(int(floor(g.y)), 0, map_size.y - 1)
+	var u := clampf(g.x - float(a), 0.0, 1.0)
+	var v := clampf(g.y - float(b), 0.0, 1.0)
+	var v00 := _terrain_corner_y(a, b)
+	var v10 := _terrain_corner_y(a + 1, b)
+	var v11 := _terrain_corner_y(a + 1, b + 1)
+	var v01 := _terrain_corner_y(a, b + 1)
+	if u >= v:
+		return v00 + (v10 - v00) * u + (v11 - v10) * v
+	return v00 + (v11 - v01) * u + (v01 - v00) * v
+
+
+func _terrain_corner_y(a: int, b: int) -> float:
+	var tile := Vector2i(clampi(a, 0, map_size.x - 1), clampi(b, 0, map_size.y - 1))
+	var world := ScaleProfile.tile_to_flat_world(Vector2(tile), map_size)
+	return float(simulation.get_height(tile)) * ScaleProfile.TERRAIN_ELEVATION_UNIT_METRES + _visual_relief_y(Vector2(world.x, world.z))
+
+
 func height_at_logical(tile_position: Vector2) -> float:
 	if simulation == null or map_size == Vector2i.ZERO:
 		return 0.0
@@ -373,13 +482,22 @@ func focus_for_building(id: int) -> Vector3:
 	return Vector3.ZERO
 
 
+## R29: C&C group selection; every id in here shows the selection ring too.
+var group_worker_ids: Array = []
+
+
+func set_group_selection(ids: Array) -> void:
+	group_worker_ids = ids.duplicate()
+	set_selection(selected_building_id, selected_worker_id)
+
+
 func set_selection(building_id: int, worker_id: int) -> void:
 	selected_building_id = building_id
 	selected_worker_id = worker_id
 	for id_value in building_views:
 		(building_views[id_value] as ProductionBuildingView3D).set_selected(int(id_value) == building_id)
 	for id_value in character_views:
-		(character_views[id_value] as ProductionCharacterView3D).set_selected(int(id_value) == worker_id)
+		(character_views[id_value] as ProductionCharacterView3D).set_selected(int(id_value) == worker_id or group_worker_ids.has(int(id_value)))
 	for id_value in rivalry_structure_views:
 		(rivalry_structure_views[id_value] as ProductionBuildingView3D).set_selected(int(id_value) == building_id)
 	for id_value in combatant_views:
@@ -428,6 +546,31 @@ func clear_road_preview() -> void:
 		return
 	for child in road_preview_root.get_children():
 		child.queue_free()
+
+
+## F5f: Show connected road network as highlight (for Road placement mode)
+func show_road_network_highlight() -> void:
+	clear_road_preview()
+	if road_preview_root == null or simulation == null:
+		return
+	var directions := [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
+	var shown := 0
+	var limit := 200  # Don't show too many at once
+	for key in simulation.connected_roads.keys():
+		if shown >= limit:
+			break
+		var tile := _tile_from_key(String(key))
+		var mask := 0
+		for index in directions.size():
+			var neighbor: Vector2i = tile + directions[index]
+			if simulation.connected_roads.has(_tile_key(neighbor)) or simulation._is_road_tile(neighbor):
+				mask |= 1 << index
+		var view := RoadView.new()
+		view.configure(0, tile, mask, true, "preview_valid")
+		view.position = tile_to_world(Vector2(tile)) + Vector3.UP * 0.10
+		view.modulate = Color(0.6, 0.8, 1.0, 0.7)  # Light blue tint for network
+		road_preview_root.add_child(view)
+		shown += 1
 
 
 func show_build_pads(valid: Array, clearing: Array) -> void:
@@ -614,7 +757,14 @@ func _named_root(root_name: String) -> Node3D:
 
 
 func _process(_delta: float) -> void:
+	if _warmup_frames > 0:
+		_warmup_frames -= 1
+		if _warmup_frames == 0 and _warmup_root != null:
+			_warmup_root.queue_free()
+			_warmup_root = null
+	var _pf19 := FrameProfiler.t0()
 	_drain_rebake_queue()
+	FrameProfiler.add("wv._drain_rebake_queue", _pf19)
 	if stream_enabled and simulation != null and map_size.x > 0:
 		stream_chunks(STREAM_BUDGET_USEC)
 
@@ -728,6 +878,15 @@ func stream_chunks(budget_usec: int = STREAM_BUDGET_USEC) -> void:
 		return
 	var t0 := Time.get_ticks_usec()
 	_enqueue_desired_chunks()
+	# Hotfix 7: a chunk load is a time-budgeted job (same builders as the
+	# rebake job), shown when complete. Unloads stay immediate.
+	if not _stream_job.is_empty():
+		while Time.get_ticks_usec() - t0 < REBAKE_BUDGET_USEC:
+			if _rebake_job_step(_stream_job, t0):
+				_stream_job = {}
+				break
+		last_stream_ms = float(Time.get_ticks_usec() - t0) / 1000.0
+		return
 	var built := 0
 	while not chunk_queue.is_empty():
 		if built > 0 and Time.get_ticks_usec() - t0 >= budget_usec:
@@ -741,7 +900,11 @@ func stream_chunks(budget_usec: int = STREAM_BUDGET_USEC) -> void:
 			_unload_chunk(coord)
 			continue
 		if wanted != current:
-			_rebuild_chunk(coord, wanted, true)
+			_stream_job = _rebake_job_new(_chunk_key(coord), wanted)
+			_stream_job["collision"] = true
+			_stream_job["stream"] = true
+			if _rebake_job_step(_stream_job, t0):
+				_stream_job = {}
 			built += 1
 	last_stream_ms = float(Time.get_ticks_usec() - t0) / 1000.0
 	if last_stream_ms > 100.0:
@@ -855,12 +1018,22 @@ func _rebuild_chunk(coord: Vector2i, lod: int, rebuild_collision: bool) -> void:
 	host.name = "Chunk_%d_%d" % [coord.x, coord.y]
 	host.visible = true
 	chunk_root.add_child(host)
+	var _pc := FrameProfiler.t0()
 	_build_chunk_terrain(host, coord, lod, rebuild_collision)
+	FrameProfiler.add("chunk.terrain", _pc)
+	_pc = FrameProfiler.t0()
 	_build_chunk_water(host, coord, lod)
+	FrameProfiler.add("chunk.water", _pc)
+	_pc = FrameProfiler.t0()
 	_build_chunk_nature(host, coord, lod)
+	FrameProfiler.add("chunk.nature", _pc)
+	_pc = FrameProfiler.t0()
 	if lod == CHUNK_LOD_NEAR:
 		_build_chunk_grass(host, coord)
+	FrameProfiler.add("chunk.grass", _pc)
+	_pc = FrameProfiler.t0()
 	_build_chunk_rival_seat(host, coord, lod)
+	FrameProfiler.add("chunk.rival", _pc)
 	chunk_nodes[_chunk_key(coord)] = host
 	chunk_lod[_chunk_key(coord)] = lod
 	_recount_chunks()
@@ -921,7 +1094,7 @@ func _build_chunk_terrain(host: Node3D, coord: Vector2i, lod: int, rebuild_colli
 			var p10 := Vector3(c00.x + half, heights[j * verts + i + 1], c00.z - half)
 			var p11 := Vector3(c00.x + half, heights[(j + 1) * verts + i + 1], c00.z + half)
 			var p01 := Vector3(c00.x - half, heights[(j + 1) * verts + i], c00.z + half)
-			_add_quad_colored(surface, p00, p10, p11, p01, Vector3.UP, colors[j * verts + i], colors[j * verts + i + 1], colors[(j + 1) * verts + i + 1], colors[(j + 1) * verts + i])
+			_add_quad_terrain(surface, p00, p10, p11, p01, _terrain_vertex_normal(heights, verts, i, j), _terrain_vertex_normal(heights, verts, i + 1, j), _terrain_vertex_normal(heights, verts, i + 1, j + 1), _terrain_vertex_normal(heights, verts, i, j + 1), colors[j * verts + i], colors[j * verts + i + 1], colors[(j + 1) * verts + i + 1], colors[(j + 1) * verts + i])
 	var mesh := surface.commit()
 	if mesh == null:
 		return
@@ -938,10 +1111,13 @@ func _build_chunk_terrain(host: Node3D, coord: Vector2i, lod: int, rebuild_colli
 		var collision := CollisionShape3D.new()
 		var box := BoxShape3D.new()
 		var cell := ScaleProfile.LOGICAL_CELL_METRES
-		box.size = Vector3(cell * float(CHUNK_TILES), 4.0, cell * float(CHUNK_TILES))
+		# F5b: Thinner box (0.5m) positioned below ground to fix diagonal pick offset
+		box.size = Vector3(cell * float(CHUNK_TILES), 0.5, cell * float(CHUNK_TILES))
 		collision.shape = box
 		var mid := _chunk_origin(coord) + Vector2i(CHUNK_TILES / 2, CHUNK_TILES / 2)
-		body.position = tile_to_world(Vector2(mid))
+		var mid_world := tile_to_world(Vector2(mid))
+		# Position box 0.25m below ground (half height) so top is at ground level
+		body.position = mid_world + Vector3(0, -0.25, 0)
 		body.add_child(collision)
 		host.add_child(body)
 
@@ -953,7 +1129,7 @@ func _fast_chunk_color(tile: Vector2i) -> Color:
 		return Color(0.682, 0.565, 0.427, 0.98)
 	var tile_type := String(simulation.get_tile(tile))
 	if tile_type == Defs.TILE_TREE:
-		return Color(0.220, 0.275, 0.145, 0.40)
+		return Color(0.320, 0.360, 0.195, 0.30)
 	if tile_type == Defs.TILE_ROCK:
 		return Color(0.522, 0.514, 0.451, 0.32)
 	if tile_type == Defs.TILE_SHARD:
@@ -1029,10 +1205,14 @@ func _build_chunk_nature(host: Node3D, coord: Vector2i, lod: int) -> void:
 			elif tile_type == Defs.TILE_ROCK and lod == CHUNK_LOD_NEAR:
 				if _nature_suppressed_near_activity(tile):
 					continue
-				var rock_path := String(Catalog.ROCKS[_tile_hash(tile, 101) % Catalog.ROCKS.size()]) if Catalog.ROCKS.size() > 0 else ""
-				if rock_path != "":
-					_append_nature_transform(transforms_by_path, rock_path, tile, 0, 0.66, 0.70, 0.18)
-	_spawn_nature_multimeshes(host, transforms_by_path)
+				_append_nature_transform(transforms_by_path, "diorama://rock_a", tile, 0, 0.66, 0.70, 0.18)
+			elif tile_type == Defs.TILE_GRASS and lod == CHUNK_LOD_NEAR and float(simulation.tree_regrowth.get(_tile_key(tile), 1.0)) <= 0.0:
+				# Harvested-tree stump marker, same as the small-map path
+				# (_sync_nature "STUMP"); the chunked province lost it in 26209fa.
+				if _nature_suppressed_near_activity(tile):
+					continue
+				_append_nature_transform(transforms_by_path, String(Catalog.CARGO["wood"]), tile, 0, 0.18, 0.42, 0.06)
+	_spawn_nature_multimeshes(host, transforms_by_path, true)
 
 
 func _build_chunk_grass(host: Node3D, coord: Vector2i) -> void:
@@ -1053,11 +1233,26 @@ func _build_chunk_grass(host: Node3D, coord: Vector2i) -> void:
 			if _in_founding_yard(tile):
 				continue
 			var forest_edge := _same_type_neighbors(tile, Defs.TILE_TREE)
+			# Beta world pass: organic 3x3 clumps (tufts + flowers + a stone or
+			# shrub) so the open meadow is not one bare colour field. Chunked
+			# MultiMesh like the rest, built once per chunk.
+			var clump_cell := Vector2i(int(floor(float(tile.x) / 3.0)), int(floor(float(tile.y) / 3.0)))
+			var in_clump := _tile_hash(clump_cell, 17) % 3 == 0 and _tile_hash(tile, 23) % 4 != 0
+			if in_clump:
+				var clump_h := _tile_hash(tile, 31)
+				_append_nature_transform(transforms_by_path, String(Catalog.GRASS[_tile_hash(tile, 83) % Catalog.GRASS.size()]), tile, 1, 0.95, 1.20, 0.60)
+				if Catalog.FLOWERS.size() > 0 and clump_h % 3 == 0:
+					_append_nature_transform(transforms_by_path, String(Catalog.FLOWERS[clump_h % Catalog.FLOWERS.size()]), tile, 2, 0.70, 1.10, 0.45)
+				if Catalog.ROCKS.size() > 0 and clump_h % 4 == 0:
+					_append_nature_transform(transforms_by_path, String(Catalog.ROCKS[clump_h % Catalog.ROCKS.size()]), tile, 3, 0.55, 0.42, 0.25)
+				elif Catalog.UNDERSTORY.size() > 0 and clump_h % 5 == 0:
+					_append_nature_transform(transforms_by_path, String(Catalog.UNDERSTORY[clump_h % Catalog.UNDERSTORY.size()]), tile, 4, 0.55, 0.62, 0.30)
+				continue
 			if forest_edge < 1 and _tile_hash(tile, 19) % 7 != 0:
 				continue
 			var grass_path := String(Catalog.GRASS[_tile_hash(tile, 83) % Catalog.GRASS.size()])
 			_append_nature_transform(transforms_by_path, grass_path, tile, 0, 0.95, 1.32, 0.70)
-	_spawn_nature_multimeshes(host, transforms_by_path)
+	_spawn_nature_multimeshes(host, transforms_by_path, true)
 
 
 func _build_chunk_rival_seat(host: Node3D, coord: Vector2i, lod: int) -> void:
@@ -1072,14 +1267,28 @@ func _build_chunk_rival_seat(host: Node3D, coord: Vector2i, lod: int) -> void:
 		var keep := MeshInstance3D.new()
 		keep.name = "RivalSeat_%d_%d" % [seat.x, seat.y]
 		var mesh := BoxMesh.new()
-		mesh.size = Vector3(7.2, 4.4 if lod == CHUNK_LOD_NEAR else 3.2, 7.2)
+		# Beta: the rival seat was one 7 m saturated red box (read as a flat
+		# red slab at the screen edge). Smaller stone keep + dark red roof.
+		var keep_h := 3.0 if lod == CHUNK_LOD_NEAR else 2.4
+		mesh.size = Vector3(4.6, keep_h, 4.6)
 		keep.mesh = mesh
 		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color("#7A2C36")
-		mat.roughness = 0.86
+		mat.albedo_color = Color("#5B504A") * _atmosphere_scale
+		mat.roughness = 0.9
 		keep.material_override = mat
-		keep.position = tile_to_world(Vector2(seat) + Vector2(1.5, 1.5)) + Vector3(0.0, 2.1, 0.0)
+		keep.position = tile_to_world(Vector2(seat) + Vector2(1.5, 1.5)) + Vector3(0.0, keep_h * 0.5, 0.0)
 		host.add_child(keep)
+		var roof := MeshInstance3D.new()
+		roof.name = "RivalSeatRoof"
+		var roof_mesh := PrismMesh.new()
+		roof_mesh.size = Vector3(5.2, 1.8, 5.2)
+		roof.mesh = roof_mesh
+		var roof_mat := StandardMaterial3D.new()
+		roof_mat.albedo_color = Color("#5E2A30") * _atmosphere_scale
+		roof_mat.roughness = 0.88
+		roof.material_override = roof_mat
+		roof.position = keep.position + Vector3(0.0, keep_h * 0.5 + 0.9, 0.0)
+		host.add_child(roof)
 
 
 func _refresh_terrain_lookups() -> void:
@@ -1092,7 +1301,7 @@ func _refresh_terrain_lookups() -> void:
 		if simulation.connected_roads != null:
 			for key_value in simulation.connected_roads.keys():
 				_terrain_road_cache[String(key_value)] = true
-		for building_value in simulation.get_buildings():
+		for building_value in simulation.buildings:
 			var building: Dictionary = building_value
 			if String(building.get("type", "")) == Defs.BUILDING_ROAD:
 				_terrain_road_cache[_tile_key(Vector2i(building.get("position", Vector2i.ZERO)))] = true
@@ -1164,7 +1373,7 @@ func _calculate_chunk_occupation_hashes() -> Dictionary:
 			var parts := String(key_value).split(",")
 			if parts.size() == 2:
 				items.append([Vector2i(int(parts[0]), int(parts[1])), Vector2i.ONE, String(key_value).hash()])
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		var tile: Vector2i = building.get("position", Vector2i.ZERO)
 		var fp: Vector2i = simulation._building_footprint(building)
@@ -1199,13 +1408,226 @@ func _rebake_occupied_chunks() -> void:
 var _rebake_queue: Array[String] = []
 
 
+## Hotfix 6: a dirty chunk is rebuilt as a time-budgeted job (rows per
+## frame, ~2.5 ms) into a detached host, then swapped in one frame. Visual
+## only: the sim already committed; same builders' maths, same result.
+const REBAKE_BUDGET_USEC := 2500
+var _rebake_job: Dictionary = {}
+var _stream_job: Dictionary = {}
+
+
 func _drain_rebake_queue() -> void:
-	if _rebake_queue.is_empty():
+	var started := Time.get_ticks_usec()
+	while Time.get_ticks_usec() - started < REBAKE_BUDGET_USEC:
+		if _rebake_job.is_empty():
+			if _rebake_queue.is_empty():
+				return
+			var key: String = _rebake_queue.pop_front()
+			var lod := int(chunk_lod.get(key, CHUNK_LOD_NONE))
+			if lod == CHUNK_LOD_NONE or chunk_root == null or simulation == null:
+				continue
+			_rebake_job = _rebake_job_new(key, lod)
+		if _rebake_job_step(_rebake_job, started):
+			_rebake_job = {}
+
+
+func _rebake_job_new(key: String, lod: int) -> Dictionary:
+	var verts := CHUNK_TILES + 1
+	var heights := PackedFloat32Array()
+	var colors := PackedColorArray()
+	heights.resize(verts * verts)
+	colors.resize(verts * verts)
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	return {
+		"key": key, "coord": _chunk_from_key(key), "lod": lod,
+		"old": chunk_nodes.get(key, null), "stage": 0, "row": 0,
+		"heights": heights, "colors": colors, "surface": surface,
+		# F5a: Preserve TerrainPicker collision on rebake (fixes lock after first placement)
+		"mesh": null, "nature": {}, "grass": {}, "collision": true, "stream": false,
+	}
+
+
+func _rebake_job_step(job: Dictionary, started: int) -> bool:
+	var coord: Vector2i = job["coord"]
+	var lod: int = job["lod"]
+	var origin := _chunk_origin(coord)
+	var verts := CHUNK_TILES + 1
+	var stage: int = job["stage"]
+	if stage == 0:
+		var heights: PackedFloat32Array = job["heights"]
+		var colors: PackedColorArray = job["colors"]
+		var j: int = job["row"]
+		while j < verts:
+			for i in verts:
+				var tile := Vector2i(
+					clampi(origin.x + i, 0, map_size.x - 1),
+					clampi(origin.y + j, 0, map_size.y - 1)
+				)
+				var world := ScaleProfile.tile_to_flat_world(Vector2(tile), map_size)
+				var sim_y := float(simulation.get_height(tile)) * ScaleProfile.TERRAIN_ELEVATION_UNIT_METRES
+				heights[j * verts + i] = sim_y + _visual_relief_y(Vector2(world.x, world.z))
+				colors[j * verts + i] = _fast_chunk_color(tile)
+			j += 1
+			if Time.get_ticks_usec() - started >= REBAKE_BUDGET_USEC:
+				break
+		job["heights"] = heights
+		job["colors"] = colors
+		job["row"] = j
+		if j >= verts:
+			job["stage"] = 1
+			job["row"] = 0
+	elif stage == 1:
+		var heights: PackedFloat32Array = job["heights"]
+		var colors: PackedColorArray = job["colors"]
+		var surface: SurfaceTool = job["surface"]
+		var half := ScaleProfile.LOGICAL_CELL_METRES * 0.5
+		var j: int = job["row"]
+		while j < CHUNK_TILES:
+			for i in CHUNK_TILES:
+				var tile := Vector2i(origin.x + i, origin.y + j)
+				if not simulation.is_inside_map(tile):
+					continue
+				var c00 := ScaleProfile.tile_to_flat_world(Vector2(tile), map_size)
+				var p00 := Vector3(c00.x - half, heights[j * verts + i], c00.z - half)
+				var p10 := Vector3(c00.x + half, heights[j * verts + i + 1], c00.z - half)
+				var p11 := Vector3(c00.x + half, heights[(j + 1) * verts + i + 1], c00.z + half)
+				var p01 := Vector3(c00.x - half, heights[(j + 1) * verts + i], c00.z + half)
+				_add_quad_terrain(surface, p00, p10, p11, p01, _terrain_vertex_normal(heights, verts, i, j), _terrain_vertex_normal(heights, verts, i + 1, j), _terrain_vertex_normal(heights, verts, i + 1, j + 1), _terrain_vertex_normal(heights, verts, i, j + 1), colors[j * verts + i], colors[j * verts + i + 1], colors[(j + 1) * verts + i + 1], colors[(j + 1) * verts + i])
+			j += 1
+			if Time.get_ticks_usec() - started >= REBAKE_BUDGET_USEC:
+				break
+		job["row"] = j
+		if j >= CHUNK_TILES:
+			job["mesh"] = surface.commit()
+			job["stage"] = 2
+			job["row"] = origin.y
+	elif stage == 2:
+		var step := 1 if lod == CHUNK_LOD_NEAR else 2
+		var y: int = job["row"]
+		while y < origin.y + CHUNK_TILES:
+			_rebake_nature_row(job["nature"], origin, y, step, lod)
+			y += step
+			if Time.get_ticks_usec() - started >= REBAKE_BUDGET_USEC:
+				break
+		job["row"] = y
+		if y >= origin.y + CHUNK_TILES:
+			job["stage"] = 3 if lod == CHUNK_LOD_NEAR and not Catalog.GRASS.is_empty() else 4
+			job["row"] = origin.y
+	elif stage == 3:
+		var occupied := _terrain_occupied_cache if _terrain_lookups_ready else _structure_tiles()
+		var y: int = job["row"]
+		while y < origin.y + CHUNK_TILES:
+			_rebake_grass_row(job["grass"], origin, y, occupied)
+			y += 1
+			if Time.get_ticks_usec() - started >= REBAKE_BUDGET_USEC:
+				break
+		job["row"] = y
+		if y >= origin.y + CHUNK_TILES:
+			job["stage"] = 4
+	else:
+		var _pfj := FrameProfiler.t0()
+		_rebake_job_finish(job)
+		FrameProfiler.add("rebake.finish", _pfj)
+		return true
+	return false
+
+
+func _rebake_nature_row(transforms_by_path: Dictionary, origin: Vector2i, y: int, step: int, lod: int) -> void:
+	# Same body as _build_chunk_nature, one row.
+	for x in range(origin.x, origin.x + CHUNK_TILES, step):
+		var tile := Vector2i(x, y)
+		if not simulation.is_inside_map(tile) or not simulation.is_revealed(tile):
+			continue
+		var tile_type := String(simulation.get_tile(tile))
+		if tile_type == Defs.TILE_TREE:
+			if _nature_suppressed_near_activity(tile):
+				continue
+			if _same_type_neighbors(tile, Defs.TILE_TREE) <= 1 and _near_founding_meadow(tile):
+				continue
+			if lod == CHUNK_LOD_FAR:
+				_append_nature_transform(transforms_by_path, _tree_path_for_tile(tile, 0, 2), tile, 0, 0.45, 0.85, 0.12)
+			else:
+				var neighbors := _same_type_neighbors(tile, Defs.TILE_TREE)
+				var path_value := _tree_path_for_tile(tile, 0, neighbors)
+				var scales := _tree_scale_range(path_value, neighbors)
+				_append_nature_transform(transforms_by_path, path_value, tile, 0, 0.55, float(scales.x), float(scales.y))
+		elif tile_type == Defs.TILE_ROCK and lod == CHUNK_LOD_NEAR:
+			if _nature_suppressed_near_activity(tile):
+				continue
+			_append_nature_transform(transforms_by_path, "diorama://rock_a", tile, 0, 0.66, 0.70, 0.18)
+
+
+func _rebake_grass_row(transforms_by_path: Dictionary, origin: Vector2i, y: int, occupied: Dictionary) -> void:
+	# Same body as _build_chunk_grass, one row.
+	for x in range(origin.x, origin.x + CHUNK_TILES):
+		var tile := Vector2i(x, y)
+		if not simulation.is_inside_map(tile) or not simulation.is_revealed(tile):
+			continue
+		if String(simulation.get_tile(tile)) != Defs.TILE_GRASS:
+			continue
+		if occupied.has(_tile_key(tile)) or _is_road_tile(tile):
+			continue
+		if _in_founding_yard(tile):
+			continue
+		var forest_edge := _same_type_neighbors(tile, Defs.TILE_TREE)
+		if forest_edge < 1 and _tile_hash(tile, 19) % 7 != 0:
+			continue
+		var grass_path := String(Catalog.GRASS[_tile_hash(tile, 83) % Catalog.GRASS.size()])
+		_append_nature_transform(transforms_by_path, grass_path, tile, 0, 0.95, 1.32, 0.70)
+
+
+func _rebake_job_finish(job: Dictionary) -> void:
+	var key: String = job["key"]
+	var coord: Vector2i = job["coord"]
+	var lod: int = job["lod"]
+	# Streaming rebuilt or unloaded the chunk meanwhile: drop the job.
+	if chunk_nodes.get(key, null) != job["old"]:
+		if not bool(job["stream"]) and not _rebake_queue.has(key):
+			_rebake_queue.append(key)
 		return
-	var key: String = _rebake_queue.pop_front()
-	var lod := int(chunk_lod.get(key, CHUNK_LOD_NONE))
-	if lod != CHUNK_LOD_NONE:
-		_rebuild_chunk(_chunk_from_key(key), lod, false)
+	if bool(job["stream"]):
+		if _desired_lod(coord) != lod:
+			return
+	elif int(chunk_lod.get(key, CHUNK_LOD_NONE)) != lod:
+		return
+	_unload_chunk(coord)
+	var host := Node3D.new()
+	host.name = "Chunk_%d_%d" % [coord.x, coord.y]
+	host.visible = true
+	chunk_root.add_child(host)
+	var mesh: Mesh = job["mesh"]
+	if mesh != null:
+		var instance := MeshInstance3D.new()
+		instance.name = "Terrain"
+		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		instance.mesh = mesh
+		_apply_ground_material(instance)
+		host.add_child(instance)
+	if bool(job["collision"]) and lod == CHUNK_LOD_NEAR:
+		var body := StaticBody3D.new()
+		body.name = "TerrainPicker"
+		body.set_meta("selection_kind", "terrain")
+		var collision := CollisionShape3D.new()
+		var box := BoxShape3D.new()
+		var cell := ScaleProfile.LOGICAL_CELL_METRES
+		# F5b: Thinner box (0.5m) positioned below ground to fix diagonal pick offset
+		box.size = Vector3(cell * float(CHUNK_TILES), 0.5, cell * float(CHUNK_TILES))
+		collision.shape = box
+		var mid := _chunk_origin(coord) + Vector2i(CHUNK_TILES / 2, CHUNK_TILES / 2)
+		var mid_world := tile_to_world(Vector2(mid))
+		# Position box 0.25m below ground (half height) so top is at ground level
+		body.position = mid_world + Vector3(0, -0.25, 0)
+		body.add_child(collision)
+		host.add_child(body)
+	_build_chunk_water(host, coord, lod)
+	_spawn_nature_multimeshes(host, job["nature"], true)
+	if lod == CHUNK_LOD_NEAR and not Catalog.GRASS.is_empty() and simulation != null:
+		_spawn_nature_multimeshes(host, job["grass"], true)
+	_build_chunk_rival_seat(host, coord, lod)
+	chunk_nodes[key] = host
+	chunk_lod[key] = lod
+	_recount_chunks()
 
 
 func _commit_terrain_mesh(rebuild_collision: bool) -> void:
@@ -1233,6 +1655,19 @@ func _commit_terrain_mesh(rebuild_collision: bool) -> void:
 	terrain_occupation_signature = _calculate_occupation_signature()
 
 
+## Read-only: a terrain surface carrying the ground material. Small maps
+## (<= 80 tiles) use one ContinuousTerrain mesh; province maps stream
+## 32-tile chunks, each with its own "Terrain" instance.
+func representative_terrain() -> MeshInstance3D:
+	if terrain_mesh_instance != null and is_instance_valid(terrain_mesh_instance):
+		return terrain_mesh_instance
+	if chunk_root == null:
+		return null
+	for node in chunk_root.find_children("Terrain", "MeshInstance3D", true, false):
+		return node as MeshInstance3D
+	return null
+
+
 func _apply_ground_material(host: MeshInstance3D) -> void:
 	var material := ShaderMaterial.new()
 	material.shader = preload("res://src/GodotClient3D/Shaders/settlement_ground.gdshader")
@@ -1245,7 +1680,7 @@ func _apply_ground_material(host: MeshInstance3D) -> void:
 	material.set_shader_parameter("macro_metres", maxf(8.0, 4.0 * road_w))
 	material.set_shader_parameter("patch_metres", maxf(1.94, 0.8 * road_w))
 	material.set_shader_parameter("detail_metres", 1.10)
-	material.set_shader_parameter("macro_amount", 0.12)
+	material.set_shader_parameter("macro_amount", 0.20)
 	material.set_shader_parameter("detail_amount", 0.08)
 	material.set_shader_parameter("dirt_amount", 0.56)
 	material.set_shader_parameter("flower_amount", 0.22)
@@ -1279,7 +1714,7 @@ func _bind_terrain_textures(material: ShaderMaterial) -> void:
 		material.set_shader_parameter("dirt_tex", dirt)
 	if rock != null:
 		material.set_shader_parameter("rock_tex", rock)
-	material.set_shader_parameter("tex_mix", 0.16)
+	material.set_shader_parameter("tex_mix", 0.24)
 	material.set_shader_parameter("tex_repeat_meadow", 1.5 * ScaleProfile.road_width_metres())
 	material.set_shader_parameter("tex_repeat_forest", 1.2 * ScaleProfile.road_width_metres())
 	if road_control_texture != null:
@@ -1500,7 +1935,7 @@ func _stamp_building_aprons(img: Image, min_xz: Vector2, size_xz: Vector2, visua
 	# Irregular worn earth around buildings so footprints are not boxes.
 	if simulation == null:
 		return
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		if String(building.get("type", "")) == Defs.BUILDING_ROAD:
 			continue
@@ -1693,6 +2128,30 @@ func _add_quad(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vect
 	_add_quad_colored(surface, a, b, c, d, normal, color, color, color, color)
 
 
+# M1 diorama-world: smooth-shaded terrain. Vertex normals come from the same
+# sim-height grid the vertices use, so slopes take the unified sun like the
+# diorama heightfield instead of the old flat up-normal.
+func _terrain_vertex_normal(heights: PackedFloat32Array, verts: int, i: int, j: int) -> Vector3:
+	var il := maxi(i - 1, 0)
+	var ir := mini(i + 1, verts - 1)
+	var ju := maxi(j - 1, 0)
+	var jd := mini(j + 1, verts - 1)
+	var cell := ScaleProfile.LOGICAL_CELL_METRES
+	var sx := (heights[j * verts + ir] - heights[j * verts + il]) / (float(maxi(ir - il, 1)) * cell)
+	var sz := (heights[jd * verts + i] - heights[ju * verts + i]) / (float(maxi(jd - ju, 1)) * cell)
+	return Vector3(-sx, 1.0, -sz).normalized()
+
+
+func _add_quad_terrain(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, na: Vector3, nb: Vector3, nc: Vector3, nd: Vector3, ca: Color, cb: Color, cc: Color, cd: Color) -> void:
+	var quad_verts := [a, b, c, a, c, d]
+	var quad_norms := [na, nb, nc, na, nc, nd]
+	var quad_cols := [ca, cb, cc, ca, cc, cd]
+	for k in quad_verts.size():
+		surface.set_normal(quad_norms[k])
+		surface.set_color((quad_cols[k] as Color).srgb_to_linear())
+		surface.add_vertex(quad_verts[k])
+
+
 func _add_quad_colored(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, normal: Vector3, ca: Color, cb: Color, cc: Color, cd: Color) -> void:
 	var verts := [a, b, c, a, c, d]
 	var cols := [ca, cb, cc, ca, cc, cd]
@@ -1736,7 +2195,12 @@ func _compute_terrain_color(tile: Vector2i) -> Color:
 	var base := Color(0.408, 0.455, 0.227, 0.0)
 	var litter := clampf(float(tree_weight) / 16.0, 0.0, 0.70)
 	if litter > 0.12:
-		base = base.lerp(Color(0.220, 0.275, 0.145, 0.40), litter * 0.78)
+		# Beta world pass: forest floor was a 78 % blend to near-black green,
+		# which printed as a flat dark mass wherever trees were thinned
+		# (LOD, near buildings, fog edge). Moss/needle tone, lighter blend,
+		# per-tile variation so the edge breaks up.
+		var moss := Color(0.300, 0.350, 0.190, 0.30).lerp(Color(0.380, 0.330, 0.200, 0.30), float(_tile_hash(tile, 61) % 100) / 100.0)
+		base = base.lerp(moss, litter * 0.50)
 	var scree := clampf(float(rock_weight) / 16.0, 0.0, 0.55)
 	if scree > 0.12:
 		base = base.lerp(Color(0.522, 0.514, 0.451, 0.32), scree * 0.50)
@@ -1750,11 +2214,13 @@ func _compute_terrain_color(tile: Vector2i) -> Color:
 	if _is_farm_field_tile(tile):
 		base = Color(0.788, 0.635, 0.290, 0.94)
 	if _is_road_tile(tile):
-		base = Color(0.682, 0.565, 0.427, 0.98)
+		# Beta: packed earth that keeps a trace of the ground under it and
+		# varies per tile, so roads read worn-in instead of pasted beige strips.
+		var wear := float(_tile_hash(tile, 57) % 9) / 100.0
+		base = base.lerp(Color(0.640 - wear, 0.525 - wear, 0.395 - wear * 0.6, 0.96), 0.86)
 	elif _is_road_shoulder(tile):
-		# 20–35% of the road width, not a hard beige stripe.
-		var shoulder := 0.20 + float(_tile_hash(tile, 41) % 16) / 100.0
-		base = base.lerp(Color(0.520, 0.410, 0.275, 0.55), clampf(shoulder, 0.20, 0.35))
+		var shoulder := 0.30 + float(_tile_hash(tile, 41) % 16) / 100.0
+		base = base.lerp(Color(0.540, 0.430, 0.290, 0.60), clampf(shoulder, 0.30, 0.45))
 	if _terrain_occupied_cache.has(_tile_key(tile)) and not _is_farm_field_tile(tile):
 		base = base.lerp(Color(0.573, 0.443, 0.306, 0.62), 0.64)
 	elif _terrain_yard_cache.has(_tile_key(tile)) and not _is_farm_field_tile(tile):
@@ -1813,7 +2279,7 @@ func _is_road_tile(tile: Vector2i) -> bool:
 		return false
 	if simulation.connected_roads.has(_tile_key(tile)):
 		return true
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		if String(building.get("type", "")) == Defs.BUILDING_ROAD and Vector2i(building.get("position", Vector2i.ZERO)) == tile:
 			return true
@@ -1840,7 +2306,7 @@ func _farm_field_tiles() -> Dictionary:
 	var fields: Dictionary = {}
 	if simulation == null:
 		return fields
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		var type_name := String(building.get("planned_type", "")) if bool(building.get("construction", false)) else String(building.get("type", ""))
 		if type_name != Defs.BUILDING_FARM:
@@ -1877,7 +2343,7 @@ func _calculate_occupation_signature() -> int:
 		road_keys.sort()
 		for key_value in road_keys:
 			value = int((value * 31 + String(key_value).hash()) & 0x7fffffff)
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		var tile: Vector2i = building.get("position", Vector2i.ZERO)
 		value = int((value * 31 + int(building.get("id", 0)) * 11 + tile.x * 13 + tile.y * 17 + int(bool(building.get("construction", false)))) & 0x7fffffff)
@@ -1924,7 +2390,7 @@ func _sync_nature(force: bool) -> void:
 
 func _calculate_nature_layout_signature() -> int:
 	var value := 23
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		var tile: Vector2i = building.get("position", Vector2i.ZERO)
 		value = int((value * 31 + int(building.get("id", 0)) * 7 + tile.x * 13 + tile.y * 17 + int(bool(building.get("construction", false)))) & 0x7fffffff)
@@ -2074,7 +2540,7 @@ func _rebuild_grass_multimeshes() -> void:
 
 func _structure_tiles() -> Dictionary:
 	var occupied: Dictionary = {}
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		var type_name := String(building.get("planned_type", "")) if bool(building.get("construction", false)) else String(building.get("type", ""))
 		var anchor: Vector2i = building.get("position", Vector2i.ZERO)
@@ -2087,7 +2553,7 @@ func _structure_tiles() -> Dictionary:
 
 func _yard_tiles(radius: int) -> Dictionary:
 	var yard: Dictionary = {}
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		var type_name := String(building.get("planned_type", "")) if bool(building.get("construction", false)) else String(building.get("type", ""))
 		if type_name == Defs.BUILDING_ROAD:
@@ -2111,7 +2577,7 @@ func _spawn_nature_contact_ao(host: Node3D, transforms_by_path: Dictionary, inte
 	ContactAO.spawn_multimesh(host, contacts, intensity)
 
 
-func _spawn_nature_multimeshes(host: Node3D, transforms_by_path: Dictionary) -> void:
+func _spawn_nature_multimeshes(host: Node3D, transforms_by_path: Dictionary, share_materials: bool = false) -> void:
 	for path_value in transforms_by_path:
 		var mesh := _mesh_for_nature_path(String(path_value))
 		if mesh == null:
@@ -2126,7 +2592,7 @@ func _spawn_nature_multimeshes(host: Node3D, transforms_by_path: Dictionary) -> 
 		var instance := MultiMeshInstance3D.new()
 		instance.name = "Composed_%s" % String(path_value).get_file().get_basename()
 		instance.multimesh = multimesh
-		var foliage := _foliage_material(mesh, path_value)
+		var foliage := _shared_foliage_material(mesh, String(path_value)) if share_materials else _foliage_material(mesh, path_value)
 		if foliage != null:
 			instance.material_override = foliage
 		host.add_child(instance)
@@ -2340,7 +2806,7 @@ func _append_boundary_wilderness(groups: Dictionary) -> void:
 
 
 func _tile_occupied_by_structure(tile: Vector2i) -> bool:
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		var type_name := String(building.get("planned_type", "")) if bool(building.get("construction", false)) else String(building.get("type", ""))
 		var anchor: Vector2i = building.get("position", Vector2i.ZERO)
@@ -2445,7 +2911,7 @@ func _collect_non_inspectable_buildings(node: Node, hall: Vector2i, radius_tiles
 func _nature_suppressed_near_activity(tile: Vector2i) -> bool:
 	if _in_founding_yard(tile, 8.0):
 		return true
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		var type_name := String(building.get("planned_type", "")) if bool(building.get("construction", false)) else String(building.get("type", ""))
 		var anchor: Vector2i = building.get("position", Vector2i.ZERO)
@@ -2510,6 +2976,10 @@ func _append_boundary_instance(groups: Dictionary, logical_position: Vector2, in
 func _mesh_for_nature_path(path_value: String) -> Mesh:
 	if nature_mesh_cache.has(path_value):
 		return nature_mesh_cache[path_value]
+	if path_value.begins_with("diorama://"):
+		var diorama_mesh := DioramaBuildings.nature_mesh(path_value)
+		nature_mesh_cache[path_value] = diorama_mesh
+		return diorama_mesh
 	if path_value.get_file().get_basename() == "grass":
 		var clump := _grass_clump_mesh()
 		nature_mesh_cache[path_value] = clump
@@ -2676,8 +3146,8 @@ func _create_shard_marker() -> void:
 	shard_crystal_material = StandardMaterial3D.new()
 	shard_crystal_material.albedo_color = Color(0.38, 0.50, 0.54, 0.90)
 	shard_crystal_material.emission_enabled = true
-	shard_crystal_material.emission = Color("#243e46")
-	shard_crystal_material.emission_energy_multiplier = 0.32
+	shard_crystal_material.emission = Color("#3f9fb8")
+	shard_crystal_material.emission_energy_multiplier = 0.9
 	shard_crystal_material.roughness = 0.48
 	shard_crystal_material.metallic = 0.14
 	var crystal_specs := [
@@ -2696,6 +3166,21 @@ func _create_shard_marker() -> void:
 		crystal.rotation_degrees = spec["rot"]
 		crystal.material_override = shard_crystal_material
 		shard_beacon.add_child(crystal)
+	# Beta world pass: the Shard is the realm's focal point. Taller crystal
+	# cluster and one cool glow light so it reads from the strategy camera.
+	for index in shard_beacon.get_child_count():
+		var c := shard_beacon.get_child(index)
+		if c is MeshInstance3D and String(c.name).begins_with("ShardCrystal_"):
+			(c as Node3D).scale = Vector3(1.9, 2.4, 1.9)
+			(c as Node3D).position *= 1.7
+	var shard_glow := OmniLight3D.new()
+	shard_glow.name = "ShardGlow"
+	shard_glow.light_color = Color("#7fd6ea")
+	shard_glow.light_energy = 1.1
+	shard_glow.omni_range = 10.0
+	shard_glow.shadow_enabled = false
+	shard_glow.position = Vector3(0.0, 2.6, 0.0)
+	shard_beacon.add_child(shard_glow)
 
 	shard_beacon_column = MeshInstance3D.new()
 	shard_beacon_column.name = "ShardColumn"
@@ -2757,7 +3242,7 @@ func _update_shard_beacon(wyrdfall: Dictionary) -> void:
 		if material != null:
 			material.emission_energy_multiplier = (0.55 if binding else 0.22) * pulse
 	if shard_crystal_material != null:
-		shard_crystal_material.emission_energy_multiplier = (0.70 if binding else 0.32) * pulse
+		shard_crystal_material.emission_energy_multiplier = (1.6 if binding else 0.9) * pulse
 
 
 func _update_seal_ceremony(wyrdfall: Dictionary) -> void:
@@ -3125,6 +3610,7 @@ func _sync_roads(road_snapshots: Array) -> void:
 	for key_value in road_views.keys():
 		if desired.has(key_value):
 			continue
+		_road_merge_dirty[_road_chunk((road_views[key_value] as ProductionRoadView3D).tile)] = true
 		(road_views[key_value] as Node).queue_free()
 		road_views.erase(key_value)
 		road_signatures.erase(key_value)
@@ -3145,10 +3631,74 @@ func _sync_roads(road_snapshots: Array) -> void:
 			roads_root.add_child(view)
 			road_views[key_value] = view
 			road_signatures[key_value] = next_signature
+			_road_merge_dirty[_road_chunk(tile)] = true
 		elif String(road_signatures.get(key_value, "")) != next_signature:
 			(road_views[key_value] as ProductionRoadView3D).configure(int(snapshot.get("id", 0)), tile, mask, planned)
 			road_signatures[key_value] = next_signature
+			_road_merge_dirty[_road_chunk(tile)] = true
+	_merge_dirty_road_chunks()
 	_rebuild_road_stamps(desired)
+
+
+## R31 draw calls: each road tile used to be two MeshInstance3Ds (edge + dirt),
+## i.e. two draw calls per tile. Static batching: per 16-tile chunk, the tile
+## meshes are baked into one mesh per shared material and the per-tile meshes
+## are hidden (their decals stay). Same vertices, same materials, same
+## transforms, so the picture is unchanged; only the draw count drops.
+const ROAD_MERGE_CHUNK := 16
+var _road_merge_dirty: Dictionary = {}
+var _road_merged: Dictionary = {}
+
+
+func _road_chunk(t: Vector2i) -> Vector2i:
+	return Vector2i(int(floor(float(t.x) / ROAD_MERGE_CHUNK)), int(floor(float(t.y) / ROAD_MERGE_CHUNK)))
+
+
+func _merge_dirty_road_chunks() -> void:
+	if _road_merge_dirty.is_empty() or roads_root == null:
+		return
+	var dirty := _road_merge_dirty
+	_road_merge_dirty = {}
+	var tools := {}
+	var mats := {}
+	for view_value in road_views.values():
+		var view := view_value as ProductionRoadView3D
+		if view == null or not is_instance_valid(view) or view.is_queued_for_deletion():
+			continue
+		var chunk := _road_chunk(view.tile)
+		if not dirty.has(chunk):
+			continue
+		for child in view.get_children():
+			var mi := child as MeshInstance3D
+			if mi == null or mi.mesh == null or mi.is_queued_for_deletion():
+				continue
+			var mat: Material = mi.material_override
+			var key := "%d,%d|%d" % [chunk.x, chunk.y, mat.get_instance_id() if mat != null else 0]
+			if not tools.has(key):
+				var st := SurfaceTool.new()
+				st.begin(Mesh.PRIMITIVE_TRIANGLES)
+				tools[key] = st
+				mats[key] = mat
+			(tools[key] as SurfaceTool).append_from(mi.mesh, 0, view.transform * mi.transform)
+			mi.visible = false
+	for chunk in dirty:
+		var old: Array = _road_merged.get(chunk, [])
+		for n in old:
+			if is_instance_valid(n):
+				(n as Node).queue_free()
+		_road_merged.erase(chunk)
+	for key in tools:
+		var chunk_key := String(key).split("|")[0].split(",")
+		var chunk := Vector2i(int(chunk_key[0]), int(chunk_key[1]))
+		var inst := MeshInstance3D.new()
+		inst.name = "RoadMerged_%d_%d" % [chunk.x, chunk.y]
+		inst.mesh = (tools[key] as SurfaceTool).commit()
+		inst.material_override = mats[key]
+		inst.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		roads_root.add_child(inst)
+		if not _road_merged.has(chunk):
+			_road_merged[chunk] = []
+		(_road_merged[chunk] as Array).append(inst)
 
 
 func _rebuild_road_stamps(desired: Dictionary) -> void:
@@ -3221,6 +3771,9 @@ func _spawn_road_stamp_multimesh(node_name: String, transforms: Array, color: Co
 	road_stamp_root.add_child(instance)
 
 
+var _building_snapshot_hashes: Dictionary = {}
+
+
 func _sync_buildings(building_snapshots: Array) -> void:
 	var desired: Dictionary = {}
 	construction_activity_count = 0
@@ -3237,6 +3790,12 @@ func _sync_buildings(building_snapshots: Array) -> void:
 			buildings_root.add_child(view)
 			building_views[id] = view
 		else:
+			# Hotfix 7: apply_snapshot is a pure function of the snapshot;
+			# skip it (and the position write) when nothing changed.
+			var snap_hash := snapshot.hash()
+			if int(_building_snapshot_hashes.get(id, -1)) == snap_hash:
+				continue
+			_building_snapshot_hashes[id] = snap_hash
 			var view: ProductionBuildingView3D = building_views[id]
 			view.position = tile_to_world(Vector2(snapshot.get("center", Vector2.ZERO)))
 			view.apply_snapshot(snapshot)
@@ -3245,6 +3804,7 @@ func _sync_buildings(building_snapshots: Array) -> void:
 			continue
 		(building_views[id_value] as Node).queue_free()
 		building_views.erase(id_value)
+		_building_snapshot_hashes.erase(id_value)
 	set_selection(selected_building_id, selected_worker_id)
 
 
@@ -3506,20 +4066,31 @@ func _sync_fog(force: bool) -> void:
 	last_revealed_count = revealed_count
 	# Always keep the shroud. Fully-revealed maps still need the off-map
 	# #17272A wall so zoom-out cannot read a diamond board.
-	var visible_tiles := _paint_current_vision()
 	var mask_size := Vector2i(ceili(float(map_size.x) / FOG_MASK_DIVISOR), ceili(float(map_size.y) / FOG_MASK_DIVISOR))
+	# Hotfix 6: paint vision straight onto the mask lattice (no per-tile
+	# string-keyed Dictionary; was ~45 ms per fog change on Shard).
+	var visible_mask := _paint_current_vision_mask(mask_size)
+	var explored := _explored_lattice_for(mask_size)
+	if _inside_lattice_size != mask_size or _inside_lattice_sim != simulation:
+		_inside_lattice = PackedByteArray()
+		_inside_lattice.resize(mask_size.x * mask_size.y)
+		for iy in mask_size.y:
+			for ix in mask_size.x:
+				if simulation.is_inside_map(Vector2i(ix * FOG_MASK_DIVISOR, iy * FOG_MASK_DIVISOR)):
+					_inside_lattice[iy * mask_size.x + ix] = 1
+		_inside_lattice_size = mask_size
+		_inside_lattice_sim = simulation
 	var mask_bytes := PackedByteArray()
-	mask_bytes.resize(mask_size.x * mask_size.y)
-	for mask_y in mask_size.y:
-		for mask_x in mask_size.x:
-			var sample := Vector2i(mask_x * FOG_MASK_DIVISOR, mask_y * FOG_MASK_DIVISOR)
-			var shroud := FOG_UNEXPLORED
-			if simulation.is_inside_map(sample):
-				if visible_tiles.has(_tile_key(sample)):
-					shroud = FOG_VISIBLE
-				elif simulation.is_revealed(sample):
-					shroud = FOG_EXPLORED
-			mask_bytes[mask_y * mask_size.x + mask_x] = shroud
+	var cells := mask_size.x * mask_size.y
+	mask_bytes.resize(cells)
+	for i in cells:
+		var shroud := FOG_UNEXPLORED
+		if _inside_lattice[i] != 0:
+			if visible_mask[i] != 0:
+				shroud = FOG_VISIBLE
+			elif explored[i] != 0:
+				shroud = FOG_EXPLORED
+		mask_bytes[i] = shroud
 	var upsample := FOG_DISPLAY_UPSAMPLE if map_size.x <= 80 else 2
 	# 320² at divisor 1 was ~400 ms of the 2242 ms start. 2×2 cells still
 	# feather inside the 1.25-cell shader.
@@ -3548,14 +4119,14 @@ func _sync_fog(force: bool) -> void:
 		fog_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
 		fog_material.render_priority = 20
 	fog_material.set_shader_parameter("unknown_opacity", 1.0)
-	fog_material.set_shader_parameter("explored_opacity", 0.55)
+	fog_material.set_shader_parameter("explored_opacity", 0.38)
 	fog_material.set_shader_parameter("cell_metres", ScaleProfile.LOGICAL_CELL_METRES)
 	fog_material.set_shader_parameter("feather_cells", 1.25)
 	fog_material.set_shader_parameter("noise_strength", 0.12)
 	fog_material.set_shader_parameter("shore_fade_metres", SHORE_FADE_METRES)
 	if fog_screen_material != null:
 		fog_screen_material.set_shader_parameter("unknown_opacity", 1.0)
-		fog_screen_material.set_shader_parameter("explored_opacity", 0.55)
+		fog_screen_material.set_shader_parameter("explored_opacity", 0.38)
 		fog_screen_material.set_shader_parameter("cell_metres", ScaleProfile.LOGICAL_CELL_METRES)
 		fog_screen_material.set_shader_parameter("feather_cells", 1.25)
 		fog_screen_material.set_shader_parameter("noise_strength", 0.12)
@@ -3564,6 +4135,34 @@ func _sync_fog(force: bool) -> void:
 		fog_screen_material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
 		fog_screen_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
 	_ensure_fog_volume()
+
+
+func _explored_lattice_for(mask_size: Vector2i) -> PackedByteArray:
+	var revealed: Dictionary = simulation.revealed_tiles
+	var count := revealed.size()
+	var start := _explored_lattice_count
+	if not is_same(revealed, _explored_lattice_dict) or mask_size != _explored_lattice_size or count < start:
+		_explored_lattice = PackedByteArray()
+		_explored_lattice.resize(mask_size.x * mask_size.y)
+		_explored_lattice_size = mask_size
+		_explored_lattice_dict = revealed
+		start = 0
+	if count > start:
+		var keys := revealed.keys()
+		for i in range(start, count):
+			var parts := String(keys[i]).split(",")
+			if parts.size() != 2:
+				continue
+			var x := int(parts[0])
+			var y := int(parts[1])
+			if x < 0 or y < 0 or x % FOG_MASK_DIVISOR != 0 or y % FOG_MASK_DIVISOR != 0:
+				continue
+			var mx := x / FOG_MASK_DIVISOR
+			var my := y / FOG_MASK_DIVISOR
+			if mx < mask_size.x and my < mask_size.y:
+				_explored_lattice[my * mask_size.x + mx] = 1
+	_explored_lattice_count = count
+	return _explored_lattice
 
 
 func _fog_vision_signature(revealed_count: int) -> String:
@@ -3579,7 +4178,7 @@ func _fog_vision_signature(revealed_count: int) -> String:
 			continue
 		var tile: Vector2i = simulation._unit_tile(worker)
 		value = int((value * 31 + tile.x * 13 + tile.y * 17 + int(worker.get("id", 0))) & 0x7fffffff)
-	return "%d:%d" % [value, int(simulation.get_buildings().size())]
+	return "%d:%d" % [value, int(simulation.buildings.size())]
 
 
 func _paint_current_vision() -> Dictionary:
@@ -3590,7 +4189,7 @@ func _paint_current_vision() -> Dictionary:
 		var hall_fp := Defs.building_footprint(Defs.BUILDING_TOWN_HALL)
 		var hall_center: Vector2i = simulation._footprint_center(simulation.town_hall_position, hall_fp)
 		_paint_vision_disk(visible, hall_center, simulation.building_vision_radius(Defs.BUILDING_TOWN_HALL))
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		if bool(building.get("construction", false)):
 			continue
@@ -3710,6 +4309,13 @@ func _free_camera_fog_screens() -> void:
 				child.free()
 
 
+## Gate isolation only (--gate-r32-hide=fog): keep the screen fog hidden even
+## when a fog update re-shows it.
+var gate_hide_fog := false
+const WARMUP_MARKER_KINDS := ["raid", "rival", "rival_banner", "rival_threat", "rival_route", "rival_smoke", "seal_choice", "caravan", "caravan_camp", "tent", "refugee", "channel", "palisade", "victory_banner", "skull", "other"]
+const R33_GROUND_CHEAP := 1.0  # r34: r33.1 shading is the default again (Black, 22:09)
+
+
 func _hide_fog_screen() -> void:
 	if fog_screen != null and is_instance_valid(fog_screen):
 		fog_screen.visible = false
@@ -3735,7 +4341,7 @@ func _ensure_fog_screen() -> void:
 	fog_screen_material.set_shader_parameter("world_min_xz", _fog_world_min_xz())
 	fog_screen_material.set_shader_parameter("world_size_xz", _fog_world_size_xz())
 	fog_screen_material.set_shader_parameter("unknown_opacity", 1.0)
-	fog_screen_material.set_shader_parameter("explored_opacity", 0.55)
+	fog_screen_material.set_shader_parameter("explored_opacity", 0.38)
 	fog_screen_material.set_shader_parameter("cell_metres", ScaleProfile.LOGICAL_CELL_METRES)
 	fog_screen_material.set_shader_parameter("feather_cells", 1.25)
 	fog_screen_material.set_shader_parameter("noise_strength", 0.12)
@@ -3755,7 +4361,7 @@ func _ensure_fog_screen() -> void:
 		fog_overlay_camera.add_child(fog_screen)
 	else:
 		fog_screen.material_override = fog_screen_material
-	fog_screen.visible = true
+	fog_screen.visible = not gate_hide_fog
 
 
 func _upsample_fog_mask(source: PackedByteArray, size: Vector2i, scale: int) -> PackedByteArray:
@@ -3903,6 +4509,7 @@ func apply_light_palette(palette: Dictionary) -> void:
 	if fog_screen_material != null:
 		fog_screen_material.set_shader_parameter("unknown_color", FOG_UNKNOWN_BASE)
 		fog_screen_material.set_shader_parameter("mist_color", FOG_MIST_BASE)
+		fog_screen_material.set_shader_parameter("haze_light", atmosphere)
 	if boundary_mist_material != null:
 		boundary_mist_material.set_shader_parameter("color_scale", atmosphere)
 	if water_material != null:
@@ -3927,7 +4534,9 @@ func apply_light_palette(palette: Dictionary) -> void:
 		ground_mat.set_shader_parameter("tint_floor", float(palette.get("ground_tint_floor", 0.0)))
 		ground_mat.set_shader_parameter("tint_wash_lo", float(palette.get("ground_wash_lo", 0.70)))
 		ground_mat.set_shader_parameter("tint_wash_hi", float(palette.get("ground_wash_hi", 0.94)))
-		ground_mat.set_shader_parameter("lod_cheap", float(palette.get("terrain_lod_cheap", 0.0)))
+		# R33 test build: cheap ground shading is the default (Helmer 19:30).
+		# Roads, water and lights keep following the palette.
+		ground_mat.set_shader_parameter("lod_cheap", maxf(float(palette.get("terrain_lod_cheap", 0.0)), R33_GROUND_CHEAP))
 	# Night/reckoning: hide road stamps. Clay reads as terrain at night
 	# and the extra MultiMeshes are wasted fill-rate on lavapipe.
 	if road_stamp_root != null:
@@ -4683,41 +5292,88 @@ func _spawn_opening_ridge(host: Node3D, hall: Vector2i) -> void:
 	crater_dir = crater_dir.normalized()
 	var crater_side := Vector2(-crater_dir.y, crater_dir.x)
 	var crater_yaw := atan2(crater_dir.x, -crater_dir.y)
-	var formation := MeshInstance3D.new()
+	# Beta r23: the crater rim was three huge formation meshes plus box
+	# ledges (read as one angular slab, r22 review 6.3). Now an irregular
+	# continuous arc of low weathered lumps with slope, rubble and scrub,
+	# held back 10-13 tiles toward the crater so it frames the settlement
+	# instead of sitting in it. Cosmetic only (no collision, no sim tiles).
+	var formation := Node3D.new()
 	formation.name = "RidgeFormation"
-	formation.mesh = _back_ridge_formation_mesh(b * 1.72, b * 0.52)
-	var anchor := tiles[2] if tiles.size() > 2 else hall + Vector2i(roundi(crater_dir.x * 7.0), roundi(crater_dir.y * 7.0))
-	formation.position = tile_to_world(Vector2(anchor)) + Vector3(crater_dir.x * 0.8, 0.0, crater_dir.y * 0.8)
-	formation.rotation.y = crater_yaw + 0.18
-	formation.material_override = grass_b
 	ridge.add_child(formation)
-	var peak_a := MeshInstance3D.new()
-	peak_a.name = "RidgeFormationCap"
-	peak_a.mesh = _back_ridge_formation_mesh(b * 0.72, b * 0.46)
-	peak_a.position = formation.position + Vector3(-crater_side.x * 2.4 - crater_dir.x * 1.6, 0.0, -crater_side.y * 2.4 - crater_dir.y * 1.6)
-	peak_a.rotation.y = crater_yaw - 0.38
-	peak_a.material_override = grass_c
-	ridge.add_child(peak_a)
-	var peak_b := MeshInstance3D.new()
-	peak_b.name = "RidgeFormationShade"
-	peak_b.mesh = _back_ridge_formation_mesh(b * 0.58, b * 0.28)
-	peak_b.position = formation.position + Vector3(crater_side.x * 2.8 - crater_dir.x * 0.9, 0.0, crater_side.y * 2.8 - crater_dir.y * 0.9)
-	peak_b.rotation.y = crater_yaw + 0.62
-	peak_b.material_override = grass_a
-	ridge.add_child(peak_b)
-	for ledge_i in 6:
-		var ledge := MeshInstance3D.new()
-		ledge.name = "RidgeLedge_%d" % ledge_i
-		var ledge_mesh := BoxMesh.new()
-		ledge_mesh.size = Vector3(1.55 + float(ledge_i) * 0.28, 0.34, 0.62)
-		ledge.mesh = ledge_mesh
-		var along := -2.6 + float(ledge_i) * 1.05
-		var out := 0.85 - float(ledge_i) * 0.12
-		ledge.position = formation.position + Vector3(crater_side.x * along + crater_dir.x * out, 0.12 + float(ledge_i % 3) * 0.18, crater_side.y * along + crater_dir.y * out)
-		ledge.rotation.y = crater_yaw + 0.18 + float(ledge_i) * 0.22
-		ledge.material_override = rock_lo if ledge_i % 2 == 0 else rock_hi
-		ledge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		ridge.add_child(ledge)
+	var lump_mesh := SphereMesh.new()
+	lump_mesh.radial_segments = 9
+	lump_mesh.rings = 5
+	lump_mesh.radius = 1.0
+	lump_mesh.height = 2.0
+	var stone_tones: Array = [
+		_ridge_material(Color("#6b675a"), 0.95),
+		_ridge_material(Color("#5c5a4f"), 0.95),
+		_ridge_material(Color("#76705f"), 0.95),
+	]
+	var moss_tones: Array = [
+		_ridge_material(Color("#45532f"), 0.97),
+		_ridge_material(Color("#4d5934"), 0.97),
+	]
+	var scrub_tones: Array = [
+		_ridge_material(Color("#3f5a32"), 0.96),
+		_ridge_material(Color("#4c6a36"), 0.96),
+	]
+	var cell := ScaleProfile.LOGICAL_CELL_METRES
+	var seed_i := absi(hall.x * 73856093 ^ hall.y * 19349663)
+	var count := 0
+	var step := -9.0
+	while step <= 9.0:
+		var h := float((seed_i + count * 2654435761) % 1000) / 1000.0
+		var h2 := float((seed_i / 7 + count * 40503) % 1000) / 1000.0
+		var bulge := 12.0 + sin(step * 0.45 + h * 2.0) * 1.4 + (h2 - 0.5) * 1.2 + absf(step) * 0.12
+		var tile_f := Vector2(hall) + crater_dir * bulge + crater_side * step
+		var tile := Vector2i(roundi(tile_f.x), roundi(tile_f.y))
+		step += 0.9 + h * 0.6
+		count += 1
+		if not simulation.is_inside_map(tile) or _in_founding_yard(tile) or _is_road_tile(tile):
+			continue
+		if simulation.occupied_tiles.has(_tile_key(tile)):
+			continue
+		var base := tile_to_world(tile_f)
+		# Core lump: wide, low, sunk into the ground.
+		var lump := MeshInstance3D.new()
+		lump.name = "RimLump_%d" % count
+		lump.mesh = lump_mesh
+		var wide := cell * (0.85 + h * 0.65)
+		var tall := cell * (0.55 + h2 * 0.6)
+		lump.scale = Vector3(wide, tall, cell * (0.7 + h2 * 0.5))
+		lump.position = base + Vector3(0.0, -tall * 0.35, 0.0)
+		lump.rotation.y = crater_yaw + (h - 0.5) * 1.2
+		lump.material_override = stone_tones[count % stone_tones.size()]
+		formation.add_child(lump)
+		# Settlement-side slope: a lower, mossy apron.
+		var apron := MeshInstance3D.new()
+		apron.name = "RimSlope_%d" % count
+		apron.mesh = lump_mesh
+		apron.scale = Vector3(wide * 1.25, tall * 0.42, cell * 1.1)
+		apron.position = base - Vector3(crater_dir.x, 0.0, crater_dir.y) * cell * 1.1 + Vector3(0.0, -tall * 0.18, 0.0)
+		apron.rotation.y = lump.rotation.y
+		apron.material_override = moss_tones[count % moss_tones.size()]
+		apron.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		formation.add_child(apron)
+		# Rubble at the foot and scrub on the crest.
+		for k in 2:
+			var rub := MeshInstance3D.new()
+			rub.mesh = lump_mesh
+			var rs := cell * (0.14 + float((count + k) % 4) * 0.05)
+			rub.scale = Vector3(rs * 1.3, rs * 0.8, rs)
+			rub.position = base - Vector3(crater_dir.x, 0.0, crater_dir.y) * cell * (1.9 + float(k) * 0.5) + Vector3(crater_side.x, 0.0, crater_side.y) * cell * (float(k) - 0.5) * 0.9
+			rub.material_override = stone_tones[(count + k + 1) % stone_tones.size()]
+			rub.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			formation.add_child(rub)
+		if h > 0.35:
+			var scrub := MeshInstance3D.new()
+			scrub.mesh = lump_mesh
+			var ss := cell * (0.30 + h2 * 0.22)
+			scrub.scale = Vector3(ss * 1.2, ss * 0.85, ss)
+			scrub.position = base + Vector3(crater_side.x, 0.0, crater_side.y) * cell * (h - 0.5) + Vector3(0.0, tall * 0.55, 0.0)
+			scrub.material_override = scrub_tones[count % scrub_tones.size()]
+			formation.add_child(scrub)
 	var trees: Dictionary = {}
 	var forest_dir := Vector2(-0.8, -0.4)
 	if simulation != null and simulation.founding_site is Dictionary:
@@ -4807,6 +5463,64 @@ func _spawn_founding_crater_traces(ridge: Node3D, hall: Vector2i) -> void:
 		ridge.add_child(spoil)
 		index += 1
 	ridge.set_meta("wyrd_traces", index)
+	_spawn_impact_ejecta(ridge, hall, crater_dir, glass)
+
+
+## R34: restrained evidence of the meteor impact around the settlement:
+## scattered dark basalt ejecta and a few small Wyrd-glass splinters, thrown
+## out along the crater direction. Deterministic per map, static, shared
+## materials (two multimeshes, two draw calls).
+func _spawn_impact_ejecta(ridge: Node3D, hall: Vector2i, crater_dir: Vector2, glass: Material) -> void:
+	var basalt := _ridge_material(Color("#2f2c2a"), 0.92)
+	var rock_mm := MultiMesh.new()
+	rock_mm.transform_format = MultiMesh.TRANSFORM_3D
+	var rock_mesh := BoxMesh.new()
+	rock_mesh.size = Vector3(0.7, 0.42, 0.55)
+	rock_mm.mesh = rock_mesh
+	var glass_mm := MultiMesh.new()
+	glass_mm.transform_format = MultiMesh.TRANSFORM_3D
+	var glass_mesh := PrismMesh.new()
+	glass_mesh.size = Vector3(0.26, 0.62, 0.22)
+	glass_mm.mesh = glass_mesh
+	var rocks: Array[Transform3D] = []
+	var shards: Array[Transform3D] = []
+	var base_angle := atan2(crater_dir.y, crater_dir.x)
+	var occupied := {}
+	if simulation != null:
+		for b in simulation.buildings:
+			occupied[Vector2i((b as Dictionary).get("position", Vector2i(-99, -99)))] = true
+	for k in 46:
+		var h := absi(hall.x * 92821 + hall.y * 68917 + k * 2654435) % 100000
+		var spread := (float(h % 1000) / 1000.0 - 0.5) * 2.2
+		var dist := 9.0 + float((h / 1000) % 16)
+		var ang := base_angle + spread
+		var tile := hall + Vector2i(int(round(cos(ang) * dist)), int(round(sin(ang) * dist)))
+		if not simulation.is_inside_map(tile) or simulation.is_water_tile(tile) or occupied.has(tile):
+			continue
+		var origin := tile_to_world(Vector2(tile)) + Vector3(float(h % 7) * 0.08 - 0.24, 0.0, float(h % 5) * 0.09 - 0.18)
+		var basis := Basis(Vector3.UP, float(h % 360) * 0.0174533)
+		if k % 4 == 3:
+			basis = basis * Basis(Vector3(1, 0, 0), 0.35 + float(h % 3) * 0.12)
+			var sc := 0.7 + float(h % 4) * 0.15
+			shards.append(Transform3D(basis.scaled(Vector3(sc, sc, sc)), origin + Vector3(0.0, 0.2 * sc, 0.0)))
+		else:
+			var sc2 := 0.55 + float(h % 6) * 0.14
+			basis = basis * Basis(Vector3(0, 0, 1), float(h % 5) * 0.09)
+			rocks.append(Transform3D(basis.scaled(Vector3(sc2, sc2 * (0.7 + float(h % 3) * 0.15), sc2)), origin + Vector3(0.0, 0.12 * sc2, 0.0)))
+	for pair in [[rock_mm, rocks, basalt, "DressImpactEjecta"], [glass_mm, shards, glass, "DressImpactGlass"]]:
+		var mm: MultiMesh = pair[0]
+		var list: Array = pair[1]
+		if list.is_empty():
+			continue
+		mm.instance_count = list.size()
+		for i in list.size():
+			mm.set_instance_transform(i, list[i])
+		var mmi := MultiMeshInstance3D.new()
+		mmi.name = String(pair[3])
+		mmi.multimesh = mm
+		mmi.material_override = pair[2]
+		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		ridge.add_child(mmi)
 
 
 func _spawn_meandering_creek(ridge: Node3D, hall: Vector2i, road_w: float) -> void:
@@ -4846,14 +5560,19 @@ func _spawn_meandering_creek(ridge: Node3D, hall: Vector2i, road_w: float) -> vo
 		var pond: MeshInstance3D = ridge.get_node_or_null("DressPond")
 		if pond != null:
 			pond.position = mid + Vector3(0.0, 0.02, 0.0)
-	var bank := _ridge_material(Color("#786C50"), 0.92)
-	var wet := _ridge_material(Color("#3D5552"), 0.55)
-	var shallow := _ridge_material(Color("#5AA0A0"), 0.28)
+	# Beta r23: the creek read as bright turquoise patches. Muted peat
+	# water, mossy-mud banks that fade into the meadow.
+	var bank := _ridge_material(Color("#5f5a42"), 0.94)
+	var wet := _ridge_material(Color("#37443a"), 0.6)
+	# R37: glossy creek/pond mirrored the moon from the high ortho camera and
+	# read as a flat white sheet at night (review: "white surface by the
+	# outpost"). Matte water keeps the colour; value-only, no new cost.
+	var shallow := _ridge_material(Color("#3e5c55"), 0.6)
 	var water := StandardMaterial3D.new()
 	water.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
-	water.albedo_color = Color("#2F7A7E")
-	water.roughness = 0.22
-	water.metallic = 0.08
+	water.albedo_color = Color("#284a4a")
+	water.roughness = 0.8
+	water.metallic = 0.0
 	water.specular_mode = BaseMaterial3D.SPECULAR_SCHLICK_GGX
 	var mud := MeshInstance3D.new()
 	mud.name = "DressCreekBank"
@@ -4891,29 +5610,102 @@ func _spawn_founding_bridges(ridge: Node3D, width: float) -> void:
 		return
 	var wood := _ridge_material(Color("#6B4E32"), 0.86)
 	var rail := _ridge_material(Color("#4A3826"), 0.90)
+	var creek_tiles: Array = simulation.founding_site.get("creek_tiles", [])
+	# R38: a crossing is several bridge tiles along the road; give them one
+	# shared span direction (the road line) so the decks join into one bridge.
+	var bridge_list: Array = []
+	for tv in simulation.founding_site.get("bridge_tiles", []):
+		if not simulation.has_method("is_founding_creek_tile") or bool(simulation.is_founding_creek_tile(Vector2i(tv))):
+			bridge_list.append(Vector2i(tv))
+	var shared_across := Vector3.ZERO
+	if bridge_list.size() >= 2:
+		var d: Vector2i = bridge_list[bridge_list.size() - 1] - bridge_list[0]
+		if d != Vector2i.ZERO:
+			shared_across = Vector3(float(d.x), 0.0, float(d.y)).normalized()
 	var index := 0
 	for tile_value in simulation.founding_site.get("bridge_tiles", []):
 		var tile := Vector2i(tile_value)
 		if simulation.has_method("is_founding_creek_tile") and not bool(simulation.is_founding_creek_tile(tile)):
 			continue
+		# R38: the deck was axis-aligned, so on a diagonal creek it sat askew
+		# and its end rails floated mid-stream. Span it across the local creek
+		# direction and run the rails along the deck sides.
+		var across := shared_across if shared_across != Vector3.ZERO else _creek_across_at(tile, creek_tiles)
+		var span := maxf(width + 0.70, 3.1) * 1.18
+		var deck_w := maxf(width * 0.42, 1.25)
+		var basis := Basis(across, Vector3.UP, across.cross(Vector3.UP).normalized())
 		var deck := MeshInstance3D.new()
 		deck.name = "DressBridge_%d" % index
 		var deck_mesh := BoxMesh.new()
-		deck_mesh.size = Vector3(maxf(width + 0.70, 3.1), 0.16, maxf(width * 0.42, 1.25))
+		deck_mesh.size = Vector3(span, 0.16, deck_w)
 		deck.mesh = deck_mesh
-		deck.position = tile_to_world(Vector2(tile)) + Vector3(0.0, 0.14, 0.0)
+		var centre := tile_to_world(Vector2(tile))
+		var bank_y := maxf(_creek_bank_height(centre + across * span * 0.5), _creek_bank_height(centre - across * span * 0.5))
+		deck.transform = Transform3D(basis, Vector3(centre.x, maxf(centre.y + 0.14, bank_y + 0.06), centre.z))
 		deck.material_override = wood
 		ridge.add_child(deck)
 		for side in [-1.0, 1.0]:
 			var post := MeshInstance3D.new()
 			post.name = "DressBridgeRail_%d_%d" % [index, int(side)]
 			var post_mesh := BoxMesh.new()
-			post_mesh.size = Vector3(0.10, 0.52, maxf(width * 0.38, 1.15))
+			post_mesh.size = Vector3(span * 0.92, 0.10, 0.10)
 			post.mesh = post_mesh
-			post.position = deck.position + Vector3(side * (width * 0.42 + 0.22), 0.30, 0.0)
+			post.transform = Transform3D(basis, deck.position + basis.z * side * (deck_w * 0.5 - 0.05) + Vector3(0.0, 0.42, 0.0))
 			post.material_override = rail
 			ridge.add_child(post)
+			for end in [-1.0, 1.0]:
+				var stake := MeshInstance3D.new()
+				stake.name = "DressBridgePost_%d_%d_%d" % [index, int(side), int(end)]
+				var stake_mesh := BoxMesh.new()
+				stake_mesh.size = Vector3(0.12, 0.52, 0.12)
+				stake.mesh = stake_mesh
+				stake.transform = Transform3D(basis, deck.position + basis.z * side * (deck_w * 0.5 - 0.05) + basis.x * end * span * 0.44 + Vector3(0.0, 0.20, 0.0))
+				stake.material_override = rail
+				ridge.add_child(stake)
 		index += 1
+
+
+## R38: terrain-mesh height at a world point (chunk vertices sit on tile
+## centres and the triangles interpolate between them).
+func _terrain_y_at(xz: Vector2) -> float:
+	if simulation == null or map_size == Vector2i.ZERO:
+		return 0.0
+	var half := Vector2(map_size - Vector2i.ONE) * 0.5
+	var fx := xz.x / ScaleProfile.LOGICAL_CELL_METRES + half.x
+	var fz := xz.y / ScaleProfile.LOGICAL_CELL_METRES + half.y
+	var x0 := floori(fx)
+	var z0 := floori(fz)
+	var tx := fx - float(x0)
+	var tz := fz - float(z0)
+	var h00 := height_at_logical(Vector2(x0, z0))
+	var h10 := height_at_logical(Vector2(x0 + 1, z0))
+	var h01 := height_at_logical(Vector2(x0, z0 + 1))
+	var h11 := height_at_logical(Vector2(x0 + 1, z0 + 1))
+	return lerpf(lerpf(h00, h10, tx), lerpf(h01, h11, tx), tz)
+
+
+## R38: unit vector across the creek (perpendicular to its flow) at a tile.
+func _creek_across_at(tile: Vector2i, creek_tiles: Array) -> Vector3:
+	var best := -1
+	var best_d := 1 << 30
+	for i in creek_tiles.size():
+		var d := (Vector2i(creek_tiles[i]) - tile).length_squared()
+		if d < best_d:
+			best_d = d
+			best = i
+	if best < 0 or creek_tiles.size() < 2:
+		return Vector3.RIGHT
+	var a := Vector2i(creek_tiles[maxi(0, best - 1)])
+	var b := Vector2i(creek_tiles[mini(creek_tiles.size() - 1, best + 1)])
+	var flow := Vector3(float(b.x - a.x), 0.0, float(b.y - a.y))
+	if flow.length() < 0.01:
+		return Vector3.RIGHT
+	flow = flow.normalized()
+	return Vector3(-flow.z, 0.0, flow.x)
+
+
+func _creek_bank_height(world_position: Vector3) -> float:
+	return _terrain_y_at(Vector2(world_position.x, world_position.z)) + 0.04
 
 
 func _dress_creek_shoreline(ridge: Node3D, points: Array[Vector3]) -> void:
@@ -4970,6 +5762,11 @@ func _creek_ribbon_mesh(points: Array[Vector3], width: float, road_w: float = 2.
 		var side := Vector3(-tangent.z, 0.0, tangent.x).normalized() * (width * 0.5 * wobble)
 		var left := pos + side
 		var right := pos - side
+		# R38: drape onto the terrain. The curve only knew the heights at the
+		# creek tiles, so between them the ribbon floated over lower ground and
+		# showed a dark hovering bank edge at night (Helmer r37).
+		left.y = _terrain_y_at(Vector2(left.x, left.z)) + 0.04
+		right.y = _terrain_y_at(Vector2(right.x, right.z)) + 0.04
 		if i > 0:
 			_ridge_tri(tool, prev_left, prev_right, right)
 			_ridge_tri(tool, prev_left, right, left)
@@ -5094,8 +5891,8 @@ func _spawn_dress_pond(host: Node3D, tile: Vector2i, size: Vector2, node_name: S
 	var water := StandardMaterial3D.new()
 	water.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
 	water.albedo_color = Color(0.16, 0.30, 0.34, 0.90)
-	water.roughness = 0.10
-	water.metallic = 0.28
+	water.roughness = 0.8
+	water.metallic = 0.0
 	water.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	water.emission_enabled = true
 	water.emission = Color(0.08, 0.16, 0.20)
@@ -5335,23 +6132,17 @@ func _force_cast_shadows(node: Node) -> void:
 
 
 func _tree_path_for_tile(tile: Vector2i, index: int, neighbors: int) -> String:
-	# GFX-K woodland: 55% conifer / 25% broadleaf / 20% understory at the edge.
+	# M2 diorama-world: 55% conifer / 25% broadleaf / 20% understory at the
+	# edge, same rolls as the GFX-K woodland, but the tree forms are the
+	# diorama family (spruce/oak keys resolve in _mesh_for_nature_path).
 	var roll := _tile_hash(tile, 17 + index) % 100
-	if neighbors <= 1:
-		if roll < 55 and Catalog.CONIFERS.size() > 0:
-			return String(Catalog.CONIFERS[_tile_hash(tile, 31 + index) % Catalog.CONIFERS.size()])
-		if roll < 80 and Catalog.DECIDUOUS.size() > 0:
-			return String(Catalog.DECIDUOUS[_tile_hash(tile, 41 + index) % Catalog.DECIDUOUS.size()])
-		if Catalog.UNDERSTORY.size() > 0:
-			return String(Catalog.UNDERSTORY[_tile_hash(tile, 51 + index) % Catalog.UNDERSTORY.size()])
-	if neighbors >= 2:
-		if roll < 55 and Catalog.CONIFERS.size() > 0:
-			return String(Catalog.CONIFERS[_tile_hash(tile, 31 + index) % Catalog.CONIFERS.size()])
-		if roll < 80 and Catalog.DECIDUOUS.size() > 0:
-			return String(Catalog.DECIDUOUS[_tile_hash(tile, 41 + index) % Catalog.DECIDUOUS.size()])
-		if Catalog.EDGE_TREES.size() > 0:
-			return String(Catalog.EDGE_TREES[_tile_hash(tile, 51 + index) % Catalog.EDGE_TREES.size()])
-	return String(Catalog.TREES[_tile_hash(tile, 17 + index) % Catalog.TREES.size()])
+	if roll < 55:
+		return "diorama://spruce_a" if _tile_hash(tile, 31 + index) % 2 == 0 else "diorama://spruce_b"
+	if roll < 80:
+		return "diorama://oak_a" if _tile_hash(tile, 41 + index) % 2 == 0 else "diorama://oak_b"
+	if neighbors <= 1 and Catalog.UNDERSTORY.size() > 0:
+		return String(Catalog.UNDERSTORY[_tile_hash(tile, 51 + index) % Catalog.UNDERSTORY.size()])
+	return "diorama://oak_b"
 
 
 func _tree_scale_range(path_value: String, neighbors: int) -> Vector2:
@@ -5379,7 +6170,26 @@ func _is_scatter_path(path_value: String) -> bool:
 	return name in ["grass", "flowers", "bush"]
 
 
+## Hotfix 6: chunks share one foliage material per (path, mesh,
+## atmosphere) instead of a fresh ShaderMaterial per MultiMesh per rebake.
+## Same inputs -> same parameters, so the look is identical.
+var _foliage_material_cache: Dictionary = {}
+
+
+func _shared_foliage_material(mesh: Mesh, path_value: String) -> Material:
+	var key := "%s|%d|%s" % [path_value, mesh.get_instance_id() if mesh != null else 0, var_to_str(_atmosphere_scale)]
+	if _foliage_material_cache.has(key):
+		return _foliage_material_cache[key]
+	if _foliage_material_cache.size() > 256:
+		_foliage_material_cache.clear()
+	var material := _foliage_material(mesh, path_value)
+	_foliage_material_cache[key] = material
+	return material
+
+
 func _foliage_material(mesh: Mesh, path_value: String) -> Material:
+	if String(path_value).begins_with("diorama://"):
+		return null
 	if String(path_value).contains("wheat"):
 		var gold := StandardMaterial3D.new()
 		gold.albedo_color = Identity.PALETTE_WHEAT
@@ -5426,7 +6236,7 @@ func _edge_forest_material() -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
 	# The Director: firs take scene light and the period scale (1.0 / 0.55 / 0.35).
-	material.albedo_color = Color("#2A4024") * _atmosphere_scale
+	material.albedo_color = Color("#3B5A33") * _atmosphere_scale
 	material.roughness = 0.94
 	material.metallic = 0.0
 	material.emission_enabled = false
@@ -5437,7 +6247,7 @@ func _rebuild_building_halos(force: bool) -> void:
 	if simulation == null or halo_root == null:
 		return
 	var signature := "r%d" % int(simulation.connected_roads.size())
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		signature += ":%d:%s:%d:%d" % [
 			int(building.get("id", 0)),
@@ -5506,80 +6316,91 @@ func _instantiate_cached(path_value: String) -> Node3D:
 	return packed.instantiate() as Node3D if packed != null else null
 
 
+var _map_marker_sig := -1
+
+
 func _sync_map_markers() -> void:
 	var host := get_node_or_null("MapMarkers")
 	if host == null:
 		host = Node3D.new()
 		host.name = "MapMarkers"
 		add_child(host)
+	# Beta: markers were freed and rebuilt (Label3D + meshes) on every sim
+	# tick; rebuild only when the marker list actually changed.
+	var markers: Array = simulation.get_map_markers() if simulation != null and simulation.has_method("get_map_markers") else []
+	var marker_sig := hash(var_to_str(markers))
+	if marker_sig == _map_marker_sig and host.get_child_count() == markers.size():
+		return
+	_map_marker_sig = marker_sig
 	for child in host.get_children():
 		child.queue_free()
-	if simulation == null or not simulation.has_method("get_map_markers"):
-		return
-	for marker_value in simulation.get_map_markers():
-		var marker: Dictionary = marker_value
-		var tile: Vector2i = marker.get("position", Vector2i.ZERO)
-		var kind := String(marker.get("kind", ""))
-		var title := String(marker.get("title", "?"))
-		var world := tile_to_world(Vector2(tile))
-		var root := Node3D.new()
-		root.position = world
-		host.add_child(root)
-		var label := Label3D.new()
-		label.text = title
-		label.font_size = 54 if kind in ["rival_threat", "seal_choice", "caravan", "victory_banner"] else 42
-		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		label.no_depth_test = true
-		label.outline_size = 10
-		label.outline_modulate = Color(0.05, 0.03, 0.02, 1.0)
-		label.position = Vector3.UP * (5.4 if kind == "rival_banner" else 3.6)
-		if kind == "raid":
-			label.modulate = Color("#f05a4a")
-		elif kind in ["rival", "rival_banner", "rival_threat"]:
-			label.modulate = Color("#d46a3a")
-		elif kind == "rival_route":
-			label.modulate = Color("#f0a06e")
-		elif kind == "rival_smoke":
-			label.modulate = Color("#9a8a7a")
-		elif kind == "seal_choice":
-			label.modulate = Color("#7ec8d4")
-		elif kind in ["caravan", "caravan_camp"]:
-			label.modulate = Color("#efcf8a")
-		elif kind in ["tent", "refugee"]:
-			label.modulate = Color("#efcf8a")
-		elif kind == "channel":
-			label.modulate = Color("#7ee0d4")
-		elif kind == "palisade":
-			label.modulate = Color("#d4782a")
-		elif kind == "victory_banner":
-			label.modulate = Color("#f0c44a")
-		elif kind == "skull":
-			label.modulate = Color("#f0a06e")
-		else:
-			label.modulate = Color("#efcf8a")
-		root.add_child(label)
-		if kind == "rival_banner":
-			root.add_child(_banner_mesh(Color("#c84a4a")))
-		elif kind == "rival_route":
-			root.add_child(_ping_mesh(Color("#f0a06e")))
-		elif kind == "rival_smoke":
-			root.add_child(_smoke_mesh())
-		elif kind == "rival_threat":
-			root.add_child(_ping_mesh(Color("#f05a4a"), 0.55))
-		elif kind == "seal_choice":
-			root.add_child(_ping_mesh(Color("#7ec8d4"), 0.42))
-		elif kind == "caravan":
-			root.add_child(_caravan_mesh())
-		elif kind in ["tent", "caravan_camp"]:
-			root.add_child(_tent_mesh())
-		elif kind == "refugee":
-			root.add_child(_settler_mesh())
-		elif kind == "channel":
-			root.add_child(_channel_flash_mesh())
-		elif kind == "palisade":
-			root.add_child(_palisade_mesh())
-		elif kind == "victory_banner":
-			root.add_child(_banner_mesh(Color("#f0c44a")))
+	for marker_value in markers:
+		host.add_child(_build_marker_node(marker_value))
+
+
+func _build_marker_node(marker: Dictionary) -> Node3D:
+	var tile: Vector2i = marker.get("position", Vector2i.ZERO)
+	var kind := String(marker.get("kind", ""))
+	var title := String(marker.get("title", "?"))
+	var world := tile_to_world(Vector2(tile))
+	var root := Node3D.new()
+	root.position = world
+	var label := Label3D.new()
+	label.text = title
+	label.font_size = 54 if kind in ["rival_threat", "seal_choice", "caravan", "victory_banner"] else 42
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.no_depth_test = true
+	label.outline_size = 10
+	label.outline_modulate = Color(0.05, 0.03, 0.02, 1.0)
+	label.position = Vector3.UP * (5.4 if kind == "rival_banner" else 3.6)
+	if kind == "raid":
+		label.modulate = Color("#f05a4a")
+	elif kind in ["rival", "rival_banner", "rival_threat"]:
+		label.modulate = Color("#d46a3a")
+	elif kind == "rival_route":
+		label.modulate = Color("#f0a06e")
+	elif kind == "rival_smoke":
+		label.modulate = Color("#9a8a7a")
+	elif kind == "seal_choice":
+		label.modulate = Color("#7ec8d4")
+	elif kind in ["caravan", "caravan_camp"]:
+		label.modulate = Color("#efcf8a")
+	elif kind in ["tent", "refugee"]:
+		label.modulate = Color("#efcf8a")
+	elif kind == "channel":
+		label.modulate = Color("#7ee0d4")
+	elif kind == "palisade":
+		label.modulate = Color("#d4782a")
+	elif kind == "victory_banner":
+		label.modulate = Color("#f0c44a")
+	elif kind == "skull":
+		label.modulate = Color("#f0a06e")
+	else:
+		label.modulate = Color("#efcf8a")
+	root.add_child(label)
+	if kind == "rival_banner":
+		root.add_child(_banner_mesh(Color("#c84a4a")))
+	elif kind == "rival_route":
+		root.add_child(_ping_mesh(Color("#f0a06e")))
+	elif kind == "rival_smoke":
+		root.add_child(_smoke_mesh())
+	elif kind == "rival_threat":
+		root.add_child(_ping_mesh(Color("#f05a4a"), 0.55))
+	elif kind == "seal_choice":
+		root.add_child(_ping_mesh(Color("#7ec8d4"), 0.42))
+	elif kind == "caravan":
+		root.add_child(_caravan_mesh())
+	elif kind in ["tent", "caravan_camp"]:
+		root.add_child(_tent_mesh())
+	elif kind == "refugee":
+		root.add_child(_settler_mesh())
+	elif kind == "channel":
+		root.add_child(_channel_flash_mesh())
+	elif kind == "palisade":
+		root.add_child(_palisade_mesh())
+	elif kind == "victory_banner":
+		root.add_child(_banner_mesh(Color("#f0c44a")))
+	return root
 
 
 func _banner_mesh(color: Color) -> Node3D:
@@ -5645,31 +6466,101 @@ func _smoke_mesh() -> MeshInstance3D:
 
 
 func _caravan_mesh() -> Node3D:
+	# R34: a covered wagon (was two glowing boxes that read as placeholder art).
 	var group := Node3D.new()
-	var wagon := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = Vector3(2.6, 1.1, 1.4)
-	wagon.mesh = box
-	wagon.position = Vector3(0.0, 0.85, 0.0)
 	var wood := StandardMaterial3D.new()
-	wood.albedo_color = Color("#7a4a28")
-	wood.emission_enabled = true
-	wood.emission = Color("#c48a4a")
-	wood.emission_energy_multiplier = 0.55
-	wagon.material_override = wood
-	group.add_child(wagon)
-	var canvas := MeshInstance3D.new()
-	var cloth := BoxMesh.new()
-	cloth.size = Vector3(2.1, 0.85, 1.15)
-	canvas.mesh = cloth
-	canvas.position = Vector3(0.0, 1.7, 0.0)
-	var cloth_mat := StandardMaterial3D.new()
-	cloth_mat.albedo_color = Color("#d8c48a")
-	cloth_mat.emission_enabled = true
-	cloth_mat.emission = Color("#efcf8a")
-	cloth_mat.emission_energy_multiplier = 0.7
-	canvas.material_override = cloth_mat
-	group.add_child(canvas)
+	wood.albedo_color = Color("#6b4428")
+	wood.roughness = 0.9
+	var dark_wood := StandardMaterial3D.new()
+	dark_wood.albedo_color = Color("#3e2818")
+	dark_wood.roughness = 0.9
+	var iron := StandardMaterial3D.new()
+	iron.albedo_color = Color("#2c2a28")
+	iron.roughness = 0.6
+	var cloth := StandardMaterial3D.new()
+	cloth.albedo_color = Color("#b9a77a")
+	cloth.roughness = 0.95
+	# R35: no CULL_DISABLED; that was the only new pipeline state in r34 and
+	# compiled mid-game on first sight (r34b hitch). Hood ends are capped instead.
+	# Faint warmth so the wagon still reads at night without glowing like a lamp.
+	cloth.emission_enabled = true
+	cloth.emission = Color("#efcf8a")
+	cloth.emission_energy_multiplier = 0.12
+	var add_box := func(size: Vector3, pos: Vector3, mat: Material, rot := Vector3.ZERO) -> void:
+		var mi := MeshInstance3D.new()
+		var b := BoxMesh.new()
+		b.size = size
+		mi.mesh = b
+		mi.position = pos
+		mi.rotation = rot
+		mi.material_override = mat
+		group.add_child(mi)
+	# Bed: floor, side boards and tail board.
+	add_box.call(Vector3(2.5, 0.12, 1.3), Vector3(0.0, 0.78, 0.0), wood)
+	add_box.call(Vector3(2.5, 0.34, 0.08), Vector3(0.0, 1.0, 0.62), wood)
+	add_box.call(Vector3(2.5, 0.34, 0.08), Vector3(0.0, 1.0, -0.62), wood)
+	add_box.call(Vector3(0.08, 0.34, 1.3), Vector3(-1.23, 1.0, 0.0), dark_wood)
+	add_box.call(Vector3(0.08, 0.34, 1.3), Vector3(1.23, 1.0, 0.0), dark_wood)
+	# Axles and wheels.
+	for x in [-0.85, 0.85]:
+		add_box.call(Vector3(0.1, 0.1, 1.6), Vector3(x, 0.45, 0.0), dark_wood)
+		for z in [-0.78, 0.78]:
+			var wheel := MeshInstance3D.new()
+			var cyl := CylinderMesh.new()
+			cyl.top_radius = 0.45
+			cyl.bottom_radius = 0.45
+			cyl.height = 0.1
+			cyl.radial_segments = 12
+			wheel.mesh = cyl
+			wheel.rotation = Vector3(PI * 0.5, 0.0, 0.0)
+			wheel.position = Vector3(x, 0.45, z)
+			wheel.material_override = dark_wood
+			group.add_child(wheel)
+			var hub := MeshInstance3D.new()
+			var hcyl := CylinderMesh.new()
+			hcyl.top_radius = 0.1
+			hcyl.bottom_radius = 0.1
+			hcyl.height = 0.14
+			hcyl.radial_segments = 8
+			hub.mesh = hcyl
+			hub.rotation = Vector3(PI * 0.5, 0.0, 0.0)
+			hub.position = Vector3(x, 0.45, z)
+			hub.material_override = iron
+			group.add_child(hub)
+	# Arched canvas hood: half of a cylinder lying along the wagon, on hoops.
+	var hood := MeshInstance3D.new()
+	var hood_mesh := CylinderMesh.new()
+	hood_mesh.top_radius = 0.66
+	hood_mesh.bottom_radius = 0.66
+	hood_mesh.height = 2.1
+	hood_mesh.radial_segments = 14
+	hood_mesh.cap_top = true
+	hood_mesh.cap_bottom = true
+	hood.mesh = hood_mesh
+	hood.rotation = Vector3(0.0, 0.0, PI * 0.5)
+	hood.position = Vector3(0.0, 1.2, 0.0)
+	hood.scale = Vector3(0.75, 1.0, 1.0)
+	hood.material_override = cloth
+	group.add_child(hood)
+	# Squashed so its lower half stays inside the bed boards; hoops at both ends.
+	for x in [-1.05, 1.05]:
+		var hoop := MeshInstance3D.new()
+		var torus := TorusMesh.new()
+		torus.inner_radius = 0.62
+		torus.outer_radius = 0.7
+		torus.rings = 12
+		torus.ring_segments = 6
+		hoop.mesh = torus
+		hoop.rotation = Vector3(0.0, 0.0, PI * 0.5)
+		hoop.position = Vector3(x, 1.2, 0.0)
+		hoop.scale = Vector3(0.75, 1.0, 1.0)
+		hoop.material_override = dark_wood
+		group.add_child(hoop)
+	# Shafts and a couple of crates by the tail.
+	add_box.call(Vector3(1.4, 0.07, 0.07), Vector3(1.9, 0.62, 0.36), dark_wood, Vector3(0.0, 0.0, -0.12))
+	add_box.call(Vector3(1.4, 0.07, 0.07), Vector3(1.9, 0.62, -0.36), dark_wood, Vector3(0.0, 0.0, -0.12))
+	add_box.call(Vector3(0.5, 0.42, 0.5), Vector3(-1.75, 0.21, 0.35), wood, Vector3(0.0, 0.3, 0.0))
+	add_box.call(Vector3(0.38, 0.34, 0.38), Vector3(-1.7, 0.17, -0.45), dark_wood, Vector3(0.0, -0.2, 0.0))
 	return group
 
 
@@ -5694,10 +6585,10 @@ func _palisade_mesh() -> Node3D:
 func _tent_mesh() -> Node3D:
 	var group := Node3D.new()
 	var cloth := StandardMaterial3D.new()
-	cloth.albedo_color = Color("#c9a86a")
-	cloth.emission_enabled = true
-	cloth.emission = Color("#efcf8a")
-	cloth.emission_energy_multiplier = 0.55
+	# Beta r23: the self-lit cream canvas was the brightest thing at night.
+	# Weathered canvas, lit only by the scene (moonlight / campfire).
+	cloth.albedo_color = Color("#9c8a68")
+	cloth.roughness = 0.95
 	var canvas := MeshInstance3D.new()
 	var prism := PrismMesh.new()
 	prism.size = Vector3(2.4, 1.6, 2.1)
@@ -5812,3 +6703,103 @@ func _channel_flash_mesh() -> Node3D:
 	ring.material_override = mat
 	group.add_child(ring)
 	return group
+
+
+
+## Hotfix 6: compile every building pipeline (finished + construction
+## variants, colour + shadow pass) while the title menu is up, so the first
+## House is not a cold-cache 3 s hitch. Instances sit just past the near
+## plane at sub-pixel scale for a few frames, then are freed.
+var _warmup_root: Node3D
+var _warmup_frames := 0
+
+
+func warm_up_pipelines(camera: Camera3D, in_play := false) -> void:
+	if camera == null or _warmup_root != null:
+		return
+	_warmup_root = Node3D.new()
+	_warmup_root.name = "PipelineWarmup"
+	add_child(_warmup_root)
+	var index := 0
+	for type_value in WarmupCatalog.BUILDINGS.keys():
+		for construction in [false, true]:
+			var view := BuildingView.new()
+			view.configure({"id": -90000 - index, "type": String(type_value), "construction": construction, "construction_fraction": 0.5, "rotation": 0, "faction": "player"})
+			_warmup_root.add_child(view)
+			index += 1
+	# R35: map markers (palisade, caravan wagon, tents, banners, pings, smoke,
+	# channel flash, Label3D) were never warmed. Their first appearance
+	# mid-game compiled shaders on the spot: r34b hitched 1183 ms (+6
+	# compiles) at "CARAVAN YARD FORTIFIED". Warm one of every kind here.
+	# R35: rival-faction structures use their own tints/materials; warm them too.
+	for type_value in WarmupCatalog.BUILDINGS.keys():
+		var rview := BuildingView.new()
+		rview.configure({"id": -95000 - index, "type": String(type_value), "construction": false, "construction_fraction": 1.0, "rotation": 0, "faction": "rival"})
+		_warmup_root.add_child(rview)
+		index += 1
+	var skip_marker_warm := "--gate-diag-no-marker-warm" in OS.get_cmdline_user_args()
+	for kind in ([] if skip_marker_warm else WARMUP_MARKER_KINDS):
+		var marker_node := _build_marker_node({"kind": kind, "title": "Warm", "position": Vector2i.ZERO})
+		marker_node.position = Vector3.ZERO
+		_warmup_root.add_child(marker_node)
+	# R35: r34 dressing (impact ejecta / Wyrd glass) is often off-screen at
+	# load; warm copies so first sight does not compile mid-game.
+	for dress_name in ["DressImpactEjecta", "DressImpactGlass"]:
+		var dress := find_child(dress_name, true, false)
+		if dress is MultiMeshInstance3D:
+			var copy := MultiMeshInstance3D.new()
+			copy.multimesh = (dress as MultiMeshInstance3D).multimesh
+			copy.material_override = (dress as MultiMeshInstance3D).material_override
+			_warmup_root.add_child(copy)
+	_warmup_root.global_transform = camera.global_transform.translated_local(Vector3(0.0, 0.0, -maxf(camera.near, 0.05) * 3.0))
+	_warmup_root.scale = Vector3.ONE * 0.001
+	_warmup_frames = 6
+	print("R35 warm_up_pipelines in_play=%s children=%d" % [in_play, _warmup_root.get_child_count()])
+
+
+
+## Hotfix 6: same disks as _paint_current_vision(), but only the tiles the
+## fog mask samples (multiples of FOG_MASK_DIVISOR) are written, as bytes.
+func _paint_current_vision_mask(mask_size: Vector2i) -> PackedByteArray:
+	var mask := PackedByteArray()
+	mask.resize(mask_size.x * mask_size.y)
+	if simulation == null:
+		return mask
+	if simulation.is_town_hall_founded():
+		var hall_fp := Defs.building_footprint(Defs.BUILDING_TOWN_HALL)
+		var hall_center: Vector2i = simulation._footprint_center(simulation.town_hall_position, hall_fp)
+		_paint_vision_disk_mask(mask, mask_size, hall_center, simulation.building_vision_radius(Defs.BUILDING_TOWN_HALL))
+	for building_value in simulation.buildings:
+		var building: Dictionary = building_value
+		if bool(building.get("construction", false)):
+			continue
+		var building_type := String(building.get("type", ""))
+		if building_type == Defs.BUILDING_TOWN_HALL:
+			continue
+		var center: Vector2i = building.get("position", Vector2i.ZERO)
+		if building_type != Defs.BUILDING_ROAD:
+			center = simulation._footprint_center(center, _building_footprint_for_visual(building, building_type))
+		_paint_vision_disk_mask(mask, mask_size, center, simulation.building_vision_radius(building_type))
+	for worker_value in simulation.workers:
+		var worker: Dictionary = worker_value
+		if int(worker.get("hp", 1)) <= 0:
+			continue
+		var tile: Vector2i = simulation._unit_tile(worker)
+		_paint_vision_disk_mask(mask, mask_size, tile, simulation.unit_vision_radius(String(worker.get("type", ""))))
+	return mask
+
+
+func _paint_vision_disk_mask(mask: PackedByteArray, mask_size: Vector2i, center: Vector2i, radius: int) -> void:
+	if radius <= 0:
+		return
+	var y0 := maxi(0, center.y - radius)
+	var y1 := mini(map_size.y - 1, center.y + radius)
+	var start_y := ((y0 + FOG_MASK_DIVISOR - 1) / FOG_MASK_DIVISOR) * FOG_MASK_DIVISOR
+	for y in range(start_y, y1 + 1, FOG_MASK_DIVISOR):
+		var span := radius - absi(y - center.y)
+		var x0 := maxi(0, center.x - span)
+		var x1 := mini(map_size.x - 1, center.x + span)
+		var start_x := ((x0 + FOG_MASK_DIVISOR - 1) / FOG_MASK_DIVISOR) * FOG_MASK_DIVISOR
+		var row := (y / FOG_MASK_DIVISOR) * mask_size.x
+		for x in range(start_x, x1 + 1, FOG_MASK_DIVISOR):
+			mask[row + x / FOG_MASK_DIVISOR] = 1

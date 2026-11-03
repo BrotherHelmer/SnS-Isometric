@@ -45,8 +45,8 @@ func _run() -> void:
 	_check(bool(fog.get("exterior_opaque", false)), "unexplored off-map fog stays opaque")
 	_check(float(fog.get("unknown_opacity", 0.0)) >= 0.99, "on-map unknown stays covering")
 
-	if game.world_view.terrain_mesh_instance != null and game.world_view.terrain_mesh_instance.material_override is ShaderMaterial:
-		var ground := game.world_view.terrain_mesh_instance.material_override as ShaderMaterial
+	if game.world_view.representative_terrain() != null and game.world_view.representative_terrain().material_override is ShaderMaterial:
+		var ground := game.world_view.representative_terrain().material_override as ShaderMaterial
 		var sunlit_value = ground.get_shader_parameter("grass_sunlit")
 		var moss_value = ground.get_shader_parameter("grass_moss")
 		var sunlit := Vector3(Identity.PALETTE_SUNLIT_GRASS.r, Identity.PALETTE_SUNLIT_GRASS.g, Identity.PALETTE_SUNLIT_GRASS.b)
@@ -96,6 +96,11 @@ func _run() -> void:
 	_check(bool(rec.get("ssil", true)) == false, "recommended keeps SSIL off")
 
 	game.queue_free()
+	await process_frame
+	# The audio director stops its players in _exit_tree, but the AudioServer
+	# drops their playbacks on the mix thread; quitting one frame later raced it
+	# ("9 resources still in use": Ogg/WAV playbacks) under CI.
+	await create_timer(0.25).timeout
 	await process_frame
 	print("T_GFX_B %s" % ("PASS" if failures.is_empty() else "FAIL"))
 	quit(0 if failures.is_empty() else 1)

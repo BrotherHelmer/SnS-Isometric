@@ -1,6 +1,8 @@
 class_name ProductionGameRoot3D
 extends Node3D
 
+const FrameProfiler = preload("res://src/GodotClient3D/Scripts/production_frame_profiler.gd")
+
 const GateAutoplay = preload("res://src/GodotClient3D/Scripts/production_gate_autoplay.gd")
 const Defs = preload("res://src/GodotClient/Scripts/one_shard_defs.gd")
 const Simulation = preload("res://src/GodotClient/Scripts/one_shard_simulation.gd")
@@ -43,11 +45,9 @@ const STARTER_BUILDINGS := [
 	Defs.BUILDING_FARM,
 ]
 const BUILD_CATEGORIES := {
-	"ESSENTIALS": [Defs.BUILDING_ROAD, Defs.BUILDING_HOUSE, Defs.BUILDING_LUMBER_CAMP, Defs.BUILDING_FARM, Defs.BUILDING_WATCHTOWER, Defs.BUILDING_OUTPOST, Defs.BUILDING_WYRD_HARVESTER],
-	"INFRASTRUCTURE": [Defs.BUILDING_ROAD, Defs.TOOL_CLEAR_AREA],
-	"HOUSING": [Defs.BUILDING_HOUSE],
-	"FOOD": [Defs.BUILDING_FARM, Defs.BUILDING_BAKERY],
-	"INDUSTRY": [Defs.BUILDING_LUMBER_CAMP, Defs.BUILDING_QUARRY, Defs.BUILDING_SAWMILL, Defs.BUILDING_STOREHOUSE],
+	# Beta: four tabs, every plan in exactly one (r10 review: no duplicates).
+	"ESSENTIALS": [Defs.BUILDING_ROAD, Defs.BUILDING_HOUSE, Defs.BUILDING_LUMBER_CAMP, Defs.BUILDING_FARM, Defs.TOOL_CLEAR_AREA],
+	"INDUSTRY": [Defs.BUILDING_QUARRY, Defs.BUILDING_SAWMILL, Defs.BUILDING_BAKERY, Defs.BUILDING_STOREHOUSE],
 	"MILITARY": [Defs.BUILDING_WALL, Defs.BUILDING_WATCHTOWER, Defs.BUILDING_BARRACKS],
 	"SPECIAL": [Defs.BUILDING_LUMEN_PILLAR, Defs.BUILDING_OUTPOST, Defs.BUILDING_WYRD_HARVESTER, Defs.BUILDING_WYRD_REFINER],
 }
@@ -119,10 +119,25 @@ var resource_label: Label
 var placement_label: Label
 var placement_legend_label: Label
 var inspector_label: RichTextLabel
+var objective_goals_scroll: ScrollContainer
+var objective_history_button: Button
+var objective_history_label: Label
+var _objective_history_count := 0
 var assault_button: Button
 var recall_button: Button
 var scout_button: Button
 var scout_aiming := false
+## R28: unit orders. "" | "move" | "attack"; right-click with a soldier selected also orders.
+var unit_order_mode := ""
+## R29: C&C group selection (patrol soldiers). Box-drag selects, Ctrl+click
+## toggles, plain click selects one, right-click orders the whole group.
+var selected_unit_ids: Array = []
+var box_select_active := false
+var box_select_origin := Vector2.ZERO
+var box_select_rect: Panel
+var _rmb_press_pos := Vector2(-1, -1)
+var move_button: Button
+var attack_button: Button
 var pause_button: Button
 var play_button: Button
 var speed_button: Button
@@ -132,6 +147,7 @@ var raid_eta_row: HBoxContainer
 var raid_eta_label: Label
 var raid_banner_dismissed := false
 var raid_banner_active := false
+var raid_view_button: Button
 const RAID_BANNER_WIDTH := 372.0
 var alert_label: Label
 var alert_panel: PanelContainer
@@ -179,10 +195,22 @@ const TOP_BAR_HEIGHT := 46.0
 # 25% HUD wall plus three banners. Keep the console one compact row
 # until later plans unlock.
 const CONSOLE_HEIGHT := 92.0
+## Beta: the bottom console can collapse to its header row.
+var console_collapsed := false
+var console_row_node: HBoxContainer
+var console_toggle_button: Button
 const CONSOLE_HEIGHT_EXPANDED := 156.0
-const MINIMAP_INNER := 72.0
+const MINIMAP_INNER := 220.0
 const MINIMAP_COLLAPSED := 44.0
+## r38: collapsed "Map" button width; the holder reserves it so the button never spills into the Realm card.
+const MAP_TOGGLE_WIDTH := 64.0
 const BUILD_GRID_COLUMNS := 4
+## R28: the unit/building panel never gets narrower than this (logical px).
+const SELECTION_MIN_WIDTH := 420.0
+const INSPECTOR_CHROME := 40.0
+const INSPECTOR_MAX_CONSOLE := 196.0
+var _insp_layout_h := -1.0
+var _insp_layout_vis := false
 const BUILD_SLOT_SIZE := Vector2(66, 52)
 const RIVAL_BANNER_DELAY := 24.0
 const BUILD_HOTKEYS := [KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9, KEY_0, KEY_Z, KEY_X, KEY_C, KEY_V]
@@ -215,6 +243,8 @@ var menu_backdrop: TextureRect
 var seed_edit: LineEdit
 var quality_select: OptionButton
 var build_buttons: Dictionary = {}
+var _plans_were_open := false
+var _plans_next_refresh := 0.0
 var fixture_stage := ""
 var fixture_requested := false
 var fixture_result: Dictionary = {}
@@ -258,6 +288,9 @@ var play_camera_focus := Vector3.ZERO
 var play_camera_zoom := ProductionIsometricCameraRig3D.OPENING_ZOOM
 var placement_invalid_shown := false
 var minimap_expanded := false
+var clock_summary_tip := ""
+var clock_full_title := ""
+var clock_full_phase := ""
 var first_screen_hint_log: Array[Dictionary] = []
 var reach_guidance_shown := false
 var last_objective_id := ""
@@ -278,6 +311,8 @@ var master_slider: HSlider
 var music_slider: HSlider
 var sfx_slider: HSlider
 var fullscreen_check: CheckBox
+var ui_scale_select: OptionButton
+const UI_SCALES := [0.9, 1.0, 1.15, 1.25, 1.3, 1.5]
 var result_more_button: Button
 var result_more_stats := false
 var last_result_stats: Dictionary = {}
@@ -324,6 +359,7 @@ func _ready() -> void:
 	_create_lighting()
 	_create_ui()
 	_restore_display_settings()
+	_apply_vsync_mode()
 	_create_audio()
 	_create_placement_ghost()
 	fixture_stage = String(launch.get("fixture", ""))
@@ -350,7 +386,13 @@ func _ready() -> void:
 			var gate = GateAutoplay.new()
 			gate.name = "GateAutoplay"
 			add_child(gate)
-			var gate_secs := 1200.0
+			# R31.1: unattended gate runs must not edge-pan. A cursor parked at a
+			# screen edge (e.g. after Shard wakes from standby) panned the camera
+			# into empty sea for whole runs (r29c, r29b2, r31a).
+			gate_no_edge_pan = true
+			# Beta r23: analysis drops the first 90 s (menus, shots); run 1300 s so the
+			# measured window is a full 1200+ s of play.
+			var gate_secs := 1300.0
 			for a2 in OS.get_cmdline_user_args():
 				if a2.begins_with("--gate-seconds="):
 					gate_secs = float(a2.trim_prefix("--gate-seconds="))
@@ -407,31 +449,109 @@ func _tick_fps_overlay(delta: float) -> void:
 		fps_overlay_timer = 0.0
 
 
+var _pipelines_warmed := false
+var _pipelines_warmed_play := "--gate-diag-no-play-warm" in OS.get_cmdline_user_args()
+
+
 func _process(delta: float) -> void:
+	FrameProfiler.frame_begin()
+	if not _pipelines_warmed and world_view != null and get_viewport().get_camera_3d() != null:
+		_pipelines_warmed = true
+		world_view.warm_up_pipelines(get_viewport().get_camera_3d())
+	# R35: the menu warm-up runs under menu lighting; in-game lighting needs
+	# its own shader variants. Warm again once play has begun.
+	elif _pipelines_warmed and not _pipelines_warmed_play and play_has_begun and world_view != null and get_viewport().get_camera_3d() != null:
+		_pipelines_warmed_play = true
+		world_view.warm_up_pipelines(get_viewport().get_camera_3d(), true)
 	hud_clock += delta
+	# R36: re-fit the console when the inspector's text height changes.
+	if inspector_panel != null and inspector_label != null and hud_console != null:
+		var vis := inspector_panel.visible
+		var h := float(inspector_label.get_content_height()) if vis else 0.0
+		if vis != _insp_layout_vis or absf(h - _insp_layout_h) > 1.0:
+			_insp_layout_vis = vis
+			_insp_layout_h = h
+			_layout_hud_console()
+	var _pf20 := FrameProfiler.t0()
 	_tick_fps_overlay(delta)
+	FrameProfiler.add("root._tick_fps_overlay", _pf20)
+	var _pf_adv := FrameProfiler.t0()
 	var ticks := simulation_host.advance(delta)
-	if ticks > 0 or last_synced_tick < 0:
+	FrameProfiler.add("root.sim_advance", _pf_adv)
+	var _pf_sp := FrameProfiler.t0()
+	if last_synced_tick < 0:
+		_pending_presentation = {}
 		_sync_presentation()
+	else:
+		# Beta: capture and 3D apply alternate frames (each ~10 ms late game),
+		# so they never land on the same frame. At most one half per frame.
+		if ticks > 0:
+			_capture_due = true
+		if not _pending_presentation.is_empty():
+			var pending := _pending_presentation
+			_pending_presentation = {}
+			_apply_presentation(pending)
+		elif _capture_due:
+			_capture_due = false
+			var _pf_cap := FrameProfiler.t0()
+			_pending_presentation = presentation_adapter.capture_frame(simulation_host.simulation, simulation_host.render_lead_seconds())
+			FrameProfiler.add("pres.capture_frame", _pf_cap)
+	FrameProfiler.add("root._sync_presentation", _pf_sp)
+	var _pf21 := FrameProfiler.t0()
 	_update_placement_ghost()
+	FrameProfiler.add("root._update_placement_ghost", _pf21)
 	ui_elapsed += delta
 	if ui_elapsed >= 0.15:
 		ui_elapsed = 0.0
+		var _pf_ui := FrameProfiler.t0()
 		_update_ui()
+		FrameProfiler.add("root._update_ui", _pf_ui)
+		var _pf_dn := FrameProfiler.t0()
 		_update_day_night_lighting()
+		FrameProfiler.add("root._update_day_night_lighting", _pf_dn)
+	var _pf22 := FrameProfiler.t0()
 	_process_audio_events()
+	FrameProfiler.add("root._process_audio_events", _pf22)
+	var _pf23 := FrameProfiler.t0()
 	_tick_audio(delta)
+	FrameProfiler.add("root._tick_audio", _pf23)
 	if debug_audio_cycle_active or debug_ui_scene != "":
 		_tick_debug_harness(delta)
+	var _pf24 := FrameProfiler.t0()
 	_tick_toasts(delta)
+	FrameProfiler.add("root._tick_toasts", _pf24)
+	var _pf25 := FrameProfiler.t0()
 	_tick_notice_feed()
+	FrameProfiler.add("root._tick_notice_feed", _pf25)
+	var _pf26 := FrameProfiler.t0()
 	_tick_shard_glance()
+	FrameProfiler.add("root._tick_shard_glance", _pf26)
+	var _pf27 := FrameProfiler.t0()
 	_tick_edge_pan(delta)
+	FrameProfiler.add("root._tick_edge_pan", _pf27)
+	var _pf28 := FrameProfiler.t0()
 	_update_shard_compass()
+	FrameProfiler.add("root._update_shard_compass", _pf28)
+	var _pf29 := FrameProfiler.t0()
 	_tick_minimap(delta)
+	FrameProfiler.add("root._tick_minimap", _pf29)
 	if simulation_host.simulation != null and simulation_host.simulation.game_finished:
 		if result_overlay != null and not result_overlay.visible and (startup_overlay == null or not startup_overlay.visible):
 			_show_result_screen()
+
+
+## r39-housefix: GUI-consumed clicks never reach _unhandled_input, so a
+## placement click on a panel used to vanish with no feedback at all.
+## Say so (real buttons still work normally and are not flagged).
+func _input(event: InputEvent) -> void:
+	if placement_type == "" or not (event is InputEventMouseButton):
+		return
+	var mb := event as InputEventMouseButton
+	if mb.button_index != MOUSE_BUTTON_LEFT or not mb.pressed:
+		return
+	var hovered := get_viewport().gui_get_hovered_control()
+	if hovered != null and hovered.mouse_filter != Control.MOUSE_FILTER_IGNORE and not (hovered is BaseButton):
+		_show_status("Click on the map to place the %s — that click hit a panel." % Defs.building_name(placement_type), 2.5)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -450,6 +570,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 		if event.keycode == KEY_ESCAPE and build_panel != null and build_panel.visible:
 			_set_build_palette_visible(false)
+			get_viewport().set_input_as_handled()
+			return
+		if event.keycode == KEY_ESCAPE and unit_order_mode != "":
+			unit_order_mode = ""
+			_show_status("Order cancelled.")
 			get_viewport().set_input_as_handled()
 			return
 		if event.keycode == KEY_ESCAPE and scout_aiming:
@@ -499,9 +624,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	if event is InputEventMouseMotion and map_drag_active:
-		if not map_drag_moved and event.position.distance_to(map_drag_origin) > 8.0:
+		# Bug 3 fix: Don't treat slight movement as drag while scout aiming
+		var drag_threshold := 20.0 if scout_aiming else 8.0
+		if not map_drag_moved and event.position.distance_to(map_drag_origin) > drag_threshold:
 			map_drag_moved = true
-		if map_drag_moved and camera_rig != null:
+		if map_drag_moved and box_select_active:
+			_update_box_select_rect(box_select_origin, event.position)
+		elif map_drag_moved and camera_rig != null:
 			camera_rig.pan_from_mouse(event.relative)
 		get_viewport().set_input_as_handled()
 		return
@@ -516,12 +645,18 @@ func _unhandled_input(event: InputEvent) -> void:
 			elif placement_type == Defs.TOOL_CLEAR_AREA:
 				_start_clear_drag(event.position)
 			elif placement_type != "":
-				_commit_placement()
+				_commit_placement(event.position)
 			else:
 				_set_build_palette_visible(false)
 				map_drag_active = true
 				map_drag_moved = false
 				map_drag_origin = event.position
+				var press_on_unit: bool = false
+				if not scout_aiming and unit_order_mode == "":
+					var character_pick: Dictionary = _screen_space_character_pick(event.position)
+					press_on_unit = not character_pick.is_empty()
+				box_select_active = press_on_unit
+				box_select_origin = event.position
 			get_viewport().set_input_as_handled()
 		else:
 			var consumed := road_dragging or wall_dragging or clear_dragging or map_drag_active
@@ -532,11 +667,20 @@ func _unhandled_input(event: InputEvent) -> void:
 			if clear_dragging:
 				_finish_clear_drag(event.position)
 			if map_drag_active:
-				if not map_drag_moved:
+				if map_drag_moved and box_select_active:
+					box_select_from_rect(Rect2(box_select_origin, Vector2.ZERO).expand(event.position), event.ctrl_pressed)
+				elif not map_drag_moved:
 					if scout_aiming:
 						_commit_scout_click(event.position)
+					elif unit_order_mode != "":
+						_commit_unit_order(event.position, unit_order_mode)
+					elif event.ctrl_pressed:
+						_toggle_unit_from_pointer(event.position)
 					else:
 						_select_from_pointer(event.position)
+				box_select_active = false
+				if box_select_rect != null:
+					box_select_rect.visible = false
 				map_drag_active = false
 				map_drag_moved = false
 			if consumed:
@@ -552,12 +696,16 @@ func _unhandled_input(event: InputEvent) -> void:
 				_set_build_palette_visible(false)
 				get_viewport().set_input_as_handled()
 				return
+			_rmb_press_pos = event.position
 			if not _pointer_over_ui() and camera_rig != null:
 				camera_rig.begin_pointer_pan()
 				get_viewport().set_input_as_handled()
 		else:
 			if camera_rig != null:
 				camera_rig.end_pointer_pan()
+			if _rmb_press_pos.x >= 0.0 and event.position.distance_to(_rmb_press_pos) < 8.0 and not _pointer_over_ui() and (_selected_soldier().size() > 0 or not _group_ids().is_empty()):
+				_commit_unit_order(event.position, "auto")
+			_rmb_press_pos = Vector2(-1, -1)
 		return
 
 
@@ -613,16 +761,277 @@ func _begin_scout_aim() -> bool:
 	return true
 
 
-func _commit_scout_click(screen_position: Vector2) -> void:
+## R29: group panel text: count, unit types, health and what they are doing.
+func group_summary_lines(ids: Array) -> Array:
+	var sim = simulation_host.simulation
+	var types := {}
+	var states := {}
+	var hp := 0
+	var max_hp := 0
+	for id_value in ids:
+		var w: Dictionary = sim.get_worker_by_id(int(id_value))
+		if w.is_empty():
+			continue
+		var descriptor: Dictionary = presentation_adapter.worker_descriptor(w, sim)
+		var t := String(descriptor.get("profession", "Soldier"))
+		types[t] = int(types.get(t, 0)) + 1
+		var st := _worker_player_status(String(descriptor.get("simulation_state", "Idle")))
+		states[st] = int(states.get(st, 0)) + 1
+		hp += int(w.get("hp", 0))
+		max_hp += int(w.get("max_hp", 1))
+	var type_parts := []
+	for t in types:
+		type_parts.append("%d× %s" % [int(types[t]), t])
+	# Most common activities first, at most two, so the line fits the panel.
+	var state_keys: Array = states.keys()
+	state_keys.sort_custom(func(a, b) -> bool: return int(states[a]) > int(states[b]))
+	var state_parts := []
+	for st in state_keys.slice(0, 2):
+		state_parts.append("%d %s" % [int(states[st]), String(st)])
+	if state_keys.size() > 2:
+		var rest := 0
+		for st in state_keys.slice(2):
+			rest += int(states[st])
+		state_parts.append("%d other" % rest)
+	return [
+		"[font_size=22][color=#efcf8a]%d Soldiers selected[/color][/font_size]" % ids.size(),
+		"[color=#9fc6a5]%s[/color]" % ", ".join(type_parts),
+		"",
+		"HP  %d / %d" % [hp, max_hp],
+		"Doing  %s" % ", ".join(state_parts),
+	]
+
+
+func _is_patrol_soldier_id(id: int) -> bool:
+	if simulation_host == null or simulation_host.simulation == null or id <= 0:
+		return false
+	var w: Dictionary = simulation_host.simulation.get_worker_by_id(id)
+	return not w.is_empty() and String(w.get("type", "")) == "guard" and int(w.get("building_id", 0)) == 0 and int(w.get("hp", 0)) > 0
+
+
+func _group_ids() -> Array:
+	var alive: Array = []
+	for id in selected_unit_ids:
+		if _is_patrol_soldier_id(int(id)):
+			alive.append(int(id))
+	if alive.size() != selected_unit_ids.size():
+		_set_group(alive)
+	return alive
+
+
+func _set_group(ids: Array) -> void:
+	selected_unit_ids = ids.duplicate()
+	if world_view != null:
+		world_view.set_group_selection(selected_unit_ids)
+
+
+## Screen position of a worker (same projection as the character pick).
+func _worker_screen_position(snapshot: Dictionary) -> Vector2:
+	var logical := Vector2(snapshot.get("logical_position", Vector2.ZERO)) + Vector2(snapshot.get("presentation_offset", Vector2.ZERO))
+	var world_position := world_view.tile_to_world(logical) + Vector3.UP * 1.15
+	if camera_rig.camera.is_position_behind(world_position):
+		return Vector2(-99999, -99999)
+	return camera_rig.camera.unproject_position(world_position)
+
+
+func box_select_from_rect(rect: Rect2, additive: bool) -> int:
+	if camera_rig == null or camera_rig.camera == null:
+		return 0
+	var ids: Array = selected_unit_ids.duplicate() if additive else []
+	for snapshot_value in current_frame_snapshot.get("workers", []):
+		var snapshot: Dictionary = snapshot_value
+		if not bool(snapshot.get("visible", true)):
+			continue
+		var id := int(snapshot.get("id", 0))
+		if not _is_patrol_soldier_id(id) or ids.has(id):
+			continue
+		if rect.grow(6.0).has_point(_worker_screen_position(snapshot)):
+			ids.append(id)
+	if ids.is_empty():
+		if not additive:
+			_select_from_pointer(rect.get_center())
+		return 0
+	_apply_group_selection(ids)
+	return ids.size()
+
+
+func _apply_group_selection(ids: Array) -> void:
+	selected_building_id = 0
+	selected_entity_kind = "worker"
+	selected_worker_id = int(ids[0])
+	_set_group(ids)
+	world_view.set_selection(0, selected_worker_id)
+	world_view.set_watchtower_overlay(Vector2.ZERO, 0.0, false)
+	_update_inspector()
+
+
+func _toggle_unit_from_pointer(screen_position: Vector2) -> void:
+	var pick := _screen_space_character_pick(screen_position)
+	var id := int(pick.get("id", 0))
+	if String(pick.get("kind", "")) != "worker" or not _is_patrol_soldier_id(id):
+		_select_from_pointer(screen_position)
+		return
+	toggle_unit(id)
+
+
+func toggle_unit(id: int) -> void:
+	var ids := _group_ids()
+	if ids.has(id):
+		ids.erase(id)
+	else:
+		ids.append(id)
+	if ids.is_empty():
+		_set_group([])
+		selected_worker_id = 0
+		selected_entity_kind = ""
+		world_view.set_selection(0, 0)
+		_update_inspector()
+		return
+	_apply_group_selection(ids)
+
+
+## Orders every soldier in the group. Attack if a raider is at the tile,
+## otherwise a move with destinations spread in a ring so they do not stack.
+func order_group(ids: Array, tile: Vector2i, mode: String) -> Dictionary:
+	var sim = simulation_host.simulation
+	var enemy_id: int = sim.enemy_id_near_tile(tile, 2 if mode == "attack" else 1)
+	if mode == "attack" and enemy_id <= 0:
+		return {"success": false, "message": "No raider there — click on a raider."}
+	var ok := 0
+	var offsets := [Vector2i.ZERO, Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0), Vector2i(0, -1), Vector2i(1, 1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, -1), Vector2i(2, 0), Vector2i(0, 2), Vector2i(-2, 0), Vector2i(0, -2)]
+	var slot := 0
+	for id_value in ids:
+		var id := int(id_value)
+		var result: Dictionary
+		if enemy_id > 0:
+			result = sim.request_attack_order(id, enemy_id)
+		else:
+			result = {"success": false}
+			while slot < offsets.size() and not bool(result.get("success", false)):
+				result = sim.request_worker_order(id, tile + offsets[slot])
+				slot += 1
+			if not bool(result.get("success", false)):
+				result = sim.request_worker_order(id, tile)
+		if bool(result.get("success", false)):
+			ok += 1
+	var verb := "attack" if enemy_id > 0 else "move"
+	return {"success": ok > 0, "message": "Order accepted: %d of %d soldiers %s." % [ok, ids.size(), verb] if ok > 0 else "No soldier could reach that spot."}
+
+
+func _update_box_select_rect(a: Vector2, b: Vector2) -> void:
+	if box_select_rect == null:
+		box_select_rect = Panel.new()
+		box_select_rect.name = "BoxSelect"
+		box_select_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color(0.55, 0.85, 0.55, 0.12)
+		sb.border_color = Color(0.62, 0.95, 0.62, 0.9)
+		sb.set_border_width_all(1)
+		box_select_rect.add_theme_stylebox_override("panel", sb)
+		hud_root.add_child(box_select_rect)
+	var r := Rect2(a, Vector2.ZERO).expand(b)
+	box_select_rect.position = r.position
+	box_select_rect.size = r.size
+	box_select_rect.visible = true
+
+
+func _selected_soldier() -> Dictionary:
+	if simulation_host.simulation == null or selected_worker_id <= 0 or selected_entity_kind != "worker":
+		return {}
+	var worker: Dictionary = simulation_host.simulation.get_worker_by_id(selected_worker_id)
+	if worker.is_empty() or String(worker.get("type", "")) != "guard" or int(worker.get("building_id", 0)) != 0:
+		return {}
+	return worker
+
+
+func _begin_unit_order(mode: String) -> void:
+	if _selected_soldier().is_empty() and _group_ids().is_empty():
+		_show_status("Select a patrol soldier first.")
+		return
 	scout_aiming = false
+	cancel_placement()
+	unit_order_mode = mode
+	_show_status("Attack — click a raider." if mode == "attack" else "Move — click open ground.")
+
+
+func _commit_unit_order(screen_position: Vector2, mode: String) -> void:
+	unit_order_mode = ""
 	if simulation_host.simulation == null or world_view == null:
 		return
 	var hit: Dictionary = _raycast_terrain(screen_position)
+	var tile: Vector2i
+	# P0 Fix: Same ground-plane fallback as Scout - Move must work on fog/water clicks
 	if hit.is_empty():
-		_show_status("Click the land to choose a scouting direction.")
+		var camera := camera_rig.camera
+		if camera == null:
+			_show_status("Click the land to give an order.")
+			return
+		var ray_origin := camera.project_ray_origin(screen_position)
+		var ray_dir := camera.project_ray_normal(screen_position)
+		var ground_plane := Plane(Vector3.UP, 0.0)
+		var intersect: Variant = ground_plane.intersects_ray(ray_origin, ray_dir)
+		if intersect == null:
+			_show_status("Click the land to give an order.")
+			return
+		tile = world_view.world_to_tile(Vector3(intersect.x, 0.0, intersect.z))
+	else:
+		tile = world_view.world_to_tile(hit.position)
+	
+	# Clamp to map bounds
+	tile.x = clampi(tile.x, 0, simulation_host.simulation.map_size.x - 1)
+	tile.y = clampi(tile.y, 0, simulation_host.simulation.map_size.y - 1)
+	var sim = simulation_host.simulation
+	var group := _group_ids()
+	if group.size() > 1:
+		_show_command_result(order_group(group, tile, mode))
 		return
-	var tile := world_view.world_to_tile(hit.position)
+	if mode == "attack":
+		var enemy_id: int = sim.enemy_id_near_tile(tile, 2)
+		if enemy_id <= 0:
+			_show_status("No raider there — click on a raider.")
+			return
+		_show_command_result(sim.request_attack_order(selected_worker_id, enemy_id))
+		return
+	if mode == "auto":
+		var near_id: int = sim.enemy_id_near_tile(tile, 1)
+		if near_id > 0:
+			_show_command_result(sim.request_attack_order(selected_worker_id, near_id))
+			return
+	_show_command_result(sim.request_worker_order(selected_worker_id, tile))
+
+
+func _commit_scout_click(screen_position: Vector2) -> void:
+	if simulation_host.simulation == null or world_view == null:
+		return
+	var hit: Dictionary = _raycast_terrain(screen_position)
+	var tile: Vector2i
+	# Bug 3 fix: Fallback to ground plane (y=0) if raycast misses (fog/water)
+	if hit.is_empty():
+		var camera := camera_rig.camera
+		if camera == null:
+			scout_aiming = false
+			_show_status("Click the land to set a scout direction.")
+			return
+		var ray_origin := camera.project_ray_origin(screen_position)
+		var ray_dir := camera.project_ray_normal(screen_position)
+		var ground_plane := Plane(Vector3.UP, 0.0)
+		var intersect: Variant = ground_plane.intersects_ray(ray_origin, ray_dir)
+		if intersect == null:
+			scout_aiming = false
+			_show_status("Click the land to set a scout direction.")
+			return
+		tile = world_view.world_to_tile(Vector3(intersect.x, 0.0, intersect.z))
+	else:
+		tile = world_view.world_to_tile(hit.position)
+	
+	# Clamp to map bounds
+	tile.x = clampi(tile.x, 0, simulation_host.simulation.map_size.x - 1)
+	tile.y = clampi(tile.y, 0, simulation_host.simulation.map_size.y - 1)
+	
 	var result: Dictionary = simulation_host.simulation.request_scout_direction(selected_worker_id, tile)
+	# Only clear aiming after successful order
+	if bool(result.get("success", false)):
+		scout_aiming = false
 	_show_command_result(result)
 
 
@@ -689,6 +1098,10 @@ func load_game() -> bool:
 
 func begin_placement(building_type: String) -> void:
 	if not is_build_unlocked(building_type):
+		# One action -> one message (as for unaffordable plans below): a locked
+		# click drops the stale placement and its hint.
+		if placement_type != "":
+			cancel_placement()
 		_show_toast("Not yet", unlock_hint(building_type), "info", 3.0)
 		_log_first_screen_hint("unlock", unlock_hint(building_type))
 		return
@@ -738,6 +1151,17 @@ func begin_placement(building_type: String) -> void:
 	elif building_type in [Defs.BUILDING_ROAD, Defs.BUILDING_WALL]:
 		instruction = "hold and drag to draw · right-click cancels"
 		legend = ""
+		# F2: First-run coach for Road mode
+		if building_type == Defs.BUILDING_ROAD:
+			var has_road_hint := false
+			for entry in first_screen_hint_log:
+				if String(Dictionary(entry).get("kind", "")) == "road_coach":
+					has_road_hint = true
+					break
+			if not has_road_hint:
+				# F5f: Reference blue highlight in coach
+				instruction = "drag from the BLUE HIGHLIGHTED roads · right-click cancels"
+				_log_first_screen_hint("road_coach", "Drag from highlighted roads")
 	else:
 		instruction = "R rotates · click to place · right-click cancels"
 		legend = "GREEN = valid · YELLOW = needs clearing · RED = blocked"
@@ -775,6 +1199,7 @@ func cancel_placement() -> void:
 
 
 func select_building(id: int) -> void:
+	_set_group([])
 	selected_building_id = id
 	selected_worker_id = 0
 	selected_entity_kind = "building"
@@ -788,6 +1213,7 @@ func select_building(id: int) -> void:
 
 
 func select_worker(id: int) -> void:
+	_set_group([id] if _is_patrol_soldier_id(id) else [])
 	selected_worker_id = id
 	selected_building_id = 0
 	selected_entity_kind = "worker"
@@ -815,10 +1241,26 @@ func _initialize_presentation() -> void:
 
 
 func _sync_presentation() -> void:
+	var _pf_cap := FrameProfiler.t0()
 	var frame := presentation_adapter.capture_frame(simulation_host.simulation, simulation_host.render_lead_seconds())
+	FrameProfiler.add("pres.capture_frame", _pf_cap)
+	_pending_presentation = {}
+	_capture_due = false
+	_apply_presentation(frame)
+
+
+var _pending_presentation: Dictionary = {}
+var _capture_due := false
+
+
+func _apply_presentation(frame: Dictionary) -> void:
 	current_frame_snapshot = frame
+	var _pf30 := FrameProfiler.t0()
 	world_view.sync_frame(frame)
+	FrameProfiler.add("pres.sync_frame", _pf30)
+	var _pf31 := FrameProfiler.t0()
 	world_view.note_camera(camera_rig.target_position, camera_rig.target_zoom)
+	FrameProfiler.add("pres.note_camera", _pf31)
 	var frontier_pad := 48.0 if placement_type != "" else 28.0
 	var opening := is_equal_approx(camera_rig.target_zoom, ProductionIsometricCameraRig3D.OPENING_ZOOM)
 	if opening:
@@ -833,7 +1275,7 @@ func _sync_presentation() -> void:
 
 
 func _create_lighting() -> void:
-	get_viewport().msaa_3d = Viewport.MSAA_2X if bool(quality_profile.get("shadows", true)) else Viewport.MSAA_DISABLED
+	get_viewport().msaa_3d = Viewport.MSAA_2X if bool(quality_profile.get("msaa", true)) else Viewport.MSAA_DISABLED
 	var environment_node := WorldEnvironment.new()
 	environment_node.name = "ShardlitEnvironment"
 	var environment := Environment.new()
@@ -889,6 +1331,10 @@ func _create_lighting() -> void:
 	environment.adjustment_saturation = 1.12
 	environment.adjustment_contrast = 1.12
 	environment.adjustment_brightness = 1.0
+	# Beta r16: build every grade LUT up front so dusk/night/dawn never
+	# create a texture mid-game.
+	for grade_key in Identity.GRADE.keys():
+		Identity.grade_lut_for(String(grade_key))
 	environment.adjustment_color_correction = Identity.grade_lut_for("day")
 	# GFX-I: Environment depth haze is off. World-space FOW shroud owns
 	# the unknown. Volumetrics stay off so the village is not veiled.
@@ -1336,6 +1782,15 @@ func _create_ui() -> void:
 	dismiss.tooltip_text = "Dismiss (the raid stays in the feed and the Log)"
 	HudSkin.set_font(dismiss, HudSkin.ui_font(700), HudSkin.SIZE_TITLE, Color("#ffd3c0"))
 	dismiss.pressed.connect(_dismiss_toast)
+	raid_view_button = Button.new()
+	raid_view_button.name = "RaidView"
+	raid_view_button.text = "View"
+	raid_view_button.focus_mode = Control.FOCUS_NONE
+	raid_view_button.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	raid_view_button.tooltip_text = "Jump to the threatened building"
+	raid_view_button.visible = false
+	raid_view_button.pressed.connect(_view_raid_target)
+	alert_row.add_child(raid_view_button)
 	alert_row.add_child(dismiss)
 	alert_panel.visible = false
 
@@ -1371,9 +1826,9 @@ func _create_ui() -> void:
 	objective_detail_panel.anchor_bottom = 0.0
 	objective_detail_panel.offset_left = 8.0
 	objective_detail_panel.offset_top = TOP_BAR_HEIGHT + 44.0
-	objective_detail_panel.offset_right = 300.0
-	objective_detail_panel.offset_bottom = TOP_BAR_HEIGHT + 200.0
-	objective_detail_panel.custom_minimum_size = Vector2(286, 156)
+	objective_detail_panel.offset_right = 334.0
+	objective_detail_panel.offset_bottom = TOP_BAR_HEIGHT + 360.0
+	objective_detail_panel.custom_minimum_size = Vector2(320, 290)
 	objective_detail_panel.clip_contents = true
 	objective_detail_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	objective_detail_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.04, 0.05, 0.055, 0.92), Color("#efcf8a")))
@@ -1403,11 +1858,37 @@ func _create_ui() -> void:
 	objective_scroll.custom_minimum_size = Vector2(0, 96)
 	objective_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	objective_box.add_child(objective_scroll)
+	objective_goals_scroll = objective_scroll
+	var goals_column := VBoxContainer.new()
+	goals_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	goals_column.add_theme_constant_override("separation", 4)
+	objective_scroll.add_child(goals_column)
 	objective_detail_body = Label.new()
 	objective_detail_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	objective_detail_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	Identity.apply_label(objective_detail_body, "body")
-	objective_scroll.add_child(objective_detail_body)
+	goals_column.add_child(objective_detail_body)
+	# R37: completed goals fold into a collapsed History section.
+	objective_history_button = Button.new()
+	objective_history_button.name = "GoalsHistory"
+	objective_history_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	objective_history_button.flat = true
+	objective_history_button.pressed.connect(func() -> void:
+		objective_history_label.visible = not objective_history_label.visible
+		_refresh_history_button()
+		# R37b: opening History scrolls it into view (it used to expand below
+		# the fold, so the click looked like it did nothing).
+		if objective_history_label.visible:
+			_scroll_goals_to_history.call_deferred())
+	Identity.apply_button(objective_history_button)
+	goals_column.add_child(objective_history_button)
+	objective_history_label = Label.new()
+	objective_history_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	objective_history_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	objective_history_label.modulate = Color(1, 1, 1, 0.72)
+	Identity.apply_label(objective_history_label, "body")
+	objective_history_label.visible = false
+	goals_column.add_child(objective_history_label)
 
 	shard_compass = Label.new()
 	shard_compass.name = "ShardCompass"
@@ -1443,14 +1924,14 @@ func _create_ui() -> void:
 	# T-SNS-UI: the full plan list opens as a themed popup above the console.
 	build_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	build_panel.offset_left = 8.0
-	build_panel.offset_right = 300.0
+	build_panel.offset_right = 360.0  # beta: wider so plan text wraps to 2 lines
 	build_panel.offset_top = -CONSOLE_HEIGHT - 8.0 - 380.0
 	build_panel.offset_bottom = -CONSOLE_HEIGHT - 8.0
 	build_panel.add_theme_stylebox_override("panel", HudSkin.frame("panel", 4.0))
 	root.add_child(build_panel)
 	var build_margin := MarginContainer.new()
 	for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
-		build_margin.add_theme_constant_override(side, 14)
+		build_margin.add_theme_constant_override(side, 10)
 	build_panel.add_child(build_margin)
 	var build_box := VBoxContainer.new()
 	build_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1491,7 +1972,7 @@ func _create_ui() -> void:
 		var section := VBoxContainer.new()
 		section.name = "%sPlans" % String(category).capitalize()
 		section.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		section.add_theme_constant_override("separation", 7)
+		section.add_theme_constant_override("separation", 5)
 		section_host.add_child(section)
 		build_category_sections[category] = section
 		for building_type in BUILD_CATEGORIES[category]:
@@ -1503,10 +1984,17 @@ func _create_ui() -> void:
 			button.clip_text = true
 			button.custom_minimum_size.y = 48
 			button.add_theme_font_size_override("font_size", 13)
+			# Beta: locked/unaffordable cards were ~40 % grey on dark; keep them
+			# visibly secondary but readable.
+			button.add_theme_color_override("font_disabled_color", Color("#c9bfa6"))
 			button.tooltip_text = _building_tooltip(String(building_type))
 			button.pressed.connect(begin_placement.bind(building_type))
 			section.add_child(button)
-			build_buttons[building_type] = button
+			# P0 beta: a plan can sit in several tabs (Essentials + Military...).
+			# Keep every button so all tabs share one unlock/affordability state.
+			if not build_buttons.has(building_type):
+				build_buttons[building_type] = []
+			(build_buttons[building_type] as Array).append(button)
 	var utility_row := HBoxContainer.new()
 	utility_row.add_theme_constant_override("separation", 8)
 	build_box.add_child(utility_row)
@@ -1535,6 +2023,7 @@ func _create_ui() -> void:
 	var console_row := HBoxContainer.new()
 	console_row.add_theme_constant_override("separation", 8)
 	hud_console.add_child(console_row)
+	console_row_node = console_row
 
 	build_strip = PanelContainer.new()
 	build_strip.name = "BuildStrip"
@@ -1551,6 +2040,15 @@ func _create_ui() -> void:
 	strip_hint.name = "BuildHint"
 	strip_hint.add_theme_color_override("font_color", Color("#8f8a76"))
 	strip_header.add_child(strip_hint)
+	console_toggle_button = Button.new()
+	console_toggle_button.name = "ConsoleToggle"
+	console_toggle_button.text = "Hide ▾"
+	console_toggle_button.tooltip_text = "Collapse or expand the bottom panel"
+	console_toggle_button.focus_mode = Control.FOCUS_NONE
+	console_toggle_button.flat = true
+	HudSkin.set_font(console_toggle_button, HudSkin.ui_font(600), HudSkin.SIZE_MIN, HudSkin.COLOR_GOLD)
+	console_toggle_button.pressed.connect(_toggle_console_collapsed)
+	strip_header.add_child(console_toggle_button)
 	var strip_grid := GridContainer.new()
 	strip_grid.name = "BuildGrid"
 	strip_grid.columns = BUILD_GRID_COLUMNS
@@ -1594,7 +2092,9 @@ func _create_ui() -> void:
 		btn.add_child(btn_vbox)
 
 		var icon_canvas := Control.new()
-		icon_canvas.custom_minimum_size = Vector2(BUILD_SLOT_SIZE.x, 24)
+		# 20 + two ~17 px lines - 2 px overlap = 52 = BUILD_SLOT_SIZE.y; a 24 px row
+		# pushed the cost line 4 px below the slot (PT31 clipping check).
+		icon_canvas.custom_minimum_size = Vector2(BUILD_SLOT_SIZE.x, 20)
 		icon_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		# Look lift: rendered thumbnail (glyph fallback if a type has none). It is
 		# taller than the 24 px row and sits behind the outlined name label.
@@ -1651,7 +2151,7 @@ func _create_ui() -> void:
 	# minimap itself is hidden (menu), so layout never collapses.
 	var map_holder := Control.new()
 	map_holder.name = "MinimapHolder"
-	map_holder.custom_minimum_size = Vector2(MINIMAP_COLLAPSED + 8.0, MINIMAP_COLLAPSED + 16.0)
+	map_holder.custom_minimum_size = Vector2(MAP_TOGGLE_WIDTH + 8.0, MINIMAP_COLLAPSED + 16.0)
 	map_holder.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	map_holder.mouse_filter = Control.MOUSE_FILTER_STOP
 	console_row.add_child(map_holder)
@@ -1659,8 +2159,15 @@ func _create_ui() -> void:
 	map_toggle.name = "MapToggle"
 	map_toggle.text = "Map"
 	map_toggle.tooltip_text = "Show the province map"
-	map_toggle.custom_minimum_size = Vector2(MINIMAP_COLLAPSED, MINIMAP_COLLAPSED)
-	map_toggle.set_anchors_preset(Control.PRESET_CENTER)
+	map_toggle.custom_minimum_size = Vector2(MAP_TOGGLE_WIDTH, MINIMAP_COLLAPSED)
+	# r38: fill the holder (4 px inset) instead of hanging off its centre point,
+	# which pushed the button's right half under the Realm card.
+	map_toggle.clip_text = true
+	map_toggle.set_anchors_preset(Control.PRESET_FULL_RECT)
+	map_toggle.offset_left = 4.0
+	map_toggle.offset_top = 8.0
+	map_toggle.offset_right = -4.0
+	map_toggle.offset_bottom = -8.0
 	map_toggle.pressed.connect(_toggle_minimap)
 	HudSkin.apply_button(map_toggle)
 	map_holder.add_child(map_toggle)
@@ -1676,6 +2183,8 @@ func _create_ui() -> void:
 	selection_host = PanelContainer.new()
 	selection_host.name = "SelectionPanel"
 	selection_host.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	selection_host.custom_minimum_size = Vector2(SELECTION_MIN_WIDTH, 0)
+	selection_host.clip_contents = true
 	selection_host.add_theme_stylebox_override("panel", HudSkin.frame("slot", 8.0))
 	console_row.add_child(selection_host)
 	realm_overview = RichTextLabel.new()
@@ -1683,8 +2192,8 @@ func _create_ui() -> void:
 	realm_overview.bbcode_enabled = true
 	realm_overview.scroll_active = false
 	realm_overview.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	realm_overview.add_theme_font_size_override("normal_font_size", 14)
-	realm_overview.add_theme_font_size_override("bold_font_size", 14)
+	realm_overview.add_theme_font_size_override("normal_font_size", 16)
+	realm_overview.add_theme_font_size_override("bold_font_size", 16)
 	selection_host.add_child(realm_overview)
 
 	inspector_panel = PanelContainer.new()
@@ -1740,7 +2249,9 @@ func _create_ui() -> void:
 	inspector_label.scroll_active = true
 	inspector_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	inspector_label.add_theme_color_override("default_color", Color("#e2dfcf"))
-	inspector_label.add_theme_font_size_override("normal_font_size", 14)
+	# R34 P2: larger inspector text (was 14).
+	inspector_label.add_theme_font_size_override("normal_font_size", 17)
+	inspector_label.add_theme_font_size_override("bold_font_size", 17)
 	inspector_box.add_child(inspector_label)
 	var action_row := HBoxContainer.new()
 	action_row.add_theme_constant_override("separation", 6)
@@ -1768,6 +2279,22 @@ func _create_ui() -> void:
 	scout_button.pressed.connect(_begin_scout_aim)
 	action_row.add_child(scout_button)
 	scout_button.visible = false
+	move_button = Button.new()
+	move_button.name = "UnitMove"
+	move_button.text = "MOVE"
+	move_button.tooltip_text = "Move: click open ground (or right-click it with the soldier selected)."
+	Identity.apply_button(move_button)
+	move_button.pressed.connect(func() -> void: _begin_unit_order("move"))
+	action_row.add_child(move_button)
+	move_button.visible = false
+	attack_button = Button.new()
+	attack_button.name = "UnitAttack"
+	attack_button.text = "ATTACK"
+	attack_button.tooltip_text = "Attack: click a raider (or right-click it with the soldier selected). Soldiers also engage raiders near them on their own."
+	Identity.apply_button(attack_button)
+	attack_button.pressed.connect(func() -> void: _begin_unit_order("attack"))
+	action_row.add_child(attack_button)
+	attack_button.visible = false
 	inspector_panel.visible = false
 
 	placement_panel = PanelContainer.new()
@@ -1782,19 +2309,27 @@ func _create_ui() -> void:
 	placement_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	placement_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	placement_panel.add_theme_stylebox_override("panel", HudSkin.frame("toast", 10.0))
+	# r39-housefix: the hint is display-only. It sits over the map exactly
+	# while placing, and as a STOP panel it silently ate placement clicks
+	# aimed at pads behind it (no message, no house).
+	placement_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(placement_panel)
 	var placement_vbox := VBoxContainer.new()
+	placement_vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	placement_vbox.add_theme_constant_override("separation", 4)
 	placement_panel.add_child(placement_vbox)
 	placement_legend_label = Label.new()
+	placement_legend_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	placement_legend_label.text = ""
 	placement_legend_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	placement_legend_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	placement_legend_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	placement_legend_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	placement_legend_label.add_theme_color_override("font_color", Color("#b9c6a8"))
 	placement_legend_label.add_theme_font_size_override("font_size", 12)
 	placement_vbox.add_child(placement_legend_label)
 	placement_label = Label.new()
+	placement_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	placement_label.text = ""
 	placement_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	placement_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1850,7 +2385,7 @@ func _set_build_category(index: int) -> void:
 				section.add_child(hint)
 			if hint != null:
 				hint.visible = card_count == 0
-		_build_panel_height = minf(410.0, 145.0 + float(maxi(card_count, 1)) * 61.0)
+		_build_panel_height = minf(700.0, 145.0 + float(maxi(card_count, 1)) * 76.0)  # beta: was 410 (Essentials scrolled)
 		_layout_hud_console()
 
 
@@ -1911,13 +2446,15 @@ func _update_placement_ghost(force := false) -> void:
 	placement_tile = next_tile
 	if placement_type == Defs.BUILDING_ROAD:
 		placement_validation = simulation_host.simulation.validate_road_route([placement_tile])
-		world_view.show_road_preview(placement_validation.get("segments", []))
+		# F5f: Show connected road network as highlight to clarify where to start
+		world_view.show_road_network_highlight()
 		placement_ghost.visible = false
 		if ghost_clearing_label != null:
 			ghost_clearing_label.visible = false
 		world_view.clear_build_pads()
 		if not bool(placement_validation.get("success", false)) and not placement_invalid_shown:
-			placement_label.text = "Road · hold and drag to draw · right-click cancels"
+			# F5f: Clearer coach text
+			placement_label.text = "Road · drag from the BLUE HIGHLIGHTED roads · right-click cancels"
 		else:
 			placement_label.text = "%s · drag from the road network" % String(placement_validation.get("message", "Road Building Mode"))
 		return
@@ -1936,20 +2473,27 @@ func _update_placement_ghost(force := false) -> void:
 			ghost_clearing_label.visible = false
 		placement_label.text = String(placement_validation.get("message", "CLEAR"))
 		return
-	placement_validation = simulation_host.simulation.validate_placement(placement_type, placement_tile, placement_rotation)
+	# F1: Center multi-tile footprints under cursor instead of using cursor tile as anchor
 	var footprint := Defs.building_footprint(placement_type)
 	if posmod(placement_rotation, 2) == 1:
 		footprint = Vector2i(footprint.y, footprint.x)
+	# F5d: Fix centering - use floored division for proper offset
+	# 2x2: offset (1,1), 3x3: offset (1,1), 4x4: offset (2,2)
+	var anchor_tile := placement_tile - Vector2i(footprint.x / 2, footprint.y / 2)
+	
+	placement_validation = simulation_host.simulation.validate_placement(placement_type, anchor_tile, placement_rotation)
 	var valid := bool(placement_validation.get("success", false))
 	var needs_clearing := valid and "CLEARING REQUIRED" in String(placement_validation.get("message", ""))
-	var ghost_height := 0.58 if needs_clearing else 0.14
+	# F1: Make invalid ghost taller (0.65) for better visibility on fog
+	# F5f: Even taller (0.85) for better visibility
+	var ghost_height := 0.58 if needs_clearing else (0.85 if not valid else 0.14)
 	var box := BoxMesh.new()
 	box.size = Vector3(float(footprint.x) * ScaleProfile.LOGICAL_CELL_METRES, ghost_height, float(footprint.y) * ScaleProfile.LOGICAL_CELL_METRES)
 	ghost_footprint.mesh = box
 	var ghost_color := Color(0.95, 0.68, 0.18, 0.52) if needs_clearing else (Color(0.26, 0.86, 0.48, 0.42) if valid else Color(0.92, 0.25, 0.22, 0.46))
 	ghost_footprint.material_override = _ghost_material(ghost_color)
 	ghost_access.material_override = _ghost_material(ghost_color.lightened(0.18))
-	var center := Vector2(placement_tile) + Vector2(footprint - Vector2i.ONE) * 0.5
+	var center := Vector2(anchor_tile) + Vector2(footprint - Vector2i.ONE) * 0.5
 	placement_ghost.position = world_view.tile_to_world(center) + Vector3.UP * (0.08 + ghost_height * 0.5)
 	placement_ghost.rotation.y = -float(placement_rotation) * PI * 0.5
 	ghost_access.position.z = float(footprint.y) * ScaleProfile.LOGICAL_CELL_METRES * 0.5 + 0.72
@@ -1959,21 +2503,70 @@ func _update_placement_ghost(force := false) -> void:
 		ghost_clearing_label.position.y = ghost_height + 2.15
 	var quality: Dictionary = placement_validation.get("placement_quality", {})
 	if quality.is_empty() and simulation_host.simulation.has_method("evaluate_placement_quality"):
-		quality = simulation_host.simulation.evaluate_placement_quality(placement_type, placement_tile, placement_rotation)
+		quality = simulation_host.simulation.evaluate_placement_quality(placement_type, anchor_tile, placement_rotation)
 	var quality_text := String(quality.get("label", ""))
 	var prefix := "CLEARING REQUIRED" if needs_clearing else ("VALID" if valid else "INVALID")
-	if not valid and not placement_invalid_shown:
-		placement_label.text = "%s · click a valid tile · right-click cancels" % Defs.building_name(placement_type)
+	if not valid:
+		# Beta r19: say why, every time, before the click.
+		var why := String(placement_validation.get("message", "")).strip_edges()
+		if why == "":
+			why = "this tile is blocked"
+		# F1: Add fog tip when Fog error but green build pads exist
+		var pads: Dictionary = simulation_host.simulation.collect_build_pads(placement_type, placement_rotation, 40)
+		var has_valid_pads := not Array(pads.get("valid", [])).is_empty()
+		# F5d: Check both reason and message for Fog/Unrevealed (roads use message)
+		var is_fog := "Fog" in String(placement_validation.get("reason", "")) or "Unrevealed" in why or "revealed" in why.to_lower()
+		if is_fog and has_valid_pads:
+			placement_label.text = "Fog — click a green pad · right-click cancels"
+		else:
+			placement_label.text = "Can't place %s: %s · right-click cancels" % [Defs.building_name(placement_type), why]
 	elif quality_text != "":
 		placement_label.text = "%s · %s" % [prefix, quality_text]
 	else:
 		placement_label.text = "%s · %s" % [prefix, String(placement_validation.get("message", ""))]
+	
+	# Store anchor_tile for commit_placement to use
+	placement_tile = anchor_tile
 
 
-func _commit_placement() -> void:
-	if placement_type == "" or placement_tile.x < 0:
+func _commit_placement(click_position := Vector2(-1, -1)) -> void:
+	if placement_type == "":
 		return
-	var result: Dictionary = simulation_host.simulation.request_build(placement_type, placement_tile, placement_rotation)
+	var commit_tile := placement_tile
+	if click_position.x >= 0.0:
+		var hit := _raycast_terrain(click_position)
+		if not hit.is_empty():
+			var clicked_tile := world_view.world_to_tile(hit.position)
+			# F1: Center multi-tile footprints under cursor
+			var footprint := Defs.building_footprint(placement_type)
+			if posmod(placement_rotation, 2) == 1:
+				footprint = Vector2i(footprint.y, footprint.x)
+			# F5d: Use proper floored division for centering
+			commit_tile = clicked_tile - Vector2i(footprint.x / 2, footprint.y / 2)
+	if commit_tile.x < 0:
+		return
+	
+	# F1: Snap to nearest valid pad if commit fails due to Fog/Unrevealed
+	var pre_validation: Dictionary = simulation_host.simulation.validate_placement(placement_type, commit_tile, placement_rotation)
+	var fail_message := String(pre_validation.get("message", ""))
+	# F5d: Check message for Fog/Unrevealed (reason key not always present)
+	var is_fog_fail := "Fog" in String(pre_validation.get("reason", "")) or "Unrevealed" in fail_message or "revealed" in fail_message.to_lower()
+	if not bool(pre_validation.get("success", false)) and is_fog_fail:
+		var pads: Dictionary = simulation_host.simulation.collect_build_pads(placement_type, placement_rotation, 40)
+		var valid_pads: Array = pads.get("valid", [])
+		if not valid_pads.is_empty():
+			var nearest_pad := Vector2i(valid_pads[0])
+			var nearest_dist := 999999.0
+			for pad_value in valid_pads:
+				var pad := Vector2i(pad_value)
+				var dist := Vector2(pad - commit_tile).length_squared()
+				if dist < nearest_dist:
+					nearest_dist = dist
+					nearest_pad = pad
+			if nearest_dist < 16.0:  # Within ~4 tiles
+				commit_tile = nearest_pad
+	
+	var result: Dictionary = simulation_host.simulation.request_build(placement_type, commit_tile, placement_rotation)
 	_show_status(String(result.get("message", "")), 3.0)
 	if bool(result.get("success", false)):
 		_sync_presentation()
@@ -1995,6 +2588,11 @@ func _start_road_drag(screen_position: Vector2) -> void:
 	if hit.is_empty():
 		return
 	road_drag_start = world_view.world_to_tile(hit.position)
+	# F5c: Forgiving road drag - snap start to network within 1 tile
+	if simulation_host.simulation != null and simulation_host.simulation.has_method("find_nearest_road_tile"):
+		var nearest: Vector2i = simulation_host.simulation.find_nearest_road_tile(road_drag_start, 1)
+		if nearest.x >= 0:
+			road_drag_start = nearest
 	road_dragging = true
 	road_preview_route = [road_drag_start]
 	_update_road_drag_preview(screen_position)
@@ -2034,8 +2632,15 @@ func _finish_road_drag(screen_position: Vector2) -> void:
 		_sync_presentation()
 	elif not bool(result.get("success", false)):
 		placement_invalid_shown = true
-		_log_first_screen_hint("placement", String(result.get("message", "Road route is blocked.")))
-		_show_status(String(result.get("message", "Road route is blocked.")), 3.0)
+		var failure_reason := String(result.get("message", "Road route is blocked."))
+		# F2: Sticky 4s status on road failures with clear reason
+		var sticky_message := failure_reason
+		if "Fog" in String(result.get("reason", "")):
+			sticky_message = "Road blocked: Fog — scout this area first"
+		elif "Disconnected" in failure_reason or "road network" in failure_reason:
+			sticky_message = "Road blocked: must connect to existing roads from Town Hall"
+		_log_first_screen_hint("placement", failure_reason)
+		_show_status(sticky_message, 4.0)
 	road_preview_route.clear()
 	road_preview_validation.clear()
 	road_drag_start = Vector2i(-1, -1)
@@ -2244,6 +2849,7 @@ func _road_route_score(route: Array[Vector2i]) -> int:
 
 
 func _select_from_pointer(screen_position: Vector2) -> void:
+	_set_group([])
 	var character_pick := _screen_space_character_pick(screen_position)
 	if not character_pick.is_empty():
 		var picked_kind := String(character_pick.get("kind", "worker"))
@@ -2367,12 +2973,16 @@ func _update_ui() -> void:
 	for key in chip_values:
 		if resource_chips.has(key):
 			(resource_chips[key] as Label).text = str(chip_values[key])
+	var _pu_rates := FrameProfiler.t0()
 	_update_resource_rates(chip_values)
+	FrameProfiler.add("ui.rates", _pu_rates)
 	if population_label != null:
 		population_label.text = "%d/%d" % [int(resources.get(Defs.RESOURCE_POPULATION_USED, 0)), int(resources.get(Defs.RESOURCE_POPULATION_MAX, 0))]
 	if soldier_label != null:
 		soldier_label.text = "%d/%d" % [int(simulation_host.simulation.soldiers_available()), int(simulation_host.simulation.soldiers_total)]
+	var _pu_idle := FrameProfiler.t0()
 	_update_idle_workers()
+	FrameProfiler.add("ui.idle", _pu_idle)
 	var night_now := bool(simulation_host.simulation.is_night)
 	# Hotfix 3: the clock capsule carries the realm summary that used to be
 	# repeated in the bottom Realm panel (day, phase timer, pop, workers, bread).
@@ -2380,11 +2990,17 @@ func _update_ui() -> void:
 	var settlement_now: Dictionary = current_frame_snapshot.get("settlement", {})
 	var food_now := int(settlement_now.get("food", 0))
 	var demand_now := int(settlement_now.get("next_food_demand", 0))
-	if time_label != null:
-		time_label.text = "%s  ·  Pop %d/%d" % [_clock_title(), int(sim_now.population_current), int(sim_now.housing_capacity)]
-	if phase_label != null:
-		phase_label.text = "%s  ·  Workers %d  ·  Bread %s" % [_phase_countdown_text(), int(sim_now.workers_free()), ("%d/%d" % [food_now, demand_now]) if demand_now > 0 else str(food_now)]
+	if time_label != null and phase_label != null:
+		var summary_title := "%s  ·  Pop %d/%d" % [_clock_title(), int(sim_now.population_current), int(sim_now.housing_capacity)]
+		var summary_phase := "%s  ·  Workers %d  ·  Bread %s" % [_phase_countdown_text(), int(sim_now.workers_free()), ("%d/%d" % [food_now, demand_now]) if demand_now > 0 else str(food_now)]
+		time_label.text = summary_title
+		phase_label.text = summary_phase
+		clock_full_title = summary_title
+		clock_full_phase = summary_phase
+		_fit_clock_summary(summary_title, summary_phase)
+	var _pu_speed := FrameProfiler.t0()
 	_sync_speed_controls()
+	FrameProfiler.add("ui.speed", _pu_speed)
 	if day_icon != null:
 		day_icon.texture = HudSkin.icon("moon" if night_now else "sun")
 	if phase_bar != null:
@@ -2396,31 +3012,81 @@ func _update_ui() -> void:
 	if Time.get_ticks_msec() / 1000.0 >= status_message_until:
 		status_label.text = ""
 		status_message_text = ""
+	var _pu_notices := FrameProfiler.t0()
 	_ingest_simulation_notices()
+	FrameProfiler.add("ui.notices", _pu_notices)
+	var _pu_raid := FrameProfiler.t0()
 	_update_raid_banner()
+	FrameProfiler.add("ui.raid", _pu_raid)
+	var _pu_loophud := FrameProfiler.t0()
 	_update_loop_hud()
-	for building_type in build_buttons:
-		var button: Button = build_buttons[building_type]
+	FrameProfiler.add("ui.loophud", _pu_loophud)
+	var _pu_btn := FrameProfiler.t0()
+	# Beta perf: the plans list is a popup; refresh its ~20 cards only while
+	# it is open (and once on open), not every UI tick (~6 ms late game).
+	var plans_open := build_panel != null and build_panel.visible
+	var refresh_plans := plans_open and not _plans_were_open or (plans_open and hud_clock >= _plans_next_refresh)
+	_plans_were_open = plans_open
+	if refresh_plans:
+		_plans_next_refresh = hud_clock + 0.25
+	for building_type in (build_buttons if refresh_plans else {}):
 		var unlocked := is_build_unlocked(String(building_type))
-		button.visible = unlocked
+		# Beta: one catalog. Locked plans stay listed with their unlock rule;
+		# unaffordable plans say exactly what is missing.
 		var reason := _build_unavailable_reason(String(building_type))
-		button.disabled = reason != ""
 		var recommend := _should_recommend_frontier(String(building_type))
 		var label := "%s  ·  %s\n%s" % [Defs.building_name(String(building_type)), Defs.formatted_cost(String(building_type)), String(BUILD_PURPOSES.get(building_type, "Settlement building."))]
+		if not unlocked:
+			label = "LOCKED  ·  %s\n%s" % [label, unlock_hint(String(building_type))]
+		elif reason != "":
+			label += "\n" + reason
 		if recommend:
 			label = "FRONTIER  ·  " + label
-		button.text = label
-		button.tooltip_text = _building_tooltip(String(building_type)) + ("\n\nUnavailable: %s" % reason if reason != "" else "")
+		var tip := _building_tooltip(String(building_type)) + ("\n\nUnavailable: %s" % reason if reason != "" else "")
+		for button_value in build_buttons[building_type]:
+			var button: Button = button_value
+			button.visible = true
+			button.disabled = reason != ""
+			if button.text != label:
+				button.text = label
+			if button.tooltip_text != tip:
+				button.tooltip_text = tip
+	FrameProfiler.add("ui.build_buttons", _pu_btn)
+	var _pu_strip := FrameProfiler.t0()
 	_refresh_build_strip_state()
+	FrameProfiler.add("ui.strip", _pu_strip)
+	var _pu_flash := FrameProfiler.t0()
 	_refresh_resource_chip_flash()
+	FrameProfiler.add("ui.flash", _pu_flash)
+	var _pu_inspector := FrameProfiler.t0()
 	_update_inspector()
+	FrameProfiler.add("ui.inspector", _pu_inspector)
 
 
 ## Playtest.31 UI: affordability on the C&C strip (cost on button, dimmed when
 ## unaffordable) and building tooltips suppressed while the placement hint is up
 ## so only one panel is visible at a time.
+var _build_strip_signature := ""
+
+
 func _refresh_build_strip_state() -> void:
 	var placing := placement_type != ""
+	# Hotfix 7: theme overrides / modulate / tooltips were rewritten every
+	# frame (relayout). Only redo them when an input to them changed.
+	var sig_parts: Array = [placing, build_strip_buttons.size(), build_strip_types.hash(), build_strip_tooltips.hash(), get_viewport().get_visible_rect().size]
+	for sig_type in build_strip_types:
+		var sig_unlocked := is_build_unlocked(String(sig_type))
+		sig_parts.append(sig_unlocked)
+		sig_parts.append(String(sig_type) == Defs.TOOL_CLEAR_AREA or _missing_resources(String(sig_type)).is_empty())
+		if not sig_unlocked:
+			sig_parts.append(unlock_hint(String(sig_type)))
+	var signature := var_to_str(sig_parts)
+	if signature == _build_strip_signature:
+		var _pu_lay := FrameProfiler.t0()
+		_layout_hud_console()
+		FrameProfiler.add("ui.layout", _pu_lay)
+		return
+	_build_strip_signature = signature
 	for index in build_strip_buttons.size():
 		var building_type: String = build_strip_types[index] if index < build_strip_types.size() else ""
 		var btn: Button = build_strip_buttons[index]
@@ -2472,7 +3138,8 @@ func _compact_cost(building_type: String) -> String:
 	var parts: Array[String] = []
 	for resource_type in Defs.RESOURCE_TYPES:
 		if cost.has(resource_type):
-			parts.append("%d%s" % [int(cost[resource_type]), Defs.resource_name(resource_type).substr(0, 2)])
+			# F4: Show full resource names (e.g. "4 Wood" instead of "4Wo")
+			parts.append("%d %s" % [int(cost[resource_type]), Defs.resource_name(resource_type)])
 	return " ".join(parts)
 
 
@@ -2580,10 +3247,15 @@ func _update_loop_hud() -> void:
 		if pressure_meter.has_method("set_threat"):
 			pressure_meter.set_threat(bool(simulation_host.simulation.is_night), hostiles)
 		pressure_meter.visible = _pressure_chip_should_show(pressure_meter.band, bool(simulation_host.simulation.is_night), hostiles)
+		# The chip's visibility changes the top-bar width; re-fit the clock.
+		if time_label != null and phase_label != null and clock_full_phase != "":
+			time_label.text = clock_full_title
+			phase_label.text = clock_full_phase
+			_fit_clock_summary(clock_full_title, clock_full_phase)
 		pressure_meter.tooltip_text = String(wyrdfall.get("pressure_tooltip", "Wyrd Pressure"))
 		# Q6: while the chip is hidden the QUIET state lives in the clock tooltip.
 		if day_icon != null and day_icon.get_parent() != null and day_icon.get_parent().get_parent() is Control:
-			(day_icon.get_parent().get_parent() as Control).tooltip_text = "Day and time until the next phase" + ("" if pressure_meter.visible else "\nWyrd Pressure: %s" % String(pressure_meter.band).capitalize())
+			(day_icon.get_parent().get_parent() as Control).tooltip_text = "Day and time until the next phase" + clock_summary_tip + ("" if pressure_meter.visible else "\nWyrd Pressure: %s" % String(pressure_meter.band).capitalize())
 	if pressure_label != null:
 		pressure_label.text = String(pressure.get("band", "QUIET"))
 	if binding_percent_label != null:
@@ -2681,15 +3353,22 @@ func _update_inspector() -> void:
 	_update_inspector_core()
 	if inspector_panel.visible:
 		_decorate_inspector()
+	# R34 P2: with nothing selected, the right console panel shows a compact
+	# realm card (defence + economy state not in the top bar) instead of
+	# leaving the bottom strip empty. It sits right of the map in the same row.
+	var show_realm := realm_overview != null and not inspector_panel.visible and play_has_begun
 	if realm_overview != null:
-		# Hotfix 3: the realm summary lives in the top bar now; the right
-		# console panel only appears for a selection, so it never covers Map.
-		realm_overview.visible = false
+		realm_overview.visible = show_realm
+		if show_realm:
+			_update_realm_overview()
 	if selection_host != null:
-		selection_host.visible = inspector_panel.visible
+		selection_host.visible = inspector_panel.visible or show_realm
 
 
 func _update_inspector_core() -> void:
+	if move_button != null:
+		move_button.visible = false
+		attack_button.visible = false
 	assault_button.visible = false
 	recall_button.visible = false
 	if scout_button != null:
@@ -2789,6 +3468,15 @@ func _update_inspector_core() -> void:
 			inspector_label.text = "\n".join(lines)
 			inspector_panel.visible = true
 			return
+	var group_now := _group_ids()
+	if group_now.size() > 1 and selected_entity_kind == "worker":
+		inspector_label.text = "\n".join(group_summary_lines(group_now))
+		inspector_label.tooltip_text = "Right-click: move or attack as a group. Ctrl+click adds or removes a soldier."
+		inspector_panel.visible = true
+		if move_button != null:
+			move_button.visible = true
+			attack_button.visible = true
+		return
 	if selected_worker_id > 0 and selected_entity_kind == "worker":
 		var worker: Dictionary = simulation_host.simulation.get_worker_by_id(selected_worker_id)
 		if worker.is_empty():
@@ -2815,6 +3503,12 @@ func _update_inspector_core() -> void:
 			inspector_panel.visible = true
 			if scout_button != null:
 				scout_button.visible = simulation_host.simulation.is_patrol_scout(worker) and not worker.has("scout_mission")
+				# Bug 3 fix: Keep button highlighted while aiming
+				scout_button.button_pressed = scout_aiming
+			var soldier := String(worker.get("type", "")) == "guard" and int(worker.get("building_id", 0)) == 0
+			if move_button != null:
+				move_button.visible = soldier
+				attack_button.visible = soldier
 			return
 	if debug_visible:
 		var metrics := world_view.presentation_metrics()
@@ -2830,6 +3524,9 @@ func _update_inspector_core() -> void:
 		inspector_panel.visible = false
 		if scout_button != null:
 			scout_button.visible = false
+		if move_button != null:
+			move_button.visible = false
+			attack_button.visible = false
 
 
 ## Look lift: stat rows get an icon, a muted label and a bold value, laid out
@@ -3012,16 +3709,33 @@ func _update_realm_overview() -> void:
 	var free_workers := int(sim.workers_free())
 	var food := int(settlement.get("food", 0))
 	var demand := int(settlement.get("next_food_demand", 0))
-	# First-screen: one compact glance until a selection opens the inspector.
-	realm_overview.text = "[font=%s][font_size=16][color=#f0c880]Realm[/color][/font_size][/font]  [color=#b9ab86]%s · %s[/color]\n[color=#e6dcc0]Pop %d/%d  ·  Workers %d  ·  Bread %s[/color]" % [
+	var towers := 0
+	var walls := 0
+	for b in sim.buildings:
+		var bt := String((b as Dictionary).get("type", ""))
+		if bool((b as Dictionary).get("construction", false)):
+			continue
+		if bt == Defs.BUILDING_WATCHTOWER:
+			towers += 1
+		elif bt == Defs.BUILDING_WALL:
+			walls += 1
+	var hostiles := int(sim.living_hostile_count())
+	var threat := "[color=#ff9a84]%d hostile%s in the realm[/color]" % [hostiles, "" if hostiles == 1 else "s"] if hostiles > 0 else "[color=#9fc79a]No hostiles in sight[/color]"
+	var realm_text := "[font=%s][font_size=18][color=#f0c880]Realm[/color][/font_size][/font]  [color=#b9ab86]%s · %s[/color]\n[color=#e6dcc0]Defence: %d soldier%s · %d watchtower%s · %d wall%s[/color]\n[color=#e6dcc0]Workers free %d · Housing %d/%d · Bread %s[/color]\n%s" % [
 		DISPLAY_FONT_PATH,
 		_clock_title(),
 		_phase_countdown_text(),
+		int(sim.soldiers_total), "" if int(sim.soldiers_total) == 1 else "s",
+		towers, "" if towers == 1 else "s",
+		walls, "" if walls == 1 else "s",
+		free_workers,
 		int(sim.population_current),
 		int(sim.housing_capacity),
-		free_workers,
-		("%d/%d" % [food, demand]) if demand > 0 else str(food)
+		("%d/%d" % [food, demand]) if demand > 0 else str(food),
+		threat,
 	]
+	if realm_overview.text != realm_text:
+		realm_overview.text = realm_text
 
 
 func _building_player_status(building: Dictionary, type_name: String) -> String:
@@ -3268,13 +3982,54 @@ func raid_status() -> Dictionary:
 	var bearing := String(sim._bearing_from_town(nearest))
 	var eta_seconds := 0 if best_eta == INF else int(ceil(best_eta))
 	var at_gates := nearest_distance <= 4.0
-	var eta_text := "at the Town Hall" if at_gates else "ETA ~%d:%02d" % [eta_seconds / 60, eta_seconds % 60]
+	# Beta: name the structure the nearest raider is closing on, and switch
+	# from "approaching" to "attacking" once they arrive (no 0:0x countdown).
+	var target_name := "the Town Hall"
+	var target_pos: Vector2i = sim.town_hall_position
+	var target_distance := INF
+	for building_value in sim.buildings:
+		var building: Dictionary = building_value
+		if bool(building.get("construction", false)) or String(building.get("type", "")) == Defs.BUILDING_ROAD:
+			continue
+		var bpos := Vector2i(building.get("position", Vector2i.ZERO))
+		var d := float(maxi(absi(bpos.x - nearest.x), absi(bpos.y - nearest.y)))
+		if d < target_distance:
+			target_distance = d
+			target_name = Defs.building_name(String(building.get("type", "")))
+			target_pos = bpos
+	# Defenses that can actually help at the target.
+	var towers := 0
+	for building_value in sim.buildings:
+		var tb: Dictionary = building_value
+		if String(tb.get("type", "")) == Defs.BUILDING_WATCHTOWER and not bool(tb.get("construction", false)):
+			var tp := Vector2i(tb.get("position", Vector2i.ZERO))
+			if maxi(absi(tp.x - target_pos.x), absi(tp.y - target_pos.y)) <= 8:
+				towers += 1
+	var guards := 0
+	for worker_value in sim.workers:
+		if String((worker_value as Dictionary).get("type", "")) == "guard":
+			guards += 1
+	var advice := ""
+	if towers == 0 and guards == 0:
+		advice = "No defenses near the %s. Build a Watchtower beside it (Military)." % target_name
+	elif towers == 0:
+		advice = "%d guard%s will respond. A Watchtower beside the %s adds ranged cover." % [guards, "" if guards == 1 else "s", target_name]
+	elif guards == 0:
+		advice = "%d Watchtower%s cover the %s. Train guards at a Barracks to finish raiders." % [towers, "" if towers == 1 else "s", target_name]
+	else:
+		advice = "%d Watchtower%s and %d guard%s defend the %s. Keep workers inside." % [towers, "" if towers == 1 else "s", guards, "" if guards == 1 else "s", target_name]
+	var attacking := at_gates or target_distance <= 3.0 or eta_seconds <= 8
+	var eta_text := ("ATTACKING %s" % target_name) if attacking else ("approaching %s  ·  arrives in %d:%02d" % [target_name, eta_seconds / 60, eta_seconds % 60])
 	return {
 		"count": count,
 		"bearing": bearing,
 		"eta_seconds": eta_seconds,
 		"at_gates": at_gates,
-		"line": "%d raider%s  ·  from %s  ·  %s" % [count, "" if count == 1 else "s", bearing, eta_text],
+		"attacking": attacking,
+		"target": target_name,
+		"target_pos": target_pos,
+		"advice": advice,
+		"line": "%d raider%s from the %s  ·  %s" % [count, "" if count == 1 else "s", bearing.trim_prefix("the "), eta_text],
 	}
 
 
@@ -3288,19 +4043,48 @@ func _update_raid_banner() -> void:
 	raid_banner_active = raiding
 	if raid_eta_row != null:
 		raid_eta_row.visible = raiding
+	if raid_view_button != null:
+		raid_view_button.visible = raiding
 	if not raiding:
+		# R34 P0: a finished raid must not leave the "RAID" banner up.
+		if toast_title != null and toast_title.text == "RAID" and alert_panel.visible:
+			toast_until = 0.0
+			alert_panel.visible = false
+			toast_title.text = ""
 		return
+	# R34 P0: a live raid makes any earlier "RAID OVER" card stale; drop it so
+	# the HUD never says "RAID OVER" and "under attack" at the same time.
+	_drop_stale_raid_over_cards()
 	raid_eta_label.text = String(status.get("line", ""))
 	if raid_banner_dismissed:
 		return
 	if toast_title.text != "RAID" and toast_until > hud_clock and toast_severity == "critical" and last_toast_key != "":
 		return  # another critical notice (e.g. Town Hall under attack) is showing
 	toast_title.text = "RAID"
-	toast_body.text = "%d hostile%s coming from %s." % [int(status.get("count", 0)), " is" if int(status.get("count", 0)) == 1 else "s are", String(status.get("bearing", "the wilds"))]
+	if bool(status.get("attacking", false)):
+		toast_body.text = "%s is under attack. %s" % [String(status.get("target", "Your settlement")), String(status.get("advice", ""))]
+	else:
+		toast_body.text = "%d hostile%s heading for the %s. %s" % [int(status.get("count", 0)), " is" if int(status.get("count", 0)) == 1 else "s are", String(status.get("target", "town")).trim_prefix("the "), String(status.get("advice", ""))]
 	toast_until = maxf(toast_until, hud_clock + 1.5)
 	toast_severity = "critical"
 	alert_panel.visible = startup_overlay == null or not startup_overlay.visible
 	alert_panel.modulate.a = 1.0
+
+
+func _drop_stale_raid_over_cards() -> void:
+	for i in range(notice_feed_entries.size() - 1, -1, -1):
+		var e: Dictionary = notice_feed_entries[i]
+		if String(e.get("key", "")).begins_with("RAID OVER:"):
+			if is_instance_valid(e.get("node")):
+				(e["node"] as Node).queue_free()
+			notice_feed_entries.remove_at(i)
+
+
+func _view_raid_target() -> void:
+	var status := raid_status()
+	if camera_rig == null or world_view == null or not status.has("target_pos"):
+		return
+	camera_rig.compose_view(world_view.tile_to_world(Vector2(status["target_pos"])), 34.0)
 
 
 func _dismiss_toast() -> void:
@@ -3349,10 +4133,174 @@ func _pressure_unlocked() -> bool:
 func _toggle_objective_detail() -> void:
 	if objective_detail_panel == null:
 		return
-	_show_objective_detail(not objective_detail_panel.visible)
+	var opening := not objective_detail_panel.visible
+	_show_objective_detail(opening)
+	if opening:
+		_jump_to_objective_target()
+
+
+## Beta: objectives are actionable. A quarry/stone objective jumps the camera to
+## the nearest revealed rock deposit where a Quarry can actually be placed and
+## pings it; other objectives keep the goal list only.
+var _objective_ping: Node3D = null
+
+
+func _objective_why(t: String) -> String:
+	if "road" in t:
+		return "Roads connect buildings so workers and goods can flow; every building needs a road link."
+	if "town hall" in t:
+		return "The Town Hall founds your realm: storage, shelter and the road network all start here."
+	if "lumen" in t:
+		return "Lumen light keeps Exposure down; a connected chain toward the Shard lets you claim it. Click the goal bar for a spot."
+	if "storehouse" in t or "storage" in t:
+		return "Storage caps how much your realm can hold; a Storehouse near production stops deliveries backing up."
+	if "quarry" in t or "stone" in t:
+		return "Stone gates towers, storehouses and bakeries. Click the goal bar to find a deposit."
+	if "lumber" in t or "wood" in t:
+		return "Wood builds almost everything; place a Lumber Camp next to trees."
+	if "night" in t or "defens" in t or "watchtower" in t:
+		return "Raiders come at night; a Watchtower near homes shoots them before they reach walls."
+	if "house" in t or "housing" in t:
+		return "More homes mean more workers and shelter at night."
+	if "bread" in t or "farm" in t or "bak" in t:
+		return "Workers eat bread; a Farm feeds a Bakery."
+	if "seal" in t or "fissure" in t or "wyrd" in t:
+		return "Sealing the Fissure is the realm's final goal. A Wyrd Refiner turns Wyrd from a Harvester into Stabilized Wyrd."
+	if "rival" in t:
+		return "The rival Outpost pressures your border; capturing it removes that pressure."
+	if "outpost" in t:
+		return "An Outpost toward the Shard extends your Lumen and claims ground the rival cannot."
+	return ""
+
+
+## Beta progression: the Lumen goal points at a spot where a Lumen Pillar
+## fits on the side of the settlement facing the Shard, and says why.
+func _jump_to_lumen_spot() -> void:
+	var sim = simulation_host.simulation
+	var origin: Vector2i = sim.town_hall_position
+	var shard: Vector2i = sim.shard_position
+	var best := Vector2i(-1, -1)
+	var best_score := INF
+	var checked := 0
+	for y in range(maxi(0, origin.y - 22), mini(sim.map_size.y, origin.y + 23), 2):
+		for x in range(maxi(0, origin.x - 22), mini(sim.map_size.x, origin.x + 23), 2):
+			var tile := Vector2i(x, y)
+			if not sim.is_revealed(tile):
+				continue
+			var score := Vector2(tile - shard).length() + Vector2(tile - origin).length() * 0.35
+			if score >= best_score:
+				continue
+			checked += 1
+			if checked > 600:
+				break
+			if bool(sim.validate_placement(Defs.BUILDING_LUMEN_PILLAR, tile).get("success", false)):
+				best = tile
+				best_score = score
+	if best.x < 0:
+		var why := _build_unavailable_reason(Defs.BUILDING_LUMEN_PILLAR)
+		_show_toast("Lumen", (why + ". " if why != "" else "") + "No revealed spot fits a Lumen Pillar yet: extend a road toward the Shard or scout.", "info", 5.0)
+		return
+	camera_rig.compose_view(world_view.tile_to_world(Vector2(best)), 38.0)
+	if _objective_ping != null and is_instance_valid(_objective_ping):
+		_objective_ping.queue_free()
+	_objective_ping = Node3D.new()
+	_objective_ping.name = "ObjectivePing"
+	_objective_ping.add_child(world_view._ping_mesh(Color("#9fe7ff"), 1.1))
+	var label := Label3D.new()
+	label.text = "Lumen Pillar here"
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.no_depth_test = true
+	label.font_size = 48
+	label.outline_size = 10
+	label.position = Vector3.UP * 3.0
+	_objective_ping.add_child(label)
+	world_view.add_child(_objective_ping)
+	_objective_ping.global_position = world_view.tile_to_world(Vector2(best))
+	var why2 := _build_unavailable_reason(Defs.BUILDING_LUMEN_PILLAR)
+	_show_toast("Lumen", "Build a Lumen Pillar here (Special tab). Its light must touch your road network to extend safe ground toward the Shard." + ("  Now: " + why2 if why2 != "" else ""), "info", 6.0)
+
+
+## P1 beta: when a Quarry already exists, say exactly why it is not giving stone.
+func _quarry_advice() -> Dictionary:
+	var sim = simulation_host.simulation if simulation_host != null else null
+	if sim == null:
+		return {}
+	for building_value in sim.buildings:
+		var b: Dictionary = building_value
+		var is_quarry := String(b.get("planned_type", "")) == Defs.BUILDING_QUARRY if bool(b.get("construction", false)) else String(b.get("type", "")) == Defs.BUILDING_QUARRY
+		if not is_quarry:
+			continue
+		var text := ""
+		if bool(b.get("construction", false)):
+			text = "Your Quarry is still under construction. Keep a worker free and enough wood in stock so the builders can finish it."
+		elif int(b.get("assigned_staff", 0)) <= 0:
+			text = "Your Quarry has no workers. Build a House for more people, or pause a less urgent job so someone can staff it."
+		else:
+			var st := String(b.get("status", ""))
+			text = "Your Quarry is staffed (%d). %s Stone goes to the Town Hall or a Storehouse; a road link and a nearby Storehouse speed delivery." % [int(b.get("assigned_staff", 0)), st]
+		return {"position": b["position"], "text": text}
+	return {}
+
+
+func _jump_to_objective_target() -> void:
+	var sim = simulation_host.simulation if simulation_host != null else null
+	if sim == null or objective_button == null or camera_rig == null or world_view == null:
+		return
+	var text := objective_button.text.to_lower()
+	if "lumen" in text:
+		_jump_to_lumen_spot()
+		return
+	if not ("quarry" in text or "stone" in text):
+		return
+	var existing := _quarry_advice()
+	if not existing.is_empty():
+		camera_rig.compose_view(world_view.tile_to_world(Vector2(existing["position"])), 34.0)
+		_show_toast("Quarry", String(existing["text"]), "info", 5.0)
+		return
+	var origin: Vector2i = sim.town_hall_position
+	var best := Vector2i(-1, -1)
+	var best_d := 1 << 30
+	for y in range(maxi(0, origin.y - 24), mini(sim.map_size.y, origin.y + 25)):
+		for x in range(maxi(0, origin.x - 24), mini(sim.map_size.x, origin.x + 25)):
+			var tile := Vector2i(x, y)
+			var d := absi(x - origin.x) + absi(y - origin.y)
+			if d >= best_d or String(sim.get_tile(tile)) != Defs.TILE_ROCK or not sim.is_revealed(tile):
+				continue
+			for off in [Vector2i.ZERO, Vector2i(-1, 0), Vector2i(0, -1), Vector2i(-1, -1), Vector2i(1, 0), Vector2i(0, 1)]:
+				if bool(sim.validate_placement(Defs.BUILDING_QUARRY, tile + off).get("success", false)):
+					best = tile
+					best_d = d
+					break
+	if best.x < 0:
+		_show_toast("Stone", "No placeable rock is revealed yet. Scout or extend roads toward grey rock.", "info", 4.0)
+		return
+	var world := world_view.tile_to_world(Vector2(best))
+	camera_rig.compose_view(world, 34.0)
+	if _objective_ping != null and is_instance_valid(_objective_ping):
+		_objective_ping.queue_free()
+	_objective_ping = Node3D.new()
+	_objective_ping.name = "ObjectivePing"
+	_objective_ping.add_child(world_view._ping_mesh(Color("#7ee0d4"), 0.9))
+	var label := Label3D.new()
+	label.text = "Quarry here"
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.no_depth_test = true
+	label.font_size = 48
+	label.outline_size = 10
+	label.position = Vector3.UP * 3.0
+	_objective_ping.add_child(label)
+	world_view.add_child(_objective_ping)
+	_objective_ping.global_position = world
+	get_tree().create_timer(8.0).timeout.connect(func(): if is_instance_valid(_objective_ping): _objective_ping.queue_free())
+	_show_toast("Quarry", "Rock deposit marked. Press 5 (Quarry) and place it on the marked rock, then link it with a Road.", "info", 5.0)
+
+
+var gate_no_edge_pan := false
 
 
 func _tick_edge_pan(delta: float) -> void:
+	if gate_no_edge_pan:
+		return
 	if camera_rig == null or not camera_rig.input_enabled or not play_has_begun:
 		return
 	if camera_rig.dragging or map_drag_active:
@@ -3386,32 +4334,122 @@ func _show_objective_detail(value: bool) -> void:
 	objective_detail_panel.visible = value
 	if not value:
 		return
-	objective_detail_panel.size = Vector2(286, 156)
-	var intentions: Array = simulation_host.simulation.get_settlement_intentions()
-	var sim_objectives: Array = simulation_host.simulation.get_objectives()
-	var lines: Array[String] = ["What matters next", ""]
+	objective_detail_panel.size = Vector2(320, 0)
+	var sim = simulation_host.simulation
+	var intentions: Array = sim.get_settlement_intentions()
+	var sim_objectives: Array = sim.get_objectives()
+	# R37: the active objective first (the same one the goal bar shows), its
+	# remaining requirements and Why; finished goals fold into History.
+	var lines: Array[String] = []
+	var history: Array[String] = []
+	var active_text := objective_button.text if objective_button != null else ""
+	lines.append("NOW: " + active_text)
+	var shown_rows := false
+	var nexts: Array[String] = []
 	for intention_value in intentions:
 		var intention: Dictionary = intention_value
-		lines.append(String(intention.get("title", "")))
-		for row in intention.get("criteria", []):
-			lines.append("%s %s" % ["[✓]" if bool(row.get("done", false)) else "[ ]", String(row.get("label", ""))])
-		lines.append("")
-	if intentions.is_empty():
-		if sim_objectives.is_empty():
-			var objective: Dictionary = simulation_host.simulation.get_macro_objective()
-			lines.append(String(objective.get("title", "FEED THE SETTLEMENT")))
-			lines.append(String(objective.get("summary", objective.get("detail", ""))))
-			lines.append("")
-			var steps: Array = objective.get("steps", [])
-			for step in steps:
-				lines.append("• %s" % String(step))
+		var rows: Array = intention.get("criteria", [])
+		if not shown_rows:
+			if String(intention.get("detail", "")) != "":
+				lines.append(String(intention.get("detail", "")))
+			for row in rows:
+				if not bool(row.get("done", false)):
+					lines.append("[ ] " + String(row.get("label", "")))
+			shown_rows = true
 		else:
-			for obj in sim_objectives:
-				var complete := bool(obj.get("complete", false))
-				var mark := "[✓]" if complete else "[ ]"
-				var text := String(obj.get("text", ""))
-				lines.append("%s %s" % [mark, text])
-	objective_detail_body.text = "\n".join(lines)
+			nexts.append(String(intention.get("title", "")))
+	if not shown_rows:
+		var wyrdfall: Dictionary = sim.get_wyrdfall_presentation() if sim.has_method("get_wyrdfall_presentation") else {}
+		var wobj: Dictionary = wyrdfall.get("objective", {})
+		var steps: Array = wobj.get("steps", [])
+		var first_open := true
+		for obj in sim_objectives:
+			if bool(obj.get("complete", false)):
+				continue
+			var text := String(obj.get("text", ""))
+			if first_open and text == active_text:
+				first_open = false
+				lines.append_array(_objective_requirement_rows(text))
+				continue
+			if first_open:
+				lines.append("[ ] " + text)
+				first_open = false
+			else:
+				nexts.append(text)
+		if first_open:
+			if String(wobj.get("detail", wobj.get("summary", ""))) != "":
+				lines.append(String(wobj.get("detail", wobj.get("summary", ""))))
+			for step in steps:
+				if String(step) != active_text:
+					lines.append("• " + String(step))
+	lines.append("")
+	var obj_text := active_text.to_lower()
+	var why_line := _objective_why(obj_text)
+	if why_line != "":
+		lines.append("Why: " + why_line)
+		lines.append("")
+	if "quarry" in obj_text or "stone" in obj_text:
+		var adv := _quarry_advice()
+		lines.append("Tip: " + (String(adv["text"]) if not adv.is_empty() else "Click the goal bar to jump to a rock deposit where a Quarry fits (it needs a road link)."))
+		lines.append("")
+	if not nexts.is_empty():
+		lines.append("Next: " + ", ".join(nexts.slice(0, 3)))
+	for intention_value in sim.intention_completed.keys():
+		history.append("✓ " + _intention_title(String(intention_value)))
+	for obj in sim_objectives:
+		if bool(obj.get("complete", false)):
+			history.append("✓ " + String(obj.get("text", "")))
+	objective_detail_body.text = "\n".join(lines).strip_edges()
+	objective_history_label.text = "\n".join(history)
+	_objective_history_count = history.size()
+	# Reset to the active section every time Goals opens.
+	objective_history_label.visible = false
+	_refresh_history_button()
+	if objective_goals_scroll != null:
+		objective_goals_scroll.scroll_vertical = 0
+		objective_goals_scroll.set_deferred("scroll_vertical", 0)
+
+
+func _scroll_goals_to_history() -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if objective_goals_scroll != null and objective_history_button != null:
+		objective_goals_scroll.scroll_vertical = int(objective_history_button.position.y)
+
+
+## R37: concrete remaining requirements for sentence-style objectives,
+## e.g. "Seal the Fissure with 12 Stabilized Wyrd and hold the ceremony".
+func _objective_requirement_rows(text: String) -> Array[String]:
+	var rows: Array[String] = []
+	var re := RegEx.new()
+	re.compile("(\\d+) (Stabilized Wyrd|Wyrd|Stone|Wood|Planks|Bread|Wheat)")
+	var m := re.search(text)
+	if m != null:
+		var need := int(m.get_string(1))
+		var res := m.get_string(2)
+		var key := res.to_lower().replace(" ", "_")
+		var have := int(simulation_host.simulation.central_inventory.get(key, 0))
+		rows.append("%s Have %d %s (stored: %d)" % ["[✓]" if have >= need else "[ ]", need, res, have])
+	if "ceremony" in text.to_lower():
+		rows.append("[ ] Then hold the ceremony at the Fissure")
+	return rows
+
+
+func _refresh_history_button() -> void:
+	if objective_history_button == null:
+		return
+	objective_history_button.visible = _objective_history_count > 0
+	objective_history_button.text = "History (%d) %s" % [_objective_history_count, "▾" if objective_history_label.visible else "▸"]
+
+
+func _intention_title(intention_id: String) -> String:
+	match intention_id:
+		"establish": return "A Settlement Begins"
+		"feed": return "Feed the Settlement"
+		"nightfall": return "Prepare for Nightfall"
+		"scout_frontier": return "Where Did They Come From?"
+		"stone_shortage": return "Stone Running Low"
+	return intention_id.capitalize()
 
 
 func _glance_at_seal() -> void:
@@ -3452,6 +4490,63 @@ func _tick_shard_glance() -> void:
 		return
 	var town := Vector2(simulation_host.simulation.town_hall_position) + Vector2(1.5, 1.5)
 	camera_rig.compose_view(world_view.tile_to_world(town), ProductionIsometricCameraRig3D.NORMAL_ZOOM)
+
+
+# Hotfix 3 put the realm summary (pop, workers, bread) in the clock capsule; at
+# 1280 px with the raid chip and 4x speed that pushed the top bar to 1428 px
+# (T-SNS-UI rule: fits 1280). Pop, idle workers and bread already have their
+# own top-bar chips, so when the row would overflow the clock falls back to
+# title + countdown and the summary moves into its tooltip.
+func _fit_clock_summary(summary_title: String, summary_phase: String) -> void:
+	clock_summary_tip = ""
+	var clock_cell: Control = phase_label.get_parent().get_parent().get_parent() as Control
+	var top_row: HBoxContainer = clock_cell.get_parent() as HBoxContainer if clock_cell != null else null
+	if top_row == null:
+		return
+	# Measure from fonts, not cached container minimums: those lag a frame
+	# behind the text set here and made the fallback flip-flop.
+	var stack_w: float = maxf(84.0, maxf(_label_text_width(time_label, summary_title), _label_text_width(phase_label, summary_phase)))
+	var clock_w: float = 16.0 + 24.0 + 8.0 + stack_w + 8.0
+	var need: float = clock_w
+	var visible_cells := 1
+	for child in top_row.get_children():
+		var cell := child as Control
+		if cell == null or cell == clock_cell or not cell.visible:
+			continue
+		visible_cells += 1
+		need += cell.get_combined_minimum_size().x
+	need += float(top_row.get_theme_constant("separation")) * float(visible_cells - 1)
+	var limit: float = get_viewport().get_visible_rect().size.x - 12.0
+	var stab_cell: Control = null
+	if resource_chips.has("stabilized_wyrd"):
+		stab_cell = (resource_chips["stabilized_wyrd"] as Label).get_parent().get_parent().get_parent() as Control
+	var stab_w := 0.0
+	if stab_cell != null:
+		stab_w = stab_cell.get_combined_minimum_size().x + 8.0
+		if not stab_cell.visible:
+			need += stab_w
+	if need <= limit:
+		if stab_cell != null:
+			stab_cell.visible = true
+		return
+	time_label.text = _clock_title()
+	phase_label.text = _phase_countdown_text()
+	clock_summary_tip = "\n%s\n%s" % [summary_title, summary_phase]
+	clock_cell.tooltip_text = "Day and time until the next phase" + clock_summary_tip
+	# Still too wide (raid chip + 4x at 1280): drop the Stabilized Wyrd chip
+	# while it reads 0; it returns as soon as there is any, or room.
+	var compact_w: float = 16.0 + 24.0 + 8.0 + maxf(84.0, maxf(_label_text_width(time_label, time_label.text), _label_text_width(phase_label, phase_label.text))) + 8.0
+	var compact_need: float = need - clock_w + compact_w
+	if stab_cell != null:
+		var stab_amount := int(simulation_host.simulation.central_inventory.get(Defs.RESOURCE_STABILIZED_WYRD, 0)) if simulation_host != null and simulation_host.simulation != null else 0
+		stab_cell.visible = not (compact_need > limit and stab_amount == 0)
+
+
+func _label_text_width(label: Label, text: String) -> float:
+	var font: Font = label.get_theme_font("font")
+	if font == null:
+		return 0.0
+	return font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, label.get_theme_font_size("font_size")).x
 
 
 func _tick_minimap(delta: float) -> void:
@@ -3539,13 +4634,24 @@ func _build_unavailable_reason(building_type: String) -> String:
 		return ""
 	if building_type == Defs.BUILDING_ROAD and simulation_host.simulation.workers_free() <= 0:
 		return "No free worker can build the road"
+	var short: Array[String] = []
 	for resource_type in Defs.building_cost(building_type):
-		if simulation_host.simulation.get_available_resource(resource_type) < int(Defs.building_cost(building_type)[resource_type]):
-			return "Needs %s" % Defs.formatted_cost(building_type)
+		var have := int(simulation_host.simulation.get_available_resource(resource_type))
+		var need := int(Defs.building_cost(building_type)[resource_type])
+		if have < need:
+			short.append("%d more %s" % [need - have, Defs.resource_name(resource_type)])
+	if not short.is_empty():
+		return "Need " + ", ".join(short)
 	return ""
 
 
+## Harness only (unit probe): show every plan, as late in a run.
+var debug_unlock_all := false
+
+
 func is_build_unlocked(building_type: String) -> bool:
+	if debug_unlock_all:
+		return true
 	if building_type in STARTER_BUILDINGS:
 		return true
 	var sim = simulation_host.simulation if simulation_host != null else null
@@ -3582,7 +4688,7 @@ func unlock_hint(building_type: String) -> String:
 		Defs.BUILDING_STOREHOUSE:
 			return "Unlocks after a House"
 		Defs.BUILDING_WATCHTOWER, Defs.BUILDING_WALL, Defs.BUILDING_BARRACKS:
-			return "Available from the second minute"
+			return "Unlocks at minute 2, with the first raid warning"
 		Defs.BUILDING_LUMEN_PILLAR, Defs.BUILDING_OUTPOST:
 			return "Unlocks after you raise a Watchtower"
 		Defs.BUILDING_WYRD_HARVESTER, Defs.BUILDING_WYRD_REFINER:
@@ -3599,16 +4705,25 @@ func visible_build_types() -> Array[String]:
 	return unlocked
 
 
+var _owned_types_frame := -1
+var _owned_types: Dictionary = {}
+
+
 func _player_has_building(building_type: String) -> bool:
 	var sim = simulation_host.simulation if simulation_host != null else null
 	if sim == null:
 		return false
-	for building_value in sim.buildings:
-		var building: Dictionary = building_value
-		var kind := String(building.get("planned_type", "")) if bool(building.get("construction", false)) else String(building.get("type", ""))
-		if kind == building_type:
-			return true
-	return false
+	# Beta perf: called ~4x per plan per UI tick (unlock checks); scan the
+	# building list once per frame instead of per call.
+	var frame := Engine.get_process_frames()
+	if frame != _owned_types_frame:
+		_owned_types_frame = frame
+		_owned_types.clear()
+		for building_value in sim.buildings:
+			var building: Dictionary = building_value
+			var kind := String(building.get("planned_type", "")) if bool(building.get("construction", false)) else String(building.get("type", ""))
+			_owned_types[kind] = true
+	return _owned_types.has(building_type)
 
 
 func _rival_banner_should_show() -> bool:
@@ -3654,33 +4769,100 @@ func first_screen_banner_count() -> int:
 
 func _toggle_minimap() -> void:
 	minimap_expanded = not minimap_expanded
+	# Beta: the minimap's _ready() runs after apply_console_layout() (the HUD
+	# is built before it enters the tree) and reset it to its 168 px window
+	# size, so the expanded map hung below the screen. Re-apply here.
+	if minimap != null:
+		minimap.apply_console_layout(MINIMAP_INNER, HudSkin.frame("slot", 6.0))
+	_layout_hud_console()
+	# The holder's new minimum size is applied at the end of the first pass;
+	# lay out again so the console height includes the expanded map.
+	_layout_hud_console()
+
+
+func _toggle_console_collapsed() -> void:
+	console_collapsed = not console_collapsed
+	if console_toggle_button != null:
+		console_toggle_button.text = "Show ▴" if console_collapsed else "Hide ▾"
+	if console_row_node != null:
+		for child in console_row_node.get_children():
+			if child != build_strip and child is Control:
+				(child as Control).visible = not console_collapsed
+	var grid_node := hud_root.find_child("BuildGrid", true, false) if hud_root != null else null
+	if grid_node is Control:
+		(grid_node as Control).visible = not console_collapsed
+	hud_console.reset_size()
 	_layout_hud_console()
 
 
 func _layout_hud_console() -> void:
 	if hud_console == null:
 		return
+	if console_collapsed:
+		var collapsed_h := hud_console.get_combined_minimum_size().y
+		hud_console.offset_bottom = 0.0
+		hud_console.offset_top = -collapsed_h
+		if build_panel != null:
+			var avail_c := get_viewport().get_visible_rect().size.y - collapsed_h - TOP_BAR_HEIGHT - 56.0
+			build_panel.offset_bottom = -collapsed_h - 8.0
+			build_panel.offset_top = -collapsed_h - 8.0 - clampf(_build_panel_height, 200.0, maxf(200.0, avail_c))
+		if placement_panel != null:
+			placement_panel.offset_top = -collapsed_h - 70.0
+			placement_panel.offset_bottom = -collapsed_h - 8.0
+		return
 	var unlocked := visible_build_types().size()
 	# Hotfix 5: at most two rows; the strip widens (up to 8 columns) so all
 	# 16 plans stay visible instead of a third/fourth row below the screen.
 	var columns := clampi(ceili(float(unlocked) / 2.0), BUILD_GRID_COLUMNS, 8)
+	# Beta: on wide windows (1280+ logical) every plan fits one row, so the
+	# console stays at its compact height instead of ~20 % of the screen.
+	if get_viewport().get_visible_rect().size.x >= 1200.0:
+		columns = clampi(unlocked, BUILD_GRID_COLUMNS, 16)
 	var grid := hud_root.find_child("BuildGrid", true, false) if hud_root != null else null
+	# R28: Helmer (1920x1200, UI 125 %) could not reach the unit panel: the
+	# build strip took its columns from the window width alone and pushed the
+	# selection panel off the right edge. Fit the columns to what is left
+	# after the minimap and a minimum-width selection panel.
+	if grid is GridContainer and (grid as GridContainer).get_child_count() > 0:
+		var g := grid as GridContainer
+		var cell_w := 0.0
+		for child in g.get_children():
+			if child is Control and (child as Control).visible:
+				cell_w = maxf(cell_w, (child as Control).get_combined_minimum_size().x)
+		cell_w += float(g.get_theme_constant("h_separation"))
+		var map_w := MINIMAP_INNER + 12.0 if minimap_expanded else MINIMAP_COLLAPSED + 8.0
+		var free_w := get_viewport().get_visible_rect().size.x - SELECTION_MIN_WIDTH - map_w - 72.0
+		if cell_w > 1.0:
+			columns = clampi(columns, 2, maxi(2, floori(free_w / cell_w)))
 	if grid is GridContainer:
 		(grid as GridContainer).columns = columns
-	var rows := 1 if unlocked <= columns else 2
+	var rows := ceili(float(unlocked) / float(maxi(1, columns)))
 	var height := CONSOLE_HEIGHT if rows == 1 else CONSOLE_HEIGHT_EXPANDED
 	if minimap_expanded:
 		height = maxf(height, MINIMAP_INNER + 40.0)
+		# Beta: the province map frame is taller than MINIMAP_INNER (title +
+		# frame), so it used to hang below the window; size from its real need.
+		height = maxf(height, MINIMAP_INNER + 48.0)
 	# The console's children need more than CONSOLE_HEIGHT; with only
 	# offset_top set, the panel grew downward past the window bottom and the
 	# build row was clipped at every resolution. Anchor to the bottom edge.
 	height = maxf(height, hud_console.get_combined_minimum_size().y)
+	# R36: the inspector text has no minimum height, so at 125%+ UI scale its
+	# last lines sat under the console frame. Grow the console to fit the
+	# text (capped; beyond the cap it scrolls).
+	if inspector_panel != null and inspector_panel.visible and inspector_label != null:
+		var text_need := float(inspector_label.get_content_height()) + INSPECTOR_CHROME
+		var row_need := 0.0
+		for child in inspector_label.get_parent().get_children():
+			if child != inspector_label and child is Control and (child as Control).visible:
+				row_need += (child as Control).get_combined_minimum_size().y + 4.0
+		height = maxf(height, minf(text_need + row_need, INSPECTOR_MAX_CONSOLE))
 	hud_console.offset_bottom = 0.0
 	hud_console.offset_top = -height
 	if build_panel != null:
 		# Hotfix 5: the plans popup sits above the live console height and
 		# never extends above the top bar on short (1024x768) windows.
-		var avail := get_viewport().get_visible_rect().size.y - height - TOP_BAR_HEIGHT - 24.0
+		var avail := get_viewport().get_visible_rect().size.y - height - TOP_BAR_HEIGHT - 56.0
 		build_panel.offset_bottom = -height - 8.0
 		build_panel.offset_top = -height - 8.0 - clampf(_build_panel_height, 200.0, maxf(200.0, avail))
 	if placement_panel != null:
@@ -3691,7 +4873,7 @@ func _layout_hud_console() -> void:
 		if minimap_expanded:
 			(map_holder as Control).custom_minimum_size = Vector2(MINIMAP_INNER + 12.0, MINIMAP_INNER + 28.0)
 		else:
-			(map_holder as Control).custom_minimum_size = Vector2(MINIMAP_COLLAPSED + 8.0, MINIMAP_COLLAPSED + 16.0)
+			(map_holder as Control).custom_minimum_size = Vector2(MAP_TOGGLE_WIDTH + 8.0, MINIMAP_COLLAPSED + 16.0)
 
 
 func _format_inventory(inventory_value) -> String:
@@ -3867,6 +5049,25 @@ func _create_start_menu(root: Control) -> void:
 	)
 	quality_row.add_child(quality_select)
 	settings_box.add_child(quality_row)
+	# Beta: UI size (Windows 125-150 % displays, small laptop screens).
+	var ui_row := HBoxContainer.new()
+	var ui_label := Label.new()
+	ui_label.text = "Interface size"
+	ui_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	Identity.apply_label(ui_label, "caption")
+	ui_row.add_child(ui_label)
+	ui_scale_select = OptionButton.new()
+	ui_scale_select.name = "UiScale"
+	for pct in UI_SCALES:
+		ui_scale_select.add_item("%d %%" % int(round(float(pct) * 100.0)))
+		ui_scale_select.set_item_metadata(ui_scale_select.item_count - 1, float(pct))
+	ui_scale_select.select(1)
+	ui_scale_select.item_selected.connect(func(index: int) -> void:
+		_apply_ui_scale(float(ui_scale_select.get_item_metadata(index)))
+		_save_display_settings()
+	)
+	ui_row.add_child(ui_scale_select)
+	settings_box.add_child(ui_row)
 	fullscreen_check = CheckBox.new()
 	fullscreen_check.text = "Fullscreen"
 	fullscreen_check.button_pressed = DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN
@@ -4317,9 +5518,9 @@ func _apply_menu_quality() -> void:
 func apply_quality_profile(profile_name: String) -> void:
 	quality_profile = QualityProfile.get_profile(profile_name)
 	var low := String(quality_profile.get("name", "")) == "scalable_low"
-	get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR if low else Viewport.SCALING_3D_MODE_BILINEAR
-	get_viewport().scaling_3d_scale = 0.75 if low else 1.0
-	get_viewport().msaa_3d = Viewport.MSAA_2X if bool(quality_profile.get("shadows", true)) else Viewport.MSAA_DISABLED
+	get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
+	get_viewport().scaling_3d_scale = float(quality_profile.get("render_scale", 1.0)) if low else 1.0
+	get_viewport().msaa_3d = Viewport.MSAA_2X if bool(quality_profile.get("msaa", true)) else Viewport.MSAA_DISABLED
 	if sun_light != null:
 		sun_light.shadow_enabled = bool(quality_profile.get("shadows", true))
 		sun_light.light_angular_distance = 0.0
@@ -4361,6 +5562,13 @@ func _hide_start_menu() -> void:
 		camera_rig.input_enabled = true
 	_sync_speed_controls()
 	play_has_begun = true
+	# Bug 2 fix: Restore revealed_tiles snapshot after title composition
+	if not _title_revealed_snapshot.is_empty() and simulation_host.simulation != null:
+		simulation_host.simulation.revealed_tiles = _title_revealed_snapshot.duplicate()
+		_title_revealed_snapshot = {}
+		if world_view != null:
+			world_view.last_revealed_count = -1
+		_sync_presentation()
 
 
 func _resume_from_menu() -> void:
@@ -4372,11 +5580,15 @@ func _resume_from_menu() -> void:
 		world_view.set_presentation_paused(false)
 
 
+var _title_revealed_snapshot: Dictionary = {}
+
 func _author_title_composition() -> void:
 	if simulation_host.simulation == null or world_view == null or camera_rig == null:
 		return
 	var simulation = simulation_host.simulation
 	if not play_has_begun:
+		# Bug 2 fix: Snapshot revealed_tiles before title composition, restore when play starts
+		_title_revealed_snapshot = simulation.revealed_tiles.duplicate()
 		var town_tile: Vector2i = simulation.town_hall_position
 		var shard_tile: Vector2i = simulation.shard_position
 		simulation._reveal_radius(town_tile, 6)
@@ -4459,9 +5671,12 @@ func _apply_quality_features() -> void:
 	var want_ssao := bool(quality_profile.get("ssao", quality_profile.get("shadows", true)))
 	# The Director: night drops SSAO. Very-Low still left lavapipe 1 ms
 	# over the +15% GFX-1 guard; windows/moon carry night form instead.
-	environment_resource.ssao_enabled = want_ssao and not night
+	# Beta r16: toggling SSAO at dusk/dawn reallocated its buffers and
+	# cost a 230-270 ms frame on Shard at every phase change. Keep it on
+	# and fade it instead; night uses a weak intensity.
+	environment_resource.ssao_enabled = want_ssao
 	environment_resource.ssao_radius = 0.55
-	environment_resource.ssao_intensity = 1.10
+	environment_resource.ssao_intensity = 0.35 if night else 1.10
 	environment_resource.ssao_power = 1.18
 	environment_resource.ssao_detail = 0.36
 	environment_resource.ssao_sharpness = 0.98
@@ -4489,6 +5704,8 @@ func _apply_sun_shadow_settings(light: DirectionalLight3D) -> void:
 	var splits := int(quality_profile.get("shadow_splits", 2))
 	if splits >= 4:
 		light.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+	elif splits <= 1:
+		light.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
 	else:
 		light.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 	var high := String(quality_profile.get("name", "recommended")) == "high"
@@ -4770,7 +5987,36 @@ func _add_idle_workers_button(host: Control) -> Button:
 
 
 func _on_idle_workers_pressed() -> void:
-	# Idle settlers only get work from a new workplace: open the BUILD plans.
+	# Beta: jump to the building that is blocking work (no road, waiting for
+	# materials, unstaffed) and say how to fix it; else open the BUILD plans.
+	var sim = simulation_host.simulation if simulation_host != null else null
+	if sim != null and camera_rig != null and world_view != null:
+		for building_value in sim.buildings:
+			var b: Dictionary = building_value
+			var kind := String(b.get("planned_type", "")) if bool(b.get("construction", false)) else String(b.get("type", ""))
+			if kind == Defs.BUILDING_ROAD or kind == Defs.BUILDING_TOWN_HALL:
+				continue
+			var fix := ""
+			if not bool(b.get("connected", true)):
+				fix = "No road access. Draw a Road (1) from this %s to your road network." % Defs.building_name(kind)
+			elif bool(b.get("construction", false)) and not Dictionary(b.get("materials_needed", {})).is_empty():
+				var need: Array[String] = []
+				var needed: Dictionary = b.get("materials_needed", {})
+				var got: Dictionary = b.get("materials_delivered", {})
+				for r in needed:
+					var left := int(needed[r]) - int(got.get(r, 0))
+					if left > 0:
+						need.append("%d %s" % [left, Defs.resource_name(String(r))])
+				if not need.is_empty() and sim.has_method("get_available_resource"):
+					for r in needed:
+						if int(sim.get_available_resource(String(r))) <= 0 and int(needed[r]) > int(got.get(r, 0)):
+							fix = "This %s is waiting for %s. Produce more %s first." % [Defs.building_name(kind), ", ".join(need), Defs.resource_name(String(r))]
+							break
+			if fix != "":
+				select_building(int(b.get("id", 0)))
+				camera_rig.compose_view(world_view.focus_for_building(int(b.get("id", 0))), 30.0)
+				_show_toast("Blocked", fix, "warning", 5.0)
+				return
 	_set_build_palette_visible(true)
 
 
@@ -4925,6 +6171,8 @@ func _save_display_settings() -> void:
 	var settings := ConfigFile.new()
 	settings.set_value("display", "fullscreen", fullscreen_check.button_pressed)
 	settings.set_value("display", "quality", String(quality_select.get_selected_metadata()))
+	if ui_scale_select != null:
+		settings.set_value("display", "ui_scale", float(ui_scale_select.get_selected_metadata()))
 	settings.save(DISPLAY_SETTINGS_PATH)
 
 
@@ -4954,7 +6202,12 @@ func _select_quality_item(wanted: String) -> void:
 
 func _restore_display_settings() -> void:
 	var settings := ConfigFile.new()
-	if settings.load(DISPLAY_SETTINGS_PATH) != OK:
+	# Harness runs (gate / screenshot flags) honour --quality over a saved setting.
+	var harness := false
+	for a in OS.get_cmdline_user_args():
+		if String(a).begins_with("--gate-") or String(a).begins_with("--greybox-shots") or String(a).begins_with("--gfx-"):
+			harness = true
+	if (harness and _has_quality_arg()) or settings.load(DISPLAY_SETTINGS_PATH) != OK:
 		_select_quality_item(String(quality_profile.get("name", "recommended")))
 		_apply_menu_quality()
 		return
@@ -4966,6 +6219,12 @@ func _restore_display_settings() -> void:
 			break
 	quality_select.select(picked)
 	_apply_menu_quality()
+	var ui_scale := float(settings.get_value("display", "ui_scale", 1.0))
+	if ui_scale_select != null:
+		for i in ui_scale_select.item_count:
+			if is_equal_approx(float(ui_scale_select.get_item_metadata(i)), ui_scale):
+				ui_scale_select.select(i)
+	_apply_ui_scale(ui_scale)
 	fullscreen_check.set_pressed_no_signal(bool(settings.get_value("display", "fullscreen", false)))
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen_check.button_pressed else DisplayServer.WINDOW_MODE_WINDOWED)
 
@@ -6224,3 +7483,28 @@ func _evidence_shot(shot_name: String, description: String) -> void:
 
 func _evidence_log(line: String) -> void:
 	print("[%s] EVIDENCE_CAPTURE %s" % [Time.get_datetime_string_from_system(), line])
+
+
+## Beta: VSync defaults to mailbox (no tearing, no FIFO stall to 30 FPS when a
+## frame takes 17-20 ms on a 60 Hz iGPU laptop). Falls back to the driver's
+## FIFO if mailbox is unsupported. `--vsync=fifo|off|mailbox` overrides.
+func _apply_vsync_mode() -> void:
+	# Shard (AMD iGPU, fullscreen) has no mailbox; adaptive (FIFO_RELAXED)
+	# only tears when a frame misses the 16.7 ms refresh instead of waiting
+	# a whole extra refresh, which is what pulled late-game seconds to ~33 FPS.
+	var mode := DisplayServer.VSYNC_ADAPTIVE
+	for a in OS.get_cmdline_user_args():
+		var s := String(a)
+		if s == "--vsync=mailbox":
+			mode = DisplayServer.VSYNC_MAILBOX
+		elif s == "--vsync=fifo":
+			mode = DisplayServer.VSYNC_ENABLED
+		elif s == "--vsync=off":
+			mode = DisplayServer.VSYNC_DISABLED
+	DisplayServer.window_set_vsync_mode(mode)
+	print("VSYNC requested=%d actual=%d" % [mode, DisplayServer.window_get_vsync_mode()])
+
+
+func _apply_ui_scale(factor: float) -> void:
+	get_window().content_scale_factor = clampf(factor, 0.75, 1.5)
+	_layout_hud_console()

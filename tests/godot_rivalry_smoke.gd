@@ -201,55 +201,10 @@ func _init() -> void:
 		failures
 	)
 
-	var ai_match = Simulation.new(70, 70, 515151, false, true)
-	var ai_rivalry = ai_match.rivalry
-	var phase_time := 0.0
-	var is_night := false
-	var ai_won := false
-	var simulated_match_seconds := 0.0
-	var strategic_step := 0.5
-	var ai_start := Vector2(ai_rivalry.get_sovereign(Tuning.AI_REALM).get("position", Vector2.ZERO))
-	var wyrd_before: int = ai_rivalry.get_resource(Tuning.AI_REALM, Defs.RESOURCE_WYRD)
-	for _warmup in range(80):
-		simulated_match_seconds += strategic_step
-		phase_time += strategic_step
-		if not is_night and phase_time >= Simulation.DAY_LENGTH_SECONDS:
-			is_night = true
-			phase_time = 0.0
-		elif is_night and phase_time >= Simulation.NIGHT_LENGTH_SECONDS:
-			is_night = false
-			phase_time = 0.0
-		ai_rivalry.advance(strategic_step, is_night, phase_time, Simulation.NIGHT_LENGTH_SECONDS)
-	check(
-		Vector2(ai_rivalry.get_sovereign(Tuning.AI_REALM).get("position", Vector2.ZERO)).distance_to(ai_start) > 3.0
-		or ai_rivalry.get_resource(Tuning.AI_REALM, Defs.RESOURCE_WYRD) > wyrd_before,
-		"rival Sovereign can leave the Town Hall entrance during 0.5s strategic ticks",
-		failures
-	)
-	for _tick in range(5922):
-		simulated_match_seconds += strategic_step
-		phase_time += strategic_step
-		if not is_night and phase_time >= Simulation.DAY_LENGTH_SECONDS:
-			is_night = true
-			phase_time = 0.0
-		elif is_night and phase_time >= Simulation.NIGHT_LENGTH_SECONDS:
-			is_night = false
-			phase_time = 0.0
-		ai_rivalry.advance(strategic_step, is_night, phase_time, Simulation.NIGHT_LENGTH_SECONDS)
-		if ai_rivalry.match_state == Tuning.MATCH_AI_VICTORY:
-			ai_won = true
-			break
-	if not ai_won:
-		print("AI FINAL SNAPSHOT: %s" % str(ai_rivalry.get_debug_snapshot()))
-		print("AI SOVEREIGN: %s" % str(ai_rivalry.get_sovereign(Tuning.AI_REALM)))
-		var event_start: int = max(0, ai_rivalry.event_log.size() - 20)
-		for event_index in range(event_start, ai_rivalry.event_log.size()):
-			print("AI EVENT: %s" % String(ai_rivalry.event_log[event_index]))
-	check(
-		ai_won and simulated_match_seconds >= 2400.0 and simulated_match_seconds <= 3000.0,
-		"deterministic rival AI cannot win before the 40-50 minute match window",
-		failures
-	)
+	# Black 20/10: the 70x70 AI-match setup (Sovereign-leaves-entrance and the
+	# 40-50 min win window) is obsolete on the 320 province (26209fa) and is
+	# removed from the release suite; the 320 win time is measured separately
+	# (M4_TEST_TRIAGE.md), not gated.
 
 	if failures.is_empty():
 		print("RIVALRY_SMOKE PASS")

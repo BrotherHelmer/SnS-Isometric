@@ -27,7 +27,7 @@ func _init() -> void:
 	carrier.carried_amount = 0
 	var carriers: int = sim._carrier_count()
 	for index in 3:
-		var tile: Vector2i = sim._town_hall_entrance_tile() + Vector2i(4 + index, 3)
+		var tile: Vector2i = _near_entrance(sim, Vector2i(4 + index, 3))
 		sim._prepare_test_tile(tile, Defs.TILE_TREE)
 		check(sim.request_clear(tile).get("success", false), "request temporary clearing worker")
 		for tick in 1500:
@@ -36,7 +36,7 @@ func _init() -> void:
 				break
 		check(sim._clearer_count() == 0, "temporary clearer finishes and retires")
 	check(sim._carrier_count() == carriers, "clearing does not accumulate zero-capacity carriers")
-	var tile: Vector2i = sim._town_hall_entrance_tile() + Vector2i(7, 3)
+	var tile: Vector2i = _near_entrance(sim, Vector2i(7, 3))
 	sim._prepare_test_tile(tile, Defs.TILE_TREE)
 	sim.request_clear(tile)
 	var directory := "user://logistics_safety_%d" % Time.get_ticks_usec()
@@ -53,7 +53,7 @@ func _init() -> void:
 		if loaded._clearer_count() == 0:
 			break
 	check(loaded._clearer_count() == 0, "loaded clearer continues to completion")
-	var race_tile: Vector2i = loaded._town_hall_entrance_tile() + Vector2i(6, 3)
+	var race_tile: Vector2i = _near_entrance(loaded, Vector2i(6, 3))
 	loaded._prepare_test_tile(race_tile, Defs.TILE_TREE)
 	check(loaded.request_clear(race_tile).success, "start clearing race with lumber production")
 	loaded._set_tile(race_tile, Defs.TILE_GRASS)
@@ -77,6 +77,12 @@ func _init() -> void:
 	check(loaded.get_tile(race_tile) == Defs.TILE_TREE and loaded._clearer_count() == 0, "resumed cargo is delivered without harvesting again")
 	print("RELEASE_LOGISTICS_SAFETY %s" % ("PASS" if failures.is_empty() else "FAIL"))
 	quit(0 if failures.is_empty() else 1)
+
+## Small test worlds can found near a map edge; keep offsets inside.
+func _near_entrance(sim_value, offset: Vector2i) -> Vector2i:
+	var entrance: Vector2i = sim_value._town_hall_entrance_tile()
+	return Vector2i(clampi(entrance.x + offset.x, 2, sim_value.map_size.x - 3), clampi(entrance.y + offset.y, 2, sim_value.map_size.y - 3))
+
 
 func check(ok: bool, message: String) -> void:
 	print("%s %s" % ["PASS" if ok else "FAIL", message])

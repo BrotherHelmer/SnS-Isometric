@@ -62,7 +62,21 @@ func _run() -> void:
 	game.world_view._sync_nature(true)
 	var stump_count := _count_nature_kind(game, "STUMP")
 	var trees_reduced := _deposit_total(simulation.tree_deposits) < _deposit_total(trees_before)
-	_check(failures, trees_reduced and stump_count > 0, "6. harvesting opens a visible clearing with deterministic stump markers")
+	# Stumps beside the camp/roads/founding yard are hidden by design
+	# (_nature_suppressed_near_activity, both render paths) and fogged tiles stay
+	# hidden, so the marker count must equal the visible harvested tiles; then a
+	# harvested tile in open, revealed meadow must add exactly one marker.
+	var visible_stumps := _visible_stump_tiles(game, simulation)
+	var probe := _open_revealed_grass(game, simulation)
+	var probe_ok := false
+	if probe.x >= 0:
+		simulation.tree_regrowth[simulation._tile_key(probe)] = -1.0
+		game.world_view._sync_nature(true)
+		probe_ok = _count_nature_kind(game, "STUMP") == stump_count + 1
+		simulation.tree_regrowth.erase(simulation._tile_key(probe))
+		game.world_view._sync_nature(true)
+	print("P32_PLAY 06 visible_stump_tiles=%d probe=%s probe_ok=%s" % [visible_stumps, str(probe), str(probe_ok)])
+	_check(failures, trees_reduced and stump_count == visible_stumps and probe_ok, "6. harvesting opens a visible clearing with deterministic stump markers")
 	print("P32_PLAY 06 stumps=%d trees_reduced=%s" % [stump_count, trees_reduced])
 
 	var house_id := _build_real(failures, fixture, simulation, Defs.BUILDING_HOUSE, simulation.town_hall_position + Vector2i(5, 5))
@@ -232,6 +246,16 @@ func _night_guard_visible(simulation, game) -> bool:
 
 func _count_nature_kind(game, kind: String) -> int:
 	var count := 0
+	var view = game.world_view
+	if kind == "STUMP" and view.map_size.x > 80 and view.chunk_root != null:
+		# Chunked province: stumps are near-chunk MultiMesh instances of the
+		# wood cargo mesh (_build_chunk_nature), not nature_views entries.
+		var stump_name := "Composed_%s" % String(view.Catalog.CARGO["wood"]).get_file().get_basename()
+		for node in view.chunk_root.find_children(stump_name, "MultiMeshInstance3D", true, false):
+			var instance := node as MultiMeshInstance3D
+			if instance.multimesh != null:
+				count += instance.multimesh.instance_count
+		return count
 	for key in game.world_view.nature_views.keys():
 		if String(game.world_view.nature_views[key]) == kind:
 			count += 1
@@ -340,3 +364,33 @@ func _finish(failures: Array[String]) -> void:
 		for failure in failures:
 			print("  - %s" % failure)
 		quit(1)
+
+
+func _visible_stump_tiles(game, simulation) -> int:
+	var count := 0
+	for key in simulation.tree_regrowth.keys():
+		if float(simulation.tree_regrowth[key]) > 0.0:
+			continue
+		var parts: PackedStringArray = String(key).split(",")
+		var tile := Vector2i(int(parts[0]), int(parts[1]))
+		if String(simulation.get_tile(tile)) != Defs.TILE_GRASS or not simulation.is_revealed(tile):
+			continue
+		if game.world_view._nature_suppressed_near_activity(tile):
+			continue
+		count += 1
+	return count
+
+
+func _open_revealed_grass(game, simulation) -> Vector2i:
+	var hall: Vector2i = simulation.town_hall_position
+	for radius in range(10, 30):
+		for offset in [Vector2i(radius, 0), Vector2i(-radius, 0), Vector2i(0, radius), Vector2i(0, -radius), Vector2i(radius, radius), Vector2i(-radius, -radius)]:
+			var tile: Vector2i = hall + offset
+			if not simulation.is_inside_map(tile) or not simulation.is_revealed(tile):
+				continue
+			if String(simulation.get_tile(tile)) != Defs.TILE_GRASS or simulation.tree_regrowth.has(simulation._tile_key(tile)):
+				continue
+			if game.world_view._nature_suppressed_near_activity(tile):
+				continue
+			return tile
+	return Vector2i(-1, -1)

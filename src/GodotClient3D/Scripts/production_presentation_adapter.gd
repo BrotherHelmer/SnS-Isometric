@@ -46,7 +46,7 @@ func capture_frame(simulation, render_lead_seconds := 0.0) -> Dictionary:
 	var settlement_has_barracks_cache := _settlement_has_barracks(simulation)
 	var building_snapshots: Array[Dictionary] = []
 	var roads_by_tile: Dictionary = {}
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		var descriptor := building_descriptor(building, simulation, settlement_has_barracks_cache)
 		if bool(descriptor.get("is_road", false)):
@@ -60,10 +60,10 @@ func capture_frame(simulation, render_lead_seconds := 0.0) -> Dictionary:
 	for road_key in roads_by_tile:
 		road_snapshots.append(roads_by_tile[road_key])
 	var worker_snapshots: Array[Dictionary] = []
-	for worker_value in simulation.get_workers():
+	for worker_value in simulation.workers:
 		worker_snapshots.append(worker_descriptor(worker_value, simulation, render_lead_seconds))
 	var combatant_snapshots: Array[Dictionary] = []
-	for enemy_value in simulation.get_enemies():
+	for enemy_value in simulation.enemies:
 		combatant_snapshots.append(enemy_descriptor(enemy_value, simulation, render_lead_seconds))
 	var rivalry_structure_snapshots: Array[Dictionary] = []
 	var rival_road_snapshots: Array[Dictionary] = []
@@ -233,7 +233,7 @@ func worker_descriptor(worker: Dictionary, simulation, render_lead_seconds := 0.
 		if bool(platform_presentation.get("platform", false)):
 			worker_type = "ranger"
 			elevation = float(platform_presentation.get("elevation", 4.85))
-	var presented_worker := worker.duplicate(true)
+	var presented_worker := worker.duplicate()
 	presented_worker["type"] = worker_type
 	var semantic := semantic_worker_state(presented_worker)
 	if worker_type == "ranger" and float(worker.get("attack_flash", 0.0)) > 0.0:
@@ -638,7 +638,7 @@ func _footprint_from(building: Dictionary, type_name: String) -> Vector2i:
 
 
 func _settlement_has_barracks(simulation) -> bool:
-	for building_value in simulation.get_buildings():
+	for building_value in simulation.buildings:
 		var building: Dictionary = building_value
 		var building_type := String(building.get("type", ""))
 		if building_type == Defs.BUILDING_BARRACKS:

@@ -46,7 +46,9 @@ func _run() -> void:
 	# 2) Clock countdown instead of a season.
 	var countdown: String = game.phase_label.text
 	var clock_re := RegEx.new()
-	clock_re.compile("^(Night|Dawn) in \\d+:\\d\\d$")
+	# 4ee32b3 (Hotfix 3) appends the realm summary to the countdown line when
+	# the bar has room; the countdown still leads the line.
+	clock_re.compile("^(Night|Dawn) in \\d+:\\d\\d(  ·  .+)?$")
 	print("LOOK clock='%s' / '%s'" % [game.time_label.text, countdown])
 	_check(clock_re.search(countdown) != null and countdown.begins_with("Dawn"), "clock shows 'Dawn in m:ss' at night")
 	sim.is_night = false
@@ -68,7 +70,7 @@ func _run() -> void:
 	_check(banner.visible and game.pressure_meter.visible, "raid shows the banner and the pressure chip")
 	_check(banner_rect.end.x >= 1280.0 - 12.0 and banner_rect.position.x > 640.0 and banner_rect.position.y < 150.0, "banner sits top-right, not centred")
 	var eta_re := RegEx.new()
-	eta_re.compile("^2 raiders  ·  from the [a-z-]+  ·  ETA ~\\d+:\\d\\d$")
+	eta_re.compile("^2 raiders from the [a-z-]+  ·  approaching .+  ·  arrives in \\d+:\\d\\d$")
 	_check(eta_re.search(eta_text) != null, "banner line has count, direction and numeric ETA")
 	_check(int(game.raid_status().get("eta_seconds", 0)) > 0, "ETA is a positive number of seconds")
 	_check(String(game.toast_title.text) == "RAID", "banner title is RAID")
@@ -82,7 +84,7 @@ func _run() -> void:
 	game._update_ui()
 	sim._spawn_enemy(town + Vector2i(-20, 0), 30, 1, 0.0, 0, sim.ENEMY_RAIDER)
 	game._update_ui()
-	_check(banner.visible and String(game.raid_eta_label.text).begins_with("1 raider  ·"), "a new raid re-opens the banner")
+	_check(banner.visible and String(game.raid_eta_label.text).begins_with("1 raider from the "), "a new raid re-opens the banner")
 	sim.enemies.clear()
 	sim.is_night = false
 	game._update_ui()
@@ -101,7 +103,9 @@ func _run() -> void:
 			print("LOOK thumb %s rect=%s slot=%s" % [thumb.name, str(thumb.get_global_rect()), str((btn as Control).get_global_rect())])
 	print("LOOK thumbs missing=%s strip=%d/%d" % [str(missing), strip_thumbs, game.build_strip_buttons.size()])
 	_check(missing.is_empty(), "all 14 plans + Town Hall + Castle have a thumbnail")
-	_check(strip_thumbs == game.build_strip_buttons.size() and strip_thumbs == 14, "every 7x2 grid slot shows its thumbnail, sized to fit inside the slot")
+	# The strip shows every BUILD_PALETTE entry (Wyrd Refiner 199fecd, Clear tool
+	# fbb4fdb) in the 4-column grid (1e87b74), no longer a fixed 7x2 of 14.
+	_check(strip_thumbs == game.build_strip_buttons.size() and strip_thumbs == game.BUILD_PALETTE.size(), "every build-grid slot shows its thumbnail, sized to fit inside the slot")
 	var hall: Dictionary = {}
 	for building_value in sim.buildings:
 		if String(Dictionary(building_value).get("type", "")) == Defs.BUILDING_TOWN_HALL:

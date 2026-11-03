@@ -29,7 +29,7 @@ func check(ok: bool, label: String, failures: Array[String]) -> void:
 
 
 func _test_auto_spur(failures: Array[String]) -> void:
-	var sim: Simulation = Simulation.new(70, 70, 260821, false, true)
+	var sim: Simulation = Simulation.new(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 260821, false, true)
 	sim.central_inventory[Defs.RESOURCE_WOOD] = 40
 	sim.central_inventory[Defs.RESOURCE_PLANKS] = 20
 	sim.central_inventory[Defs.RESOURCE_STONE] = 20
@@ -84,7 +84,7 @@ func _find_spur_house_site(sim: Simulation) -> Vector2i:
 
 
 func _test_night_two_damages_yard(failures: Array[String]) -> void:
-	var sim: Simulation = Simulation.new(70, 70, 260821, false, true)
+	var sim: Simulation = Simulation.new(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 260821, false, true)
 	var town: Dictionary = sim._find_town_hall()
 	var hp_before := int(town["hp"])
 	sim.day_count = 2
@@ -92,6 +92,8 @@ func _test_night_two_damages_yard(failures: Array[String]) -> void:
 	sim.phase_time = 0.0
 	sim.protection_powered = true
 	sim.central_inventory[Defs.RESOURCE_WYRD] = 3
+	# ca9967c (demo balance): five hostiles once a Barracks stands.
+	sim._add_completed_building(Defs.BUILDING_BARRACKS, sim.town_hall_position + Vector2i(8, 0))
 	sim._spawn_wave()
 	check(sim.enemies.size() == 5, "Night 2 still spawns five hostiles", failures)
 	var closest := 999
@@ -119,7 +121,7 @@ func _test_night_one_teaching(failures: Array[String]) -> void:
 	var plan := Wyrdfall.wave_plan(0.0, 1, true, false)
 	check(int(plan.get("size", 0)) == 2, "Night 1 remains a teaching wave of 2", failures)
 	check(int(plan.get("damage", 0)) == Simulation.RaidTuning.NIGHT1_DAMAGE, "Night 1 raider damage stays the tutorial constant", failures)
-	var sim: Simulation = Simulation.new(70, 70, 260821, false, true)
+	var sim: Simulation = Simulation.new(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 260821, false, true)
 	sim.day_count = 1
 	sim._start_night()
 	check(sim.enemies.size() == 2, "Night 1 actually spawns two raiders", failures)
@@ -156,7 +158,7 @@ func _test_objective_verbs(failures: Array[String]) -> void:
 
 
 func _test_wall_chain(failures: Array[String]) -> void:
-	var sim: Simulation = Simulation.new(70, 70, 260821, false, true)
+	var sim: Simulation = Simulation.new(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 260821, false, true)
 	sim.central_inventory[Defs.RESOURCE_STONE] = 40
 	sim.central_inventory[Defs.RESOURCE_PLANKS] = 20
 	var tower_tile := sim.town_hall_position + Vector2i(6, 8)

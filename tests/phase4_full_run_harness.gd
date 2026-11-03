@@ -25,7 +25,7 @@ func _init() -> void:
 func _run_seed(seed_value: int, failures: Array[String]) -> void:
 	var simulation = Simulation.new(70, 70, seed_value, false, true)
 	check(failures, simulation.rivalry != null, "seed %d founds a live realm" % seed_value)
-	check(failures, _count_tile(simulation, Defs.TILE_SHARD) == 1, "seed %d has one Shard" % seed_value)
+	# Black 19/10: the 70x70 one-Shard fixture is obsolete (320 province, 26209fa); removed.
 	var wood_before := int(simulation.central_inventory.get(Defs.RESOURCE_WOOD, 0))
 	var road := simulation._town_hall_entrance_tile() + Vector2i.LEFT
 	simulation._prepare_test_tile(road, Defs.TILE_GRASS)
@@ -47,8 +47,10 @@ func _run_seed(seed_value: int, failures: Array[String]) -> void:
 	simulation.phase_time = 0.0
 	simulation.cumulative_wyrd_extracted = 20
 	simulation.day_count = 4
+	# Black 19/10: growth is capped (ca9967c) - larger only once a Barracks stands, max 5.
+	simulation._add_completed_building(Defs.BUILDING_BARRACKS, simulation.town_hall_position + Vector2i(8, 0))
 	simulation._spawn_wave()
-	check(failures, simulation.enemies.size() > first_night_size, "seed %d later pressure produces a larger raid" % seed_value)
+	check(failures, simulation.enemies.size() > first_night_size and simulation.enemies.size() <= 5, "seed %d later pressure produces a larger (capped) raid" % seed_value)
 
 	_configure_ready_claim(simulation, simulation.rivalry, Tuning.PLAYER_REALM)
 	check(failures, bool(simulation.rivalry.claim_requirements(Tuning.PLAYER_REALM).get("ready", false)), "seed %d can satisfy Binding requirements" % seed_value)

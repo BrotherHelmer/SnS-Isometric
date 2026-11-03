@@ -58,6 +58,8 @@ const ENEMY_ATTACK_STRIKE_REMAINING := 0.28
 const GUARD_ATTACK_ANIMATION_SECONDS := 0.48
 const GUARD_ATTACK_STRIKE_REMAINING := 0.24
 const GUARD_DAMAGE := 4
+## R28 combat: patrol soldiers react to raiders inside this radius (tiles).
+const GUARD_DEFENCE_RADIUS := 10
 const TOWN_HALL_OVERFLOW := 20
 const AUTO_SPUR_MAX_STEPS := 2
 const NOTICE_LOG_LIMIT := 80
@@ -314,6 +316,7 @@ func start_new_run(width: int = MAP_WIDTH, height: int = MAP_HEIGHT, seed_value:
 	path_grid = null
 	hostile_path_grid = null
 	path_grid_dirty = true
+	_terrain_solid_for = -1
 	log_entries.clear()
 	run_journal.clear()
 	_pending_diagnostic_lines.clear()
@@ -701,7 +704,9 @@ func advance_tick() -> void:
 		return
 	var stamp := _profile_stamp()
 	_update_time(TICK_SECONDS)
+	var _pfu_demo_beats := _profile_stamp()
 	_update_demo_beats()
+	_profile_finish("demo_beats", _pfu_demo_beats)
 	_profile_finish("time_day_night", stamp)
 	if rivalry != null:
 		stamp = _profile_stamp()
@@ -745,8 +750,12 @@ func advance_tick() -> void:
 	_profile_finish("production_worker_updates", stamp)
 	stamp = _profile_stamp()
 	_update_production(TICK_SECONDS)
+	var _pfu_economy_stalls := _profile_stamp()
 	_refresh_economy_stalls()
+	_profile_finish("economy_stalls", _pfu_economy_stalls)
+	var _pfu_routine_notices := _profile_stamp()
 	_emit_routine_notices()
+	_profile_finish("routine_notices", _pfu_routine_notices)
 	_profile_finish("building_production_updates", stamp)
 	stamp = _profile_stamp()
 	_update_barracks(TICK_SECONDS)
@@ -756,14 +765,18 @@ func advance_tick() -> void:
 	_profile_finish("carrier_updates", stamp)
 	stamp = _profile_stamp()
 	_process_laborers(TICK_SECONDS)
+	var _pfu_idle_settlers := _profile_stamp()
 	_account_idle_settlers(TICK_SECONDS)
+	_profile_finish("idle_settlers", _pfu_idle_settlers)
 	_profile_finish("laborer_updates", stamp)
 	stamp = _profile_stamp()
 	_update_unit_vision()
 	_profile_finish("unit_vision", stamp)
 	_profile_finish("worker_update_total", worker_stamp)
 	stamp = _profile_stamp()
+	var _pfu_camp_activate := _profile_stamp()
 	_activate_revealed_enemy_camps()
+	_profile_finish("camp_activate", _pfu_camp_activate)
 	_profile_finish("scouting_camp_updates", stamp)
 	stamp = _profile_stamp()
 	var combat_stamp := stamp
@@ -779,14 +792,20 @@ func advance_tick() -> void:
 	stamp = _profile_stamp()
 	_update_projectiles(TICK_SECONDS)
 	_profile_finish("projectiles", stamp)
+	var _pfu_combat_log := _profile_stamp()
 	_flush_combat_log(false)
+	_profile_finish("combat_log", _pfu_combat_log)
+	var _pfu_finish_raid_check := _profile_stamp()
 	_maybe_finish_raid()
+	_profile_finish("finish_raid_check", _pfu_finish_raid_check)
 	stamp = _profile_stamp()
 	_update_objectives()
 	Intentions.evaluate(self)
 	_profile_finish("objective_updates", stamp)
 	stamp = _profile_stamp()
+	var _pfu_diag_snapshot := _profile_stamp()
 	_update_diagnostic_snapshot(TICK_SECONDS)
+	_profile_finish("diag_snapshot", _pfu_diag_snapshot)
 	_profile_finish("diagnostic_snapshot", stamp)
 	stamp = _profile_stamp()
 	_flush_diagnostic_events()
@@ -1906,6 +1925,13 @@ func request_worker_order(worker_id: int, tile: Vector2i) -> Dictionary:
 	var worker: Dictionary = _find_worker_by_id(worker_id)
 	if worker.is_empty():
 		return _failure("Worker", "That settler is no longer available.")
+	if String(worker.get("type", "")) == "guard":
+		var enemy_here := enemy_id_near_tile(tile, 1)
+		if enemy_here > 0:
+			return request_attack_order(worker_id, enemy_here)
+		worker.erase("manual_attack_id")
+		if int(worker.get("building_id", 0)) != 0:
+			return _failure("Order", "Tower sentries hold their tower.")
 	if String(worker.get("state", "")) == "Inside Town Hall":
 		return _failure("Intro", "Wait for the settler to step into the clearing.")
 	if int(worker.get("carried_amount", 0)) > 0:
@@ -1962,6 +1988,37 @@ func request_worker_order(worker_id: int, tile: Vector2i) -> Dictionary:
 		last_message = "Order accepted: move there."
 		return _success(last_message)
 	return _failure("Order", "Choose open ground, a tree, or a stone deposit.")
+
+
+## R28: manual attack order for a patrol soldier (right-click a raider).
+func request_attack_order(worker_id: int, enemy_id: int) -> Dictionary:
+	var worker: Dictionary = _find_worker_by_id(worker_id)
+	if worker.is_empty() or String(worker.get("type", "")) != "guard":
+		return _failure("Attack", "Only soldiers can attack.")
+	if int(worker.get("building_id", 0)) != 0:
+		return _failure("Attack", "Tower sentries hold their tower.")
+	var enemy := _find_enemy_by_id(enemy_id)
+	if enemy.is_empty() or int(enemy.get("hp", 0)) <= 0:
+		return _failure("Attack", "That target is gone.")
+	if worker.has("scout_mission"):
+		return _failure("Attack", "This soldier is scouting.")
+	worker["manual_attack_id"] = enemy_id
+	worker["manual_order"] = true
+	worker["path"] = []
+	worker["engage_timer"] = 0.0
+	worker["state"] = "Engaging raider"
+	worker["reaction"] = "!"
+	worker["reaction_until"] = elapsed_seconds + 0.8
+	last_message = "Order accepted: attack."
+	_emit_audio("soldier")
+	return _success(last_message)
+
+
+func enemy_id_near_tile(tile: Vector2i, radius: int = 1) -> int:
+	for enemy in enemies:
+		if int(enemy.get("hp", 0)) > 0 and _manhattan(enemy["position"], tile) <= radius:
+			return int(enemy.get("id", 0))
+	return 0
 
 
 func is_patrol_scout(worker: Dictionary) -> bool:
@@ -2314,7 +2371,9 @@ func _assign_idle_workers_to_priority_clears() -> void:
 	for worker in workers:
 		if targets.is_empty():
 			return
-		if String(worker.get("type", "")) in ["carrier", "clearer", "guard"]:
+		# P0 Fix: Allow carriers/settlers/laborers to be converted to clearers.
+		# Previously excluded "carrier" which made Clear tool a no-op in diorama demo.
+		if String(worker.get("type", "")) in ["clearer", "guard"]:
 			continue
 		if int(worker.get("building_id", 0)) != 0:
 			continue
@@ -3233,7 +3292,9 @@ func run_economy_smoke_test() -> Dictionary:
 	central_inventory[Defs.RESOURCE_BREAD] = 999
 	is_night = true
 	phase_time = 0.0
+	var _pfw_spawn_wave_0 := _profile_stamp()
 	_spawn_wave()
+	_profile_finish("spawn_wave", _pfw_spawn_wave_0)
 	_simulate_seconds_for_test(NIGHT_LENGTH_SECONDS + 0.25)
 	var town_hall := _find_town_hall()
 	passed = _record_smoke(report, "an undefended realm survives the first night", not game_finished and day_count == 2 and not town_hall.is_empty() and int(town_hall.get("hp", 0)) > 0) and passed
@@ -5225,6 +5286,30 @@ func _clear_corridor(start: Vector2i, finish: Vector2i, half_width: int) -> void
 		_clear_area(center, half_width)
 
 
+## Beta r17: Vector2i -> terrain for every shard/tree/rock tile, so a path
+## grid rebuild skips the 100k-cell String scan. Built lazily; _set_tile
+## keeps it current; -1 version forces a rebuild after load/new run.
+var _terrain_solid_tiles: Dictionary = {}
+var _terrain_solid_for: int = -1
+
+
+func _ensure_terrain_solid_tiles() -> void:
+	var stamp: int = map_tiles.size() * 100000 + (map_tiles[0].size() if map_tiles.size() > 0 else 0)
+	if _terrain_solid_for == stamp and is_same(_terrain_solid_map_ref, map_tiles):
+		return
+	_terrain_solid_tiles.clear()
+	for y in range(map_tiles.size()):
+		var row = map_tiles[y]
+		for x in range(row.size()):
+			var terrain := String(row[x])
+			if terrain == Defs.TILE_SHARD or terrain == Defs.TILE_TREE or terrain == Defs.TILE_ROCK:
+				_terrain_solid_tiles[Vector2i(x, y)] = terrain
+	_terrain_solid_for = stamp
+	_terrain_solid_map_ref = map_tiles
+
+var _terrain_solid_map_ref: Array = []
+
+
 func _set_tile(tile: Vector2i, tile_type: String) -> void:
 	if not is_inside_map(tile):
 		return
@@ -5237,7 +5322,17 @@ func _set_tile(tile: Vector2i, tile_type: String) -> void:
 		tree_deposits.erase(key)
 		rock_deposits.erase(key)
 	map_tiles[tile.y][tile.x] = tile_type
-	path_grid_dirty = true
+	if _terrain_solid_for >= 0:
+		if tile_type == Defs.TILE_SHARD or tile_type == Defs.TILE_TREE or tile_type == Defs.TILE_ROCK:
+			_terrain_solid_tiles[tile] = tile_type
+		else:
+			_terrain_solid_tiles.erase(tile)
+	# Beta r17: a terrain change (tree felled, rock mined) only affects one
+	# cell; patch both A* grids instead of a full 320x320 rebuild.
+	if path_grid != null and hostile_path_grid != null and not path_grid_dirty:
+		_refresh_path_cell(tile)
+	else:
+		path_grid_dirty = true
 
 
 func _sanitize_resource_deposits() -> void:
@@ -5607,15 +5702,16 @@ func _reveal_from_world() -> void:
 		_reveal_radius(town_center, INITIAL_REVEAL_RADIUS)
 		return
 	_reveal_radius(town_center, building_vision_radius(Defs.BUILDING_TOWN_HALL))
-	# Settlers live inside the bowl: keep the Shard and the crater
-	# corridor visible from the first camera so the horizon reads.
-	_reveal_radius(shard_position, 8)
-	var crater_dir := crater_direction_from(town_center)
-	var span := _tile_distance(town_center, shard_position)
-	for frac in [0.22, 0.45, 0.68, 0.88]:
-		var along := town_center + Vector2i(roundi(crater_dir.x * span * frac), roundi(crater_dir.y * span * frac))
-		if is_inside_map(along):
-			_reveal_radius(along, 5)
+	# Bug 2 fix: Remove crater corridor auto-reveal to fix false-lit disconnected islands.
+	# The Shard stays hidden until scouted (Helmer ruling 19/10): no opening reveal,
+	# and no corridor markers either (they create pre-lit pockets Helmer never visited).
+	# Player must scout to discover the frontier.
+	# var crater_dir := crater_direction_from(town_center)
+	# var span := _tile_distance(town_center, shard_position)
+	# for frac in [0.22, 0.45, 0.68, 0.88]:
+	# 	var along := town_center + Vector2i(roundi(crater_dir.x * span * frac), roundi(crater_dir.y * span * frac))
+	# 	if is_inside_map(along):
+	# 		_reveal_radius(along, 5)
 	for building in buildings:
 		if bool(building.get("construction", false)):
 			continue
@@ -6452,6 +6548,8 @@ func _update_patrol_worker(worker: Dictionary, delta: float) -> void:
 	# Do not walk away during a committed strike, against a raider or Outpost.
 	if float(worker.get("attack_flash", 0.0)) > 0.0:
 		return
+	if _update_guard_engagement(worker, delta):
+		return
 	if int(worker.get("assault_target_id", 0)) > 0:
 		var target := _assault_outpost(int(worker.assault_target_id))
 		if target.is_empty():
@@ -6493,6 +6591,46 @@ func _update_patrol_worker(worker: Dictionary, delta: float) -> void:
 			worker["activity_timer"] = 1.2
 			return
 	worker["activity_timer"] = 1.0
+
+
+## R28 combat: Helmer saw raiders hit a building while soldiers stood by.
+## Patrols only struck enemies within 2 tiles and never moved toward them.
+## Now a soldier closes on a manual target, or on any raider inside
+## GUARD_DEFENCE_RADIUS (unless walking a manual move order); the strike
+## itself stays in _update_patrol_combat.
+func _update_guard_engagement(worker: Dictionary, delta: float) -> bool:
+	var manual_id := int(worker.get("manual_attack_id", 0))
+	var threat: Dictionary = {}
+	if manual_id > 0:
+		threat = _find_enemy_by_id(manual_id)
+		if threat.is_empty() or int(threat.get("hp", 0)) <= 0:
+			worker.erase("manual_attack_id")
+			threat = {}
+	if threat.is_empty():
+		if bool(worker.get("manual_order", false)) and not worker["path"].is_empty() and String(worker.get("state", "")) == "Moving by order":
+			return false
+		threat = _find_enemy_for_guard(worker, GUARD_DEFENCE_RADIUS)
+	if threat.is_empty():
+		return false
+	var pos: Vector2i = worker["position"]
+	var enemy_pos: Vector2i = threat["position"]
+	if _manhattan(pos, enemy_pos) <= 2:
+		worker["path"] = []
+		worker["state"] = "Fighting"
+		return true
+	worker["engage_timer"] = float(worker.get("engage_timer", 0.0)) - delta
+	if worker["path"].is_empty() or float(worker["engage_timer"]) <= 0.0:
+		worker["engage_timer"] = 0.8
+		var path := _find_worker_path(pos, enemy_pos)
+		if path.size() > 1:
+			path.pop_back()
+		worker["path"] = path
+		worker["state"] = "Engaging raider"
+		worker["arrival_state"] = "Fighting"
+		if path.is_empty():
+			return false
+	_advance_production_worker(worker, delta)
+	return true
 
 
 func _update_scout_worker(worker: Dictionary, delta: float) -> void:
@@ -6684,8 +6822,12 @@ func _find_worker_path(start: Vector2i, destination: Vector2i) -> Array:
 	return _find_weighted_path(start, [destination], false)
 
 
+var _shelter_entries_cache: Array = []
+
+
 func _send_workers_to_shelter() -> void:
 	var sent := 0
+	_shelter_entries_cache = _shelter_entries()
 	for worker in workers:
 		if String(worker.get("type", "")) == "guard":
 			if worker.has("scout_mission"):
@@ -6699,16 +6841,29 @@ func _send_workers_to_shelter() -> void:
 		_send_worker_to_shelter(worker)
 		if String(worker.get("state", "")) in ["Going to shelter", "Sheltered"]:
 			sent += 1
+	_shelter_entries_cache = []
 	_record_event("shelter_called", "%d workers head for shelter." % sent, {"workers": sent})
 
 
 func _send_worker_to_shelter(worker: Dictionary) -> void:
+	# Beta r26: a worker with no reachable shelter retries every 3 s, not
+	# every tick (each retry is several full-map A* floods).
+	if String(worker.get("state", "")) == "No shelter" and elapsed_seconds < float(worker.get("shelter_retry_at", -1.0)):
+		return
 	var best_path: Array = []
 	var best_entrance := Vector2i(-1, -1)
 	var found := false
 	var start: Vector2i = worker["position"]
 	var is_carrier := String(worker.get("type", "")) == "carrier"
-	for entrance in _shelter_entries():
+	# Beta r21: every worker used to path-test every house entrance (workers x
+	# entrances A* queries, 200+ ms at the 30 s night warning). Test only the
+	# four nearest entrances by Manhattan distance.
+	var entries: Array = _shelter_entries_cache if not _shelter_entries_cache.is_empty() else _shelter_entries()
+	var ranked: Array = entries.duplicate()
+	ranked.sort_custom(func(a, b): return absi(a.x - start.x) + absi(a.y - start.y) < absi(b.x - start.x) + absi(b.y - start.y))
+	if ranked.size() > 4:
+		ranked.resize(4)
+	for entrance in ranked:
 		var candidate: Array = _path_to_access(start, [entrance]) if is_carrier else _find_worker_path(start, entrance)
 		if start != entrance and candidate.is_empty():
 			continue
@@ -6716,8 +6871,30 @@ func _send_worker_to_shelter(worker: Dictionary) -> void:
 			found = true
 			best_path = candidate
 			best_entrance = entrance
+	if not found and entries.size() > ranked.size():
+		# Beta r26: the 4 nearest can all be unreachable (other side of a
+		# creek/wall). Falling straight to "No shelter" made laborers retry
+		# every tick at night with 4 failing full-map A* floods (r25a: 2 FPS
+		# from ~980 s). Fall back to the full list once, like before r21.
+		for entrance in entries:
+			if entrance in ranked:
+				continue
+			var candidate: Array = _path_to_access(start, [entrance]) if is_carrier else _find_worker_path(start, entrance)
+			if start != entrance and candidate.is_empty():
+				continue
+			if not found or candidate.size() < best_path.size():
+				found = true
+				best_path = candidate
+				best_entrance = entrance
 	if not found:
-		worker["state"] = "No shelter"
+		# Beta r26: no reachable shelter -> shelter in place for the night.
+		# "No shelter" was retried by the night labor loop every tick, and
+		# each retry is several full-map A* floods (r25a fell to 2 FPS).
+		worker["state"] = "Sheltered"
+		worker["arrival_state"] = "Sheltered"
+		worker["shelter_position"] = start
+		worker["path"] = []
+		worker["sheltered_in_place"] = true
 		return
 	worker["shelter_position"] = best_entrance
 	worker["path"] = best_path
@@ -6775,7 +6952,9 @@ func _wake_workers_at_dawn() -> void:
 		worker["arrival_state"] = "Working"
 		worker["move_elapsed"] = 0.0
 		worker["state"] = "Working" if worker["path"].is_empty() else "Returning to work"
+	var _pf_dawn_resume_jobs := _profile_stamp()
 	_resume_daytime_jobs()
+	_profile_finish("dawn_resume_jobs", _pf_dawn_resume_jobs)
 
 
 func _resume_daytime_jobs() -> void:
@@ -6883,11 +7062,33 @@ func _construction_waiting_for_materials() -> bool:
 	return false
 
 
+## R27: unreachable (start, access) pairs are remembered for 3 s so a task
+## scan does not re-run the per-tile A* fallback for them every tick
+## (r26a ~1200 s: 48 ticks at 150-320 ms in output_task_discovery).
+var _access_fail_cache: Dictionary = {}
+
+
 func _path_to_access(start: Vector2i, access: Array) -> Array:
 	if access.is_empty():
 		return []
 	if access.has(start):
 		return []
+	var fail_key := _tile_key(start) + "@" + _tile_key(access[0]) + "#" + str(access.size())
+	# R34: game time, not wall time, so the same seed plays out the same at any FPS.
+	var now := int(elapsed_seconds * 1000.0)
+	if _access_fail_cache.has(fail_key):
+		if now - int(_access_fail_cache[fail_key]) < 3000:
+			return []
+		_access_fail_cache.erase(fail_key)
+	if _access_fail_cache.size() > 4096:
+		_access_fail_cache.clear()
+	var result := _path_to_access_uncached(start, access)
+	if result.is_empty():
+		_access_fail_cache[fail_key] = now
+	return result
+
+
+func _path_to_access_uncached(start: Vector2i, access: Array) -> Array:
 	var road_path := _find_road_path(start, access)
 	if not road_path.is_empty():
 		return road_path
@@ -8076,20 +8277,28 @@ func _update_time(delta: float) -> void:
 		dusk_warning_sent = true
 		if dusk_forecast.is_empty():
 			dusk_forecast = Wyrdfall.night_forecast(float(get_wyrd_pressure().get("value", 0.0)), day_count <= 1)
+		var _pfw_raid_plan_0 := _profile_stamp()
 		_prepare_raid_plan()
+		_profile_finish("raid_plan", _pfw_raid_plan_0)
 		last_message = RaidIntents.dusk_message()
 		_add_log("Dusk approaches.")
+		var _pfw_playtest_note_0 := _profile_stamp()
 		playtest_log.note(self, "dusk_warning", last_message)
+		_profile_finish("playtest_note", _pfw_playtest_note_0)
 	if not is_night and not horn_warning_sent and remaining <= RaidIntents.RAID_WARNING_SECONDS:
 		horn_warning_sent = true
 		if raid_plan.is_empty():
+			var _pfw_raid_plan_1 := _profile_stamp()
 			_prepare_raid_plan()
+			_profile_finish("raid_plan", _pfw_raid_plan_1)
 		var origin: Vector2i = raid_plan.get("origin", shard_position)
 		add_map_marker("raid", origin, "RAID", elapsed_seconds + 90.0)
 		last_message = RaidIntents.raid_warning_message(String(raid_plan.get("bearing", "the woods")), 60, String(raid_plan.get("target_name", "")))
 		_add_log(last_message)
 		push_notice("danger", "RAID WARNING", last_message, "critical")
+		var _pfw_playtest_note2_0 := _profile_stamp()
 		playtest_log.note(self, "horn_warning", last_message)
+		_profile_finish("playtest_note2", _pfw_playtest_note2_0)
 		_record_event("raid_warning", last_message, {"origin": origin, "bearing": String(raid_plan.get("bearing", "")), "target": String(raid_plan.get("target_name", ""))})
 	if not is_night and not night_warning_sent and remaining <= NIGHT_WARNING_SECONDS:
 		night_warning_sent = true
@@ -8119,7 +8328,9 @@ func _update_time(delta: float) -> void:
 	if not is_night and not night_final_warning_sent and remaining <= NIGHT_FINAL_WARNING_SECONDS:
 		night_final_warning_sent = true
 		path_grid_dirty = true
+		var _pf_dusk_shelter := _profile_stamp()
 		_send_workers_to_shelter()
+		_profile_finish("dusk_shelter", _pf_dusk_shelter)
 		_add_log("Final warning: night falls in 30 seconds. Civilians are returning home and gates are closing.")
 		last_message = "NIGHT IN 30 SECONDS — civilians are returning home."
 		_emit_audio("night")
@@ -8147,15 +8358,25 @@ func _start_night() -> void:
 	last_message = "Night %d begins." % day_count
 	if not is_revealed(shard_position):
 		hidden_threat_level += 1
+	var _pfw_night_meal_0 := _profile_stamp()
 	_serve_night_meal()
+	_profile_finish("night_meal", _pfw_night_meal_0)
+	var _pf_dusk_shelter := _profile_stamp()
 	_send_workers_to_shelter()
+	_profile_finish("dusk_shelter", _pf_dusk_shelter)
+	var _pfw_spawn_wave_1 := _profile_stamp()
 	_spawn_wave()
+	_profile_finish("spawn_wave", _pfw_spawn_wave_1)
 	_emit_audio("night")
+	var _pfw_playtest_note3_0 := _profile_stamp()
 	playtest_log.note(self, "night_started", "Night %d" % day_count)
+	_profile_finish("playtest_note3", _pfw_playtest_note3_0)
 
 
 func _end_night() -> void:
+	var _pf_dawn_finish_raid := _profile_stamp()
 	_finish_raid("dawn")
+	_profile_finish("dawn_finish_raid", _pf_dawn_finish_raid)
 	is_night = false
 	phase_time = 0.0
 	night_warning_sent = false
@@ -8164,7 +8385,9 @@ func _end_night() -> void:
 	horn_warning_sent = false
 	day_count += 1
 	path_grid_dirty = true
+	var _pf_dawn_retreat := _profile_stamp()
 	_retreat_enemies_at_dawn()
+	_profile_finish("dawn_retreat", _pf_dawn_retreat)
 	if hungry_population > 0:
 		hunger_penalty_remaining = DAY_LENGTH_SECONDS * HUNGER_RECOVERY_FRACTION
 		_add_log("Hungry workers produce at half output until mid-morning.")
@@ -8172,13 +8395,17 @@ func _end_night() -> void:
 			"hungry": hungry_population,
 			"duration": hunger_penalty_remaining
 		})
+	var _pf_dawn_wake := _profile_stamp()
 	_wake_workers_at_dawn()
+	_profile_finish("dawn_wake", _pf_dawn_wake)
 	stats["days_survived"] = max(int(stats.get("days_survived", 0)), day_count - 1)
 	intention_flags["first_dawn"] = true
 	_add_log("Dawn breaks. Day %d begins." % day_count)
 	playtest_log.note(self, "dawn", "Day %d" % day_count)
 	last_message = "Hungry workers are recovering." if hungry_population > 0 else "Dawn breaks."
+	var _pf_dawn_summary := _profile_stamp()
 	_compose_dawn_summary()
+	_profile_finish("dawn_summary", _pf_dawn_summary)
 	if rivalry != null:
 		return
 	if claim_active:
@@ -8205,7 +8432,9 @@ func _spawn_wave() -> void:
 		last_message = "QUIET NIGHT - no raiders emerged from the fog."
 		return
 	if raid_plan.is_empty():
+		var _pfw_raid_plan_2 := _profile_stamp()
 		_prepare_raid_plan()
+		_profile_finish("raid_plan", _pfw_raid_plan_2)
 	var spawn_origins := _night_spawn_origins()
 	for i in range(wave_size):
 		var origin: Vector2i = shard_position if spawn_origins.is_empty() else spawn_origins[i % spawn_origins.size()]
@@ -8229,12 +8458,16 @@ func _spawn_wave() -> void:
 func _night_spawn_origins() -> Array[Vector2i]:
 	var candidates: Array[Vector2i] = []
 	var town_center := _footprint_center(town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
-	for y in range(map_size.y):
-		for x in range(map_size.x):
+	# R30: only the 11-16 ring can qualify; scan its bounding box, not the
+	# whole map (r29a: ~245 ms at nightfall). Same candidates, same order.
+	for y in range(maxi(0, town_center.y - 16), mini(map_size.y, town_center.y + 17)):
+		for x in range(maxi(0, town_center.x - 16), mini(map_size.x, town_center.x + 17)):
 			var tile := Vector2i(x, y)
+			if _manhattan(town_center, tile) < 11 or _manhattan(town_center, tile) > 16:
+				continue
 			if is_revealed(tile) or is_tile_occupied(tile) or String(get_tile(tile)) != Defs.TILE_GRASS:
 				continue
-			if _manhattan(town_center, tile) < 11 or _manhattan(town_center, tile) > 16:
+			if false:
 				continue
 			if is_tile_protected(tile) or _tile_in_any_tower_range(tile):
 				continue
@@ -8253,12 +8486,12 @@ func _night_spawn_origins() -> Array[Vector2i]:
 		return first_distance < second_distance
 	)
 	if candidates.is_empty():
-		for y in range(map_size.y):
-			for x in range(map_size.x):
+		for y in range(maxi(0, town_center.y - 18), mini(map_size.y, town_center.y + 19)):
+			for x in range(maxi(0, town_center.x - 18), mini(map_size.x, town_center.x + 19)):
 				var tile := Vector2i(x, y)
-				if is_revealed(tile) or is_tile_occupied(tile) or String(get_tile(tile)) != Defs.TILE_GRASS:
-					continue
 				if _manhattan(town_center, tile) < 10 or _manhattan(town_center, tile) > 18:
+					continue
+				if is_revealed(tile) or is_tile_occupied(tile) or String(get_tile(tile)) != Defs.TILE_GRASS:
 					continue
 				candidates.append(tile)
 		candidates.sort_custom(func(first: Vector2i, second: Vector2i) -> bool:
@@ -9105,6 +9338,9 @@ func _update_patrol_combat(delta: float) -> void:
 		if float(guard["attack_timer"]) > 0.0:
 			continue
 		var enemy := _find_enemy_for_guard(guard, 2)
+		var manual_target := _find_enemy_by_id(int(guard.get("manual_attack_id", 0)))
+		if not manual_target.is_empty() and int(manual_target.get("hp", 0)) > 0 and _manhattan(guard["position"], manual_target["position"]) <= 2:
+			enemy = manual_target
 		if enemy.is_empty():
 			var outpost := _assault_outpost(int(guard.get("assault_target_id", 0)))
 			if not outpost.is_empty() and _outpost_distance(guard.position, outpost) <= 1:
@@ -9607,9 +9843,35 @@ func _write_last_run_snapshot() -> void:
 	}, "  "))
 
 
+## R27: road BFS results memoised per road-network signature. r26a spent
+## ~14 ms every tick for 6 minutes re-flooding the same road graph (patrols
+## and off-road workers whose road search always failed).
+var _road_path_cache: Dictionary = {}
+var _road_path_cache_sig: String = ""
+var _road_path_cache_age: float = 0.0
+
+
+func _road_path_signature() -> String:
+	return "%d|%d|%s" % [connected_roads.size(), connected_walls.size(), str(is_gate_closed())]
+
+
 func _find_road_path(start: Vector2i, goals: Array) -> Array:
 	var stamp := _profile_stamp()
-	var result := _find_road_path_unprofiled(start, goals)
+	var sig := _road_path_signature()
+	var now := float(elapsed_seconds)  # R34: game time (determinism)
+	if sig != _road_path_cache_sig or now - _road_path_cache_age > 5.0 or _road_path_cache.size() > 4096:
+		_road_path_cache.clear()
+		_road_path_cache_sig = sig
+		_road_path_cache_age = now
+	var key := _tile_key(start)
+	for goal in goals:
+		key += ";" + _tile_key(goal)
+	var result: Array
+	if _road_path_cache.has(key):
+		result = (_road_path_cache[key] as Array).duplicate()
+	else:
+		result = _find_road_path_unprofiled(start, goals)
+		_road_path_cache[key] = result.duplicate()
 	_profile_finish("road_path_requests", stamp)
 	return result
 
@@ -9727,24 +9989,70 @@ func _ensure_path_grid_unprofiled() -> void:
 	for building_value in buildings:
 		var indexed_building: Dictionary = building_value
 		building_types_by_id[int(indexed_building.get("id", 0))] = String(indexed_building.get("type", ""))
-	for y in range(map_size.y):
-		for x in range(map_size.x):
-			var tile := Vector2i(x, y)
+	# Hotfix 5 perf: the full 320x320 per-tile loop (string keys + 4 dictionary
+	# lookups + 4 setter calls per cell) cost ~430 ms on every invalidation, i.e.
+	# every building placement / completion / dusk / dawn. Same rules, but only
+	# tiles that can differ from plain terrain take the slow path.
+	var base_weight := 1.0 / ROAD_MOVE_MULTIPLIER
+	var full_region := Rect2i(Vector2i.ZERO, map_size)
+	path_grid.fill_weight_scale_region(full_region, base_weight)
+	hostile_path_grid.fill_weight_scale_region(full_region, base_weight)
+	var special: Dictionary = {}
+	for source in [occupied_tiles, water_tiles, connected_roads, connected_walls]:
+		for key in source.keys():
+			var special_tile: Vector2i = _tile_from_key(String(key)) if typeof(key) == TYPE_STRING else Vector2i(key)
+			if special_tile.x >= 0 and special_tile.y >= 0 and special_tile.x < map_size.x and special_tile.y < map_size.y:
+				special[special_tile] = true
+	var gate_closed := is_gate_closed()
+	_ensure_terrain_solid_tiles()
+	for solid_tile in _terrain_solid_tiles:
+		if special.has(solid_tile):
+			continue
+		if String(_terrain_solid_tiles[solid_tile]) == Defs.TILE_SHARD:
+			path_grid.set_point_solid(solid_tile, true)
+		hostile_path_grid.set_point_solid(solid_tile, true)
+	for tile in special:
+			var terrain := String(map_tiles[tile.y][tile.x])
 			var tile_key := _tile_key(tile)
 			var building_type := String(building_types_by_id.get(int(occupied_tiles.get(tile_key, 0)), ""))
-			var terrain := String(get_tile(tile))
 			var wet := is_water_tile(tile) and not connected_roads.has(tile_key)
-			var blocked := terrain == Defs.TILE_SHARD or wet or (_is_gate_tile(tile) and is_gate_closed())
-			var hostile_blocked := terrain in [Defs.TILE_SHARD, Defs.TILE_TREE, Defs.TILE_ROCK] or wet or (_is_gate_tile(tile) and is_gate_closed())
+			var gate_shut := gate_closed and building_type == Defs.BUILDING_ROAD and _is_gate_tile(tile)
+			var blocked := terrain == Defs.TILE_SHARD or wet or gate_shut
+			var hostile_blocked := terrain in [Defs.TILE_SHARD, Defs.TILE_TREE, Defs.TILE_ROCK] or wet or gate_shut
 			if building_type != "" and building_type != Defs.BUILDING_ROAD:
 				blocked = true
 				hostile_blocked = true
-			var move_weight := 1.0 if connected_walls.has(tile_key) or building_type == Defs.BUILDING_ROAD else 1.0 / ROAD_MOVE_MULTIPLIER
+			var move_weight := 1.0 if connected_walls.has(tile_key) or building_type == Defs.BUILDING_ROAD else base_weight
 			path_grid.set_point_solid(tile, blocked)
 			path_grid.set_point_weight_scale(tile, move_weight)
 			hostile_path_grid.set_point_solid(tile, hostile_blocked)
 			hostile_path_grid.set_point_weight_scale(tile, move_weight)
 	path_grid_dirty = false
+
+
+func _refresh_path_cell(tile: Vector2i) -> void:
+	var base_weight := 1.0 / ROAD_MOVE_MULTIPLIER
+	var terrain := String(map_tiles[tile.y][tile.x])
+	var tile_key := _tile_key(tile)
+	var building_type := ""
+	var occupant_id := int(occupied_tiles.get(tile_key, 0))
+	if occupant_id != 0:
+		for building_value in buildings:
+			if int(building_value.get("id", 0)) == occupant_id:
+				building_type = String(building_value.get("type", ""))
+				break
+	var wet := is_water_tile(tile) and not connected_roads.has(tile_key)
+	var gate_shut := is_gate_closed() and building_type == Defs.BUILDING_ROAD and _is_gate_tile(tile)
+	var blocked := terrain == Defs.TILE_SHARD or wet or gate_shut
+	var hostile_blocked := terrain in [Defs.TILE_SHARD, Defs.TILE_TREE, Defs.TILE_ROCK] or wet or gate_shut
+	if building_type != "" and building_type != Defs.BUILDING_ROAD:
+		blocked = true
+		hostile_blocked = true
+	var move_weight := 1.0 if connected_walls.has(tile_key) or building_type == Defs.BUILDING_ROAD else base_weight
+	path_grid.set_point_solid(tile, blocked)
+	path_grid.set_point_weight_scale(tile, move_weight)
+	hostile_path_grid.set_point_solid(tile, hostile_blocked)
+	hostile_path_grid.set_point_weight_scale(tile, move_weight)
 
 
 func _reconstruct_path(start: Vector2i, destination: Vector2i, came_from: Dictionary) -> Array:
@@ -9859,6 +10167,19 @@ func _first_connected_road_tile() -> Vector2i:
 	for key in connected_roads.keys():
 		return _tile_from_key(key)
 	return Vector2i(-1, -1)
+
+
+## F5c: Find nearest connected road tile within max_distance (Manhattan)
+func find_nearest_road_tile(from: Vector2i, max_distance: int) -> Vector2i:
+	var best := Vector2i(-1, -1)
+	var best_dist := max_distance + 1
+	for key in connected_roads.keys():
+		var road_tile := _tile_from_key(String(key))
+		var dist := _manhattan(from, road_tile)
+		if dist <= max_distance and dist < best_dist:
+			best = road_tile
+			best_dist = dist
+	return best
 
 
 func _is_walkable_road(tile: Vector2i) -> bool:
@@ -10389,7 +10710,9 @@ func _update_wyrdfall(delta: float) -> void:
 		var claim: Dictionary = rivalry.get_claim_status(RivalryTuning.PLAYER_REALM)
 		var progress := float(claim.get("binding_progress", 0.0))
 		if reckoning_waves_spawned < 2 and progress >= Wyrdfall.BINDING_DURATION_SECONDS * 0.5:
+			var _pfw_spawn_wave_2 := _profile_stamp()
 			_spawn_wave()
+			_profile_finish("spawn_wave", _pfw_spawn_wave_2)
 	_notice_shard_contact()
 
 
@@ -10399,7 +10722,9 @@ func _on_binding_started(realm_id: String) -> void:
 		reckoning_waves_spawned = 0
 		_add_log("THE RECKONING begins. The Wyrd reacts violently.")
 		last_message = "THE RECKONING — hold the Shard until Binding completes."
+		var _pfw_spawn_wave_3 := _profile_stamp()
 		_spawn_wave()
+		_profile_finish("spawn_wave", _pfw_spawn_wave_3)
 		_emit_audio("enemy")
 	else:
 		_add_log("The rival has begun Binding the Shard.")
@@ -10713,6 +11038,7 @@ func _restore_state(data: Dictionary) -> void:
 	rng.seed = rng_seed
 	map_size = _vector_from_data(data.get("map_size", _vector_to_data(Vector2i(MAP_WIDTH, MAP_HEIGHT))), Vector2i(MAP_WIDTH, MAP_HEIGHT))
 	map_tiles = data.get("map_tiles", [])
+	_terrain_solid_for = -1
 	height_map = data.get("height_map", [])
 	revealed_tiles = data.get("revealed_tiles", {})
 	tree_deposits = data.get("tree_deposits", {})

@@ -45,6 +45,13 @@ const HOME_LUMEN_RADIUS := 8.0
 const LUMEN_LINK_DISTANCE := 17.0
 const LUMEN_NIGHTLY_UPKEEP := 1
 const MAX_LUMEN_PILLARS_PER_REALM := 6
+const LUMEN_PILLAR_CAP_REFERENCE_MAP := 70.0
+
+
+# Rival Pillar cap scales with map edge: 6 on the 70x70 reference map, 28 on 320x320.
+static func max_lumen_pillars_for_map(map_size: Vector2i) -> int:
+	var edge := float(maxi(map_size.x, map_size.y))
+	return maxi(MAX_LUMEN_PILLARS_PER_REALM, int(ceil(float(MAX_LUMEN_PILLARS_PER_REALM) * edge / LUMEN_PILLAR_CAP_REFERENCE_MAP)))
 
 const SOVEREIGN_MAX_HP := 100
 const SOVEREIGN_MOVE_SPEED := 2.8

@@ -21,6 +21,7 @@ var orders: Array[Dictionary] = []
 var scouted := false
 var last_scout_day := 0
 var last_idle_reason := ""
+var _waypoint_retry_at := 0.0
 
 
 func think(sim) -> Dictionary:
@@ -45,6 +46,58 @@ func think(sim) -> Dictionary:
 	if last_actions.is_empty() and last_idle_reason == "":
 		last_idle_reason = "waiting on workers, stock, or construction"
 	return _result()
+
+
+## Beta: frame-spread think. The harness calls think_step() once per frame;
+## each call runs one phase so no single frame pays the whole decision pass.
+const THINK_PHASES := 13
+var think_phase := 0
+var _phase_skip: Dictionary = {}
+
+func think_step(sim) -> bool:
+	if think_phase == 0:
+		last_actions.clear()
+		last_failures.clear()
+		last_idle_reason = ""
+	if sim == null or bool(sim.game_finished):
+		think_phase = 0
+		return true
+	var actions_before := last_actions.size()
+	_phase_work = 0
+	var skip_left := int(_phase_skip.get(think_phase, 0))
+	if skip_left > 0 and think_phase not in [0, 1, 12]:
+		_phase_skip[think_phase] = skip_left - 1
+		think_phase += 1
+		if think_phase >= THINK_PHASES:
+			think_phase = 0
+			return true
+		return false
+	match think_phase:
+		0: _defend(sim)
+		1: _defend_night(sim)
+		2: _pursue_economy(sim)
+		3: _pursue_crater_war(sim)
+		4: _try_wyrd_choice(sim)
+		5: _try_midgame_choice(sim)
+		6: _try_seal_choice(sim)
+		7: _try_channel(sim)
+		8: _scout(sim)
+		9: _expand_toward_shard(sim)
+		10: _contest_rivals(sim)
+		11: _try_seal(sim)
+		12:
+			if last_actions.is_empty() and last_idle_reason == "":
+				last_idle_reason = "waiting on workers, stock, or construction"
+	# Harness budget: an expensive phase that changed nothing waits two
+	# think cycles (~6 s game time) before scanning again.
+	# R34: measured in placement validations (deterministic), not 25 ms of wall time.
+	if _phase_work > PHASE_SKIP_WORK and last_actions.size() == actions_before:
+		_phase_skip[think_phase] = 2
+	think_phase += 1
+	if think_phase >= THINK_PHASES:
+		think_phase = 0
+		return true
+	return false
 
 
 func _result() -> Dictionary:
@@ -322,19 +375,20 @@ func _try_waypoint_outpost(sim) -> bool:
 	if marker.x < 0:
 		marker = _midpoint(sim.town_hall_position, _frontier_target(sim))
 	var hall: Vector2i = sim.town_hall_position
+	# Gate harness perf: each aim runs _best_site (radius 22) twice, so the old
+	# 121-aim ring cost ~6.5 s per think() once the Lumen Pillar stood and froze
+	# the whole frame. _best_site already covers the ring; probe the marker only
+	# and back off 30 s between failed attempts.
+	if float(sim.elapsed_seconds) < _waypoint_retry_at:
+		return false
 	var aims: Array[Vector2i] = [marker]
-	for radius in range(1, 6):
-		for ox in range(-radius, radius + 1):
-			aims.append(marker + Vector2i(ox, -radius))
-			aims.append(marker + Vector2i(ox, radius))
-			aims.append(marker + Vector2i(-radius, ox))
-			aims.append(marker + Vector2i(radius, ox))
 	for aim_value in aims:
 		var aim: Vector2i = aim_value
 		if absi(aim.x - hall.x) + absi(aim.y - hall.y) < 8:
 			continue
 		if _try_build(sim, Defs.BUILDING_OUTPOST, aim):
 			return true
+	_waypoint_retry_at = float(sim.elapsed_seconds) + 30.0
 	_extend_roads(sim, marker, 2)
 	return false
 
@@ -366,12 +420,19 @@ func _try_frontier_outpost(sim) -> bool:
 			aims.append(marker + Vector2i(ox, radius))
 			aims.append(marker + Vector2i(-radius, ox))
 			aims.append(marker + Vector2i(radius, ox))
+	var _aims_tried := 0
 	for aim_value in aims:
 		var aim: Vector2i = aim_value
 		if absi(aim.x - hall.x) + absi(aim.y - hall.y) < 16:
 			continue
+		# Gate-only: cap the outpost aim scan per think (R34: a count, not
+		# 150 ms of wall time, so decisions do not depend on frame rate).
+		_aims_tried += 1
+		if _gate_quarry_backoff and _aims_tried > 6:
+			break
 		if _try_build(sim, Defs.BUILDING_OUTPOST, aim):
 			return true
+	_waypoint_retry_at = float(sim.elapsed_seconds) + 30.0
 	_extend_roads(sim, marker, 2)
 	return false
 
@@ -382,30 +443,63 @@ func _try_build(sim, building_type: String, aim: Vector2i) -> bool:
 		return false
 	if _count_pending(sim, building_type) > 0:
 		return false
-	var site := _best_site(sim, building_type, aim)
-	if site.x < 0:
-		_extend_roads(sim, aim, 2)
+	# R29 harness: a failed site search scans ~2000 tiles twice (~600 ms);
+	# r28a repeated it every 3 s. Gate-only: back off that type for 20 s.
+	if _gate_quarry_backoff and float(sim.elapsed_seconds) < float(_site_fail_until.get(building_type, -1.0)):
+		last_idle_reason = "no site for %s yet (retrying)" % Defs.building_name(building_type)
+		return false
+	var site: Vector2i
+	if _gate_quarry_backoff:
+		# R30 harness: resumable search, at most SITE_SCAN_BUDGET validations
+		# per think step, so a failed ~2000-tile search no longer lands in one
+		# frame. -2 means "still searching": try again next think.
+		site = _best_site_budgeted(sim, building_type, aim)
+		if site.x == -2:
+			last_idle_reason = "searching a site for %s" % Defs.building_name(building_type)
+			return false
+		if site.x < 0:
+			_extend_roads(sim, aim, 2)
+	else:
 		site = _best_site(sim, building_type, aim)
+		if site.x < 0:
+			_extend_roads(sim, aim, 2)
+			site = _best_site(sim, building_type, aim)
 	if site.x < 0:
 		last_failures.append("%s: no site near %s" % [building_type, str(aim)])
+		_site_fail_until[building_type] = float(sim.elapsed_seconds) + 20.0
 		return false
 	var result: Dictionary = sim.request_build(building_type, site)
 	if bool(result.get("success", false)):
 		_note(sim, building_type, site, String(result.get("message", "")))
 		return true
 	last_failures.append("%s@%s: %s" % [building_type, str(site), String(result.get("message", ""))])
+	if _gate_quarry_backoff:
+		_site_fail_until[building_type] = float(sim.elapsed_seconds) + 20.0
 	return false
+
+
+## Gate-only (measurement harness): after a failed Quarry search, back off 20 s
+## and scan only the 12 nearest rocks, so the bot's 360-540 ms search does not
+## pollute frame metrics. Off unless `--gate-bot-quarry-backoff`.
+var _gate_quarry_backoff := "--gate-bot-quarry-backoff" in OS.get_cmdline_user_args()
+var _quarry_retry_at_s := -1.0
+var _site_fail_until := {}
 
 
 func _try_quarry(sim) -> bool:
 	if not _can_afford(sim, Defs.BUILDING_QUARRY):
 		last_idle_reason = "cannot afford Quarry"
 		return false
+	if _gate_quarry_backoff and float(sim.elapsed_seconds) < _quarry_retry_at_s:
+		last_idle_reason = "quarry backoff (gate)"
+		return false
 	var rocks := _revealed_kind(sim, sim.town_hall_position, Defs.TILE_ROCK, 32)
 	var preferred: Variant = sim.founding_site.get("quarry_stone", Vector2i(-1, -1))
 	if preferred is Vector2i and preferred.x >= 0:
 		rocks.erase(preferred)
 		rocks.insert(0, preferred)
+	if _gate_quarry_backoff and rocks.size() > 12:
+		rocks.resize(12)
 	if rocks.is_empty():
 		last_failures.append("QUARRY: no revealed rock")
 		_extend_roads(sim, _aim_resource(sim, Defs.TILE_ROCK, Vector2i(8, 2)), 2)
@@ -435,6 +529,8 @@ func _try_quarry(sim) -> bool:
 							road_aim_score = score
 	_extend_roads(sim, road_aim, 2)
 	last_failures.append("QUARRY: %d rocks visible, none placeable yet %s" % [rocks.size(), str(reasons)])
+	if _gate_quarry_backoff:
+		_quarry_retry_at_s = float(sim.elapsed_seconds) + 20.0
 	print("DEMO_AI quarry_fail rocks=%d reasons=%s aim=%s" % [rocks.size(), str(reasons), str(road_aim)])
 	return false
 
@@ -525,27 +621,90 @@ func _extend_roads(sim, target: Vector2i, count: int) -> void:
 
 
 func _best_road_step(sim, target: Vector2i) -> Vector2i:
-	var best := Vector2i(-1, -1)
-	var best_score := 100000
+	# R29 harness: r28a spent ~600 ms every 3 s here validating every road
+	# neighbour. Collect candidates, sort by distance, validate until the
+	# first legal one (same choice as before: the nearest legal tile).
+	var candidates: Array = []
+	var seen := {}
 	for building_value in sim.get_buildings():
 		var building: Dictionary = building_value
 		var kind := String(building.get("type", ""))
 		var planned := String(building.get("planned_type", ""))
-		var is_road := kind == Defs.BUILDING_ROAD or planned == Defs.BUILDING_ROAD
-		if not is_road:
+		if kind != Defs.BUILDING_ROAD and planned != Defs.BUILDING_ROAD:
 			continue
 		var origin: Vector2i = building.get("position", Vector2i.ZERO)
 		for direction in [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]:
 			var tile: Vector2i = origin + direction
-			if not sim.is_inside_map(tile):
+			if seen.has(tile) or not sim.is_inside_map(tile):
 				continue
-			var score := absi(tile.x - target.x) + absi(tile.y - target.y)
-			if score >= best_score:
-				continue
-			if bool(sim.validate_placement(Defs.BUILDING_ROAD, tile).get("success", false)):
-				best = tile
-				best_score = score
-	return best
+			seen[tile] = true
+			candidates.append([absi(tile.x - target.x) + absi(tile.y - target.y), tile])
+	candidates.sort_custom(func(x, y) -> bool: return int(x[0]) < int(y[0]))
+	for c in candidates:
+		if bool(sim.validate_placement(Defs.BUILDING_ROAD, c[1]).get("success", false)):
+			return c[1]
+	return Vector2i(-1, -1)
+
+
+const SITE_SCAN_BUDGET := 200
+var _site_scan: Dictionary = {}
+
+
+## R31.4 harness fix: one resumable scan per building type. A single shared
+## scan made alternating requests (e.g. Wyrd Refiner + Farm in the same think
+## phase) reset each other to radius 0 forever: no site was ever found, every
+## call burned its full budget (~570 ms per phase late game on Shard) and the
+## bot stopped building. Also a wall-time cap per step.
+var _site_scans: Dictionary = {}
+const PHASE_SKIP_WORK := 150
+var _phase_work := 0
+
+
+func _best_site_budgeted(sim, building_type: String, target: Vector2i) -> Vector2i:
+	var key := "%s@%s" % [building_type, str(target)]
+	_site_scan = _site_scans.get(building_type, {})
+	if String(_site_scan.get("key", "")) != key:
+		_site_scan = {"key": key, "radius": 0, "best": Vector2i(-1, -1), "best_score": 100000}
+	_site_scans[building_type] = _site_scan
+	var result := _best_site_budgeted_inner(sim, building_type, target)
+	if result.x != -2:
+		_site_scans.erase(building_type)
+	return result
+
+
+func _best_site_budgeted_inner(sim, building_type: String, target: Vector2i) -> Vector2i:
+	var budget := SITE_SCAN_BUDGET
+	var radius: int = _site_scan["radius"]
+	while radius <= SITE_RADIUS:
+		for ox in range(-radius, radius + 1):
+			for oy in range(-radius, radius + 1):
+				if maxi(absi(ox), absi(oy)) != radius:
+					continue
+				var tile := target + Vector2i(ox, oy)
+				if not sim.is_inside_map(tile):
+					continue
+				budget -= 1
+				_phase_work += 1
+				var validation: Dictionary = sim.validate_placement(building_type, tile)
+				if not bool(validation.get("success", false)):
+					continue
+				var score := absi(tile.x - target.x) + absi(tile.y - target.y)
+				if building_type != Defs.BUILDING_QUARRY and String(validation.get("message", "")).contains("CLEARING"):
+					score += 8
+				if score < int(_site_scan["best_score"]):
+					_site_scan["best"] = tile
+					_site_scan["best_score"] = score
+		# A ring is always finished once started (same choice as _best_site).
+		var best: Vector2i = _site_scan["best"]
+		if best.x >= 0:
+			_site_scan = {}
+			return best
+		radius += 1
+		_site_scan["radius"] = radius
+		if budget <= 0 and radius <= SITE_RADIUS:
+			return Vector2i(-2, -2)
+	_site_scan = {}
+	return Vector2i(-1, -1)
 
 
 func _best_site(sim, building_type: String, target: Vector2i) -> Vector2i:
@@ -559,6 +718,7 @@ func _best_site(sim, building_type: String, target: Vector2i) -> Vector2i:
 				var tile := target + Vector2i(ox, oy)
 				if not sim.is_inside_map(tile):
 					continue
+				_phase_work += 1
 				var validation: Dictionary = sim.validate_placement(building_type, tile)
 				if not bool(validation.get("success", false)):
 					continue

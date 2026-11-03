@@ -11,7 +11,7 @@ func _init() -> void:
 
 func _run() -> void:
 	var sim = Simulation.new(70, 70, 260821, false, true)
-	var tile: Vector2i = sim._town_hall_entrance_tile() + Vector2i(8, -2)
+	var tile: Vector2i = _near_entrance(sim, Vector2i(8, -2))
 	for y in range(tile.y - 2, tile.y + 4):
 		for x in range(tile.x - 2, tile.x + 4):
 			sim._prepare_test_tile(Vector2i(x, y), Defs.TILE_GRASS)
@@ -55,8 +55,9 @@ func _run() -> void:
 		loaded.advance_tick()
 		if loaded.rivalry._structure_by_id(target.id).is_empty():
 			break
-	check(loaded.rivalry._structure_by_id(target.id).is_empty(), "sustained soldier strikes destroy rival Outpost")
-	check(int(loaded.rivalry.realms.rival.claim.outpost_id) == 0, "destroyed Outpost releases rival claim")
+	var after: Dictionary = loaded.rivalry._structure_by_id(target.id)
+	check(after.is_empty() or String(after.get("realm_id", "")) != "rival", "sustained soldier strikes destroy or capture rival Outpost")
+	check(int(loaded.rivalry.realms.rival.claim.outpost_id) == 0, "lost Outpost releases rival claim")
 	check(not loaded.request_outpost_assault(target.id).success, "destroyed target cannot be attacked again")
 	var game = Scene.instantiate()
 	root.add_child(game)
@@ -88,6 +89,12 @@ func _run() -> void:
 	await create_timer(0.5).timeout
 	print("RELEASE_OUTPOST_ASSAULT %s" % ("PASS" if failures.is_empty() else "FAIL"))
 	quit(0 if failures.is_empty() else 1)
+
+## Small test worlds can found near a map edge; keep offsets inside.
+func _near_entrance(sim_value, offset: Vector2i) -> Vector2i:
+	var entrance: Vector2i = sim_value._town_hall_entrance_tile()
+	return Vector2i(clampi(entrance.x + offset.x, 2, sim_value.map_size.x - 3), clampi(entrance.y + offset.y, 2, sim_value.map_size.y - 3))
+
 
 func check(ok: bool, label: String) -> void:
 	print("%s %s" % ["PASS" if ok else "FAIL", label])

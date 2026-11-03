@@ -7,6 +7,11 @@ static var _materials: Dictionary = {}
 static var _light_tint := Color.WHITE
 static var _value_lift := 0.06
 
+## M2 diorama-world: assigned by ProductionWorldView3D.setup to its exact
+## rendered-terrain sampler; ribbons then drape over the terrain instead
+## of floating as flat pads. Empty in previews/tests (flat, as before).
+static var height_sampler: Callable
+
 var tile := Vector2i.ZERO
 var building_id := 0
 var planned := false
@@ -28,7 +33,20 @@ func signature() -> String:
 	return "%d:%d:%d:%s" % [building_id, connection_mask, int(planned), faction]
 
 
+var _drape_centre_y := 0.0
+
+
+func _lifted(local: Vector3) -> Vector3:
+	# Local vertex -> terrain height at its logical point, relative to the
+	# tile centre height (the node itself sits at the centre height).
+	if not height_sampler.is_valid():
+		return local
+	var logical := Vector2(float(tile.x), float(tile.y)) + Vector2(local.x, local.z) / ScaleProfile.LOGICAL_CELL_METRES
+	return Vector3(local.x, local.y + float(height_sampler.call(logical)) - _drape_centre_y, local.z)
+
+
 func _rebuild() -> void:
+	_drape_centre_y = float(height_sampler.call(Vector2(float(tile.x), float(tile.y)))) if height_sampler.is_valid() else 0.0
 	for child in get_children():
 		remove_child(child)
 		child.queue_free()
@@ -85,12 +103,19 @@ func _add_path_mesh(width: float, height: float, material: Material, node_name: 
 	var junction := width * 0.52
 	# Shared a,d,c,b vertex order. Lighting uses a world-up normal in the
 	# shader, so winding no longer decides which way the lane faces.
-	var ja := Vector3(-junction, height, -junction)
-	var jb := Vector3(junction, height, -junction)
-	var jc := Vector3(junction, height, junction)
-	var jd := Vector3(-junction, height, junction)
+	# R36: r34 put a disc wider than the road on every tile, so straight
+	# roads beaded and junctions read as joined blobs. Straight pass-through
+	# tiles get no disc; bends, junctions and ends get a disc exactly the
+	# road width, which fills the joint without bulging.
 	var flat := Vector2(0.5, 0.5)
-	_add_quad(surface, ja, jd, jc, jb, flat, flat, flat, flat)
+	var centre := _lifted(Vector3(0.0, height, 0.0))
+	var straight := connection_mask == 0b0101 or connection_mask == 0b1010
+	var disc_r := width * 0.5
+	if not straight:
+		for k in 16:
+			var a0 := TAU * float(k) / 16.0
+			var a1 := TAU * float(k + 1) / 16.0
+			_add_triangle(surface, centre, _lifted(Vector3(cos(a1) * disc_r, height, sin(a1) * disc_r)), _lifted(Vector3(cos(a0) * disc_r, height, sin(a0) * disc_r)), flat, flat, flat)
 	var directions := [Vector2(0.0, -1.0), Vector2(1.0, 0.0), Vector2(0.0, 1.0), Vector2(-1.0, 0.0)]
 	for index in directions.size():
 		if connection_mask & (1 << index) == 0:
@@ -98,13 +123,26 @@ func _add_path_mesh(width: float, height: float, material: Material, node_name: 
 		var direction: Vector2 = directions[index]
 		var perpendicular := Vector2(-direction.y, direction.x)
 		var half_width := width * 0.5
-		var start := direction * junction * 0.38
+		var start := Vector2.ZERO
 		var finish := direction * half_cell
-		var a := Vector3(start.x - perpendicular.x * half_width, height, start.y - perpendicular.y * half_width)
-		var b := Vector3(start.x + perpendicular.x * half_width, height, start.y + perpendicular.y * half_width)
-		var c := Vector3(finish.x + perpendicular.x * half_width, height, finish.y + perpendicular.y * half_width)
-		var d := Vector3(finish.x - perpendicular.x * half_width, height, finish.y - perpendicular.y * half_width)
-		_add_quad(surface, a, d, c, b, Vector2(0.0, 0.0), Vector2(0.0, 1.0), Vector2(1.0, 1.0), Vector2(1.0, 0.0))
+		# R34: gentle per-tile wobble at the arm's midpoint; the tile-border end
+		# stays fixed so neighbouring tiles still meet exactly.
+		var wob := (float(absi(tile.x * 73 + tile.y * 151 + index * 37) % 9) - 4.0) / 4.0 * width * 0.035
+		var mid := (start + finish) * 0.5 + perpendicular * wob
+		var mid_width := half_width * (0.97 + float(absi(tile.x * 41 + tile.y * 23 + index) % 5) * 0.015)
+		var pts := [[start, half_width], [mid, mid_width], [finish, half_width]]
+		for seg in 2:
+			var p0: Vector2 = pts[seg][0]
+			var w0: float = pts[seg][1]
+			var p1: Vector2 = pts[seg + 1][0]
+			var w1: float = pts[seg + 1][1]
+			var v0 := 0.5 * float(seg)
+			var v1 := v0 + 0.5
+			var a := _lifted(Vector3(p0.x - perpendicular.x * w0, height, p0.y - perpendicular.y * w0))
+			var b := _lifted(Vector3(p0.x + perpendicular.x * w0, height, p0.y + perpendicular.y * w0))
+			var c := _lifted(Vector3(p1.x + perpendicular.x * w1, height, p1.y + perpendicular.y * w1))
+			var d := _lifted(Vector3(p1.x - perpendicular.x * w1, height, p1.y - perpendicular.y * w1))
+			_add_quad(surface, a, d, c, b, Vector2(0.0, v0), Vector2(0.0, v1), Vector2(1.0, v1), Vector2(1.0, v0))
 	var instance := MeshInstance3D.new()
 	instance.name = node_name
 	instance.mesh = surface.commit()

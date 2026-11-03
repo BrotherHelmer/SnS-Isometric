@@ -38,7 +38,7 @@ const BUILDING_MODEL_SCALE := {
 	"LUMEN_PILLAR": 2.10,
 	"CLAIMANT_OUTPOST": 3.25,
 	"WYRD_HARVESTER": 2.10,
-	"WYRD_REFINER": 5.50,
+	"WYRD_REFINER": 2.70,
 }
 
 # Runtime model bounds at unit scale. They keep socket, focus, construction,

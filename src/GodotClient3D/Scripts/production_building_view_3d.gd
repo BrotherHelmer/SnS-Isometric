@@ -5,8 +5,11 @@ const Catalog = preload("res://src/GodotClient3D/Scripts/production_asset_catalo
 const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_profile.gd")
 const ContactAO = preload("res://src/GodotClient3D/Scripts/production_contact_ao.gd")
 const BuildingMaterials = preload("res://src/GodotClient3D/Scripts/production_building_materials.gd")
+const DioramaBuildings = preload("res://src/GodotClient3D/Scripts/production_diorama_buildings.gd")
 
 var entity_id := 0
+## Beta: set from the quality profile; Low (0.6) thins chimney smoke.
+static var vfx_density := 1.0
 var building_type := ""
 var footprint := Vector2i.ONE
 var rotation_quarters := 0
@@ -45,7 +48,13 @@ func configure(snapshot: Dictionary) -> void:
 	last_snapshot = snapshot.duplicate(true)
 	wall_signature = "%d:%d:%d" % [int(snapshot.get("wall_mask", 0)), int(bool(snapshot.get("gate_adjacent", false))), int(bool(snapshot.get("gate_closed", false)))]
 	name = "%s_%d" % ["Construction" if is_construction else building_type, entity_id]
-	rotation.y = -float(rotation_quarters) * PI * 0.5
+	# Bug 1 fix: Add rotation variety for houses based on entity_id (0, 90, 180, 270 degrees)
+	var base_rotation := -float(rotation_quarters) * PI * 0.5
+	if building_type == "HOUSE" and not is_construction:
+		var variant_rotation := (entity_id % 4) * PI * 0.5
+		rotation.y = base_rotation + variant_rotation
+	else:
+		rotation.y = base_rotation
 	# Issue #5: Check if this is Town Hall and should upgrade to Castle
 	var has_barracks := bool(snapshot.get("has_barracks", false))
 	if building_type == "TOWN_HALL" and has_barracks:
@@ -150,14 +159,95 @@ func _rebuild() -> void:
 		_create_building_identity_markers()
 	_create_ownership_banner()
 	_create_contact_ao()
+	_merge_static_trim()
+	_merge_grounding_discs()
+
+
+## R31 draw calls: the principal trim is 10-25 small BoxMesh nodes per
+## building, each its own draw call (and shadow draw). They never move, are
+## never toggled and nothing looks them up, so bake them into one mesh per
+## material. Same boxes, same transforms, same materials: identical picture.
+func _merge_static_trim() -> void:
+	var tools := {}
+	var mats := {}
+	var shadows := {}
+	for child in get_children():
+		var mi := child as MeshInstance3D
+		if mi == null or mi.mesh == null or not String(mi.name).begins_with("Trim"):
+			continue
+		if mi.get_child_count() > 0 or mi.mesh.get_surface_count() != 1:
+			continue
+		var mat: Material = mi.material_override
+		var key := "%d|%d" % [mat.get_instance_id() if mat != null else 0, int(mi.cast_shadow)]
+		if not tools.has(key):
+			var st := SurfaceTool.new()
+			st.begin(Mesh.PRIMITIVE_TRIANGLES)
+			tools[key] = st
+			mats[key] = mat
+			shadows[key] = mi.cast_shadow
+		(tools[key] as SurfaceTool).append_from(mi.mesh, 0, mi.transform)
+		remove_child(mi)
+		mi.queue_free()
+	_merge_wheat_props()
+	var index := 0
+	for key in tools:
+		var inst := MeshInstance3D.new()
+		inst.name = "MergedTrim_%d" % index
+		index += 1
+		inst.mesh = (tools[key] as SurfaceTool).commit()
+		inst.material_override = mats[key]
+		inst.cast_shadow = shadows[key]
+		add_child(inst)
+
+
+## M3 performance pass: the workyard dirt, apron and contact-AO discs are
+## three static ground quads under every building. Bake them into one mesh
+## (one surface per disc material, bottom-to-top): same picture, two fewer
+## mesh instances per building. Anything unexpected leaves the discs as-is.
+func _merge_grounding_discs() -> void:
+	var discs: Array[MeshInstance3D] = []
+	for node_name in ["WorkyardDirt", "WorkyardApron", "ContactAO"]:
+		var found := find_child(node_name, true, false) as MeshInstance3D
+		if found != null and found.mesh != null and found.get_child_count() == 0:
+			discs.append(found)
+	if discs.size() < 2:
+		return
+	var merged := ArrayMesh.new()
+	for disc in discs:
+		var xform := Transform3D.IDENTITY
+		var node: Node = disc
+		while node != null and node != self:
+			xform = (node as Node3D).transform * xform
+			node = node.get_parent()
+		var st := SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		st.append_from(disc.mesh, 0, xform)
+		var baked := st.commit()
+		if baked == null:
+			return
+		merged.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, baked.surface_get_arrays(0))
+		merged.surface_set_material(merged.get_surface_count() - 1, disc.material_override)
+	var instance := MeshInstance3D.new()
+	instance.name = "GroundingMerged"
+	instance.mesh = merged
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(instance)
+	for disc in discs:
+		disc.get_parent().remove_child(disc)
+		disc.queue_free()
 
 
 func _create_completed_model() -> void:
 	if building_type == "WALL":
 		_create_wall_model()
 		return
-	if building_type == "TOWN_HALL":
-		_create_founding_hall_model()
+	# M1 diorama-world: the approved diorama builders own the founding-loop
+	# types. CASTLE (the barracks upgrade) keeps the authored keep view.
+	if building_type in ["TOWN_HALL", "HOUSE", "LUMBER_CAMP", "SAWMILL", "FARM", "BAKERY", "STOREHOUSE", "QUARRY", "WATCHTOWER", "BARRACKS", "LUMEN_PILLAR", "CLAIMANT_OUTPOST", "WYRD_HARVESTER", "WYRD_REFINER"]:
+		model_root = DioramaBuildings.build(building_type, entity_id)
+		model_root.name = "SemanticModel_%s" % building_type
+		model_root.position.z = _model_offset_z()
+		add_child(model_root)
 		return
 	var packed := load(Catalog.building_path(building_type)) as PackedScene
 	if packed == null:
@@ -367,7 +457,13 @@ func _create_wall_model() -> void:
 	var mask := int(last_snapshot.get("wall_mask", 0))
 	if mask == 0:
 		mask = 5
-	var stone := _material(Color("#a99d81"), 0.0)
+	# M2 diorama-world: painted stone + a sculpted cap slab; the mask
+	# connectivity and silhouette are unchanged.
+	var stone := StandardMaterial3D.new()
+	stone.albedo_texture = load(Catalog.DIORAMA_TEXTURES["stone"]) as Texture2D
+	stone.albedo_color = Color(0.90, 0.88, 0.84)
+	stone.uv1_scale = Vector3(1.2, 1.2, 1.2)
+	stone.roughness = 0.95
 	for index in 4:
 		if mask & (1 << index) == 0:
 			continue
@@ -379,6 +475,16 @@ func _create_wall_model() -> void:
 		segment.rotation.y = float(index) * PI * 0.5
 		segment.material_override = stone
 		model_root.add_child(segment)
+		# Cap slab is a sibling of the segment, not a child: the segment's
+		# own children stay exactly its three merlons.
+		var cap := MeshInstance3D.new()
+		var cap_mesh := BoxMesh.new()
+		cap_mesh.size = Vector3(0.88, 0.16, 2.32)
+		cap.mesh = cap_mesh
+		cap.position = segment.position + Vector3(0.0, 1.03, 0.0)
+		cap.rotation.y = segment.rotation.y
+		cap.material_override = stone
+		model_root.add_child(cap)
 		for merlon_index in 3:
 			var merlon := MeshInstance3D.new()
 			merlon.name = "Crenellation"
@@ -940,7 +1046,7 @@ func apply_light_palette(window_color: Color, torch_color: Color, torch_range: f
 	if window_light != null:
 		window_light.light_color = window_color
 		window_light.omni_range = clampf(torch_range, 3.2, 9.0)
-		window_light.light_energy = 1.20 if building_type != "TOWN_HALL" else 1.65
+		window_light.light_energy = 0.85 if building_type != "TOWN_HALL" else 1.25
 	if window_emission != null and window_emission.material_override is StandardMaterial3D:
 		var glow_material := window_emission.material_override as StandardMaterial3D
 		glow_material.emission = window_color
@@ -949,7 +1055,7 @@ func apply_light_palette(window_color: Color, torch_color: Color, torch_range: f
 	if lantern_light != null:
 		lantern_light.light_color = torch_color
 		lantern_light.omni_range = clampf(torch_range, 3.2, 8.0)
-		lantern_light.light_energy = 1.05
+		lantern_light.light_energy = 0.75
 
 
 func _update_night_presentation(night: bool, occupants: int) -> void:
@@ -963,7 +1069,7 @@ func _update_night_presentation(night: bool, occupants: int) -> void:
 		window_light.name = "InhabitedWindowGlow"
 		window_light.position = sockets["entrance"].position + Vector3(0.0, 1.05, -0.28)
 		window_light.light_color = Color("#F5B36B")
-		window_light.light_energy = 1.20 if building_type != "TOWN_HALL" else 1.65
+		window_light.light_energy = 0.85 if building_type != "TOWN_HALL" else 1.25
 		window_light.omni_range = 7.2 if building_type != "TOWN_HALL" else 8.4
 		window_light.shadow_enabled = false
 		window_light.distance_fade_enabled = true
@@ -983,7 +1089,7 @@ func _update_night_presentation(night: bool, occupants: int) -> void:
 		window_emission.material_override = glow_material
 		add_child(window_emission)
 	window_light.visible = inhabited
-	window_light.light_energy = (1.20 if building_type != "TOWN_HALL" else 1.65) if night else 0.42
+	window_light.light_energy = (0.85 if building_type != "TOWN_HALL" else 1.25) if night else 0.42
 	if window_emission != null:
 		window_emission.visible = inhabited
 		if window_emission.material_override is StandardMaterial3D:
@@ -994,7 +1100,7 @@ func _update_activity_presentation(active: bool, night: bool) -> void:
 	if building_type in ["BAKERY", "LUMBER_CAMP", "SAWMILL", "HOUSE", "TOWN_HALL"] and work_smoke == null:
 		work_smoke = CPUParticles3D.new()
 		work_smoke.name = "ChimneySmoke"
-		work_smoke.amount = 18
+		work_smoke.amount = maxi(8, int(round(18.0 * vfx_density)))
 		work_smoke.lifetime = 3.6
 		work_smoke.emission_shape = CPUParticles3D.EMISSION_SHAPE_POINT
 		work_smoke.direction = Vector3.UP
@@ -1015,7 +1121,8 @@ func _update_activity_presentation(active: bool, night: bool) -> void:
 		work_smoke.position = sockets["vfx"].position + Vector3(0.0, 0.85, 0.0)
 		add_child(work_smoke)
 	if work_smoke != null:
-		work_smoke.emitting = active or building_type in ["HOUSE", "TOWN_HALL", "BAKERY"]
+		var idle_smoke := building_type in ["TOWN_HALL", "BAKERY"] or (building_type == "HOUSE" and (vfx_density >= 1.0 or entity_id % 3 == 0))
+		work_smoke.emitting = active or idle_smoke
 	if building_type == "WATCHTOWER":
 		if lantern_light == null:
 			lantern_light = OmniLight3D.new()
@@ -1120,6 +1227,61 @@ func _update_inventory_indicators(inventory: Dictionary) -> void:
 		indicator.scale = base_scale * pile
 
 
+## R31 draw calls: a farm is 33 wheat prop scenes (one draw call each, plus
+## shadows). They are static and identical, so draw them as one MultiMesh per
+## mesh part with the same tint material and the same per-plant transforms.
+func _merge_wheat_props() -> void:
+	if workyard_root == null:
+		return
+	var groups := {}
+	var group_mat := {}
+	var group_shadow := {}
+	var props: Array = []
+	for prop in workyard_root.get_children():
+		var pn := String(prop.name)
+		if not (pn.begins_with("WheatCrop") or pn.begins_with("WheatApron")) or not (prop is Node3D):
+			continue
+		props.append(prop)
+		for child in (prop as Node).find_children("*", "MeshInstance3D", true, false):
+			var mi := child as MeshInstance3D
+			if mi.mesh == null:
+				continue
+			var xf: Transform3D = mi.transform
+			var p: Node = mi.get_parent()
+			while p != null and p != self:
+				if p is Node3D:
+					xf = (p as Node3D).transform * xf
+				p = p.get_parent()
+			var mat: Material = mi.material_override
+			var key := "%d|%s|%d" % [mi.mesh.get_instance_id(), str((mat as StandardMaterial3D).albedo_color) if mat is StandardMaterial3D else str(mat), int(mi.cast_shadow)]
+			if not groups.has(key):
+				groups[key] = []
+				group_mat[key] = mat
+				group_shadow[key] = mi.cast_shadow
+			(groups[key] as Array).append([mi.mesh, xf])
+	if groups.is_empty():
+		return
+	var index := 0
+	for key in groups:
+		var items: Array = groups[key]
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = items[0][0]
+		mm.instance_count = items.size()
+		for i in items.size():
+			mm.set_instance_transform(i, items[i][1])
+		var inst := MultiMeshInstance3D.new()
+		inst.name = "MergedWheat_%d" % index
+		index += 1
+		inst.multimesh = mm
+		inst.material_override = group_mat[key]
+		inst.cast_shadow = group_shadow[key]
+		add_child(inst)
+	for prop in props:
+		workyard_root.remove_child(prop)
+		prop.queue_free()
+
+
 func _tint_wheat(prop: Node) -> void:
 	# Opening-style wheat.res is a grey-green stem; force a ripe gold so
 	# farm fields do not read as sticks at gameplay zoom.
@@ -1166,6 +1328,12 @@ func _apply_principal_trim() -> void:
 	# GFX-L: three archetypes. Keep K trim names. Replace the bunker wrap
 	# with a low fitted foundation and modular stone / plaster façades.
 	if building_type != "TOWN_HALL" and building_type != "CASTLE" and building_type != "HOUSE" and building_type != "BAKERY" and building_type != "LUMBER_CAMP" and building_type != "SAWMILL":
+		return
+	# R38: the authored civic keep already has its own curtain, gatehouse,
+	# buttresses and plinth. The generic box trim (facade panels, corner posts,
+	# fascia beam, foundation skirts) was wrapped around it a second time and
+	# read as a broken grey gate wall with see-through gaps (Helmer r37).
+	if building_type == "CASTLE" and String(Catalog.building_path("CASTLE")).contains("civic_"):
 		return
 	var plaster := _material(BuildingMaterials.WARM_PLASTER, 0.0)
 	var timber := _material(BuildingMaterials.DARK_TIMBER, 0.0)

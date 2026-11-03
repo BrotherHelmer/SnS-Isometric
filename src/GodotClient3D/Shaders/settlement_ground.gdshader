@@ -34,6 +34,9 @@ uniform float flower_amount = 0.22;
 uniform float stone_amount = 0.22;
 uniform float crop_amount = 1.0;
 uniform float lod_cheap = 0.0;
+// R33 ground-lite: large-scale (9-25 m) colour layers use one noise octave
+// instead of two. Fine detail, flowers, tufts and bump are untouched.
+uniform float ground_lite = 0.0;
 uniform vec2 world_min_xz = vec2(-87.5, -87.5);
 uniform vec2 world_size_xz = vec2(175.0, 175.0);
 uniform vec3 beach_color : source_color = vec3(0.090, 0.153, 0.165);
@@ -78,7 +81,15 @@ float island_land(vec2 world_xz) {
 	return -sd + jut;
 }
 
+// R32 candidate (gate flag --gate-r32-ground-hash): arithmetic hash instead of
+// sin(). Same statistics, DIFFERENT noise pattern (visible change).
+uniform float fast_hash = 0.0;
 float hash21(vec2 p) {
+	if (fast_hash > 0.5) {
+		vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+		p3 += dot(p3, p3.yzx + 33.33);
+		return fract((p3.x + p3.y) * p3.z);
+	}
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
 }
 
@@ -91,6 +102,10 @@ float noise2(vec2 p) {
 
 float fbm(vec2 p) {
 	return noise2(p) * 0.62 + noise2(p * 2.07 + vec2(19.1, 7.3)) * 0.38;
+}
+
+float macro_n(vec2 p) {
+	return ground_lite > 0.5 ? noise2(p) : fbm(p);
 }
 
 vec2 road_control_uv(vec2 world_xz) {
@@ -138,13 +153,13 @@ void fragment() {
 	// GFX-Q: meadow / dry grass / exposed soil / rock. Palette still owns hue.
 	vec3 grass = mix(grass_moss, meadow_lush, clamp(broad * 0.58 + patch * 0.42, 0.0, 1.0));
 	grass = mix(grass, grass_sunlit, smoothstep(0.54, 0.90, patch) * 0.34);
-	float shade_macro = fbm(world_pos.xz / max(macro_metres * 1.52, 12.0) + vec2(9.4, 2.1));
+	float shade_macro = macro_n(world_pos.xz / max(macro_metres * 1.52, 12.0) + vec2(9.4, 2.1));
 	float shade_w = smoothstep(0.36, 0.72, shade_macro) * 0.44;
 	grass = mix(grass, meadow_shade, shade_w);
 	grass = mix(grass, forest_floor, smoothstep(0.50, 0.88, 1.0 - patch) * 0.28);
-	float soil_n = fbm(world_pos.xz / 13.5 + vec2(4.1, 9.7));
-	float dry_n = fbm(world_pos.xz / 9.2 + vec2(11.0, 3.4));
-	float rock_n = fbm(world_pos.xz / 17.0 + vec2(2.2, 15.3));
+	float soil_n = macro_n(world_pos.xz / 13.5 + vec2(4.1, 9.7));
+	float dry_n = macro_n(world_pos.xz / 9.2 + vec2(11.0, 3.4));
+	float rock_n = macro_n(world_pos.xz / 17.0 + vec2(2.2, 15.3));
 	vec3 dirt_s = texture(dirt_tex, world_pos.xz / 5.1).rgb;
 	vec3 rock_s = texture(rock_tex, world_pos.xz / 6.4).rgb;
 	float dirt_luma = dot(dirt_s, vec3(0.2126, 0.7152, 0.0722));

@@ -12,7 +12,7 @@ func run() -> void:
 	game._start_review_seed()
 	game.simulation_host.paused = true
 	game.set_process(false)
-	assert(game.world_view.terrain_mesh_instance.material_override is ShaderMaterial)
+	assert(game.world_view.representative_terrain().material_override is ShaderMaterial)
 	for character in game.world_view.character_views.values():
 		assert(character.skeleton != null and character.playback.get_current_node() != "Start")
 	if DisplayServer.get_name() != "headless":

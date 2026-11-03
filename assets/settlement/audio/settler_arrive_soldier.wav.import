@@ -2,13 +2,13 @@
 
 importer="wav"
 type="AudioStreamWAV"
-uid="uid://c5l8o0q3t6v9y"
-path="res://.godot/imported/settler_arrive_soldier.wav-d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9.sample"
+uid="uid://c5l8o0q3t6way"
+path="res://.godot/imported/settler_arrive_soldier.wav-efaaf72b8584ca09815655febb4c1419.sample"
 
 [deps]
 
 source_file="res://assets/settlement/audio/settler_arrive_soldier.wav"
-dest_files=["res://.godot/imported/settler_arrive_soldier.wav-d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9.sample"]
+dest_files=["res://.godot/imported/settler_arrive_soldier.wav-efaaf72b8584ca09815655febb4c1419.sample"]
 
 [params]
 

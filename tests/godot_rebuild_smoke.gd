@@ -8,7 +8,7 @@ const RivalryTuning = preload("res://src/GodotClient/Scripts/one_shard_rivalry_t
 func _init() -> void:
 	var simulation = Simulation.new(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT, 246810, false)
 	var failures: Array[String] = []
-	check(simulation.map_size == Vector2i(70, 70), "province is 70x70 microtiles", failures)
+	check(simulation.map_size == Vector2i(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT), "province is MAP_WIDTH x MAP_HEIGHT microtiles (320x320 since 26209fa)", failures)
 	check(_count_tile(simulation, Defs.TILE_SHARD) == 1, "province contains exactly one Shard", failures)
 	check(_height_levels(simulation).size() >= 3, "terrain contains broad elevation levels", failures)
 	check(_resource_layers_are_exclusive(simulation), "forest and rock deposits never share a tile", failures)
@@ -183,7 +183,8 @@ func _init() -> void:
 	simulation.hidden_threat_level = 3
 	simulation.day_count = 3
 	simulation._spawn_wave()
-	check(simulation.enemies.size() >= 3 and simulation.enemies.size() <= 10 and int(simulation.enemies[0]["hp"]) < 40, "night waves stay at a readable, bounded size", failures)
+	# Black 19/10: waves are capped at Night-1 size (2) until a Barracks (ca9967c).
+	check(simulation.enemies.size() >= 2 and simulation.enemies.size() <= 5 and int(simulation.enemies[0]["hp"]) < 40, "night waves stay at a readable, bounded size", failures)
 	simulation._retreat_enemies_at_dawn()
 	check(bool(simulation.enemies[0].get("retreating", false)), "surviving raiders retreat toward fog at dawn", failures)
 
@@ -245,7 +246,11 @@ func _init() -> void:
 	var shield_sim = Simulation.new(30, 30, 99001, false, true)
 	var shield_center := shield_sim._footprint_center(shield_sim.town_hall_position, Defs.building_footprint(Defs.BUILDING_TOWN_HALL))
 	var shield_enemy_tile := shield_center + Vector2i(9, 0)
-	shield_sim._prepare_test_tile(shield_enemy_tile, Defs.TILE_GRASS)
+	# The seed's terrain walls (15,6) in with trees/rock, so the raider had no
+	# path and never reached the yard (Lumen was not what stopped it). Clear a
+	# grass lane from the raider toward the hall; geometry unchanged.
+	for lane_x in range(shield_center.x + 3, shield_enemy_tile.x + 1):
+		shield_sim._prepare_test_tile(Vector2i(lane_x, shield_center.y), Defs.TILE_GRASS)
 	shield_sim._reveal_radius(shield_enemy_tile, 2)
 	var shield_town: Dictionary = shield_sim._find_town_hall()
 	var shield_hp_before := int(shield_town["hp"])
@@ -259,10 +264,12 @@ func _init() -> void:
 		shield_sim._update_enemies(Simulation.TICK_SECONDS)
 	check(int(shield_town["hp"]) < shield_hp_before, "Lumen no longer blocks raiders from damaging the yard", failures)
 	check(shield_sim.is_tile_protected(shield_center), "Lumen still claims the town as lighting and shelter", failures)
-	shield_sim.central_inventory[Defs.RESOURCE_WYRD] = 3
+	# Black 20/10: night upkeep never takes Wyrd below CraterWarRules.RAW_RESERVE
+	# (3, deliberate since 199fecd); start one above the floor.
+	shield_sim.central_inventory[Defs.RESOURCE_WYRD] = 4
 	shield_sim.protection_powered = true
 	shield_sim._update_wyrd_network(81.0)
-	check(int(shield_sim.central_inventory[Defs.RESOURCE_WYRD]) == 2, "the Town Hall bubble consumes meaningful Wyrd each night minute", failures)
+	check(int(shield_sim.central_inventory[Defs.RESOURCE_WYRD]) == 3, "the Town Hall bubble consumes meaningful Wyrd each night minute (down to the 3 reserve)", failures)
 	var harvest_site: Dictionary = shield_sim.rivalry.get_wyrd_sites()[0]
 	var harvest_outpost := {
 		"id": 999,
@@ -319,7 +326,7 @@ func _init() -> void:
 	var saved_state: Dictionary = simulation._serialize_state().duplicate(true)
 	var restored = Simulation.new(12, 12, 13579, false, true)
 	restored._restore_state(saved_state)
-	check(restored.map_size == Vector2i(70, 70) and restored.height_map == simulation.height_map, "save state preserves the larger elevated province", failures)
+	check(restored.map_size == Vector2i(Simulation.MAP_WIDTH, Simulation.MAP_HEIGHT) and restored.height_map == simulation.height_map, "save state preserves the larger elevated province", failures)
 	check(restored.enemy_camps.size() == simulation.enemy_camps.size() and restored.soldiers_total == simulation.soldiers_total, "save state preserves camps and trained soldiers", failures)
 
 	var shelter_sim = Simulation.new(70, 70, 112233, false, true)

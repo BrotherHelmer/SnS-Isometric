@@ -20,7 +20,9 @@ func _run() -> void:
 	await process_frame
 	_check(failures, game.minimap != null, "province minimap exists")
 	game._tick_minimap(0.2)
-	_check(failures, game.minimap.visible, "minimap is visible during play")
+	# 8c52985: the minimap opens collapsed to a MapToggle; either is on screen.
+	var map_toggle: Node = game.hud_root.find_child("MapToggle", true, false)
+	_check(failures, game.minimap.visible or (map_toggle != null and (map_toggle as Control).visible), "minimap is visible during play")
 	game._tick_audio(0.5)
 	var stems: Array = game.audio_director.evidence_snapshot().get("stems", [])
 	_check(failures, stems.has("day"), "day mix includes the pastoral score stem")
@@ -29,7 +31,9 @@ func _run() -> void:
 		if String(game.world_view.nature_views[key_value]) == Defs.TILE_GRASS:
 			grass_in_trees += 1
 	_check(failures, grass_in_trees == 0, "grass is not rebuilt with every tree mesh")
-	_check(failures, game.world_view.grass_root != null and game.world_view.grass_root.get_child_count() > 0, "revealed yards have a dedicated grass layer")
+	# 26209fa: on the chunked province (>80 tiles) grass is built per near chunk
+	# (_build_chunk_grass -> "Composed_<grass asset>" MultiMeshes), not in grass_root.
+	_check(failures, _grass_instances(game.world_view) > 0, "revealed yards have a dedicated grass layer")
 	var fog: Dictionary = game.world_view.fog_configuration()
 	_check(failures, bool(fog.get("volume_mesh", false)), "fog of war is a covering volume")
 	_check(failures, game.world_view.fog_plane != null and game.world_view.fog_skirts.size() >= 4, "fog sheet and skirts cover the island edge")
@@ -38,7 +42,8 @@ func _run() -> void:
 	_check(failures, game.pressure_meter != null and not game.pressure_meter.visible and "QUIET" in game.pressure_meter.band, "Wyrd Pressure chip is wired from minute zero and hidden while QUIET")
 	_check(failures, game.pressure_meter != null and game._pressure_chip_should_show("RISING", false, 0) and game._pressure_chip_should_show("QUIET", true, 0), "Wyrd Pressure chip appears above QUIET or at night")
 	var rival_line := String(game.simulation_host.simulation.get_wyrdfall_presentation().get("rival_line", ""))
-	_check(failures, rival_line != "", "rival threat is named from the opening")
+	# Black 19/10: the rival is a late reveal (Crater War, 199fecd); blank at t=0 is intended.
+	_check(failures, rival_line == "", "rival threat stays unnamed until it is foreshadowed")
 	game._update_shard_compass()
 	_check(failures, game.shard_compass != null, "shard compass exists for off-screen guidance")
 	game.queue_free()
@@ -58,3 +63,18 @@ func _check(failures: Array[String], ok: bool, label: String) -> void:
 	print("%s %s" % ["PASS" if ok else "FAIL", label])
 	if not ok:
 		failures.append(label)
+
+
+func _grass_instances(view: Node) -> int:
+	var grass_names: Dictionary = {}
+	for path_value in view.Catalog.GRASS:
+		grass_names["Composed_%s" % String(path_value).get_file().get_basename()] = true
+	var count := 0
+	if view.grass_root != null:
+		count += view.grass_root.get_child_count()
+	if view.chunk_root != null:
+		for node in view.chunk_root.find_children("Composed_*", "MultiMeshInstance3D", true, false):
+			var instance := node as MultiMeshInstance3D
+			if grass_names.has(String(instance.name)) and instance.multimesh != null and instance.multimesh.instance_count > 0:
+				count += instance.multimesh.instance_count
+	return count

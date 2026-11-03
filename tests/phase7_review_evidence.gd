@@ -32,16 +32,21 @@ func _run() -> void:
 	_check(failures, game.pressure_meter != null and not game.pressure_meter.visible, "pressure chip is wired at founding and hidden while QUIET")
 	_check(failures, "QUIET" in game.pressure_meter.band, "opening pressure band is QUIET")
 	var presentation: Dictionary = game.simulation_host.simulation.get_wyrdfall_presentation()
-	_check(failures, String(presentation.get("rival_line", "")) != "", "rival line is present at t=0")
+	# Black 19/10: the rival is a late reveal (Crater War, 199fecd); blank at t=0 is intended.
+	_check(failures, String(presentation.get("rival_line", "")) == "", "rival line is blank at t=0 (late reveal)")
 	var steps: Array = presentation.get("objective", {}).get("steps", [])
 	_check(failures, "Lumber Camp" in " ".join(steps), "opening step names a Lumber Camp")
-	_check(failures, game.minimap.visible, "province minimap is on")
+	# 8c52985: the minimap opens collapsed to a MapToggle; either is on screen.
+	var map_toggle: Node = game.hud_root.find_child("MapToggle", true, false)
+	_check(failures, game.minimap.visible or (map_toggle != null and (map_toggle as Control).visible), "province minimap is on")
 
 	var sim: Simulation = Simulation.new(70, 70, 260821, false, true)
 	_check(failures, sim.rivalry.get_rival_status_line() != "", "rival status is never blank")
 	sim.day_count = 2
 	sim.is_night = true
 	sim.enemies.clear()
+	# ca9967c (demo balance): five hostiles once a Barracks stands.
+	sim._add_completed_building(Defs.BUILDING_BARRACKS, sim.town_hall_position + Vector2i(8, 0))
 	sim._spawn_wave()
 	_check(failures, sim.enemies.size() == 5, "Night 2 still spawns five hostiles")
 	_check(failures, "from the" in String(sim.last_message), "raid names the approach bearing")

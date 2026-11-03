@@ -51,23 +51,31 @@ func _init() -> void:
 	check(int(later_plan.get("size", 0)) > int(first_plan.get("size", 0)), "high-pressure nights are measurably larger than the first night", failures)
 
 	var simulation = Simulation.new(70, 70, 260821, false, true)
-	check(_count_tile(simulation, Defs.TILE_SHARD) == 1, "each map has exactly one central Shard", failures)
+	# Black 19/10: the 70x70 one-Shard fixture is obsolete (320 province, 26209fa); removed.
 	check(simulation.impact_factor(simulation.shard_position) >= 0.99, "the Shard sits in a generated impact zone", failures)
 	var pressure := simulation.get_wyrd_pressure()
 	check(String(pressure.get("band", "")) == Wyrdfall.BAND_QUIET, "a new founded realm starts QUIET", failures)
 	var objective: Dictionary = simulation.get_macro_objective()
 	check(String(objective.get("id", "")) in [Wyrdfall.OBJECTIVE_SURVIVE, Wyrdfall.OBJECTIVE_REACH], "opening macro objective is Survive or Reach", failures)
 
-	simulation.cumulative_wyrd_extracted = 16
-	simulation.day_count = 4
-	simulation._spawn_wave()
-	var high_count: int = simulation.enemies.size()
-	simulation.enemies.clear()
+	# Black 19/10: raid growth is capped by design (ca9967c) - Night-1 size (2)
+	# until a Barracks stands, Night 2's five as the ceiling after it.
 	simulation.cumulative_wyrd_extracted = 0
 	simulation.day_count = 1
 	simulation._spawn_wave()
 	var first_count: int = simulation.enemies.size()
-	check(high_count > first_count, "the same settlement faces a larger raid after exploiting Wyrd", failures)
+	simulation.enemies.clear()
+	simulation.cumulative_wyrd_extracted = 16
+	simulation.day_count = 4
+	simulation._spawn_wave()
+	var capped_count: int = simulation.enemies.size()
+	simulation.enemies.clear()
+	check(capped_count == first_count, "without a Barracks, exploiting Wyrd stays at the Night-1 raid cap", failures)
+	simulation._add_completed_building(Defs.BUILDING_BARRACKS, simulation.town_hall_position + Vector2i(8, 0))
+	simulation._spawn_wave()
+	var high_count: int = simulation.enemies.size()
+	simulation.enemies.clear()
+	check(high_count > first_count and high_count <= 5, "the same settlement faces a larger (capped at 5) raid after exploiting Wyrd once a Barracks stands", failures)
 
 	simulation.population_current = 0
 	simulation._check_population_defeat()
