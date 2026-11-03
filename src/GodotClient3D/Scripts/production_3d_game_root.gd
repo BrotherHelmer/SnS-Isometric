@@ -624,7 +624,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	if event is InputEventMouseMotion and map_drag_active:
-		if not map_drag_moved and event.position.distance_to(map_drag_origin) > 8.0:
+		# Bug 3 fix: Don't treat slight movement as drag while scout aiming
+		var drag_threshold := 20.0 if scout_aiming else 8.0
+		if not map_drag_moved and event.position.distance_to(map_drag_origin) > drag_threshold:
 			map_drag_moved = true
 		if map_drag_moved and box_select_active:
 			_update_box_select_rect(box_select_origin, event.position)
@@ -982,15 +984,37 @@ func _commit_unit_order(screen_position: Vector2, mode: String) -> void:
 
 
 func _commit_scout_click(screen_position: Vector2) -> void:
-	scout_aiming = false
 	if simulation_host.simulation == null or world_view == null:
 		return
 	var hit: Dictionary = _raycast_terrain(screen_position)
+	var tile: Vector2i
+	# Bug 3 fix: Fallback to ground plane (y=0) if raycast misses (fog/water)
 	if hit.is_empty():
-		_show_status("Click the land to choose a scouting direction.")
-		return
-	var tile := world_view.world_to_tile(hit.position)
+		var camera := camera_rig.camera
+		if camera == null:
+			scout_aiming = false
+			_show_status("Click the land to set a scout direction.")
+			return
+		var ray_origin := camera.project_ray_origin(screen_position)
+		var ray_dir := camera.project_ray_normal(screen_position)
+		var ground_plane := Plane(Vector3.UP, 0.0)
+		var intersect := ground_plane.intersects_ray(ray_origin, ray_dir)
+		if intersect == null:
+			scout_aiming = false
+			_show_status("Click the land to set a scout direction.")
+			return
+		tile = world_view.world_to_tile(Vector2(intersect.x, intersect.z))
+	else:
+		tile = world_view.world_to_tile(hit.position)
+	
+	# Clamp to map bounds
+	tile.x = clampi(tile.x, 0, simulation_host.simulation.map_size.x - 1)
+	tile.y = clampi(tile.y, 0, simulation_host.simulation.map_size.y - 1)
+	
 	var result: Dictionary = simulation_host.simulation.request_scout_direction(selected_worker_id, tile)
+	# Only clear aiming after successful order
+	if bool(result.get("success", false)):
+		scout_aiming = false
 	_show_command_result(result)
 
 
@@ -3462,6 +3486,8 @@ func _update_inspector_core() -> void:
 			inspector_panel.visible = true
 			if scout_button != null:
 				scout_button.visible = simulation_host.simulation.is_patrol_scout(worker) and not worker.has("scout_mission")
+				# Bug 3 fix: Keep button highlighted while aiming
+				scout_button.button_pressed = scout_aiming
 			var soldier := String(worker.get("type", "")) == "guard" and int(worker.get("building_id", 0)) == 0
 			if move_button != null:
 				move_button.visible = soldier
@@ -5519,6 +5545,13 @@ func _hide_start_menu() -> void:
 		camera_rig.input_enabled = true
 	_sync_speed_controls()
 	play_has_begun = true
+	# Bug 2 fix: Restore revealed_tiles snapshot after title composition
+	if not _title_revealed_snapshot.is_empty() and simulation_host.simulation != null:
+		simulation_host.simulation.revealed_tiles = _title_revealed_snapshot.duplicate()
+		_title_revealed_snapshot = {}
+		if world_view != null:
+			world_view.last_revealed_count = -1
+		_sync_presentation()
 
 
 func _resume_from_menu() -> void:
@@ -5530,11 +5563,15 @@ func _resume_from_menu() -> void:
 		world_view.set_presentation_paused(false)
 
 
+var _title_revealed_snapshot: Dictionary = {}
+
 func _author_title_composition() -> void:
 	if simulation_host.simulation == null or world_view == null or camera_rig == null:
 		return
 	var simulation = simulation_host.simulation
 	if not play_has_begun:
+		# Bug 2 fix: Snapshot revealed_tiles before title composition, restore when play starts
+		_title_revealed_snapshot = simulation.revealed_tiles.duplicate()
 		var town_tile: Vector2i = simulation.town_hall_position
 		var shard_tile: Vector2i = simulation.shard_position
 		simulation._reveal_radius(town_tile, 6)
