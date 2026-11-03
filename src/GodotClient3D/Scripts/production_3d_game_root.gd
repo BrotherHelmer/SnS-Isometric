@@ -998,12 +998,12 @@ func _commit_scout_click(screen_position: Vector2) -> void:
 		var ray_origin := camera.project_ray_origin(screen_position)
 		var ray_dir := camera.project_ray_normal(screen_position)
 		var ground_plane := Plane(Vector3.UP, 0.0)
-		var intersect := ground_plane.intersects_ray(ray_origin, ray_dir)
+		var intersect: Variant = ground_plane.intersects_ray(ray_origin, ray_dir)
 		if intersect == null:
 			scout_aiming = false
 			_show_status("Click the land to set a scout direction.")
 			return
-		tile = world_view.world_to_tile(Vector2(intersect.x, intersect.z))
+		tile = world_view.world_to_tile(Vector3(intersect.x, 0.0, intersect.z))
 	else:
 		tile = world_view.world_to_tile(hit.position)
 	
