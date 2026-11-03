@@ -959,10 +959,27 @@ func _commit_unit_order(screen_position: Vector2, mode: String) -> void:
 	if simulation_host.simulation == null or world_view == null:
 		return
 	var hit: Dictionary = _raycast_terrain(screen_position)
+	var tile: Vector2i
+	# P0 Fix: Same ground-plane fallback as Scout - Move must work on fog/water clicks
 	if hit.is_empty():
-		_show_status("Click the land to give an order.")
-		return
-	var tile := world_view.world_to_tile(hit.position)
+		var camera := camera_rig.camera
+		if camera == null:
+			_show_status("Click the land to give an order.")
+			return
+		var ray_origin := camera.project_ray_origin(screen_position)
+		var ray_dir := camera.project_ray_normal(screen_position)
+		var ground_plane := Plane(Vector3.UP, 0.0)
+		var intersect: Variant = ground_plane.intersects_ray(ray_origin, ray_dir)
+		if intersect == null:
+			_show_status("Click the land to give an order.")
+			return
+		tile = world_view.world_to_tile(Vector3(intersect.x, 0.0, intersect.z))
+	else:
+		tile = world_view.world_to_tile(hit.position)
+	
+	# Clamp to map bounds
+	tile.x = clampi(tile.x, 0, simulation_host.simulation.map_size.x - 1)
+	tile.y = clampi(tile.y, 0, simulation_host.simulation.map_size.y - 1)
 	var sim = simulation_host.simulation
 	var group := _group_ids()
 	if group.size() > 1:

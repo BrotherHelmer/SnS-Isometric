@@ -2371,7 +2371,9 @@ func _assign_idle_workers_to_priority_clears() -> void:
 	for worker in workers:
 		if targets.is_empty():
 			return
-		if String(worker.get("type", "")) in ["carrier", "clearer", "guard"]:
+		# P0 Fix: Allow carriers/settlers/laborers to be converted to clearers.
+		# Previously excluded "carrier" which made Clear tool a no-op in diorama demo.
+		if String(worker.get("type", "")) in ["clearer", "guard"]:
 			continue
 		if int(worker.get("building_id", 0)) != 0:
 			continue
