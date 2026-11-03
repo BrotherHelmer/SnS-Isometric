@@ -548,6 +548,31 @@ func clear_road_preview() -> void:
 		child.queue_free()
 
 
+## F5f: Show connected road network as highlight (for Road placement mode)
+func show_road_network_highlight() -> void:
+	clear_road_preview()
+	if road_preview_root == null or simulation == null:
+		return
+	var directions := [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
+	var shown := 0
+	var limit := 200  # Don't show too many at once
+	for key in simulation.connected_roads.keys():
+		if shown >= limit:
+			break
+		var tile := _tile_from_key(String(key))
+		var mask := 0
+		for index in directions.size():
+			var neighbor: Vector2i = tile + directions[index]
+			if simulation.connected_roads.has(_tile_key(neighbor)) or simulation._is_road_tile(neighbor):
+				mask |= 1 << index
+		var view := RoadView.new()
+		view.configure(0, tile, mask, true, "preview_valid")
+		view.position = tile_to_world(Vector2(tile)) + Vector3.UP * 0.10
+		view.modulate = Color(0.6, 0.8, 1.0, 0.7)  # Light blue tint for network
+		road_preview_root.add_child(view)
+		shown += 1
+
+
 func show_build_pads(valid: Array, clearing: Array) -> void:
 	clear_build_pads()
 	if pad_root == null:
@@ -1086,10 +1111,13 @@ func _build_chunk_terrain(host: Node3D, coord: Vector2i, lod: int, rebuild_colli
 		var collision := CollisionShape3D.new()
 		var box := BoxShape3D.new()
 		var cell := ScaleProfile.LOGICAL_CELL_METRES
-		box.size = Vector3(cell * float(CHUNK_TILES), 4.0, cell * float(CHUNK_TILES))
+		# F5b: Thinner box (0.5m) positioned below ground to fix diagonal pick offset
+		box.size = Vector3(cell * float(CHUNK_TILES), 0.5, cell * float(CHUNK_TILES))
 		collision.shape = box
 		var mid := _chunk_origin(coord) + Vector2i(CHUNK_TILES / 2, CHUNK_TILES / 2)
-		body.position = tile_to_world(Vector2(mid))
+		var mid_world := tile_to_world(Vector2(mid))
+		# Position box 0.25m below ground (half height) so top is at ground level
+		body.position = mid_world + Vector3(0, -0.25, 0)
 		body.add_child(collision)
 		host.add_child(body)
 
@@ -1415,7 +1443,8 @@ func _rebake_job_new(key: String, lod: int) -> Dictionary:
 		"key": key, "coord": _chunk_from_key(key), "lod": lod,
 		"old": chunk_nodes.get(key, null), "stage": 0, "row": 0,
 		"heights": heights, "colors": colors, "surface": surface,
-		"mesh": null, "nature": {}, "grass": {}, "collision": false, "stream": false,
+		# F5a: Preserve TerrainPicker collision on rebake (fixes lock after first placement)
+		"mesh": null, "nature": {}, "grass": {}, "collision": true, "stream": false,
 	}
 
 
@@ -1582,10 +1611,13 @@ func _rebake_job_finish(job: Dictionary) -> void:
 		var collision := CollisionShape3D.new()
 		var box := BoxShape3D.new()
 		var cell := ScaleProfile.LOGICAL_CELL_METRES
-		box.size = Vector3(cell * float(CHUNK_TILES), 4.0, cell * float(CHUNK_TILES))
+		# F5b: Thinner box (0.5m) positioned below ground to fix diagonal pick offset
+		box.size = Vector3(cell * float(CHUNK_TILES), 0.5, cell * float(CHUNK_TILES))
 		collision.shape = box
 		var mid := _chunk_origin(coord) + Vector2i(CHUNK_TILES / 2, CHUNK_TILES / 2)
-		body.position = tile_to_world(Vector2(mid))
+		var mid_world := tile_to_world(Vector2(mid))
+		# Position box 0.25m below ground (half height) so top is at ground level
+		body.position = mid_world + Vector3(0, -0.25, 0)
 		body.add_child(collision)
 		host.add_child(body)
 	_build_chunk_water(host, coord, lod)

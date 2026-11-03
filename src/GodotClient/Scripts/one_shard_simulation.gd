@@ -10165,6 +10165,19 @@ func _first_connected_road_tile() -> Vector2i:
 	return Vector2i(-1, -1)
 
 
+## F5c: Find nearest connected road tile within max_distance (Manhattan)
+func find_nearest_road_tile(from: Vector2i, max_distance: int) -> Vector2i:
+	var best := Vector2i(-1, -1)
+	var best_dist := max_distance + 1
+	for key in connected_roads.keys():
+		var road_tile := _tile_from_key(String(key))
+		var dist := _manhattan(from, road_tile)
+		if dist <= max_distance and dist < best_dist:
+			best = road_tile
+			best_dist = dist
+	return best
+
+
 func _is_walkable_road(tile: Vector2i) -> bool:
 	return (connected_roads.has(_tile_key(tile)) or connected_walls.has(_tile_key(tile))) and not (_is_gate_tile(tile) and is_gate_closed())
 
