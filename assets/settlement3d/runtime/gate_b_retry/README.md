@@ -1,6 +1,20 @@
 # Gate B RETRY Assets
 
-**Status**: Awaiting Purple's `sns-gate-b-retry.tgz`
+**Status**: ✅ Kitbash received and integrated
+
+## Model: sns_townhall_kitbash.glb
+
+**Source**: KayKit Medieval Hexagon Pack 1.0 (barracks_green + tower_A_green)  
+**Licence**: CC0 1.0 (Kay Lousberg + SnS project modifications)  
+**Specs**:
+- Triangles: 6914
+- AABB: 3.00×3.60×2.65 m (fits 3×3.7 m Town Hall slot)
+- Format: Y-up, single mesh, embedded recoloured atlas
+- Materials: Nordic red roof #c23b2a, warm stone #b8ab93, timber
+- Polish: Tower rear-right, swords/rack removed
+
+**Rebuild**: See `tools/blender/gate-b-retry-source/` for Blender scripts  
+**Cost**: 0 DKK (CC0 assets + Blender GPL)
 
 ## RETRY Orders (Binding)
 
