@@ -242,18 +242,38 @@ func _create_completed_model() -> void:
 	if building_type == "WALL":
 		_create_wall_model()
 		return
-	# Gate B: Check for Nordic kit GLB models first (Town Hall, House, Lumber Camp)
-	# Pass --gate-b-enable to use Gate B assets instead of baseline
-	var gate_b_path := GateBConfig.get_building_model(building_type)
-	if gate_b_path != "":
-		var packed := load(gate_b_path) as PackedScene
+	
+	# Gate B RETRY: Dual comparison paths for Town Hall ONLY
+	# PRIMARY: --gate-b-retry → Blender kitbash GLB (awaiting Purple's tarball)
+	# CHALLENGER: --gate-b-control → C-only material/lighting remap (existing mesh)
+	# BASELINE: no flag → production_diorama_buildings.gd
+	
+	# Path A: RETRY kitbash (Town Hall only, mesh replacement)
+	var retry_path := GateBConfig.get_retry_model(building_type)
+	if retry_path != "":
+		var packed := load(retry_path) as PackedScene
 		if packed != null:
 			model_root = packed.instantiate()
-			model_root.name = "SemanticModel_%s_GateB" % building_type
+			model_root.name = "SemanticModel_%s_Retry" % building_type
 			model_root.scale = Vector3.ONE * ScaleProfile.building_scale(building_type)
 			model_root.position.z = _model_offset_z()
 			add_child(model_root)
+			print("GATE_B_RETRY: Loaded kitbash for %s" % building_type)
 			return
+	
+	# Path B: C-only control (Town Hall only, material remap on existing mesh)
+	if GateBConfig.is_control_active() and building_type == "TOWN_HALL":
+		# Build baseline model first
+		model_root = DioramaBuildings.build(building_type, entity_id)
+		model_root.name = "SemanticModel_%s_Control" % building_type
+		model_root.position.z = _model_offset_z()
+		add_child(model_root)
+		# Apply C-only material remap (Nordic palette, no mesh change)
+		_apply_gate_b_control_materials(model_root)
+		print("GATE_B_CONTROL: Applied material remap for %s" % building_type)
+		return
+	
+	# Path C: BASELINE (unchanged)
 	# M1 diorama-world: the approved diorama builders own the founding-loop
 	# types. CASTLE (the barracks upgrade) keeps the authored keep view.
 	if building_type in ["TOWN_HALL", "HOUSE", "LUMBER_CAMP", "SAWMILL", "FARM", "BAKERY", "STOREHOUSE", "QUARRY", "WATCHTOWER", "BARRACKS", "LUMEN_PILLAR", "CLAIMANT_OUTPOST", "WYRD_HARVESTER", "WYRD_REFINER"]:
@@ -286,6 +306,87 @@ func _create_founding_hall_model() -> void:
 	# Packed keep/castle stays on CASTLE so the upgrade keeps the keep.
 	_build_procedural_founding_hall(model_root)
 	BuildingMaterials.apply(model_root, entity_id, building_type)
+
+
+func _apply_gate_b_control_materials(root: Node3D) -> void:
+	## C-only control: Remap materials to Nordic palette without changing mesh
+	## Palette from PIPELINE.md: stone #b8b4a8, roof #c23b2a, thatch #d9a84e, timber #6b4423
+	var nordic_palette := {
+		"stone": Color("#b8b4a8"),
+		"stone_light": Color("#d4d0c4"),
+		"roof_red": Color("#c23b2a"),
+		"thatch": Color("#d9a84e"),
+		"timber": Color("#6b4423"),
+		"timber_light": Color("#8a5d30"),
+		"plaster": Color("#e8e0cc"),
+	}
+	
+	# Walk all MeshInstance3D children and remap their materials
+	for child in _get_all_mesh_instances(root):
+		var mi := child as MeshInstance3D
+		if mi == null or mi.material_override == null:
+			continue
+		
+		var old_mat := mi.material_override as StandardMaterial3D
+		if old_mat == null:
+			continue
+		
+		# Create new material with Nordic palette
+		var new_mat := StandardMaterial3D.new()
+		new_mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_VERTEX
+		
+		# Map old colors to Nordic palette (heuristic based on hue/brightness)
+		var old_color := old_mat.albedo_color
+		var new_color := _remap_to_nordic_palette(old_color, nordic_palette)
+		
+		new_mat.albedo_color = new_color
+		new_mat.roughness = 0.88
+		new_mat.metallic = 0.0
+		
+		# Preserve texture if present
+		if old_mat.albedo_texture != null:
+			new_mat.albedo_texture = old_mat.albedo_texture
+			new_mat.uv1_scale = old_mat.uv1_scale
+		
+		mi.material_override = new_mat
+
+
+func _remap_to_nordic_palette(old_color: Color, palette: Dictionary) -> Color:
+	## Heuristic color remapping to Nordic palette
+	var h := old_color.h
+	var s := old_color.s
+	var v := old_color.v
+	
+	# Red/orange hues (roofs)
+	if h >= 0.0 and h < 0.08 and v > 0.4:
+		return palette["roof_red"]
+	# Yellow/tan hues (thatch, plaster)
+	elif h >= 0.08 and h < 0.17:
+		if v > 0.75:
+			return palette["plaster"]
+		else:
+			return palette["thatch"]
+	# Brown hues (timber)
+	elif h >= 0.02 and h < 0.12 and v < 0.5:
+		return palette["timber"] if v < 0.35 else palette["timber_light"]
+	# Gray/stone hues
+	elif s < 0.2:
+		if v > 0.6:
+			return palette["stone_light"]
+		else:
+			return palette["stone"]
+	# Fallback: slightly warm the color
+	else:
+		return old_color.lightened(0.1)
+
+
+func _get_all_mesh_instances(node: Node) -> Array[MeshInstance3D]:
+	var result: Array[MeshInstance3D] = []
+	if node is MeshInstance3D:
+		result.append(node)
+	for child in node.get_children():
+		result.append_array(_get_all_mesh_instances(child))
+	return result
 
 
 func _fit_node_to_size(node: Node, target: Vector3) -> void:
