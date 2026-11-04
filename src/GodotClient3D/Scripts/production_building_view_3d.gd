@@ -6,6 +6,7 @@ const ScaleProfile = preload("res://src/GodotClient3D/Scripts/production_scale_p
 const ContactAO = preload("res://src/GodotClient3D/Scripts/production_contact_ao.gd")
 const BuildingMaterials = preload("res://src/GodotClient3D/Scripts/production_building_materials.gd")
 const DioramaBuildings = preload("res://src/GodotClient3D/Scripts/production_diorama_buildings.gd")
+const GateBConfig = preload("res://src/GodotClient3D/Scripts/gate_b_config.gd")
 
 var entity_id := 0
 ## Beta: set from the quality profile; Low (0.6) thins chimney smoke.
@@ -241,6 +242,18 @@ func _create_completed_model() -> void:
 	if building_type == "WALL":
 		_create_wall_model()
 		return
+	# Gate B: Check for Nordic kit GLB models first (Town Hall, House, Lumber Camp)
+	# Pass --gate-b-enable to use Gate B assets instead of baseline
+	var gate_b_path := GateBConfig.get_building_model(building_type)
+	if gate_b_path != "":
+		var packed := load(gate_b_path) as PackedScene
+		if packed != null:
+			model_root = packed.instantiate()
+			model_root.name = "SemanticModel_%s_GateB" % building_type
+			model_root.scale = Vector3.ONE * ScaleProfile.building_scale(building_type)
+			model_root.position.z = _model_offset_z()
+			add_child(model_root)
+			return
 	# M1 diorama-world: the approved diorama builders own the founding-loop
 	# types. CASTLE (the barracks upgrade) keeps the authored keep view.
 	if building_type in ["TOWN_HALL", "HOUSE", "LUMBER_CAMP", "SAWMILL", "FARM", "BAKERY", "STOREHOUSE", "QUARRY", "WATCHTOWER", "BARRACKS", "LUMEN_PILLAR", "CLAIMANT_OUTPOST", "WYRD_HARVESTER", "WYRD_REFINER"]:

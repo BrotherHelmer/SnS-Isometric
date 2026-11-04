@@ -1,0 +1,6 @@
+town_hall: 846 tris
+house: 472 tris
+lumber_camp: 484 tris
+tree_pine: 62 tris
+tree_round: 80 tris
+path_strip: 32 tris
